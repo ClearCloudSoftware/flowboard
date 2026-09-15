@@ -1,0 +1,223 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="FlowBoard ideation" id="flowboard-ideation">
+    <mxGraphModel dx="4900" dy="4082" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="board" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Board  /p/[slug]&lt;/b&gt;&lt;br&gt;Kanban read model. Columns = flow steps." vertex="1">
+          <mxGeometry height="392" width="640" x="-640" y="-100" as="geometry" />
+        </mxCell>
+        <mxCell id="board-1" parent="board" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Columns come from the flow&lt;/b&gt;&lt;br&gt;Backlog + Todo fixed in front, Done at the end. Order = board_order of the active flow version." vertex="1">
+          <mxGeometry height="94" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="board-2" parent="board" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Card at a glance&lt;/b&gt;&lt;br&gt;Title, current step, state dot (running / answers / approval / failed), live ticking cost, split badge." vertex="1">
+          <mxGeometry height="94" width="290" x="322" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="board-3" parent="board" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Drag only Backlog ↔ Todo&lt;/b&gt;&lt;br&gt;Everything downstream is engine-driven; dragging there would lie about what the system does." vertex="1">
+          <mxGeometry height="94" width="290" x="16" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="board-4" parent="board" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Task detail sheet&lt;/b&gt;&lt;br&gt;Step timeline (state, attempts, cost, duration), artifact links, Approve / Reject, plan.md vs summary.md diff." vertex="1">
+          <mxGeometry height="94" width="290" x="322" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="board-5" parent="board" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;D1 · Auto-start on promote?&lt;/b&gt;&lt;br&gt;Default: explicit Start button on card + sheet; promote stays cheap." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="board-6" parent="board" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;8+ columns don&#39;t fit&lt;/b&gt;&lt;br&gt;Horizontal scroll, but the columns that need me must stay findable. Jump-to-attention?" vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="inbox" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Inbox  /inbox&lt;/b&gt;&lt;br&gt;Most-used screen. Latency here costs money." vertex="1">
+          <mxGeometry height="504" width="640" x="580" y="-70" as="geometry" />
+        </mxCell>
+        <mxCell id="inbox-1" parent="inbox" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;One queue, every project&lt;/b&gt;&lt;br&gt;Question text, help text, task, asking step, waiting time, link to the live session." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="inbox-2" parent="inbox" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Five question types&lt;/b&gt;&lt;br&gt;yes/no · single select · multi select · text (⌘Enter) · number." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="inbox-3" parent="inbox" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Batches, not cards&lt;/b&gt;&lt;br&gt;5–8 questions arrive from one step. Show them as one group to work down." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="inbox-4" parent="inbox" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Waiting time → Slack at 5 min&lt;/b&gt;&lt;br&gt;Elapsed time legible at a glance without becoming the loudest thing on screen." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="inbox-5" parent="inbox" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Keyboard model&lt;/b&gt;&lt;br&gt;j/k move · 1–9 pick · Enter submit. Cards resolve calmly when answered from Slack." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="inbox-6" parent="inbox" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;D2 · Keep the 10 s undo window?&lt;/b&gt;&lt;br&gt;Default: drop from the MCP path; web-side undo only while no agent waits." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="inbox-7" parent="inbox" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Empty state shows what&#39;s running&lt;/b&gt;&lt;br&gt;Not a shrug illustration." vertex="1">
+          <mxGeometry height="57" width="290" x="16" y="388" as="geometry" />
+        </mxCell>
+        <mxCell id="runs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Runner &amp;amp; live viewer  /runs/[id]&lt;/b&gt;&lt;br&gt;One headless CLI session per run." vertex="1">
+          <mxGeometry height="392" width="640" x="2370" y="-90" as="geometry" />
+        </mxCell>
+        <mxCell id="runs-1" parent="runs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Job queue + worker&lt;/b&gt;&lt;br&gt;Route handlers enqueue; the worker spawns processes. Becomes a fleet later, for free." vertex="1">
+          <mxGeometry height="94" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="runs-2" parent="runs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;stream-json → 7 event kinds&lt;/b&gt;&lt;br&gt;Parser written against docs/stream-sample.jsonl, not assumptions. Cost + tokens captured." vertex="1">
+          <mxGeometry height="94" width="290" x="322" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="runs-3" parent="runs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Live session viewer&lt;/b&gt;&lt;br&gt;Normalised events as they arrive; tool calls collapsible with full input / result." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="runs-4" parent="runs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Sticky footer + Stop&lt;/b&gt;&lt;br&gt;Elapsed, turn count, running cost. Stop kills the process." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="runs-5" parent="runs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;D5 · Hook isolation&lt;/b&gt;&lt;br&gt;Empty --settings file per headless run." vertex="1">
+          <mxGeometry height="57" width="290" x="16" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="runs-6" parent="runs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Git worktree per task&lt;/b&gt;&lt;br&gt;Workspace isolation. Artifacts live on disk, not in the DB." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="engine" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Flow engine&lt;/b&gt;&lt;br&gt;Versioned DAG. The board is only its projection." vertex="1">
+          <mxGeometry height="504" width="640" x="-690" y="592" as="geometry" />
+        </mxCell>
+        <mxCell id="engine-1" parent="engine" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Flow = versioned DAG&lt;/b&gt;&lt;br&gt;Editing creates a new version. Tasks pin flow_id at start; in-flight tasks never move." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="engine-2" parent="engine" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Step def → step instance → run&lt;/b&gt;&lt;br&gt;Rework loops create attempt 2, 3, 4 against the same instance." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="engine-3" parent="engine" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Advance modes&lt;/b&gt;&lt;br&gt;auto · wait for approval · wait for answers (park / resume via prompt replay)." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="engine-4" parent="engine" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Parallel branches + join&lt;/b&gt;&lt;br&gt;Card sits at the split point and shows which branches are active." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="engine-5" parent="engine" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;D3 · max_attempts = attempts allowed&lt;/b&gt;&lt;br&gt;Fail on the 4th (default 3). Loops are guarded." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="engine-6" parent="engine" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Artifact contracts&lt;/b&gt;&lt;br&gt;requires / produces declared per step, validated at design time." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="engine-7" parent="engine" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;StepExecutor generalization&lt;/b&gt;&lt;br&gt;A step could be shell, HTTP, pure transform or a human task, not only an agent." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="388" as="geometry" />
+        </mxCell>
+        <mxCell id="editor" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Flow editor  /p/[slug]/flow&lt;/b&gt;" vertex="1">
+          <mxGeometry height="280" width="640" x="10" y="584" as="geometry" />
+        </mxCell>
+        <mxCell id="editor-1" parent="editor" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Vertical step list + connections panel&lt;/b&gt;&lt;br&gt;A node graph is nice, not required for v1." vertex="1">
+          <mxGeometry height="57" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="editor-2" parent="editor" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Add step form&lt;/b&gt;&lt;br&gt;Skill or Agent → model, effort, advance mode, requires, produces, limits." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="editor-3" parent="editor" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Live validation banner&lt;/b&gt;&lt;br&gt;Shown while the artifact contract is unsatisfied." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="editor-4" parent="editor" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;D4 · Don&#39;t persist node positions&lt;/b&gt;&lt;br&gt;dagre layout is deterministic." vertex="1">
+          <mxGeometry height="57" width="290" x="322" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="library" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Skills &amp;amp; agents  /skills /agents&lt;/b&gt;" vertex="1">
+          <mxGeometry height="280" width="640" x="1390" y="-38" as="geometry" />
+        </mxCell>
+        <mxCell id="library-1" parent="library" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Install skill from GitHub URL&lt;/b&gt;&lt;br&gt;Clone / sparse-checkout into ./skills/&amp;lt;slug&amp;gt;, parse SKILL.md frontmatter. Update, remove." vertex="1">
+          <mxGeometry height="94" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="library-2" parent="library" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Agent form&lt;/b&gt;&lt;br&gt;name, description, system prompt, default model, default effort, allowed tools." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="library-3" parent="library" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Capability packs&lt;/b&gt;&lt;br&gt;Skills + agents + flows bundled and shareable as one unit." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="costs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Costs &amp;amp; settings  /costs&lt;/b&gt;&lt;br&gt;Not just a total." vertex="1">
+          <mxGeometry height="392" width="640" y="976" as="geometry" />
+        </mxCell>
+        <mxCell id="costs-1" parent="costs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Spend per project over time&lt;/b&gt;&lt;br&gt;Bar chart." vertex="1">
+          <mxGeometry height="57" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="costs-2" parent="costs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Spend per step definition&lt;/b&gt;&lt;br&gt;What does /grill-me actually cost me?" vertex="1">
+          <mxGeometry height="57" width="290" x="322" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="costs-3" parent="costs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Spend per model × effort&lt;/b&gt;" vertex="1">
+          <mxGeometry height="40" width="290" x="16" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="costs-4" parent="costs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Wasted spend&lt;/b&gt;&lt;br&gt;Σ cost_usd where wasted = 1: money burnt by rework loops." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="costs-5" parent="costs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Cost per completed task&lt;/b&gt;&lt;br&gt;Trended by flow version." vertex="1">
+          <mxGeometry height="57" width="290" x="16" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="costs-6" parent="costs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Draft mode toggle&lt;/b&gt;&lt;br&gt;Overrides every step to --model haiku --effort low while iterating on the flow itself." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="slack" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Slack escalation&lt;/b&gt;" vertex="1">
+          <mxGeometry height="280" width="640" x="800" y="1544" as="geometry" />
+        </mxCell>
+        <mxCell id="slack-1" parent="slack" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Escalate after 5 min&lt;/b&gt;&lt;br&gt;Block Kit message; answering in Slack resolves the inbox card." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="slack-2" parent="slack" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Verification&lt;/b&gt;&lt;br&gt;Signature check on Slack interactions." vertex="1">
+          <mxGeometry height="57" width="290" x="322" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="slack-3" parent="slack" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Notifier port&lt;/b&gt;&lt;br&gt;Slack today → Discord, email, webhook, desktop tomorrow." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="arch" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Architecture · ports &amp;amp; adapters&lt;/b&gt;&lt;br&gt;Claude Code and Codex as interchangeable adapters." vertex="1">
+          <mxGeometry height="392" width="640" x="2030" y="1422" as="geometry" />
+        </mxCell>
+        <mxCell id="arch-1" parent="arch" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Five ports carry the program&lt;/b&gt;&lt;br&gt;AgentProvider · Notifier · Workspace · ArtifactStore · TaskSource." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="arch-2" parent="arch" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;core/ never imports adapters/&lt;/b&gt;&lt;br&gt;Only core/ports. Enforce with a lint rule." vertex="1">
+          <mxGeometry height="57" width="290" x="322" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="arch-3" parent="arch" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Codex adapter spike&lt;/b&gt;&lt;br&gt;Validate AgentProvider against Codex&#39;s real CLI before the port hardens." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="arch-4" parent="arch" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;ReplayProvider&lt;/b&gt;&lt;br&gt;Replays recorded stream-json in tests. No CLI, no cost." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="arch-5" parent="arch" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;TaskSource adapters&lt;/b&gt;&lt;br&gt;GitHub Issues, Linear, Jira, webhook, beyond markdown import." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="arch-6" parent="arch" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Workspace adapters&lt;/b&gt;&lt;br&gt;devcontainer, Docker sandbox, remote." vertex="1">
+          <mxGeometry height="57" width="290" x="322" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="import" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Import &amp;amp; seed&lt;/b&gt;" vertex="1">
+          <mxGeometry height="280" width="640" y="1408" as="geometry" />
+        </mxCell>
+        <mxCell id="import-1" parent="import" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Markdown backlog import&lt;/b&gt;&lt;br&gt;Headings and bullets → tasks." vertex="1">
+          <mxGeometry height="57" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="import-2" parent="import" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;D6 · Deterministic parser&lt;/b&gt;&lt;br&gt;Supports headings and bullets; agent-assisted parse optional." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="import-3" parent="import" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Seed data&lt;/b&gt;&lt;br&gt;One project, default flow, sample tasks, so the app is alive on first run." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="scope" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Out of scope (v1)&lt;/b&gt;" vertex="1">
+          <mxGeometry height="168" width="640" x="680" y="1184" as="geometry" />
+        </mxCell>
+        <mxCell id="scope-1" parent="scope" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e5534b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Not building&lt;/b&gt;&lt;br&gt;Auth, accounts, roles, deployment, Docker, multi-machine, plugin marketplace." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="scope-2" parent="scope" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e5534b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;No direct Anthropic API&lt;/b&gt;&lt;br&gt;Every model call goes through the claude CLI." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="parking" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Parking lot · new ideas&lt;/b&gt;" vertex="1">
+          <mxGeometry height="168" width="640" x="1360" y="1184" as="geometry" />
+        </mxCell>
+        <mxCell id="parking-1" parent="parking" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Drop ideas here&lt;/b&gt;&lt;br&gt;Double-click anywhere for a new note. N = note, A = area, L = link." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="nmu2qv1rrdch" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Integrations&lt;/b&gt;" vertex="1">
+          <mxGeometry height="530" width="1060" x="740" y="1560" as="geometry" />
+        </mxCell>
+        <mxCell id="link-0" edge="1" parent="1" source="arch-3" style="endArrow=none;dashed=1;html=1;strokeColor=#8a91a3;" target="arch-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-1" edge="1" parent="1" source="slack-3" style="endArrow=none;dashed=1;html=1;strokeColor=#8a91a3;" target="arch-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-2" edge="1" parent="1" source="board-5" style="endArrow=none;dashed=1;html=1;strokeColor=#8a91a3;" target="board-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-3" edge="1" parent="1" source="engine-7" style="endArrow=none;dashed=1;html=1;strokeColor=#8a91a3;" target="editor-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

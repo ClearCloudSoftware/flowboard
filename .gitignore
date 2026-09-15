@@ -1,0 +1,11 @@
+# OS / editor junk
+.DS_Store
+
+# Node
+node_modules/
+
+# Local data & runtime (per docs/REBUILD-BACKLOG.md Story 0.3)
+data/*.db*
+data/runs/
+.vibe-worktrees/
+skills/_installed/
