@@ -34,7 +34,10 @@ browser, or run `python3 -m http.server` in this folder.
 
 ## Conventions
 
-So the next mockup looks like it belongs to the same product:
+Run `/mockup` and these are applied for you — the skill carries the tokens, a skeleton, the
+field-guide pattern, and a linter for the mistakes that are invisible until you render
+(`python3 ~/.claude/skills/mockup/scripts/check.py <file>`). The table below is the summary;
+anything here overrides the skill's defaults.
 
 | | |
 |---|---|
