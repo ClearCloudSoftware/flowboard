@@ -1,0 +1,1122 @@
+<meta charset="utf-8">
+<title>FlowBoard Monitor</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --paper:#FBFAF7;
+  --surface:#FFFFFF;
+  --surface-2:#F4F2EC;
+  --surface-3:#EDEAE1;
+  --line:#E4E1D8;
+  --line-2:#CFCBBE;
+  --ink:#17171C;
+  --ink-2:#55535C;
+  --ink-3:#7A7880;
+  --run:#0E6E74;
+  --run-soft:#0E6E7414;
+  --wait:#A35A00;
+  --wait-soft:#A35A0014;
+  --fail:#B0231B;
+  --fail-soft:#B0231B12;
+  --done:#B8B4A8;
+  --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.num{font-variant-numeric:tabular-nums}
+.sans{font-family:var(--sans)}
+.sep{color:var(--line-2);padding:0 .45em}
+.app{height:100dvh;display:flex;flex-direction:column}
+
+/* ─── topbar ─────────────────────────────────────────────── */
+.topbar{
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding:11px 18px;border-bottom:1px solid var(--line);
+  background:var(--surface);
+}
+.brand{font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+.tb-spacer{flex:1 1 auto}
+.stat{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.stat b{font-weight:600;font-size:13px}
+.stat.warn b{color:var(--wait)}
+.demo{
+  border:1px solid var(--line-2);padding:1px 6px;font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
+}
+
+/* ─── workers strip (#4) ─────────────────────────────────── */
+.workers{border-bottom:1px solid var(--line);background:var(--surface-2)}
+.wk-head{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:100%;
+  padding:7px 18px;transition:background var(--t);
+}
+.wk-head:hover{background:var(--surface-3)}
+.caret{display:inline-block;width:9px;color:var(--ink-3);transition:transform var(--t)}
+.workers.open .caret{transform:rotate(90deg)}
+.slots{display:inline-flex;gap:3px;vertical-align:middle}
+.slot{width:12px;height:11px;background:var(--pend);border:1px solid var(--line-2)}
+.slot.busy{background:var(--run);border-color:var(--run)}
+.wk-tick{color:var(--ink-3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:42ch;flex:1 1 200px}
+.wk-body{border-top:1px solid var(--line);background:var(--surface)}
+.wk-row{
+  display:grid;align-items:center;gap:12px;padding:6px 18px;
+  grid-template-columns:22px 1fr 78px 64px 58px minmax(120px,1.4fr) 62px 46px;
+  border-bottom:1px solid var(--line);
+}
+.wk-row:last-child{border-bottom:0}
+.wk-row.idle{color:var(--ink-3)}
+.wk-n{color:var(--ink-3)}
+.wk-act{color:var(--ink-2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.wk-queue{padding:6px 18px;color:var(--ink-3);border-top:1px solid var(--line);background:var(--surface-2)}
+.stop{border:1px solid var(--line-2);padding:1px 7px;font-size:11px;color:var(--ink-2);transition:all var(--t)}
+.stop:hover{border-color:var(--fail);color:var(--fail);background:var(--fail-soft)}
+
+/* ─── needs you (#1) ─────────────────────────────────────── */
+.needs{border-bottom:1px solid var(--line);background:var(--surface);max-height:44vh;overflow:auto}
+.needs.hot{box-shadow:inset 3px 0 0 var(--wait)}
+.needs-head{display:flex;align-items:center;gap:10px;padding:8px 18px 5px}
+.needs-head .count{
+  background:var(--wait);color:#fff;font-size:10px;font-weight:600;
+  padding:1px 6px;letter-spacing:.06em;
+}
+.clear{padding:10px 18px 12px;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+.clear .ok{color:var(--run)}
+.need{
+  display:grid;gap:2px 12px;padding:7px 18px 9px;border-top:1px solid var(--line);
+  grid-template-columns:20px 1fr auto;align-items:start;
+}
+.need:hover{background:var(--surface-2)}
+.need.gone{opacity:0;transform:translateY(-4px);transition:opacity 180ms,transform 180ms}
+.need-ico{padding-top:1px}
+.need-ico.wait{color:var(--wait)}
+.need-ico.fail{color:var(--fail)}
+.need-where{display:flex;align-items:center;flex-wrap:wrap;gap:0}
+.need-where b{font-weight:600}
+.need-where .step{color:var(--ink-2)}
+.need-ask{grid-column:2/4;font-family:var(--sans);font-size:13.5px;line-height:1.4;color:var(--ink);max-width:78ch}
+.need-meta{display:flex;align-items:center;gap:0;color:var(--ink-3);font-size:12px;white-space:nowrap;justify-self:end}
+.esc{color:var(--wait);border:1px solid var(--wait);padding:0 5px;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.need-acts{grid-column:2/4;display:flex;gap:7px;flex-wrap:wrap;margin-top:5px}
+.act{
+  border:1px solid var(--line-2);padding:3px 10px;font-size:12px;
+  transition:background var(--t),border-color var(--t),color var(--t);
+}
+.act:hover{background:var(--surface-2);border-color:var(--ink-3)}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act.primary:hover{background:var(--run);color:#fff}
+.act.danger:hover{border-color:var(--fail);color:var(--fail);background:var(--fail-soft)}
+.act kbd{
+  font-family:var(--mono);font-size:10px;color:var(--ink-3);
+  border:1px solid var(--line);padding:0 3px;margin-right:6px;
+}
+.act.primary kbd{border-color:currentColor;color:inherit;opacity:.65}
+.reason{grid-column:2/4;display:flex;gap:7px;margin-top:7px}
+.reason input{
+  flex:1;font:inherit;padding:4px 9px;border:1px solid var(--line-2);
+  background:var(--surface);color:var(--ink);border-radius:0;
+}
+.reason input:focus{outline:2px solid var(--wait);outline-offset:-2px}
+
+/* ─── view switcher ──────────────────────────────────────── */
+.bar{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:0 18px;border-bottom:1px solid var(--line);background:var(--surface-2);
+}
+.tab{
+  padding:9px 14px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:color var(--t),border-color var(--t);font-weight:500;
+}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--run)}
+.bar-spacer{flex:1}
+.chip{
+  padding:2px 9px;font-size:11px;color:var(--ink-2);border:1px solid transparent;
+  transition:all var(--t);
+}
+.chip:hover{border-color:var(--line-2)}
+.chip[aria-pressed="true"]{border-color:var(--ink-3);background:var(--surface);color:var(--ink);font-weight:500}
+.bar select{
+  font:inherit;font-size:11px;padding:2px 6px;border:1px solid var(--line-2);
+  background:var(--surface);color:var(--ink-2);border-radius:0;margin:6px 0;
+}
+.main{flex:1;min-height:0;overflow:auto}
+
+/* ─── pulse list (#5) ────────────────────────────────────── */
+.rows{display:flex;flex-direction:column}
+.row{
+  display:grid;align-items:center;gap:14px;width:100%;
+  grid-template-columns:20px minmax(150px,1.6fr) 178px 98px 86px 84px;
+  padding:9px 18px;border-bottom:1px solid var(--line);
+  transition:background var(--t);
+}
+.row:hover{background:var(--surface)}
+.row[aria-expanded="true"]{background:var(--surface);box-shadow:inset 2px 0 0 var(--ink)}
+.r-ico.run{color:var(--run)}
+.r-ico.wait{color:var(--wait)}
+.r-ico.fail{color:var(--fail)}
+.r-ico.done{color:var(--done)}
+.r-ico.idle{color:var(--line-2)}
+.r-id{display:flex;flex-direction:column;gap:1px;min-width:0}
+.r-id b{font-weight:500;letter-spacing:-.01em}
+.r-id .t{
+  font-family:var(--sans);font-size:12px;color:var(--ink-3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.r-step{color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-time,.r-cost{text-align:right;color:var(--ink-2);white-space:nowrap}
+.r-cost b{font-weight:600;color:var(--ink)}
+.r-waste{display:block;font-size:11px;color:var(--fail)}
+.row.is-done{color:var(--ink-3)}
+.row.is-done .r-id b{font-weight:400;color:var(--ink-2)}
+.row.is-done .r-cost b{font-weight:400;color:var(--ink-2)}
+.fork{color:var(--ink-3);font-size:11px;margin-left:6px}
+
+/* flow bar */
+.fbar{display:flex;gap:3px;align-items:center}
+.cell{width:32px;height:14px;position:relative;overflow:hidden;flex:0 0 auto}
+.cell.split{display:flex;flex-direction:column;gap:2px;overflow:visible}
+.cell.split .cell{height:6px;width:32px}
+.s-done{background:var(--done)}
+.s-running{background:var(--run)}
+.s-running::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);
+  transform:translateX(-100%);animation:sweep 1.9s cubic-bezier(.4,0,.2,1) infinite;
+}
+.s-hold{
+  background:repeating-linear-gradient(45deg,var(--wait) 0 1.5px,transparent 1.5px 5px);
+  box-shadow:inset 0 0 0 1px var(--wait);
+}
+.s-failed{background:var(--fail)}
+.s-queued{background:var(--pend);box-shadow:inset 0 0 0 1px var(--line-2)}
+.s-pending{background:var(--pend)}
+.retryn{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:600;color:#fff;letter-spacing:-.02em;
+}
+@keyframes sweep{to{transform:translateX(100%)}}
+
+/* expanded detail */
+.detail{
+  border-bottom:1px solid var(--line);background:var(--surface);
+  box-shadow:inset 2px 0 0 var(--ink);padding:4px 18px 16px 52px;
+  display:grid;gap:16px;grid-template-columns:minmax(300px,1.3fr) minmax(260px,1fr);
+}
+.d-block{min-width:0}
+.d-h{margin:10px 0 7px;display:flex;align-items:center;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.stepchip{border:1px solid var(--line);padding:3px 8px;font-size:11px;background:var(--surface-2)}
+.stepchip.now{border-color:var(--run);color:var(--run);background:var(--run-soft)}
+.stepchip.bad{border-color:var(--fail);color:var(--fail);background:var(--fail-soft)}
+.stepchip.hold{border-color:var(--wait);color:var(--wait);background:var(--wait-soft)}
+.stepchip i{font-style:normal;color:var(--ink-3);margin-left:6px}
+.stepchip.now i,.stepchip.bad i,.stepchip.hold i{color:inherit;opacity:.75}
+.log{
+  background:var(--surface-2);border:1px solid var(--line);padding:8px 10px;
+  font-size:12px;line-height:1.7;overflow-x:auto;white-space:pre;
+}
+.log .g{color:var(--ink-3)}
+.log .ok{color:var(--run)}
+.log .bad{color:var(--fail)}
+.log .hold{color:var(--wait)}
+.arts{display:flex;flex-direction:column;gap:0}
+.art{
+  display:flex;align-items:center;gap:10px;padding:5px 0;
+  border-bottom:1px solid var(--line);font-size:12px;
+}
+.art:last-child{border-bottom:0}
+.art .p{flex:1;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.art .sz{color:var(--ink-3)}
+.d-acts{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+
+/* ─── timeline (#2) ──────────────────────────────────────── */
+.tl{padding:14px 18px 22px}
+.tl-axis{
+  position:relative;height:18px;
+  margin-left:calc(var(--laneName) + 12px);margin-right:86px;
+  border-bottom:1px solid var(--line);
+}
+.tick{position:absolute;top:0;font-size:10px;color:var(--ink-3);transform:translateX(-50%)}
+.tick::after{content:"";position:absolute;left:50%;top:15px;width:1px;height:5px;background:var(--line-2)}
+.lanes{position:relative}
+.lane{
+  display:grid;grid-template-columns:var(--laneName) 1fr 74px;align-items:center;
+  gap:12px;border-bottom:1px solid var(--line);padding:5px 0;
+}
+.lane-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.lane-name.dim{color:var(--ink-3)}
+.lane-track{position:relative;height:calc(var(--rows,1) * 15px + (var(--rows,1) - 1) * 3px)}
+.bar{
+  position:absolute;height:12px;min-width:2px;overflow:hidden;
+  font-size:9px;line-height:12px;color:#fff;padding:0 4px;white-space:nowrap;
+}
+.bar.b-done{background:var(--done);color:#fff}
+.bar.b-running{background:var(--run)}
+.bar.b-running::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:translateX(-100%);animation:sweep 1.9s cubic-bezier(.4,0,.2,1) infinite;
+}
+.bar.b-failed{background:var(--fail)}
+.bar.b-hold{
+  background:repeating-linear-gradient(45deg,var(--wait-soft) 0 3px,transparent 3px 7px);
+  box-shadow:inset 0 0 0 1px var(--wait);color:var(--wait);
+}
+.lane-cost{text-align:right;font-size:12px;color:var(--ink-2)}
+.nowline{position:absolute;top:-18px;bottom:0;width:1px;background:var(--fail);opacity:.55}
+.nowline::before{
+  content:"NOW";position:absolute;top:-13px;left:3px;font-size:9px;
+  letter-spacing:.1em;color:var(--fail);
+}
+.tl-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;color:var(--ink-3);font-size:11px}
+.tl-legend i{display:inline-block;width:14px;height:9px;margin-right:6px;vertical-align:-1px;font-style:normal}
+
+/* ─── pipeline (#3) ──────────────────────────────────────── */
+.pipe{padding:18px}
+.pipe-wrap{overflow-x:auto;border:1px solid var(--line);background:var(--surface);padding:6px}
+.pipe svg{display:block;min-width:820px;width:100%;max-width:980px;margin:0 auto;height:auto}
+.n-box{fill:var(--surface);stroke:var(--line-2);stroke-width:1}
+.n-box.hot{stroke:var(--wait);stroke-width:1.5;fill:var(--wait-soft)}
+.n-box.live{stroke:var(--run);stroke-width:1.5}
+.n-lbl{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.12em;fill:var(--ink)}
+.n-sub{font-family:var(--mono);font-size:10px;fill:var(--ink-3)}
+.n-cnt{font-family:var(--mono);font-size:24px;font-weight:600;fill:var(--ink)}
+.n-cnt.zero{fill:var(--line-2)}
+.n-rule{stroke:var(--line);stroke-width:1}
+.e{fill:none;stroke:var(--line-2);stroke-width:1.5}
+.e.live{stroke:var(--run)}
+.e.retry{stroke:var(--fail);stroke-dasharray:4 4;opacity:.75}
+.e-flow{fill:none;stroke:var(--run);stroke-width:2.5;stroke-dasharray:3 15;stroke-linecap:round;animation:flow 1.7s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-36}}
+.e-lbl{font-family:var(--mono);font-size:10px;fill:var(--fail)}
+.gatebadge{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.1em;fill:var(--wait)}
+.pipe-read{
+  margin-top:14px;display:flex;gap:20px;flex-wrap:wrap;align-items:baseline;
+  padding-top:12px;border-top:1px solid var(--line);
+}
+.pipe-note{
+  font-family:var(--sans);font-size:13px;color:var(--ink-2);margin-top:10px;max-width:74ch;
+}
+.pipe-note b{color:var(--wait);font-weight:600}
+
+/* ─── status bar ─────────────────────────────────────────── */
+.statusbar{
+  display:flex;align-items:center;gap:0;flex-wrap:wrap;
+  padding:6px 18px;border-top:1px solid var(--line);background:var(--surface-2);
+  color:var(--ink-3);font-size:11px;position:sticky;bottom:0;
+}
+.statusbar .g{flex:1}
+.statusbar b{color:var(--ink-2);font-weight:500}
+.keys kbd{
+  border:1px solid var(--line-2);padding:0 4px;font-family:var(--mono);
+  font-size:10px;color:var(--ink-2);
+}
+.empty{padding:36px 18px;color:var(--ink-3);text-align:center}
+
+@media (max-width:900px){
+  #flowBtn{display:none}
+  .row{grid-template-columns:20px 1fr auto;gap:8px 12px}
+  .row .fbar{grid-column:2/4;order:3}
+  .r-step{grid-column:2;order:4;font-size:12px}
+  .r-time{grid-column:3;order:5}
+  .r-cost{grid-column:3;order:2}
+  .detail{grid-template-columns:1fr;padding-left:18px}
+  .wk-row{grid-template-columns:20px 1fr auto;gap:4px 10px}
+  .wk-row>*:nth-child(n+3):nth-child(-n+5){font-size:11px;color:var(--ink-3)}
+  .wk-act{grid-column:1/-1}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after,*::before{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">flowboard<em>/</em><span>monitor</span></div>
+    <button class="stat" id="flowBtn" title="Open the pipeline view">
+      <span class="lbl">flow</span>
+      <b style="font-weight:400">research→plan→build∥tests→review→summarize</b>
+      <span class="lbl" style="color:var(--line-2)">v4</span>
+    </button>
+    <span class="tb-spacer"></span>
+    <span class="stat"><span class="lbl">burn</span><b id="burn">—</b><span class="lbl">/hr</span></span>
+    <span class="stat"><span class="lbl">today</span><b id="today">—</b></span>
+    <span class="stat warn"><span class="lbl">wasted</span><b id="wasted">—</b><span class="lbl" id="wastedPct"></span></span>
+    <span class="stat"><span class="lbl">clock</span><b id="clock">—</b></span>
+    <span class="demo">demo ×10</span>
+  </header>
+
+  <section class="workers" id="workers" aria-label="Worker slots">
+    <button class="wk-head" id="wkHead" aria-expanded="false" aria-controls="wkBody">
+      <span class="caret">▸</span>
+      <span class="lbl">workers</span>
+      <span class="slots" id="wkSlots"></span>
+      <b id="wkCount">—</b>
+      <span class="sep">·</span><span>queue <b id="wkQueue">—</b></span>
+      <span class="sep">·</span><span id="wkBurn">—</span>
+      <span class="wk-tick" id="wkTick"></span>
+    </button>
+    <div class="wk-body" id="wkBody" hidden></div>
+  </section>
+
+  <section class="needs" id="needs" aria-label="Waiting on you"></section>
+
+  <nav class="bar" aria-label="Views">
+    <button class="tab" data-view="pulse" aria-selected="true">Pulse</button>
+    <button class="tab" data-view="timeline" aria-selected="false">Timeline</button>
+    <button class="tab" data-view="pipeline" aria-selected="false">Pipeline</button>
+    <span class="bar-spacer"></span>
+    <span id="barTools"></span>
+  </nav>
+
+  <main class="main">
+    <div id="viewPulse"><div class="rows" id="rows"></div></div>
+    <div id="viewTimeline" hidden></div>
+    <div id="viewPipeline" hidden></div>
+  </main>
+
+  <footer class="statusbar">
+    <span id="sbCounts"></span>
+    <span class="g"></span>
+    <span class="keys">
+      <kbd>j</kbd>&nbsp;<kbd>k</kbd> move <span class="sep">·</span>
+      <kbd>↵</kbd> open <span class="sep">·</span>
+      <kbd>a</kbd> approve <span class="sep">·</span>
+      <kbd>1-9</kbd> answer <span class="sep">·</span>
+      <kbd>v</kbd> view <span class="sep">·</span>
+      <kbd>w</kbd> workers
+    </span>
+  </footer>
+</div>
+
+<script>
+/* ══ model ══════════════════════════════════════════════════════════════ */
+const SPEED = 10, CAP = 4;
+const RATE = { haiku:0.008, sonnet:0.05, opus:0.14 };          // $ per minute
+const STEPS = {
+  research : { label:'Research',  model:'haiku'  },
+  plan     : { label:'Plan',      model:'opus'   },
+  build    : { label:'Build',     model:'opus'   },
+  tests    : { label:'Tests',     model:'sonnet' },
+  review   : { label:'Review',    model:'sonnet', gate:true },
+  summarize: { label:'Summarize', model:'haiku'  },
+};
+const ORDER = ['research','plan','build','tests','review','summarize'];
+const COLS  = [['research'],['plan'],['build','tests'],['review'],['summarize']];
+const NEXT  = { research:['plan'], plan:['build','tests'], build:['review'], tests:['review'], review:['summarize'], summarize:[] };
+const DEPS  = { plan:['research'], build:['plan'], tests:['plan'], review:['build','tests'], summarize:['review'] };
+const DUR   = { research:[90,220], plan:[150,420], build:[380,1100], tests:[240,620], review:[110,260], summarize:[60,140] };
+
+const BOOT = Date.now();
+const now  = () => BOOT + (Date.now() - BOOT) * SPEED;
+const MIN  = 60000;
+const ago  = m => BOOT - m * MIN;
+const rnd  = ([a,b]) => (a + Math.random() * (b - a)) * 1000;
+
+const run = (step, state, startMin, durMin, extra = {}) => {
+  const o = { step, state, start: startMin == null ? null : ago(startMin), attempts: 1, wasted: 0, ...extra };
+  if (durMin != null) {
+    o.planned = durMin * MIN;
+    o.ms = state === 'running' ? (BOOT - o.start) : durMin * MIN;
+    o.end = state === 'running' ? null : o.start + durMin * MIN;
+  } else {
+    o.ms = o.start ? (BOOT - o.start) : 0;          // seeded mid-run: already this far in
+    if (!o.planned) o.planned = rnd(DUR[step]);
+  }
+  o.cost = (o.ms / MIN) * RATE[STEPS[step].model];
+  return o;
+};
+const T = (id, title, repo, runs, extra = {}) => ({ id, title, repo, runs, log: 0, ...extra });
+
+/* ══ seed — the board mid-morning ═══════════════════════════════════════ */
+const TASKS = [
+  T('auth-refactor','Rotate refresh tokens on every use','flowboard/api',{
+    research: run('research','done',22,1.6),
+    plan:     run('plan','done',20.4,4.2),
+    build:    run('build','done',16.2,8.0),
+    tests:    run('tests','done',16.2,5.1),
+    review:   run('review','gate',8.2,3.2,{ since: ago(5) }),
+  }),
+  T('csv-export','Stream the ledger export instead of buffering it','flowboard/api',{
+    research: run('research','done',20,2.1),
+    plan:     run('plan','asking',17.9,5.4,{ since: ago(12.5),
+      ask:'The ledger export can stream straight out of Postgres, or stage to object storage first. Streaming is cheaper but holds a connection for the whole export.',
+      opts:['Stream from Postgres','Stage to object storage','Decide it yourself'] }),
+  }),
+  T('sandbox-egress','Default-deny egress allowlist, per step','flowboard/runner',{
+    research: run('research','done',41,2.4),
+    plan:     run('plan','done',38.6,6.1),
+    build:    run('build','running',32.5,null,{ planned: 38 * MIN }),
+    tests:    run('tests','done',32.5,9.2),
+  }),
+  T('billing-webhook','Idempotency keys for replayed Stripe events','flowboard/api',{
+    research: run('research','done',63,1.9),
+    plan:     run('plan','done',61.1,3.8),
+    build:    run('build','failed',44,2.3,{ attempts:3, wasted:1.442,
+      err:'egress denied — api.stripe.com not in the step allowlist' }),
+  }),
+  T('docs-pass','Plain-English feature map for the v3 rebuild','flowboard/docs',{
+    research: run('research','running',3.2,null,{ planned: 7 * MIN }),
+  }),
+  T('mem0-adapter','Wire the self-hosted memory port behind the seam','flowboard/core',{
+    research: run('research','done',27,2.2),
+    plan:     run('plan','done',24.8,4.6),
+    build:    run('build','running',20.2,null,{ planned: 26 * MIN }),
+    tests:    run('tests','running',20.2,null,{ planned: 24 * MIN }),
+  }),
+  T('cost-rollup','Wasted-spend metric, per flow version','flowboard/core',{
+    research: run('research','done',11,2.6),
+    plan:     run('plan','queued',null,null),
+  }),
+  T('provider-codex','Codex CLI behind the AgentProvider seam','flowboard/providers',{
+    research: run('research','asking',9,1.4,{ since: ago(8),
+      ask:'The Codex CLI reports no per-call cost. Estimate spend from token counts, or record it as unknown and leave the totals honest?',
+      opts:['Estimate from tokens','Record as unknown'] }),
+  }),
+  T('pdf-import','Pull quoted prices out of supplier PDFs','flowboard/api',{
+    research: run('research','queued',null,null),
+  }),
+  T('flow-versioning','Pin a running task to the flow version it started on','flowboard/core',{
+    research: run('research','done',94,1.7),
+    plan:     run('plan','done',92,5.0),
+    build:    run('build','done',87,11.4,{ attempts:2, wasted:0.79 }),
+    tests:    run('tests','done',87,6.2),
+    review:   run('review','done',75.6,3.4),
+    summarize:run('summarize','done',72.2,1.3),
+  },{ finished: ago(70.9) }),
+  T('inbox-keyboard','Number-key answers, no mouse, in the inbox','flowboard/web',{
+    research: run('research','done',126,1.5),
+    plan:     run('plan','done',124.5,3.1),
+    build:    run('build','done',121.4,6.8),
+    tests:    run('tests','done',121.4,4.0),
+    review:   run('review','done',114.6,2.6),
+    summarize:run('summarize','done',112,1.1),
+  },{ finished: ago(110.9) }),
+  T('drawio-export','Export a flow as a drawio diagram','flowboard/web',{}),
+];
+
+/* per-task log lines — what the agent is doing right now */
+const LOGS = {
+  'sandbox-egress':[
+    ['g','› read  docs/old/architecture/08-sandboxing.md (412 lines)'],
+    ['' ,'› edit  runner/src/sandbox/egress.ts'],
+    ['' ,'› edit  runner/src/sandbox/allowlist.json'],
+    ['hold','◆ egress denied  registry.npmjs.org → adding to step allowlist'],
+    ['' ,'› run   pnpm vitest run tests/sandbox'],
+    ['ok','✓ 41 passed  (3.8s)'],
+    ['g','⋯ thinking  (effort: high)'],
+  ],
+  'mem0-adapter':[
+    ['g','› read  core/src/ports/memory-store.ts'],
+    ['' ,'› edit  core/src/adapters/mem0/client.ts'],
+    ['' ,'› run   docker compose up -d mem0'],
+    ['ok','✓ mem0 healthy on :8088'],
+    ['' ,'› edit  core/src/adapters/mem0/index.ts'],
+    ['g','⋯ thinking  (effort: high)'],
+  ],
+  'docs-pass':[
+    ['g','› read  docs/feature-map.md (448 lines)'],
+    ['' ,'› read  docs/old/PRD.MD'],
+    ['g','⋯ summarising section E — Seeing & steering'],
+    ['' ,'› write .flowboard/artifacts/brief.md'],
+  ],
+  'cost-rollup':[
+    ['g','› read  core/src/cost/rollup.ts'],
+    ['' ,'› edit  core/src/cost/wasted.ts'],
+  ],
+  'pdf-import':[['g','› waiting for a worker slot']],
+  _:[
+    ['g','› read  the task brief'],
+    ['' ,'› edit  the files it named'],
+    ['g','⋯ thinking'],
+  ],
+};
+const ARTS = {
+  research:['brief.md','4.1 kB'], plan:['plan.md','11.7 kB'],
+  build:['changes.patch','38.2 kB'], tests:['test-report.md','2.9 kB'],
+  review:['review.md','6.4 kB'], summarize:['summary.md','1.8 kB'],
+};
+
+/* ══ helpers ════════════════════════════════════════════════════════════ */
+const $  = s => document.querySelector(s);
+const el = (h) => { const d = document.createElement('div'); d.innerHTML = h.trim(); return d.firstElementChild; };
+const money = n => '$' + n.toFixed(2);
+const pad = n => String(n).padStart(2,'0');
+const dur = ms => {
+  const s = Math.max(0, Math.round(ms/1000));
+  if (s < 90) return s + 's';
+  const m = Math.floor(s/60);
+  return m < 90 ? m + 'm' : Math.floor(m/60) + 'h' + pad(m%60);
+};
+const since = t => dur(now() - t);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const ICON = {
+  run : '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.1" fill="currentColor"/><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".3"/></svg>',
+  gate: '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.4" y="3.2" width="2.4" height="9.6" fill="currentColor"/><rect x="9.2" y="3.2" width="2.4" height="9.6" fill="currentColor"/></svg>',
+  ask : '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6.15 6.35a1.9 1.9 0 1 1 2.5 1.8c-.52.2-.72.58-.72 1.05v.35" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="7.93" cy="11.5" r=".95" fill="currentColor"/></svg>',
+  fail: '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 4.3l7.4 7.4M11.7 4.3l-7.4 7.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  done: '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.3l3.1 3.1 6.1-7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  idle: '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2.6"/></svg>',
+};
+
+const runsOf   = t => ORDER.map(s => t.runs[s]).filter(Boolean);
+const costOf   = t => runsOf(t).reduce((a,r) => a + r.cost, 0);
+const wasteOf  = t => runsOf(t).reduce((a,r) => a + r.wasted, 0);
+const isDone   = t => !!t.finished;
+const blocking = t => runsOf(t).find(r => r.state === 'gate' || r.state === 'asking' || r.state === 'failed');
+const activeR  = t => runsOf(t).filter(r => r.state === 'running');
+const runningRuns = () => TASKS.flatMap(t => activeR(t).map(r => ({ t, r })));
+const queuedRuns  = () => TASKS.flatMap(t => runsOf(t).filter(r => r.state === 'queued').map(r => ({ t, r })));
+
+function statusOf(t){
+  const b = blocking(t);
+  if (b) return b.state === 'failed' ? 'fail' : 'wait';
+  if (activeR(t).length) return 'run';
+  if (isDone(t)) return 'done';
+  return 'idle';
+}
+function whereOf(t){
+  const b = blocking(t);
+  if (b) return b.step;
+  const a = activeR(t);
+  if (a.length > 1) return a.map(r => STEPS[r.step].label.toLowerCase()).join(' ∥ ');
+  if (a.length) return STEPS[a[0].step].label.toLowerCase();
+  const q = runsOf(t).find(r => r.state === 'queued');
+  if (q) return 'queued';
+  if (isDone(t)) return 'done';
+  return 'backlog';
+}
+
+/* ══ engine ═════════════════════════════════════════════════════════════ */
+function ready(t, step){
+  return (DEPS[step] || []).every(d => t.runs[d] && t.runs[d].state === 'done');
+}
+function advance(t, from, ts){
+  for (const nx of NEXT[from]) {
+    if (t.runs[nx] && t.runs[nx].state !== 'pending') continue;
+    if (!ready(t, nx)) continue;
+    t.runs[nx] = run(nx, 'queued', null, null);
+  }
+  if (from === 'summarize') t.finished = ts;
+}
+function finish(t, r, ts){
+  r.state = 'done'; r.end = ts; r.ms = ts - r.start;
+  r.cost = (r.ms / MIN) * RATE[STEPS[r.step].model];
+  if (STEPS[r.step].gate) { r.state = 'gate'; r.since = ts; dirty.needs = true; }
+  else advance(t, r.step, ts);
+}
+function schedule(ts){
+  let free = CAP - runningRuns().length;
+  if (free <= 0) return;
+  for (const { r } of queuedRuns()) {
+    if (free <= 0) break;
+    r.state = 'running'; r.start = ts; r.ms = 0;
+    if (!r.planned) r.planned = rnd(DUR[r.step]);
+    free--;
+  }
+}
+function tick(){
+  const ts = now();
+  for (const t of TASKS) for (const r of runsOf(t)) {
+    if (r.state !== 'running') continue;
+    r.ms = ts - r.start;
+    r.cost = (r.ms / MIN) * RATE[STEPS[r.step].model];
+    if (r.ms >= r.planned) finish(t, r, ts);
+  }
+  schedule(ts);
+  render();
+}
+
+/* decisions */
+function approve(t){
+  const r = t.runs.review;
+  r.state = 'done'; advance(t, 'review', now());
+  schedule(now()); dirty.needs = true; render();
+}
+function reject(t, reason){
+  const r = t.runs.review;
+  r.state = 'pending'; r.since = null;
+  const b = t.runs.build;
+  t.rejectedFor = reason || 'needs another pass';
+  b.wasted += b.cost; b.attempts++;
+  b.state = 'queued'; b.start = null; b.ms = 0; b.cost = 0; b.planned = rnd(DUR.build);
+  delete t.runs.review;
+  schedule(now()); dirty.needs = true; render();
+}
+function answer(t, r, choice){
+  r.state = 'done'; r.end = now(); r.answered = choice; r.since = null;
+  advance(t, r.step, now()); schedule(now()); dirty.needs = true; render();
+}
+function retry(t, r){
+  r.wasted += r.cost; r.attempts++;
+  r.state = 'queued'; r.start = null; r.ms = 0; r.cost = 0;
+  r.planned = rnd(DUR[r.step]); delete r.err;
+  schedule(now()); dirty.needs = true; render();
+}
+function stop(t, r){
+  r.wasted += r.cost; r.state = 'failed'; r.err = 'stopped by you';
+  r.end = now(); dirty.needs = true; render();
+}
+
+/* ══ view state ═════════════════════════════════════════════════════════ */
+const state = { view:'pulse', filter:'all', sort:'attention', open:null, focus:null, kb:false, win:90, rejecting:null };
+const dirty = { needs:true };
+
+/* ══ needs band (#1) ════════════════════════════════════════════════════ */
+function needsList(){
+  const out = [];
+  for (const t of TASKS) {
+    const r = blocking(t);
+    if (r) out.push({ t, r, at: r.since || r.end || now() });
+  }
+  return out.sort((a,b) => a.at - b.at);
+}
+function renderNeeds(){
+  const box = $('#needs');
+  if (box.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;
+  const list = needsList();
+  box.classList.toggle('hot', list.length > 0);
+  if (!list.length) {
+    box.innerHTML = `<div class="clear"><span class="ok">${ICON.done}</span>
+      <span>Nothing waiting on you.</span>
+      <span class="sep">·</span><span class="lbl">${runningRuns().length} running, ${queuedRuns().length} queued</span></div>`;
+    return;
+  }
+  let h = `<div class="needs-head"><span class="lbl">needs you</span><span class="count">${list.length}</span>
+    <span class="lbl" style="letter-spacing:.02em;text-transform:none">oldest first — clear these and everything else runs itself</span></div>`;
+  list.forEach(({ t, r }, i) => {
+    const waited = since(r.since || r.end);
+    const escd = (now() - (r.since || r.end)) > 10 * MIN;
+    const n = i + 1;
+    const kind = r.state === 'failed' ? 'fail' : r.state === 'gate' ? 'gate' : 'ask';
+    const ico = `<span class="need-ico ${kind === 'fail' ? 'fail' : 'wait'}">${ICON[kind]}</span>`;
+    const head = `<div class="need-where"><b>${t.id}</b><span class="sep">·</span><span class="step">${STEPS[r.step].label.toLowerCase()}</span></div>`;
+    const meta = `<div class="need-meta">${escd ? `<span class="esc">escalated</span><span class="sep">·</span>` : ''}waited ${waited}</div>`;
+    let body = '', acts = '';
+    if (r.state === 'gate') {
+      body = `<div class="need-ask sans">Review passed. Approve the change so the task can move to <b>summarize</b>?</div>`;
+      acts = state.rejecting === t.id
+        ? `<form class="reason" data-reject="${t.id}"><input id="reason-${t.id}" placeholder="Why — this goes to the next build attempt" autocomplete="off"><button class="act danger" type="submit">Send back</button><button class="act" type="button" data-cancel="1">Cancel</button></form>`
+        : `<div class="need-acts"><button class="act primary" data-approve="${t.id}"><kbd>a</kbd>Approve</button>
+           <button class="act danger" data-rejectopen="${t.id}"><kbd>r</kbd>Send back</button>
+           <button class="act" data-openrow="${t.id}">Read review.md</button></div>`;
+    } else if (r.state === 'asking') {
+      body = `<div class="need-ask sans">${esc(r.ask)}</div>`;
+      acts = `<div class="need-acts">${r.opts.map((o, j) =>
+        `<button class="act${j === 0 ? ' primary' : ''}" data-answer="${t.id}" data-step="${r.step}" data-choice="${esc(o)}"><kbd>${j + 1}</kbd>${esc(o)}</button>`).join('')}</div>`;
+    } else {
+      body = `<div class="need-ask sans">Attempt ${r.attempts} of 3 failed — ${esc(r.err)}. ${money(r.wasted)} spent on the attempts so far.</div>`;
+      acts = `<div class="need-acts"><button class="act primary" data-allow="${t.id}" data-step="${r.step}">Allow host &amp; retry</button>
+        <button class="act" data-retry="${t.id}" data-step="${r.step}">Retry as-is</button>
+        <button class="act" data-openrow="${t.id}">Open the log</button></div>`;
+    }
+    h += `<div class="need" data-n="${n}">${ico}${head}${meta}${body}${acts}</div>`;
+  });
+  box.innerHTML = h;
+}
+
+/* ══ pulse list (#5) ════════════════════════════════════════════════════ */
+const SEG = { done:'s-done', running:'s-running', gate:'s-hold', asking:'s-hold', failed:'s-failed', queued:'s-queued' };
+function segHTML(t, step, half){
+  const r = t.runs[step];
+  const st = r ? r.state : 'pending';
+  const cls = SEG[st] || 's-pending';
+  const s = STEPS[step];
+  let tip = `${s.label} · ${s.model}`;
+  if (!r) tip += ' · not started';
+  else if (st === 'running') tip += ` · running ${dur(r.ms)} · ${money(r.cost)}`;
+  else if (st === 'queued') tip += ' · waiting for a worker';
+  else if (st === 'gate') tip += ` · waiting for your approval (${since(r.since)})`;
+  else if (st === 'asking') tip += ` · asked you a question (${since(r.since)})`;
+  else if (st === 'failed') tip += ` · failed, attempt ${r.attempts} · ${r.err || ''}`;
+  else tip += ` · ${dur(r.ms)} · ${money(r.cost)}`;
+  if (r && r.attempts > 1) tip += ` · ${r.attempts} attempts`;
+  const badge = (r && r.attempts > 1 && st === 'failed') ? `<span class="retryn">${r.attempts}</span>` : '';
+  return `<span class="cell ${cls}" title="${esc(tip)}">${badge}</span>`;
+}
+function fbar(t){
+  return `<span class="fbar" aria-hidden="true">` + COLS.map(col =>
+    col.length === 1 ? segHTML(t, col[0])
+      : `<span class="cell split">${col.map(s => segHTML(t, s, 1)).join('')}</span>`
+  ).join('') + `</span>`;
+}
+function filtered(){
+  let list = TASKS.slice();
+  const f = state.filter;
+  if (f === 'active')  list = list.filter(t => statusOf(t) === 'run');
+  if (f === 'blocked') list = list.filter(t => statusOf(t) === 'wait');
+  if (f === 'failed')  list = list.filter(t => statusOf(t) === 'fail');
+  if (f === 'done')    list = list.filter(t => isDone(t));
+  const rank = { fail:0, wait:1, run:2, idle:3, done:4 };
+  const by = {
+    attention: (a,b) => rank[statusOf(a)] - rank[statusOf(b)] || costOf(b) - costOf(a),
+    cost:      (a,b) => costOf(b) - costOf(a),
+    longest:   (a,b) => (activeR(b)[0]?.ms || 0) - (activeR(a)[0]?.ms || 0),
+    id:        (a,b) => a.id.localeCompare(b.id),
+  }[state.sort];
+  return list.sort(by);
+}
+function timingOf(t){
+  const b = blocking(t);
+  if (b) return (b.state === 'failed' ? 'failed ' : 'waiting ') + since(b.since || b.end);
+  const a = activeR(t);
+  if (a.length) return dur(Math.max(...a.map(r => r.ms)));
+  if (isDone(t)) return since(t.finished) + ' ago';
+  const q = runsOf(t).find(r => r.state === 'queued');
+  return q ? 'in queue' : '—';
+}
+function renderRows(){
+  const rows = $('#rows'), list = filtered();
+  if (!list.length) { rows.innerHTML = `<div class="empty">No tasks match this filter.</div>`; return; }
+  let h = '';
+  for (const t of list) {
+    const st = statusOf(t), open = state.open === t.id;
+    const w = wasteOf(t);
+    h += `<button class="row${st === 'done' ? ' is-done' : ''}" data-task="${t.id}" aria-expanded="${open}">
+      <span class="r-ico ${st}">${ICON[st === 'wait' ? (blocking(t).state === 'gate' ? 'gate' : 'ask') : st]}</span>
+      <span class="r-id"><b>${t.id}${activeR(t).length > 1 ? '<span class="fork">⑂2</span>' : ''}</b><span class="t">${esc(t.title)}</span></span>
+      ${fbar(t)}
+      <span class="r-step">${whereOf(t)}</span>
+      <span class="r-time">${timingOf(t)}</span>
+      <span class="r-cost"><b>${money(costOf(t))}</b>${w > 0.005 ? `<span class="r-waste">${money(w)} wasted</span>` : ''}</span>
+    </button>`;
+    if (open) h += detailHTML(t);
+  }
+  rows.innerHTML = h;
+  if (state.kb && state.focus) {
+    const b = rows.querySelector(`[data-task="${CSS.escape(state.focus)}"]`);
+    if (b) b.focus({ preventScroll:true });
+  }
+}
+function detailHTML(t){
+  const a = activeR(t)[0], b = blocking(t);
+  const lines = LOGS[t.id] || LOGS._;
+  const cut = a ? (2 + (Math.floor((now() - a.start) / (18 * 1000)) % (lines.length - 1))) : lines.length;
+  const logHTML = lines.slice(0, Math.max(2, Math.min(cut, lines.length)))
+    .map(([c, s]) => `<span class="${c}">${esc(s)}</span>`).join('\n');
+  const chips = ORDER.filter(s => t.runs[s]).map(s => {
+    const r = t.runs[s], cls = r.state === 'running' ? 'now' : r.state === 'failed' ? 'bad' : (r.state === 'gate' || r.state === 'asking') ? 'hold' : '';
+    const val = r.state === 'queued' ? 'queued' : r.state === 'running' ? dur(r.ms) + ' · ' + money(r.cost) : dur(r.ms) + ' · ' + money(r.cost);
+    return `<span class="stepchip ${cls}">${STEPS[s].label}<i>${STEPS[s].model} · ${val}${r.attempts > 1 ? ' · ×' + r.attempts : ''}</i></span>`;
+  }).join('');
+  const arts = ORDER.filter(s => t.runs[s] && t.runs[s].state === 'done' && ARTS[s]).map(s =>
+    `<div class="art"><span style="color:var(--ink-3)">${ICON.done}</span><span class="p">.flowboard/${t.id}/${ARTS[s][0]}</span><span class="sz">${ARTS[s][1]}</span></div>`).join('')
+    || `<div class="art"><span class="p" style="color:var(--ink-3)">Nothing written yet.</span></div>`;
+  return `<div class="detail">
+    <div class="d-block">
+      <div class="d-h"><span class="lbl">steps</span><span class="lbl" style="color:var(--line-2)">${t.repo}</span></div>
+      <div class="chips">${chips || '<span class="stepchip">Not started</span>'}</div>
+      ${t.rejectedFor ? `<div class="d-h"><span class="lbl">sent back</span></div><div class="log"><span class="hold">← ${esc(t.rejectedFor)}</span></div>` : ''}
+      <div class="d-h"><span class="lbl">${a ? 'live — ' + STEPS[a.step].label.toLowerCase() : 'last output'}</span>${a ? `<span class="lbl" style="color:var(--run)">${dur(a.ms)} · ${money(a.cost)}</span>` : ''}</div>
+      <div class="log">${logHTML}${b && b.err ? `\n<span class="bad">✕ ${esc(b.err)}</span>` : ''}</div>
+      <div class="d-acts">
+        ${a ? `<button class="act danger" data-stop="${t.id}" data-step="${a.step}">Stop this run</button>` : ''}
+        <button class="act" data-goto="timeline">See it on the timeline</button>
+        <button class="act" data-goto="pipeline">See the flow</button>
+      </div>
+    </div>
+    <div class="d-block">
+      <div class="d-h"><span class="lbl">artifacts</span><span class="lbl" style="color:var(--line-2)">the contract for the next step</span></div>
+      <div class="arts">${arts}</div>
+      <div class="d-h"><span class="lbl">spend</span></div>
+      <div class="arts">
+        <div class="art"><span class="p">This task, so far</span><span class="sz"><b style="color:var(--ink)">${money(costOf(t))}</b></span></div>
+        <div class="art"><span class="p">Burned on redone work</span><span class="sz" style="color:${wasteOf(t) > 0.005 ? 'var(--fail)' : 'var(--ink-3)'}">${money(wasteOf(t))}</span></div>
+        <div class="art"><span class="p">Sandbox</span><span class="sz">container · default-deny egress</span></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ══ workers strip (#4) ═════════════════════════════════════════════════ */
+function burnRate(){ return runningRuns().reduce((a, { r }) => a + RATE[STEPS[r.step].model], 0) * 60; }
+function renderWorkers(){
+  const live = runningRuns(), q = queuedRuns();
+  $('#wkSlots').innerHTML = Array.from({ length: CAP }, (_, i) =>
+    `<span class="slot${i < live.length ? ' busy' : ''}"></span>`).join('');
+  $('#wkCount').textContent = `${live.length}/${CAP}`;
+  $('#wkQueue').textContent = q.length;
+  $('#wkBurn').textContent = money(burnRate()) + '/hr';
+  const head = live[0];
+  $('#wkTick').textContent = head
+    ? `${STEPS[head.r.step].label.toLowerCase()} · ${head.t.id} · ${logLine(head.t, head.r)}`
+    : 'all slots idle';
+  if (!$('#workers').classList.contains('open')) return;
+  const rows = Array.from({ length: CAP }, (_, i) => {
+    const s = live[i];
+    if (!s) return `<div class="wk-row idle"><span class="wk-n">${i + 1}</span><span>— idle —</span><span></span><span></span><span></span><span></span><span></span><span></span></div>`;
+    return `<div class="wk-row"><span class="wk-n">${i + 1}</span>
+      <span>${s.t.id}</span><span>${STEPS[s.r.step].label.toLowerCase()}</span>
+      <span style="color:var(--ink-3)">${STEPS[s.r.step].model}</span>
+      <span class="num">${dur(s.r.ms)}</span>
+      <span class="wk-act">${esc(logLine(s.t, s.r))}</span>
+      <span class="num" style="text-align:right">${money(s.r.cost)}</span>
+      <span style="text-align:right"><button class="stop" data-stop="${s.t.id}" data-step="${s.r.step}">stop</button></span>
+    </div>`;
+  }).join('');
+  $('#wkBody').innerHTML = rows + (q.length
+    ? `<div class="wk-queue">queued <span class="sep">·</span>${q.map(({ t, r }) => `${t.id}·${r.step}`).join('  ')}</div>` : '');
+}
+function logLine(t, r){
+  const lines = LOGS[t.id] || LOGS._;
+  return lines[Math.floor((now() - r.start) / (18 * 1000)) % lines.length][1];
+}
+
+/* ══ timeline (#2) ══════════════════════════════════════════════════════ */
+function renderTimeline(){
+  const W = state.win * MIN, end = now(), start = end - W;
+  const lanes = TASKS.filter(t => runsOf(t).some(r => r.start && (r.end || end) > start))
+    .sort((a, b) => (Math.min(...runsOf(a).filter(r => r.start).map(r => r.start))) - (Math.min(...runsOf(b).filter(r => r.start).map(r => r.start))));
+  const pct = t => ((t - start) / W) * 100;
+  const step = state.win <= 30 ? 5 : state.win <= 90 ? 15 : 60;
+  let ticks = '';
+  for (let m = 0; m <= state.win; m += step) {
+    const at = start + m * MIN, d = new Date(at);
+    ticks += `<span class="tick" style="left:${pct(at)}%">${pad(d.getHours())}:${pad(d.getMinutes())}</span>`;
+  }
+  let body = '';
+  for (const t of lanes) {
+    const items = [];
+    for (const r of runsOf(t)) {
+      if (r.start) items.push({ a: r.start, b: r.end || end, kind: r.state === 'running' ? 'b-running' : r.state === 'failed' ? 'b-failed' : 'b-done', r });
+      if (r.since) items.push({ a: r.since, b: end, kind: 'b-hold', r, hold: true });
+    }
+    items.sort((x, y) => x.a - y.a);
+    const track = [];
+    for (const it of items) {
+      let row = 0;
+      while (track[row] != null && track[row] > it.a + 200) row++;
+      it.row = row; track[row] = it.b;
+    }
+    const depth = Math.max(1, track.length);
+    const bars = items.filter(it => it.b > start).map(it => {
+      const l = Math.max(0, pct(it.a)), w = Math.max(0.4, pct(Math.min(it.b, end)) - l);
+      const lbl = it.hold ? (it.r.state === 'failed' ? '' : 'waiting on you') : STEPS[it.r.step].label.toLowerCase();
+      const tip = it.hold
+        ? `${t.id} · ${STEPS[it.r.step].label} · waiting on you ${since(it.r.since)}`
+        : `${t.id} · ${STEPS[it.r.step].label} · ${STEPS[it.r.step].model} · ${dur(it.b - it.a)} · ${money(it.r.cost)}`;
+      return `<span class="bar ${it.kind}" style="left:${l}%;width:${w}%;top:${it.row * 15}px" title="${esc(tip)}">${w > 7 ? lbl : ''}</span>`;
+    }).join('');
+    body += `<div class="lane"><span class="lane-name${isDone(t) ? ' dim' : ''}">${t.id}</span>
+      <span class="lane-track" style="--rows:${depth}">${bars}</span>
+      <span class="lane-cost">${money(costOf(t))}</span></div>`;
+  }
+  $('#viewTimeline').innerHTML = `<div class="tl" style="--laneName:150px">
+    <div class="tl-axis">${ticks}</div>
+    <div class="lanes">${body || '<div class="empty">Nothing ran in this window.</div>'}
+      <span class="nowline" style="left:calc(150px + 12px + (100% - 150px - 12px - 74px - 12px) * 1)"></span></div>
+    <div class="tl-legend">
+      <span><i style="background:var(--run)"></i>running</span>
+      <span><i style="background:var(--done)"></i>finished</span>
+      <span><i style="background:repeating-linear-gradient(45deg,var(--wait-soft) 0 3px,transparent 3px 7px);box-shadow:inset 0 0 0 1px var(--wait)"></i>waiting on you</span>
+      <span><i style="background:var(--fail)"></i>failed</span>
+      <span class="sans" style="font-size:12px">Flat, hatched stretches are the hours nobody paid for — the board waiting on a human.</span>
+    </div></div>`;
+}
+
+/* ══ pipeline (#3) ══════════════════════════════════════════════════════ */
+const NODE = {
+  research:{ x:30,  y:145 }, plan:{ x:220, y:145 }, build:{ x:410, y:60 },
+  tests:{ x:410, y:230 },    review:{ x:600, y:145 }, summarize:{ x:790, y:145 },
+};
+const NW = 140, NH = 70;
+function renderPipeline(){
+  const hold = {}, live = {}, count = {}, spend = {}, ran = {}, msum = {};
+  for (const s of ORDER) { count[s] = 0; spend[s] = 0; ran[s] = 0; msum[s] = 0; hold[s] = 0; live[s] = 0; }
+  for (const t of TASKS) for (const r of runsOf(t)) {
+    spend[r.step] += r.cost + r.wasted;
+    if (r.state === 'done') { ran[r.step]++; msum[r.step] += r.ms; }
+    if (r.state === 'running') { count[r.step]++; live[r.step]++; }
+    if (r.state === 'queued') count[r.step]++;
+    if (r.state === 'gate' || r.state === 'asking' || r.state === 'failed') { count[r.step]++; hold[r.step]++; }
+  }
+  const retries = TASKS.reduce((a, t) => a + runsOf(t).reduce((b, r) => b + (r.attempts - 1), 0), 0);
+  const wasted = TASKS.reduce((a, t) => a + wasteOf(t), 0);
+
+  const node = (s) => {
+    const n = NODE[s], cls = hold[s] ? 'hot' : live[s] ? 'live' : '';
+    const avg = ran[s] ? dur(msum[s] / ran[s]) : '—';
+    const per = ran[s] ? money(spend[s] / ran[s]) : '—';
+    return `<g>
+      <rect class="n-box ${cls}" x="${n.x}" y="${n.y}" width="${NW}" height="${NH}"/>
+      ${live[s] ? `<rect x="${n.x}" y="${n.y}" width="3" height="${NH}" fill="var(--run)"/>` : ''}
+      <text class="n-lbl" x="${n.x + 12}" y="${n.y + 21}">${STEPS[s].label.toUpperCase()}</text>
+      <text class="n-sub" x="${n.x + 12}" y="${n.y + 37}">${STEPS[s].model}</text>
+      <text class="n-cnt ${count[s] ? '' : 'zero'}" x="${n.x + NW - 12}" y="${n.y + 34}" text-anchor="end">${count[s]}</text>
+      <line class="n-rule" x1="${n.x + 12}" y1="${n.y + 46}" x2="${n.x + NW - 12}" y2="${n.y + 46}"/>
+      <text class="n-sub" x="${n.x + 12}" y="${n.y + 61}">avg ${avg} · ${per}</text>
+      ${STEPS[s].gate ? `<text class="gatebadge" x="${n.x + NW - 12}" y="${n.y + 61}" text-anchor="end">GATE</text>` : ''}
+    </g>`;
+  };
+  const edge = (d, on, extra = '') =>
+    `<path class="e${on ? ' live' : ''}${extra}" d="${d}" marker-end="url(#ar${on ? 'L' : ''})"/>` +
+    (on ? `<path class="e-flow" d="${d}"/>` : '');
+
+  const svg = `<svg viewBox="0 0 980 345" role="img" aria-label="Flow pipeline with live task counts per step">
+    <defs>
+      <marker id="ar" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="var(--line-2)"/></marker>
+      <marker id="arL" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="var(--run)"/></marker>
+    </defs>
+    ${edge('M170,180 H213', live.plan || count.plan)}
+    ${edge('M360,180 C385,180 385,95 403,95', live.build)}
+    ${edge('M360,180 C385,180 385,265 403,265', live.tests)}
+    ${edge('M550,95 C575,95 575,180 593,180', count.review)}
+    ${edge('M550,265 C575,265 575,180 593,180', count.review)}
+    ${edge('M740,180 H783', count.summarize)}
+    <path class="e retry" d="M670,145 C670,25 480,25 480,60" marker-end="url(#ar)"/>
+    <text class="e-lbl" x="575" y="22" text-anchor="middle">↺ sent back ×${retries} today · ${money(wasted)} burned</text>
+    ${ORDER.map(node).join('')}
+  </svg>`;
+
+  const inflight = TASKS.filter(t => !isDone(t) && runsOf(t).length).length;
+  const waiting = needsList().length;
+  const worst = ORDER.reduce((a, s) => (hold[s] > hold[a] ? s : a), 'research');
+  $('#viewPipeline').innerHTML = `<div class="pipe">
+    <div class="pipe-wrap">${svg}</div>
+    <div class="pipe-read">
+      <span class="stat"><span class="lbl">backlog</span><b>${TASKS.filter(t => !runsOf(t).length).length}</b></span>
+      <span class="stat"><span class="lbl">in flight</span><b>${inflight}</b></span>
+      <span class="stat"><span class="lbl">waiting on you</span><b style="color:${waiting ? 'var(--wait)' : 'inherit'}">${waiting}</b></span>
+      <span class="stat"><span class="lbl">finished today</span><b>${TASKS.filter(isDone).length}</b></span>
+      <span class="stat"><span class="lbl">burn</span><b>${money(burnRate())}/hr</b></span>
+    </div>
+    <p class="pipe-note">Counts are live tasks sitting at each step. ${hold[worst]
+      ? `Right now <b>${STEPS[worst].label.toLowerCase()}</b> is where work stops — ${hold[worst]} task${hold[worst] > 1 ? 's' : ''} parked there waiting on a human, not on an agent.`
+      : `Nothing is parked on a human — every step is moving.`} The dashed loop is the review→build retry path; a thick one means the recipe, not the code, is the problem.</p>
+  </div>`;
+}
+
+/* ══ chrome ═════════════════════════════════════════════════════════════ */
+function renderBarTools(){
+  const v = state.view;
+  if (v === 'pulse') {
+    $('#barTools').innerHTML =
+      ['all','active','blocked','failed','done'].map(f =>
+        `<button class="chip" data-filter="${f}" aria-pressed="${state.filter === f}">${f}</button>`).join('') +
+      `<span class="sep">·</span><select id="sortSel" aria-label="Sort tasks">
+        <option value="attention">needs you first</option>
+        <option value="cost">most expensive</option>
+        <option value="longest">longest running</option>
+        <option value="id">name</option></select>`;
+    $('#sortSel').value = state.sort;
+  } else if (v === 'timeline') {
+    $('#barTools').innerHTML = [30,90,240].map(w =>
+      `<button class="chip" data-win="${w}" aria-pressed="${state.win === w}">${w < 60 ? w + 'm' : (w / 60) + 'h'}</button>`).join('');
+  } else $('#barTools').innerHTML = '';
+}
+function setView(v){
+  state.view = v;
+  document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === v)));
+  $('#viewPulse').hidden = v !== 'pulse';
+  $('#viewTimeline').hidden = v !== 'timeline';
+  $('#viewPipeline').hidden = v !== 'pipeline';
+  renderBarTools(); render();
+}
+function renderStatus(){
+  const r = runningRuns().length, w = needsList().length;
+  const f = TASKS.filter(t => statusOf(t) === 'fail').length;
+  $('#sbCounts').innerHTML =
+    `<b>${TASKS.length}</b> tasks <span class="sep">·</span><b>${r}</b> running <span class="sep">·</span>` +
+    `<b style="color:${w ? 'var(--wait)' : 'inherit'}">${w}</b> waiting on you <span class="sep">·</span>` +
+    `<b>${f}</b> failed <span class="sep">·</span><b>${TASKS.filter(t => !runsOf(t).length).length}</b> backlog` +
+    ` <span class="sep">·</span>sandbox <b>container</b>, egress <b>default-deny</b>`;
+}
+function renderTop(){
+  const d = new Date(now());
+  $('#clock').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  $('#burn').textContent = money(burnRate());
+  const total = TASKS.reduce((a, t) => a + costOf(t), 0);
+  const waste = TASKS.reduce((a, t) => a + wasteOf(t), 0);
+  $('#today').textContent = money(total);
+  $('#wasted').textContent = money(waste);
+  $('#wastedPct').textContent = total ? `(${Math.round((waste / total) * 100)}%)` : '';
+}
+function render(){
+  renderTop(); renderWorkers(); renderStatus(); renderNeeds();
+  if (state.view === 'pulse') renderRows();
+  if (state.view === 'timeline') renderTimeline();
+  if (state.view === 'pipeline') renderPipeline();
+}
+
+/* ══ interaction ════════════════════════════════════════════════════════ */
+const byId = id => TASKS.find(t => t.id === id);
+
+document.addEventListener('click', e => {
+  const tab = e.target.closest('.tab'); if (tab) return setView(tab.dataset.view);
+  if (e.target.closest('#flowBtn')) return setView('pipeline');
+  if (e.target.closest('#wkHead')) {
+    const w = $('#workers'), open = !w.classList.contains('open');
+    w.classList.toggle('open', open); $('#wkHead').setAttribute('aria-expanded', String(open));
+    $('#wkBody').hidden = !open; return render();
+  }
+  const chip = e.target.closest('[data-filter]'); if (chip) { state.filter = chip.dataset.filter; renderBarTools(); return render(); }
+  const win = e.target.closest('[data-win]');    if (win)  { state.win = +win.dataset.win; renderBarTools(); return render(); }
+  const go  = e.target.closest('[data-goto]');   if (go)   return setView(go.dataset.goto);
+
+  const ap = e.target.closest('[data-approve]'); if (ap) return approve(byId(ap.dataset.approve));
+  const ro = e.target.closest('[data-rejectopen]'); if (ro) { state.rejecting = ro.dataset.rejectopen; renderNeeds(); $('#reason-' + state.rejecting)?.focus(); return; }
+  if (e.target.closest('[data-cancel]')) { state.rejecting = null; return renderNeeds(); }
+  const an = e.target.closest('[data-answer]');
+  if (an) { const t = byId(an.dataset.answer); return answer(t, t.runs[an.dataset.step], an.dataset.choice); }
+  const al = e.target.closest('[data-allow]');
+  if (al) { const t = byId(al.dataset.allow); t.allowed = true; return retry(t, t.runs[al.dataset.step]); }
+  const rt = e.target.closest('[data-retry]');
+  if (rt) { const t = byId(rt.dataset.retry); return retry(t, t.runs[rt.dataset.step]); }
+  const sp = e.target.closest('[data-stop]');
+  if (sp) { const t = byId(sp.dataset.stop); return stop(t, t.runs[sp.dataset.step]); }
+  const or = e.target.closest('[data-openrow]');
+  if (or) { state.open = or.dataset.openrow; setView('pulse'); return render(); }
+
+  const row = e.target.closest('.row');
+  if (row) { state.open = state.open === row.dataset.task ? null : row.dataset.task; state.focus = row.dataset.task; return render(); }
+});
+document.addEventListener('submit', e => {
+  const f = e.target.closest('[data-reject]'); if (!f) return;
+  e.preventDefault();
+  const t = byId(f.dataset.reject), v = f.querySelector('input').value.trim();
+  state.rejecting = null; reject(t, v);
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'sortSel') { state.sort = e.target.value; render(); }
+});
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
+  const list = filtered(), i = list.findIndex(t => t.id === state.focus);
+  const k = e.key;
+  if (k === 'j' || k === 'ArrowDown') { state.kb = true; state.focus = list[Math.min(list.length - 1, i + 1)]?.id; e.preventDefault(); return render(); }
+  if (k === 'k' || k === 'ArrowUp')   { state.kb = true; state.focus = list[Math.max(0, i - 1)]?.id; e.preventDefault(); return render(); }
+  if (k === 'Enter' || k === 'o')     { if (state.focus) { state.kb = true; state.open = state.open === state.focus ? null : state.focus; e.preventDefault(); return render(); } }
+  if (k === 'Escape')                 { state.open = null; state.rejecting = null; return render(); }
+  if (k === 'v') { const o = ['pulse','timeline','pipeline']; return setView(o[(o.indexOf(state.view) + 1) % o.length]); }
+  if (k === 'w') { $('#wkHead').click(); return; }
+  const need = needsList()[0];
+  if (k === 'a' && need && need.r.state === 'gate') return approve(need.t);
+  if (k === 'r' && need && need.r.state === 'gate') { state.rejecting = need.t.id; renderNeeds(); $('#reason-' + need.t.id)?.focus(); return; }
+  if (/^[1-9]$/.test(k)) {
+    const n = needsList()[0];
+    if (n && n.r.state === 'asking' && n.r.opts[+k - 1]) return answer(n.t, n.r, n.r.opts[+k - 1]);
+  }
+});
+
+/* ══ go ═════════════════════════════════════════════════════════════════ */
+renderBarTools();
+render();
+setInterval(tick, 700);
+</script>
