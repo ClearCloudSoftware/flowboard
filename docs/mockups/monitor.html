@@ -18,8 +18,11 @@
   --run-soft:#0E6E7414;
   --wait:#A35A00;
   --wait-soft:#A35A0014;
+  --wait-wash:#FBF4E8;
+  --wait-edge:#E7D6B8;
   --fail:#B0231B;
   --fail-soft:#B0231B12;
+  --fail-edge:#EBD0CC;
   --done:#B8B4A8;
   --pend:#EAE7DE;
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
@@ -43,7 +46,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;te
 
 /* ─── topbar ─────────────────────────────────────────────── */
 .topbar{
-  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;flex-shrink:0;
   padding:11px 18px;border-bottom:1px solid var(--line);
   background:var(--surface);
 }
@@ -60,7 +63,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;te
 }
 
 /* ─── workers strip (#4) ─────────────────────────────────── */
-.workers{border-bottom:1px solid var(--line);background:var(--surface-2)}
+.workers{flex-shrink:0;border-bottom:1px solid var(--line);background:var(--surface-2)}
 .wk-head{
   display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:100%;
   padding:7px 18px;transition:background var(--t);
@@ -87,20 +90,30 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;te
 .stop:hover{border-color:var(--fail);color:var(--fail);background:var(--fail-soft)}
 
 /* ─── needs you (#1) ─────────────────────────────────────── */
-.needs{border-bottom:1px solid var(--line);background:var(--surface);max-height:44vh;overflow:auto}
-.needs.hot{box-shadow:inset 3px 0 0 var(--wait)}
-.needs-head{display:flex;align-items:center;gap:10px;padding:8px 18px 5px}
+/* the band owns its own ground, and only lights up when something wants you */
+.needs{
+  flex-shrink:0;max-height:40vh;overflow:auto;
+  background:var(--surface);border-bottom:1px solid var(--line-2);
+}
+.needs.hot{background:var(--wait-wash);padding-bottom:9px}
+.needs-head{display:flex;align-items:center;gap:10px;padding:9px 18px 7px}
 .needs-head .count{
   background:var(--wait);color:#fff;font-size:10px;font-weight:600;
   padding:1px 6px;letter-spacing:.06em;
 }
 .clear{padding:10px 18px 12px;color:var(--ink-2);display:flex;align-items:center;gap:8px}
 .clear .ok{color:var(--run)}
+/* each thing waiting on you is a discrete object, not another row */
 .need{
-  display:grid;gap:2px 12px;padding:7px 18px 9px;border-top:1px solid var(--line);
-  grid-template-columns:20px 1fr auto;align-items:start;
+  display:grid;gap:2px 12px;grid-template-columns:20px 1fr auto;align-items:start;
+  margin:0 18px 7px;padding:8px 13px 10px;
+  background:var(--surface);
+  border:1px solid var(--wait-edge);border-left:3px solid var(--wait);
 }
-.need:hover{background:var(--surface-2)}
+.need:last-child{margin-bottom:0}
+.need:hover{background:#FFFCF6}
+.need.is-fail{border-left-color:var(--fail);border-color:var(--fail-edge)}
+.need.is-fail:hover{background:#FFFBFA}
 .need.gone{opacity:0;transform:translateY(-4px);transition:opacity 180ms,transform 180ms}
 .need-ico{padding-top:1px}
 .need-ico.wait{color:var(--wait)}
@@ -134,8 +147,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;te
 
 /* ─── view switcher ──────────────────────────────────────── */
 .bar{
-  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
-  padding:0 18px;border-bottom:1px solid var(--line);background:var(--surface-2);
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;
+  padding:0 18px;background:var(--surface-2);
+  border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);
 }
 .tab{
   padding:9px 14px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
@@ -262,19 +276,19 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;te
 .lane-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
 .lane-name.dim{color:var(--ink-3)}
 .lane-track{position:relative;height:calc(var(--rows,1) * 15px + (var(--rows,1) - 1) * 3px)}
-.bar{
+.tlbar{
   position:absolute;height:12px;min-width:2px;overflow:hidden;
   font-size:9px;line-height:12px;color:#fff;padding:0 4px;white-space:nowrap;
 }
-.bar.b-done{background:var(--done);color:#fff}
-.bar.b-running{background:var(--run)}
-.bar.b-running::after{
+.tlbar.b-done{background:var(--done);color:#fff}
+.tlbar.b-running{background:var(--run)}
+.tlbar.b-running::after{
   content:"";position:absolute;inset:0;
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
   transform:translateX(-100%);animation:sweep 1.9s cubic-bezier(.4,0,.2,1) infinite;
 }
-.bar.b-failed{background:var(--fail)}
-.bar.b-hold{
+.tlbar.b-failed{background:var(--fail)}
+.tlbar.b-hold{
   background:repeating-linear-gradient(45deg,var(--wait-soft) 0 3px,transparent 3px 7px);
   box-shadow:inset 0 0 0 1px var(--wait);color:var(--wait);
 }
@@ -317,7 +331,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;te
 
 /* ─── status bar ─────────────────────────────────────────── */
 .statusbar{
-  display:flex;align-items:center;gap:0;flex-wrap:wrap;
+  display:flex;align-items:center;gap:0;flex-wrap:wrap;flex-shrink:0;
   padding:6px 18px;border-top:1px solid var(--line);background:var(--surface-2);
   color:var(--ink-3);font-size:11px;position:sticky;bottom:0;
 }
@@ -727,7 +741,7 @@ function renderNeeds(){
         <button class="act" data-retry="${t.id}" data-step="${r.step}">Retry as-is</button>
         <button class="act" data-openrow="${t.id}">Open the log</button></div>`;
     }
-    h += `<div class="need" data-n="${n}">${ico}${head}${meta}${body}${acts}</div>`;
+    h += `<div class="need${kind === 'fail' ? ' is-fail' : ''}" data-n="${n}">${ico}${head}${meta}${body}${acts}</div>`;
   });
   box.innerHTML = h;
 }
@@ -912,7 +926,7 @@ function renderTimeline(){
       const tip = it.hold
         ? `${t.id} · ${STEPS[it.r.step].label} · waiting on you ${since(it.r.since)}`
         : `${t.id} · ${STEPS[it.r.step].label} · ${STEPS[it.r.step].model} · ${dur(it.b - it.a)} · ${money(it.r.cost)}`;
-      return `<span class="bar ${it.kind}" style="left:${l}%;width:${w}%;top:${it.row * 15}px" title="${esc(tip)}">${w > 7 ? lbl : ''}</span>`;
+      return `<span class="tlbar ${it.kind}" style="left:${l}%;width:${w}%;top:${it.row * 15}px" title="${esc(tip)}">${w > 7 ? lbl : ''}</span>`;
     }).join('');
     body += `<div class="lane"><span class="lane-name${isDone(t) ? ' dim' : ''}">${t.id}</span>
       <span class="lane-track" style="--rows:${depth}">${bars}</span>
