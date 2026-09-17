@@ -64,6 +64,14 @@ browser, or run `python3 -m http.server` in this folder.
   step, which runs, bills and writes its artifact.
   [Hosted copy](https://claude.ai/artifact/7ZQVVGGTbXkLYPwv5BPQGh) (private link).
 
+- **[`task-detail-guide.html`](./task-detail-guide.html)** — the field guide to
+  that screen. Its three sets of marks and why you mustn't read one as another,
+  the four plan-vs-built verdicts with what each should make you do, the task
+  lifecycle, and what the numbers don't say (agent time is not wall-clock).
+  Its walkthrough is a decision rather than a tour: reading the evidence at a
+  review gate item by item, then taking either branch and seeing what it costs.
+  [Hosted copy](https://claude.ai/artifact/Ps7zX6Jn151u1m2jgr7Bh1) (private link).
+
 ## Conventions
 
 Run `/mockup` and these are applied for you — the skill carries the tokens, a skeleton, the

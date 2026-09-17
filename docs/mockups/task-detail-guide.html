@@ -1,0 +1,649 @@
+<meta charset="utf-8">
+<title>Task Detail Field Guide</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74; --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --wait-ink:#FDF6EA; --wait-ink-2:#F8E8D0;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+:focus-visible{outline:2px solid var(--run);outline-offset:2px}
+code,.m{font-family:var(--mono);font-size:.92em;font-variant-numeric:tabular-nums}
+.lbl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sep{color:var(--line-2);padding:0 .45em}
+.you{color:var(--wait);font-weight:500}
+.auto{color:var(--run);font-weight:500}
+
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 24px;
+  background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-family:var(--mono);font-weight:600;font-size:13px;white-space:nowrap}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+.top .sp{flex:1}
+.openlink{font-family:var(--mono);font-size:12px;color:var(--run);border:1px solid var(--run);
+  padding:3px 11px;background:var(--run-soft);transition:background var(--t),color var(--t)}
+.openlink:hover{background:var(--run);color:#fff}
+.gnav{position:sticky;top:0;z-index:30;display:flex;gap:2px;flex-wrap:wrap;padding:0 24px;
+  background:var(--surface-3);border-top:2px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.gnav a{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);text-decoration:none;padding:9px 12px;border-bottom:2px solid transparent;
+  margin-bottom:-1px;transition:color var(--t),border-color var(--t)}
+.gnav a:hover{color:var(--ink)}
+.gnav a.on{color:var(--ink);border-bottom-color:var(--run);font-weight:500}
+.wrap{max-width:1000px;margin:0 auto;padding:0 24px 80px}
+section{padding-top:44px;scroll-margin-top:60px}
+h1{font-size:30px;line-height:1.15;margin:34px 0 10px;letter-spacing:-.02em;text-wrap:balance;font-weight:600}
+h2{font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:600;margin:0 0 4px;padding-bottom:9px;border-bottom:2px solid var(--ink)}
+h3{font-size:17px;font-weight:600;margin:28px 0 6px;letter-spacing:-.01em}
+p{margin:10px 0;max-width:70ch}
+.lede{font-size:17px;color:var(--ink-2);max-width:66ch;margin-bottom:8px}
+.sub{color:var(--ink-3);font-size:13px;margin:8px 0 0;max-width:72ch}
+ul,ol{margin:10px 0;padding-left:20px;max-width:70ch}
+li{margin:6px 0}
+a{color:var(--run)}
+
+.spec{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+.spec th{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;text-align:left;padding:0 12px 7px 0;border-bottom:1px solid var(--line-2)}
+.spec td{padding:12px 12px 12px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.spec tr:last-child td{border-bottom:0}
+.spec .sample{width:1%;white-space:nowrap;padding-right:18px}
+.spec .nm{width:1%;white-space:nowrap;font-family:var(--mono);font-weight:500}
+.spec .nm small{display:block;font-weight:400;color:var(--ink-3);font-size:11px;letter-spacing:.02em}
+.spec td.act{width:1%;white-space:nowrap}
+.tw{overflow-x:auto}
+
+/* ── specimens lifted from the screen ─────────────────── */
+.gseg{display:block;width:104px;height:16px;position:relative;overflow:hidden}
+.g-done{background:var(--done)}
+.g-running{background:var(--run)}
+.g-hold{background:repeating-linear-gradient(45deg,var(--wait) 0 1.5px,transparent 1.5px 5px);
+  box-shadow:inset 0 0 0 1px var(--wait)}
+.g-failed{background:var(--fail)}
+.g-queued{background:var(--pend);box-shadow:inset 0 0 0 1px var(--line-2)}
+.g-pending{background:var(--pend)}
+.gsl{font-family:var(--mono);font-size:11px;margin-top:5px;display:flex;gap:6px;align-items:baseline}
+.gsl b{font-size:12px;font-weight:500}
+.gsl span{color:var(--ink-3)}
+.gico{display:inline-flex;vertical-align:-3px}
+.gico.done{color:var(--done)} .gico.run{color:var(--run)}
+.gico.wait{color:var(--wait)} .gico.fail{color:var(--fail)} .gico.idle{color:var(--line-2)}
+.gvd{display:inline-flex;align-items:center;font-family:var(--mono);font-size:10px;
+  letter-spacing:.06em;text-transform:uppercase;font-weight:600;padding:1px 6px;border:1px solid;white-space:nowrap}
+.gvd.matched{color:var(--ink-3);border-color:var(--line-2)}
+.gvd.deviated{color:var(--wait);border-color:var(--wait);background:var(--wait-soft)}
+.gvd.missed{color:var(--fail);border-color:var(--fail);background:var(--fail-soft)}
+.gvd.unplanned{color:var(--run);border-color:var(--run);background:var(--run-soft)}
+.gpill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);padding:1px 8px;
+  font-size:11px;border:1px solid var(--line-2);background:var(--surface-2);white-space:nowrap}
+.gpill.wait{border-color:var(--wait);color:var(--wait);background:var(--wait-soft);font-weight:500}
+.gpill.run{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.gpill.done{border-color:var(--line-2);color:var(--ink-3)}
+.ghunk{background:var(--surface-2);border:1px solid var(--line);padding:8px 10px;
+  font-family:var(--mono);font-size:12px;line-height:1.65;overflow-x:auto;white-space:pre;margin:10px 0}
+.ghunk .a{color:var(--run)} .ghunk .d{color:var(--fail)} .ghunk .c{color:var(--ink-3)}
+.gfile{font-family:var(--mono);font-size:12px;display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+.gfile b{font-weight:500}
+.gplus{color:var(--run)} .gminus{color:var(--fail)}
+.gnote{font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.45;max-width:52ch}
+.ggate{border:1px solid var(--wait-edge);max-width:560px}
+.ggate .h{background:var(--wait);color:var(--wait-ink);padding:6px 11px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em}
+.ggate .b{background:var(--wait-wash);padding:10px 11px;font-size:13.5px}
+.ggate .b em{font-style:normal;color:var(--wait);font-weight:500}
+
+/* ── anatomy ──────────────────────────────────────────── */
+.anat{border:1px solid var(--line-2);background:var(--surface);margin:18px 0;font-family:var(--mono);font-size:12px}
+.a-b{padding:8px 40px 8px 12px;position:relative;border-bottom:1px solid var(--line);overflow:hidden}
+.a-b:last-child{border-bottom:0}
+.a-flex{display:flex;align-items:center;gap:12px}
+.a-hd{padding:14px 40px 12px 12px}
+.a-hd h4{font-family:var(--sans);font-size:17px;margin:0 0 3px;font-weight:600}
+.a-nums{display:flex;gap:22px;flex-wrap:wrap;margin-top:8px;color:var(--ink-3)}
+.a-spine{display:flex;gap:4px;margin-top:11px}
+.a-spine span{flex:1;height:12px}
+.a-gate{background:var(--wait);color:var(--wait-ink);font-weight:600;font-size:11px;letter-spacing:.06em}
+.a-tabs{background:var(--surface-3);border-top:2px solid var(--line-2);border-bottom:1px solid var(--line-2);
+  display:flex;gap:16px;color:var(--ink-3);font-size:11px;letter-spacing:.1em}
+.a-tabs b{color:var(--ink)}
+.a-main{display:grid;grid-template-columns:1fr 150px;gap:18px}
+.a-sb{background:var(--surface-2);color:var(--ink-3);font-size:11px}
+.pin{position:absolute;right:9px;top:50%;transform:translateY(-50%);width:20px;height:20px;
+  border:1px solid var(--ink);background:var(--paper);color:var(--ink);font-family:var(--mono);
+  font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;
+  transition:background var(--t),color var(--t)}
+.a-hd .pin,.a-b.a-main .pin{top:10px;transform:none}
+.pin:hover,.pin:focus-visible{background:var(--ink);color:var(--paper)}
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:0 24px;margin-top:14px}
+.legend div{display:flex;gap:9px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+.legend b{font-family:var(--mono);font-size:11px;border:1px solid var(--ink);width:19px;height:19px;
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-weight:600}
+
+/* ── diagram ──────────────────────────────────────────── */
+.diag{overflow-x:auto;border:1px solid var(--line);background:var(--surface);padding:10px;margin:18px 0}
+.diag svg{display:block;min-width:700px;width:100%;max-width:820px;margin:0 auto;height:auto}
+.d-box{fill:var(--surface);stroke:var(--line-2);stroke-width:1}
+.d-box.wait{stroke:var(--wait);stroke-width:1.5;fill:var(--wait-soft)}
+.d-box.run{stroke:var(--run);stroke-width:1.5}
+.d-box.fail{stroke:var(--fail);stroke-width:1.5;fill:var(--fail-soft)}
+.d-t{font-family:var(--mono);font-size:12px;font-weight:600;fill:var(--ink)}
+.d-s{font-family:var(--mono);font-size:9.5px;fill:var(--ink-3)}
+.d-e{fill:none;stroke:var(--line-2);stroke-width:1.4}
+.d-e.you{stroke:var(--wait);stroke-dasharray:5 3}
+.d-l{font-family:var(--mono);font-size:9.5px;fill:var(--ink-3)}
+.d-l.you{fill:var(--wait)}
+
+/* ── scrubber ─────────────────────────────────────────── */
+.scrub{border:1px solid var(--line-2);background:var(--surface);margin:18px 0}
+.sc-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px;
+  background:var(--surface-2);border-bottom:1px solid var(--line)}
+.sc-branch{display:flex;margin-left:auto}
+.sc-branch button{font-family:var(--mono);font-size:11px;padding:3px 11px;
+  border:1px solid var(--line-2);color:var(--ink-2);transition:all var(--t)}
+.sc-branch button+button{border-left:0}
+.sc-branch button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:500}
+.sc-stage{padding:16px 14px;display:grid;gap:18px;grid-template-columns:minmax(290px,1.1fr) minmax(250px,.9fr);align-items:start}
+.stagebox{min-height:158px}
+.sc-why{border-left:3px solid var(--ink);padding:0 0 0 13px}
+.sc-why h4{margin:0 0 4px;font-size:15px;font-weight:600}
+.sc-why p{margin:0;font-size:14px;color:var(--ink-2);max-width:54ch}
+.sc-ask{margin-top:10px;font-family:var(--mono);font-size:11.5px;line-height:1.55;color:var(--ink-2);
+  background:var(--surface-2);border:1px solid var(--line);padding:7px 10px}
+.sc-ask b{color:var(--ink)}
+.sc-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px;
+  background:var(--surface-2);border-top:1px solid var(--line)}
+.sc-foot input[type=range]{flex:1;min-width:160px;accent-color:var(--run)}
+.nav-b{font-family:var(--mono);font-size:12px;border:1px solid var(--line-2);padding:3px 11px;transition:all var(--t)}
+.nav-b:hover:not(:disabled){border-color:var(--ink);background:var(--surface)}
+.nav-b:disabled{opacity:.35;cursor:default}
+.beat-n{font-family:var(--mono);font-size:11px;color:var(--ink-3);white-space:nowrap}
+
+.callout{border-left:3px solid var(--wait);background:var(--wait-wash);padding:11px 14px;
+  margin:18px 0;font-size:14px;max-width:74ch}
+.callout.cold{border-left-color:var(--run);background:var(--run-soft)}
+.callout.hot{border-left-color:var(--fail);background:var(--fail-soft)}
+.callout b{font-weight:600}
+.kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line-2);padding:1px 5px;
+  background:var(--surface);white-space:nowrap}
+.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0 28px;margin-top:14px}
+.keys div{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.keys .k{flex:0 0 76px}
+.foot{border-top:1px solid var(--line-2);margin-top:50px;padding-top:18px;color:var(--ink-3);font-size:13px}
+
+@media (max-width:820px){
+  .sc-stage{grid-template-columns:1fr}
+  .a-main{grid-template-columns:1fr}
+  h1{font-size:25px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after{transition-duration:.001ms!important;animation-duration:.001ms!important}
+  html{scroll-behavior:auto}
+}
+html{scroll-behavior:smooth}
+</style>
+
+<header class="top">
+  <div class="brand">flowboard<em>/</em><span>task</span><em>·</em><span>field guide</span></div>
+  <span class="sp"></span>
+  <a class="openlink" href="./task-detail.html">Open the screen →</a>
+</header>
+
+<nav class="gnav" id="gnav">
+  <a href="#anatomy">Anatomy</a>
+  <a href="#marks">Marks</a>
+  <a href="#tabs">The four tabs</a>
+  <a href="#verdicts">Plan vs built</a>
+  <a href="#lifecycle">Lifecycle</a>
+  <a href="#call">Making the call</a>
+  <a href="#actions">Actions</a>
+  <a href="#numbers">Numbers</a>
+</nav>
+
+<div class="wrap">
+
+<h1>One task, and the evidence for deciding about it</h1>
+<p class="lede">This screen exists for one moment: an agent has finished work and wants your go-ahead.
+Everything on it is there so you can answer <b>should this ship</b> without reading the diff line by
+line — and without taking the agent's word for what it did.</p>
+
+<!-- ══ ANATOMY ══════════════════════════════════════════ -->
+<section id="anatomy">
+  <h2>Anatomy</h2>
+  <div class="anat" aria-label="Schematic of the task detail screen">
+    <div class="a-b a-flex">
+      <span>‹ Board</span><span class="sep">/</span><span style="font-weight:600">auth-refactor</span>
+      <span class="gpill wait">waiting on you</span>
+      <span style="flex:1"></span>
+      <span style="color:var(--ink-3)">Pause · Send to backlog · Cancel task</span>
+      <button class="pin" data-go="lifecycle" title="Jump to Lifecycle">1</button>
+    </div>
+    <div class="a-b a-hd">
+      <h4>Rotate refresh tokens on every use</h4>
+      <span style="color:var(--ink-3);font-family:var(--sans);font-size:13px">Every refresh should hand back a new token pair…</span>
+      <div class="a-nums"><span>BILL <b style="color:var(--ink)">$2.61</b></span>
+        <span>AGENT TIME <b style="color:var(--ink)">22m</b></span>
+        <span>WAITING ON YOU <b style="color:var(--ink)">5m</b></span>
+        <span>RETRIES <b style="color:var(--ink)">1</b></span></div>
+      <div class="a-spine">
+        <span class="g-done"></span><span class="g-done"></span><span class="g-done"></span>
+        <span class="g-done"></span><span class="g-hold"></span><span class="g-pending"></span>
+      </div>
+      <button class="pin" data-go="marks" title="Jump to Marks">2</button>
+    </div>
+    <div class="a-b a-gate">NEEDS YOU — review passed with 2 notes<button class="pin" data-go="call" title="Jump to Making the call">3</button></div>
+    <div class="a-b a-tabs"><b>STORY</b><span>PLAN VS BUILT</span><span>FILES</span><span>COST</span>
+      <button class="pin" data-go="tabs" title="Jump to the tabs">4</button></div>
+    <div class="a-b a-main">
+      <div style="color:var(--ink-3)">the selected tab — every run, or the plan comparison, or the files, or the money</div>
+      <div style="color:var(--ink-3);border-left:1px solid var(--line);padding-left:12px">owner<br>repo &amp; branch<br>workspace<br>flow version<br>memory<br>timeline</div>
+      <button class="pin" data-go="numbers" title="Jump to Numbers">5</button>
+    </div>
+    <div class="a-b a-sb">auth-refactor · 4/6 steps done · $2.61 billed · blocked on you · sandbox container, egress default-deny
+      <button class="pin" data-go="numbers" title="Jump to Numbers">6</button></div>
+  </div>
+  <div class="legend">
+    <div><b>1</b><span><strong>Topbar.</strong> Where the task stands, and the three things you can do to the task itself rather than to a step.</span></div>
+    <div><b>2</b><span><strong>Header &amp; spine.</strong> The four numbers that matter, then every step as a bar. Click any segment to jump to it.</span></div>
+    <div><b>3</b><span><strong>Gate banner.</strong> Only present when something is blocked on you, and it says what the reviewer actually flagged.</span></div>
+    <div><b>4</b><span><strong>Tabs.</strong> Four ways to read the same task — the story, the plan comparison, the files, the money.</span></div>
+    <div><b>5</b><span><strong>Aside.</strong> The facts that don't change: where the code lives, which flow version is pinned, what memory it started with.</span></div>
+    <div><b>6</b><span><strong>Status bar.</strong> The one-line version, including the sandbox posture everything ran under.</span></div>
+  </div>
+</section>
+
+<!-- ══ MARKS ════════════════════════════════════════════ -->
+<section id="marks">
+  <h2>Three alphabets</h2>
+  <p>The screen uses three sets of marks, and they mean different things. The <b>spine</b> is about
+  steps, the <b>story icons</b> are about runs, and the <b>verdict badges</b> are about work items.
+  Don't read one as the other.</p>
+
+  <h3>The spine — one segment per step</h3>
+  <div class="tw"><table class="spec" id="spineTbl"></table></div>
+
+  <h3>Story icons — the state of each run</h3>
+  <div class="tw"><table class="spec" id="storyTbl"></table></div>
+
+  <h3>Status pill — the task as a whole</h3>
+  <div class="tw"><table class="spec" id="pillTbl"></table></div>
+</section>
+
+<!-- ══ TABS ═════════════════════════════════════════════ -->
+<section id="tabs">
+  <h2>The four tabs</h2>
+  <p>Same task, four questions. Number keys <span class="kbd">1</span>–<span class="kbd">4</span> switch between them.</p>
+  <div class="tw"><table class="spec" id="tabTbl"></table></div>
+  <div class="callout cold"><b>Everything is a real file.</b> Each step declares what it produces, and
+  FlowBoard files the output into the task's own copy of the repo, committed on its own branch. That
+  is why <em>Files</em> is a list of paths rather than a database view — and it's what makes the next
+  section possible at all.</div>
+</section>
+
+<!-- ══ VERDICTS ═════════════════════════════════════════ -->
+<section id="verdicts">
+  <h2>Plan vs built — the four verdicts</h2>
+  <p>The plan is a real file with numbered items and acceptance criteria. The build's output is a real
+  patch. So the two can be lined up <em>mechanically</em>: each item gets a verdict based on what is
+  actually in the working tree, not on what the agent said it did in its summary.</p>
+  <div class="tw"><table class="spec" id="verdictTbl"></table></div>
+
+  <h3>What a deviation looks like</h3>
+  <p>Item 2 asked for family-wide revocation. Something <em>was</em> built, a file <em>was</em>
+  changed, and a diff skimmed quickly looks like progress:</p>
+  <div class="ghunk"><span class="c">@@ src/auth/family.ts</span>
+<span class="a">+  await revoke(token.jti)</span>
+<span class="c">   // TODO: walk the family and revoke siblings</span>
+<span class="c">   —  review.md flagged this as a deviation from plan item 2</span></div>
+  <p class="sub">One token revoked, not the family. The acceptance criterion — "replaying an old token
+  logs the session out everywhere" — is not met, and no test covers it.</p>
+
+  <div class="callout"><b>Deviated is the verdict to fear, not missed.</b> A missing item is loud: the
+  column is empty and you notice. A deviation is quiet — it has a file, a diff and a green test run
+  behind it. This view exists mostly to make that difference visible in one glance.</div>
+</section>
+
+<!-- ══ LIFECYCLE ════════════════════════════════════════ -->
+<section id="lifecycle">
+  <h2>Where a task can be, and what moves it</h2>
+  <p>Solid arrows happen on their own. <span class="you">Dashed amber arrows are yours</span> — they
+  are the only places a person moves a task.</p>
+  <div class="diag">
+    <svg viewBox="0 126 820 186" role="img" aria-label="Task lifecycle: backlog, running, waiting on you, done, failed">
+      <defs>
+        <marker id="ta" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#CFCBBE"/></marker>
+        <marker id="tw" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#A35A00"/></marker>
+      </defs>
+      <path class="d-e you" d="M150,175 H244" marker-end="url(#tw)"/>
+      <text class="d-l you" x="197" y="140" text-anchor="middle">you promote it</text>
+      <path class="d-e" d="M380,168 H464" marker-end="url(#ta)"/>
+      <text class="d-l" x="422" y="140" text-anchor="middle">a gate, or a question</text>
+      <path class="d-e you" d="M470,192 C440,218 410,218 382,194" marker-end="url(#tw)"/>
+      <text class="d-l you" x="440" y="232" text-anchor="middle">you answer, approve, or send back</text>
+      <path class="d-e" d="M600,175 H674" marker-end="url(#ta)"/>
+      <text class="d-l" x="637" y="140" text-anchor="middle">approved</text>
+      <path class="d-e" d="M315,200 V250" marker-end="url(#ta)"/>
+      <text class="d-l" x="305" y="230" text-anchor="end">retries exhausted</text>
+      <path class="d-e you" d="M250,285 H200 V175 H238" marker-end="url(#tw)"/>
+      <text class="d-l you" x="196" y="230" text-anchor="end">you retry</text>
+      <g><rect class="d-box" x="20" y="150" width="130" height="50"/>
+        <text class="d-t" x="34" y="172">backlog</text><text class="d-s" x="34" y="188">no workspace yet</text></g>
+      <g><rect class="d-box run" x="250" y="150" width="130" height="50"/>
+        <text class="d-t" x="264" y="172">running</text><text class="d-s" x="264" y="188">an agent has it</text></g>
+      <g><rect class="d-box wait" x="470" y="150" width="130" height="50"/>
+        <text class="d-t" x="484" y="172">waiting</text><text class="d-s" x="484" y="188">on you · $0/min</text></g>
+      <g><rect class="d-box" x="674" y="150" width="130" height="50"/>
+        <text class="d-t" x="688" y="172">done</text><text class="d-s" x="688" y="188">workspace kept</text></g>
+      <g><rect class="d-box fail" x="250" y="250" width="130" height="50"/>
+        <text class="d-t" x="264" y="272">failed</text><text class="d-s" x="264" y="288">spend is wasted</text></g>
+    </svg>
+  </div>
+  <p><b>Pause</b>, <b>Send to backlog</b> and <b>Cancel</b> are not drawn because they can happen from
+  anywhere. Pausing and sending back to the backlog both keep the workspace; cancelling stops any
+  running agents and tidies up. In every case the workspace survives until you clean it up yourself,
+  and only once the task is finished or cancelled.</p>
+</section>
+
+<!-- ══ MAKING THE CALL ══════════════════════════════════ -->
+<section id="call">
+  <h2>Making the call at a gate</h2>
+  <p>The screen is at a review gate with two flags against it. Step through how to read the evidence,
+  then take either decision and see what it costs.</p>
+
+  <div class="scrub">
+    <div class="sc-head"><span class="lbl">walkthrough</span>
+      <span style="font-size:13px;color:var(--ink-3)">auth-refactor, at the review gate</span>
+      <span class="sc-branch">
+        <button data-branch="approve" aria-pressed="true">Approve</button>
+        <button data-branch="reject" aria-pressed="false">Send back</button>
+      </span></div>
+    <div class="sc-stage">
+      <div class="stagebox" id="cStage"></div>
+      <div>
+        <div class="sc-why"><h4 id="cTitle"></h4><p id="cWhy"></p></div>
+        <div class="sc-ask" id="cAsk"></div>
+      </div>
+    </div>
+    <div class="sc-foot">
+      <button class="nav-b" id="cPrev">← Prev</button>
+      <button class="nav-b" id="cNext">Next →</button>
+      <input type="range" id="cRange" min="0" max="1" value="0" step="1" aria-label="Step">
+      <span class="beat-n" id="cN"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ ACTIONS ══════════════════════════════════════════ -->
+<section id="actions">
+  <h2>Every control</h2>
+  <div id="actionTables"></div>
+  <div class="callout hot"><b>Stopping never refunds.</b> Cancelling a task, or sending a step back,
+  does not recover what has already been spent — it moves that spend into <em>wasted</em> and stops
+  the <em>future</em> spend. The only free decision on this screen is approving.</div>
+</section>
+
+<!-- ══ NUMBERS ══════════════════════════════════════════ -->
+<section id="numbers">
+  <h2>The numbers, and what they don't say</h2>
+  <div class="tw"><table class="spec" id="numTbl"></table></div>
+
+  <h3>Agent time is not wall-clock</h3>
+  <p>This task shows <span class="m">22m</span> of agent time, but it has been open far longer. The
+  gap is time nobody paid for: <span class="m">2m 14s</span> while Plan waited on your answer, and the
+  <span class="m">5m</span> and counting since the review gate opened. A run that asks you a question
+  saves its place and stops billing, so a slow answer costs you calendar time and nothing else.</p>
+
+  <h3>Kept, wasted, bill</h3>
+  <ul>
+    <li><b>Kept</b> — spend on attempts whose output is still in the workspace.</li>
+    <li><b>Wasted</b> — spend on attempts that were thrown away. Here, <span class="m">$0.48</span> on
+      a build the sandbox killed for reaching <span class="m">registry.npmjs.org</span>, which wasn't
+      on that step's allowlist.</li>
+    <li><b>Bill</b> — the two added together. It never goes down. Sending a step back moves money from
+      kept to wasted; it does not reduce what you owe.</li>
+  </ul>
+
+  <h3>Keyboard</h3>
+  <div class="keys" id="keyList"></div>
+  <div class="foot">
+    Companion to <a href="./task-detail.html">task-detail.html</a>. The other screens have guides too:
+    <a href="./monitor-guide.html">monitor</a> and <a href="./flow-designer-guide.html">flow designer</a>.
+  </div>
+</section>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const ICON = {
+  run :'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.1" fill="currentColor"/><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".3"/></svg>',
+  gate:'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.4" y="3.2" width="2.4" height="9.6" fill="currentColor"/><rect x="9.2" y="3.2" width="2.4" height="9.6" fill="currentColor"/></svg>',
+  done:'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.3l3.1 3.1 6.1-7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  fail:'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 4.3l7.4 7.4M11.7 4.3l-7.4 7.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  idle:'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2.6"/></svg>',
+};
+const seg = (cls, label, sub) =>
+  `<span style="display:inline-block"><span class="gseg g-${cls}"></span>
+    <span class="gsl"><b>${label}</b><span>${sub}</span></span></span>`;
+const T = (el, head, rows) => $(el).innerHTML =
+  `<tr>${head.map(h => `<th${h[1] ? ' class="' + h[1] + '"' : ''}>${h[0]}</th>`).join('')}</tr>` +
+  rows.map(r => `<tr>${r.map((c, i) => `<td${head[i][1] ? ' class="' + head[i][1] + '"' : ''}>${c}</td>`).join('')}</tr>`).join('');
+
+T('#spineTbl', [['Segment','sample'],['State','nm'],['Means']], [
+  [seg('done','Build','8m 00s'),'done','The step finished and its artifact is in the workspace. Grey, deliberately — most of a healthy task is this, and colouring it would drown the part that wants you.'],
+  [seg('running','Summarize','12s'),'running','An agent has it right now. The segment sweeps and the bill climbs.'],
+  [seg('hold','Review','waiting'),'waiting on you','The agent work is finished; a human decision is holding the task. Hatched, so it reads as blocked without relying on colour.'],
+  [seg('queued','Build','in queue'),'queued','Ready to run, waiting for a free worker. The hairline outline separates it from <em>pending</em>.'],
+  [seg('pending','Summarize','—'),'pending','Not started, and it can\'t be — something upstream is unfinished.'],
+  [seg('failed','Build','failed'),'failed','Out of retries. Whatever it spent is now wasted.'],
+]);
+
+T('#storyTbl', [['Icon','sample'],['Run state','nm'],['What the row tells you']], [
+  [`<span class="gico done">${ICON.done}</span>`,'done','Duration, cost, and how many attempts it took. Expand it for the log and the artifact it wrote.'],
+  [`<span class="gico run">${ICON.run}</span>`,'running','Live duration and a cost that climbs while you watch.'],
+  [`<span class="gico wait">${ICON.gate}</span>`,'gate','Finished, waiting on your approval. Costs nothing while it waits.'],
+  [`<span class="gico fail">${ICON.fail}</span>`,'failed','Expand for the error. The red band names what broke and what that attempt cost.'],
+  [`<span class="gico idle">${ICON.idle}</span>`,'not started','No run yet — nothing to show but the step\'s settings.'],
+]);
+
+T('#pillTbl', [['Pill','sample'],['Means','nm'],['What you can do']], [
+  [`<span class="gpill run">${ICON.run} build running</span>`,'running','Watch, or stop the run from the story row if it is clearly lost.'],
+  [`<span class="gpill wait">${ICON.gate} waiting on you</span>`,'waiting','The gate banner is showing. Approve or send back — nothing else advances it.'],
+  [`<span class="gpill done">${ICON.done} done</span>`,'done','Read the summary, then clean up the workspace when you no longer need the branch.'],
+]);
+
+T('#tabTbl', [['Tab','nm'],['Answers'],['Reach for it when']], [
+  ['Story','What happened, in order, and what each step cost.','You want the narrative — including the question you answered and the attempt that failed.'],
+  ['Plan vs built','Did we build what we said we would?','<b>Always, before approving.</b> It is the only view that compares intent against the working tree.'],
+  ['Files','What exists now, and where.','You want to open an artifact, or see the shape of the diff before reading it.'],
+  ['Cost','Where the money went, and how much of it was wasted.','The bill looks high, or you are deciding whether a retry is worth paying for.'],
+]);
+
+T('#verdictTbl', [['Verdict','sample'],['Means','nm'],['What it should make you do']], [
+  [`<span class="gvd matched">as planned</span>`,'matched','A change in the tree does what the item asked, and the acceptance criterion is met.','Spot-check it and move on.'],
+  [`<span class="gvd deviated">deviated</span>`,'deviated','Something was built for this item, but not what was asked.','<b>Read the hunk.</b> Decide whether the difference matters — this is the verdict most likely to ship a bug.'],
+  [`<span class="gvd missed">not built</span>`,'missed','Nothing in the tree corresponds to the item. The story log says why.','Decide whether the item was actually needed. If it was, send it back — approving is accepting the gap.'],
+  [`<span class="gvd unplanned">unplanned</span>`,'unplanned','A change nobody asked for. Not automatically wrong, but it is untested scope.','Ask whether it earns its place. Unplanned code rarely has a test behind it.'],
+].map(r => [r[0], `${r[1]}<small>${r[2]}</small>`, r[3]]));
+
+/* ── the walkthrough ──────────────────────────────────────────────── */
+const spine = (states) => `<div style="display:flex;gap:4px;max-width:440px">${
+  states.map(([c, l]) => `<span style="flex:1"><span class="gseg g-${c}" style="width:auto;display:block"></span>
+    <span class="gsl" style="font-size:10px"><b style="font-size:10.5px">${l}</b></span></span>`).join('')}</div>`;
+const S6 = [['done','Research'],['done','Plan'],['done','Build'],['done','Tests'],['hold','Review'],['pending','Summarize']];
+
+const gate = `<div class="ggate"><div class="h">NEEDS YOU — review passed with 2 notes · waited 5m</div>
+  <div class="b">The reviewer passed the change but flagged two things: plan item 2 <em>deviated</em> —
+  it revokes one token rather than the family — and item 3 was <em>never built</em>.</div></div>`;
+
+const item = (n, text, verdict, files, note) => `<div style="border:1px solid var(--line);padding:10px 12px;background:var(--surface);max-width:470px">
+  <div style="display:flex;gap:10px;align-items:baseline;margin-bottom:7px">
+    ${n ? `<span class="m" style="color:var(--ink-3)">${n}</span>` : ''}
+    <span style="font-size:13.5px;flex:1">${text}</span>
+    <span class="gvd ${verdict}">${{matched:'as planned',deviated:'deviated',missed:'not built',unplanned:'unplanned'}[verdict]}</span></div>
+  ${files.map(f => `<div class="gfile"><b>${f[0]}</b><span class="gplus">+${f[1]}</span><span class="gminus">−${f[2]}</span></div>`).join('')}
+  ${note ? `<div class="gnote">${note}</div>` : ''}</div>`;
+
+const COMMON = [
+  { t:'You arrive from the inbox', stage:() => spine(S6) + `<div style="margin-top:14px">${gate}</div>`,
+    why:'One question waits: should this ship? The spine says four steps finished cleanly, review is hatched, and summarize has not started. The banner tells you the reviewer already found two problems — so this is not a rubber stamp.',
+    ask:'First look: <b>is anything red?</b> Nothing here is. A passed review with notes is the normal case, and the notes are the job.' },
+  { t:'Read the spine before the diff', stage:() => spine([['done','Research'],['done','Plan'],['done','Build ↺2'],['done','Tests'],['hold','Review'],['pending','Summarize']]) +
+      `<div style="margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--ink-3)">
+        bill <b style="color:var(--ink)">$2.61</b> · $0.48 of it wasted<br>agent time <b style="color:var(--ink)">22m</b> · retries <b style="color:var(--ink)">1</b></div>`,
+    why:'Build carries a <span class="m">↺2</span>: it took two attempts. That is worth a glance before anything else, because a step that struggled is a step more likely to have cut a corner.',
+    ask:'The story tab says attempt 1 died on an egress denial, not on the code. Reassuring — the retry was environmental, not a sign of confusion.' },
+  { t:'Open Plan vs built', stage:() => `<div style="font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-bottom:9px">
+      <b style="color:var(--ink)">3</b> planned · <b>1</b> as planned · <b style="color:var(--wait)">1</b> deviated · <b style="color:var(--fail)">1</b> not built · <b style="color:var(--run)">1</b> unplanned</div>` +
+      item(1,'Rotate the refresh token on every use, invalidating the one presented.','matched',
+        [['src/auth/jwt.ts',48,12],['tests/auth/rotate.test.ts',64,0]],'Rotation is implemented and the replay rejection is covered by a test.'),
+    why:'The tally is the whole judgement in one line. Item 1 is clean — a file that does what was asked, and a test that proves it. That one is settled in seconds.',
+    ask:'This comparison is mechanical. <b>plan.md</b> and <b>changes.patch</b> are both real files, so the agent\'s own account of its work is never the evidence.' },
+  { t:'The deviation', stage:() => item(2,'Store a token family id so replaying any token in a family revokes the whole family.','deviated',
+      [['src/auth/family.ts',31,4]],'Revokes the single presented token, not the family. A stolen older token in the same family still works.') +
+      `<div class="ghunk" style="max-width:470px"><span class="c">@@ src/auth/family.ts</span>
+<span class="a">+  await revoke(token.jti)</span>
+<span class="c">   // TODO: walk the family and revoke siblings</span></div>`,
+    why:'A file changed, lines were added, tests passed. Skimmed, it reads as done. Expanded, the TODO is still sitting there and the acceptance criterion — log the session out everywhere — is not met.',
+    ask:'<b>This is the one that ships bugs.</b> A missing item is obvious; a deviation has evidence of work behind it.' },
+  { t:'The item that never happened', stage:() => item(3,'Add a migration for the token_family column.','missed',[],
+      'Build reported no migration tooling in this workspace and moved on.') +
+      `<div style="margin-top:10px;font-family:var(--mono);font-size:12px;color:var(--ink-3)">from the story log:<br>
+        <span style="color:var(--ink-2)">⋯ item 3 skipped — no migration tooling in this workspace</span></div>`,
+    why:'Nothing in the tree corresponds to item 3. The agent did not fail — it hit a wall, said so in its log, and carried on. Which is the right behaviour, and also easy to miss if you only read the diff.',
+    ask:'Note that item 2 depends on this column existing. Approving leaves <b>two</b> halves of one feature undone, not one.' },
+  { t:'And something nobody asked for', stage:() => item(null,'Nothing in the plan asked for this.','unplanned',
+      [['src/auth/metrics.ts',22,0]],'Counters for rotations and revocations. Useful, but nobody asked for it — and nothing tests it.'),
+    why:'Scope that appeared on its own. Often harmless, occasionally the thing that breaks a deploy, and almost never covered by a test — because no acceptance criterion generated it.',
+    ask:'Cheap rule: unplanned code either earns a line in the next plan, or comes back out.' },
+  { t:'Check what it cost', stage:() => `<div style="font-family:var(--mono);font-size:12px">
+      <div style="display:flex;gap:22px;flex-wrap:wrap;margin-bottom:10px">
+        <span><span class="lbl">kept</span> <b style="font-size:15px">$2.13</b></span>
+        <span><span class="lbl">wasted</span> <b style="font-size:15px;color:var(--fail)">$0.48</b></span>
+        <span><span class="lbl">bill</span> <b style="font-size:15px">$2.61</b></span>
+        <span><span class="lbl">this recipe averages</span> <b style="font-size:15px">$2.14</b></span></div>
+      <div style="color:var(--ink-3);font-size:11.5px">the sandbox killed build attempt 1 for reaching registry.npmjs.org</div></div>`,
+    why:'Roughly on par with the recipe\'s average, plus a toll the sandbox charged once. The host is on the allowlist now, so the next task down this flow will not pay it again.',
+    ask:'Cost rarely decides a gate on its own — but a task well over its recipe\'s average usually means something went around in circles.' },
+];
+const TAIL_APPROVE = [
+  { t:'You approve', stage:() => spine([['done','Research'],['done','Plan'],['done','Build'],['done','Tests'],['done','Review'],['running','Summarize']]) +
+      `<div style="margin-top:12px"><span class="gpill run">${ICON.run} summarize running</span></div>`,
+    why:'The gate clears and summarize starts immediately. Approving costs nothing and wastes nothing — it is the only free decision here.',
+    ask:'<b>What you just accepted:</b> item 2 half-built, item 3 not built, and an untested metrics file. If that is a deliberate trade, say so in the next task.' },
+  { t:'Done — and what you owe next', stage:() => spine([['done','Research'],['done','Plan'],['done','Build'],['done','Tests'],['done','Review'],['done','Summarize']]) +
+      `<div style="margin-top:12px"><span class="gpill done">${ICON.done} done</span>
+        <span class="m" style="color:var(--ink-3);margin-left:10px">summary.md · $2.63 · workspace kept</span></div>`,
+    why:'The task is finished and its branch is still there until you clean it up. The summary records what shipped, including the gap.',
+    ask:'Approving with known gaps is a legitimate call — the honest version of it files the follow-up before you close the tab.' },
+];
+const TAIL_REJECT = [
+  { t:'You send it back', stage:() => spine([['done','Research'],['done','Plan'],['queued','Build ↺3'],['done','Tests'],['pending','Review'],['pending','Summarize']]) +
+      `<div style="margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--ink-3)">
+        your reason, handed to attempt 3:<br>
+        <span style="color:var(--ink-2)">"Finish item 2: revoke the whole token family, not just the presented token."</span></div>`,
+    why:'Review is discarded and build re-queues as attempt 3, carrying your reason. Tests are not re-run — they already passed and that result still stands.',
+    ask:'<b>The money moves, it does not come back.</b> The $1.12 the first build kept is now wasted, so the bill stays $2.61 and the wasted column jumps to $1.60.' },
+  { t:'Back where you were, poorer', stage:() => `<div style="font-family:var(--mono);font-size:12px">
+      <div style="display:flex;gap:22px;flex-wrap:wrap;margin-bottom:10px">
+        <span><span class="lbl">kept</span> <b style="font-size:15px">$1.01</b></span>
+        <span><span class="lbl">wasted</span> <b style="font-size:15px;color:var(--fail)">$1.60</b></span>
+        <span><span class="lbl">bill</span> <b style="font-size:15px">$2.61</b></span></div>
+      <div style="color:var(--ink-3);font-size:11.5px">61% of this task's spend is now on work that was thrown away</div></div>`,
+    why:'Build runs again, review re-runs, and the gate re-opens. If the second attempt also deviates, the same money goes again — which is why a gate you keep re-opening is usually a sign the plan was unclear, not the agent.',
+    ask:'Retries are capped. After the limit the engine gives up and fails the task rather than looping on your money forever.' },
+];
+
+let branch = 'approve', beat = 0;
+const beats = () => COMMON.concat(branch === 'approve' ? TAIL_APPROVE : TAIL_REJECT);
+function paint(){
+  const list = beats(), b = list[Math.min(beat, list.length - 1)];
+  $('#cTitle').textContent = b.t;
+  $('#cWhy').innerHTML = b.why;
+  $('#cAsk').innerHTML = b.ask;
+  $('#cStage').innerHTML = b.stage();
+  $('#cPrev').disabled = beat === 0;
+  $('#cNext').disabled = beat >= list.length - 1;
+  $('#cRange').max = list.length - 1;
+  $('#cRange').value = beat;
+  $('#cN').textContent = `step ${beat + 1} / ${list.length}`;
+}
+$('#cPrev').onclick = () => { beat = Math.max(0, beat - 1); paint(); };
+$('#cNext').onclick = () => { beat = Math.min(beats().length - 1, beat + 1); paint(); };
+$('#cRange').oninput = e => { beat = +e.target.value; paint(); };
+document.querySelectorAll('[data-branch]').forEach(btn => btn.onclick = () => {
+  branch = btn.dataset.branch;
+  document.querySelectorAll('[data-branch]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+  beat = Math.max(beat, COMMON.length - 1);
+  paint();
+});
+$('.scrub').addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') { $('#cNext').click(); e.preventDefault(); }
+  if (e.key === 'ArrowLeft')  { $('#cPrev').click(); e.preventDefault(); }
+});
+paint();
+
+/* ── actions ──────────────────────────────────────────────────────── */
+const ACTIONS = [
+  ['At the gate', [
+    ['Approve','<span class="kbd">a</span>','Clears the gate. The next step queues immediately and the task finishes without you.','Free — nothing is re-run, nothing is wasted.'],
+    ['Send back','<span class="kbd">r</span>','Opens a reason box. Review is discarded, build re-queues as the next attempt carrying your reason, and tests are left alone.','The build\'s kept spend moves to <span class="you">wasted</span>.'],
+    ['Compare plan vs built','—','Jumps to the tab you should read before deciding either way.','—'],
+  ]],
+  ['On the task', [
+    ['Pause','—','Stops after the current run rather than mid-flight. The workspace stays.','Stops future spend only.'],
+    ['Send to backlog','—','Returns the task to the backlog, keeping its workspace and everything it produced.','Same.'],
+    ['Cancel task','—','Stops any running agents and tidies up. The workspace survives until you clean it up.','Anything in flight becomes <span class="you">wasted</span>.'],
+    ['Clean up workspace','—','Only offered once the task is finished or cancelled. Removes the branch and the folder.','—'],
+  ]],
+  ['Reading', [
+    ['A spine segment','—','Jumps to that step in the Story tab and expands it.','—'],
+    ['A story row','—','Expands the run: its log, the question you answered, the failed attempt, the artifact it wrote.','—'],
+    ['A plan row','—','Expands the diff hunk behind that verdict.','—'],
+    ['An artifact chip','—','Opens the file in a formatted viewer. Everything is an ordinary file on the task\'s branch.','—'],
+  ]],
+];
+$('#actionTables').innerHTML = ACTIONS.map(([g, rows]) =>
+  `<h3>${g}</h3><div class="tw"><table class="spec">
+    <tr><th class="nm">Control</th><th class="act">Key</th><th>What it does</th><th>Money</th></tr>` +
+  rows.map(r => `<tr><td class="nm">${r[0]}</td><td class="act">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('') +
+  `</table></div>`).join('');
+
+T('#numTbl', [['Number','nm'],['Counts'],['Watch for']], [
+  ['bill','Everything this task has cost — kept work plus thrown-away attempts.','It never falls. If it looks high, open the Cost tab rather than guessing.'],
+  ['agent time','The sum of run durations. <b>Not</b> how long the task has been open.','A big gap between this and wall-clock means the task spent its life waiting on a human.'],
+  ['waiting on you','How long the current gate or question has been open, ticking.','Anything past your escalation window should already have reached you in chat.'],
+  ['retries','Extra attempts across all steps. One retry is ordinary; three is a signal.','A step that keeps retrying is usually blocked by the environment, not confused by the task.'],
+]);
+
+$('#keyList').innerHTML = [
+  ['a','Approve the open gate'],
+  ['r','Send it back — opens the reason box'],
+  ['esc','Cancel the reason box'],
+  ['1 – 4','Switch tab: story, plan, files, cost'],
+  ['← →','Step through the walkthrough above'],
+].map(([k, d]) => `<div><span class="k"><span class="kbd">${k}</span></span><span>${d}</span></div>`).join('');
+
+/* ── nav ──────────────────────────────────────────────────────────── */
+document.querySelectorAll('[data-go]').forEach(b =>
+  b.onclick = () => document.getElementById(b.dataset.go).scrollIntoView({ block:'start' }));
+const links = [...document.querySelectorAll('#gnav a')];
+const spy = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  links.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
+}), { rootMargin:'-55px 0px -70% 0px' });
+document.querySelectorAll('section[id]').forEach(s => spy.observe(s));
+</script>
