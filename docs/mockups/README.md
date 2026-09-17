@@ -53,6 +53,17 @@ browser, or run `python3 -m http.server` in this folder.
   flow, hits the validation wall, and fixes it.
   [Hosted copy](https://claude.ai/artifact/7gZh2YiHmntbkGnNA5fa1T) (private link).
 
+- **[`task-detail.html`](./task-detail.html)** — the whole story of one task.
+  A progress spine over four tabs: **Story** (every run with its log, the
+  question you answered, the attempt that failed and what it cost), **Plan vs
+  built** (the distinctive one — `plan.md`'s items lined up against what
+  actually landed in the workspace, each marked *as planned*, *deviated*, *not
+  built* or *unplanned*, expanding to the diff hunk), **Files** (artifacts and
+  the working tree) and **Cost** (kept versus wasted, against the flow's
+  average). Opens at the review gate; approving it actually releases the last
+  step, which runs, bills and writes its artifact.
+  [Hosted copy](https://claude.ai/artifact/7ZQVVGGTbXkLYPwv5BPQGh) (private link).
+
 ## Conventions
 
 Run `/mockup` and these are applied for you — the skill carries the tokens, a skeleton, the

@@ -1,0 +1,684 @@
+<meta charset="utf-8">
+<title>FlowBoard Task Detail</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74; --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --wait-ink:#FDF6EA; --wait-ink-2:#F8E8D0;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);
+  font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+input{font:inherit;color:inherit;border-radius:0}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sans{font-family:var(--sans)}
+.sep{color:var(--line-2);padding:0 .45em}
+.sp{flex:1}
+.app{height:100dvh;display:flex;flex-direction:column}
+
+/* ── topbar ───────────────────────────────────────────────────── */
+.topbar{flex-shrink:0;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+.back{display:inline-flex;align-items:center;gap:7px;color:var(--ink-2);transition:color var(--t)}
+.back:hover{color:var(--ink)}
+.tid{font-weight:600;font-size:14px;letter-spacing:-.01em}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;font-size:11px;
+  border:1px solid var(--line-2);background:var(--surface-2);white-space:nowrap}
+.pill.wait{border-color:var(--wait);color:var(--wait);background:var(--wait-soft);font-weight:500}
+.pill.run{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.pill.done{border-color:var(--line-2);color:var(--ink-3)}
+.act{border:1px solid var(--line-2);padding:3px 11px;font-size:12px;white-space:nowrap;
+  transition:background var(--t),border-color var(--t),color var(--t)}
+.act:hover:not(:disabled){background:var(--surface-2);border-color:var(--ink-3)}
+.act:disabled{opacity:.4;cursor:default}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act.primary:hover:not(:disabled){background:var(--run);color:#fff}
+.act.danger:hover{border-color:var(--fail);color:var(--fail);background:var(--fail-soft)}
+.act kbd{font-size:10px;color:var(--ink-3);border:1px solid var(--line);padding:0 3px;margin-right:6px}
+.act.primary kbd{border-color:currentColor;color:inherit;opacity:.65}
+
+.scroll{flex:1;min-height:0;overflow:auto}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+
+/* ── header block ─────────────────────────────────────────────── */
+.hdr{padding:18px 0 14px;border-bottom:1px solid var(--line)}
+.hdr h1{font-family:var(--sans);font-size:23px;line-height:1.25;margin:0 0 6px;
+  font-weight:600;letter-spacing:-.015em;text-wrap:balance;max-width:44ch}
+.hdr p{font-family:var(--sans);font-size:14px;color:var(--ink-2);margin:0;max-width:72ch}
+.hnums{display:flex;gap:26px;flex-wrap:wrap;margin-top:14px}
+.hnum{display:flex;flex-direction:column;gap:1px}
+.hnum b{font-size:17px;font-weight:600}
+.hnum b.w{color:var(--fail)}
+
+/* ── the progress spine ───────────────────────────────────────── */
+.spine{display:flex;gap:4px;margin-top:16px;flex-wrap:wrap}
+.sp-step{flex:1 1 118px;min-width:110px;text-align:left;transition:opacity var(--t)}
+.sp-bar{display:block;height:16px;position:relative;overflow:hidden}
+.sp-done{background:var(--done)}
+.sp-running{background:var(--run)}
+.sp-running::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);
+  transform:translateX(-100%);animation:sweep 1.9s cubic-bezier(.4,0,.2,1) infinite}
+.sp-hold{background:repeating-linear-gradient(45deg,var(--wait) 0 1.5px,transparent 1.5px 5px);
+  box-shadow:inset 0 0 0 1px var(--wait)}
+.sp-failed{background:var(--fail)}
+.sp-queued{background:var(--pend);box-shadow:inset 0 0 0 1px var(--line-2)}
+.sp-pending{background:var(--pend)}
+.sp-l{display:flex;align-items:baseline;gap:6px;margin-top:5px;font-size:11px}
+.sp-l b{font-weight:500;font-size:12px}
+.sp-l span{color:var(--ink-3)}
+.sp-step:hover .sp-l b{text-decoration:underline}
+@keyframes sweep{to{transform:translateX(100%)}}
+
+/* ── gate banner ──────────────────────────────────────────────── */
+.gate{background:var(--wait-wash);border-bottom:1px solid var(--wait-edge)}
+.gate-h{background:var(--wait);color:var(--wait-ink);padding:7px 0}
+.gate-h .wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.gate-h .lbl{color:var(--wait-ink);font-weight:600;font-size:11px}
+.gate-b{padding:11px 0 13px}
+.gate-b .wrap{display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
+.gate-q{font-family:var(--sans);font-size:14.5px;max-width:62ch;flex:1 1 380px}
+.gate-q em{font-style:normal;color:var(--wait);font-weight:500}
+.gate-acts{display:flex;gap:7px;flex-wrap:wrap}
+.reason{display:flex;gap:7px;flex:1 1 100%;margin-top:4px}
+.reason input{flex:1;padding:5px 9px;border:1px solid var(--wait-edge);background:var(--surface)}
+.reason input:focus{outline:2px solid var(--wait);outline-offset:-2px}
+
+/* ── tabs ─────────────────────────────────────────────────────── */
+.tabs{position:sticky;top:0;z-index:10;background:var(--surface-3);
+  border-top:2px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.tabs .wrap{display:flex;gap:2px;flex-wrap:wrap;align-items:center}
+.tab{padding:9px 14px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500;
+  transition:color var(--t),border-color var(--t)}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--run)}
+.tab u{text-decoration:none;color:var(--ink-3);margin-left:6px;letter-spacing:0}
+
+/* ── two-column body ──────────────────────────────────────────── */
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 276px;gap:26px;padding:20px 0 60px;align-items:start}
+.aside{position:sticky;top:56px;display:flex;flex-direction:column;gap:0}
+.ab{border-top:1px solid var(--line);padding:9px 0}
+.ab:first-child{border-top:0;padding-top:0}
+.ab .lbl{display:block;margin-bottom:4px}
+.ab .v{font-size:12px;color:var(--ink-2);overflow-wrap:anywhere}
+.ab .v b{color:var(--ink);font-weight:500}
+.mem{display:flex;gap:7px;padding:4px 0;font-size:11.5px;color:var(--ink-2);align-items:baseline}
+.mem i{font-style:normal;flex:0 0 auto;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-3);border:1px solid var(--line);padding:0 4px}
+
+/* ── story ────────────────────────────────────────────────────── */
+.st-row{border-bottom:1px solid var(--line)}
+.st-h{display:grid;grid-template-columns:18px 1fr 96px 74px 62px;gap:12px;align-items:center;
+  width:100%;padding:10px 4px;transition:background var(--t)}
+.st-h:hover{background:var(--surface)}
+.st-row.open .st-h{background:var(--surface);box-shadow:inset 2px 0 0 var(--ink)}
+.st-i{display:inline-flex}
+.st-i.done{color:var(--done)} .st-i.run{color:var(--run)}
+.st-i.wait{color:var(--wait)} .st-i.fail{color:var(--fail)} .st-i.idle{color:var(--line-2)}
+.st-n b{font-weight:500;font-size:13.5px}
+.st-n span{color:var(--ink-3);font-size:11.5px;margin-left:8px}
+.st-meta{color:var(--ink-2);font-size:12px;text-align:right}
+.st-meta.w{color:var(--fail)}
+.st-b{padding:2px 4px 16px 34px;display:grid;gap:13px}
+.log{background:var(--surface-2);border:1px solid var(--line);padding:8px 10px;
+  font-size:12px;line-height:1.7;overflow-x:auto;white-space:pre}
+.log .g{color:var(--ink-3)} .log .ok{color:var(--run)}
+.log .bad{color:var(--fail)} .log .hold{color:var(--wait)}
+.qa{border-left:3px solid var(--wait);background:var(--wait-wash);padding:8px 12px}
+.qa .q{font-family:var(--sans);font-size:13.5px;display:block;margin-bottom:5px}
+.qa .a{font-size:12px;color:var(--wait)}
+.att{border-left:3px solid var(--fail);background:var(--fail-soft);padding:7px 12px;font-size:12px}
+.att b{color:var(--fail);font-weight:500}
+.art{display:inline-flex;align-items:center;gap:8px;font-size:12px;border:1px solid var(--line-2);
+  padding:3px 9px;background:var(--surface);transition:border-color var(--t)}
+.art:hover{border-color:var(--run);color:var(--run)}
+.art u{text-decoration:none;color:var(--ink-3)}
+
+/* ── plan vs built ────────────────────────────────────────────── */
+.pb-head{display:flex;gap:16px;flex-wrap:wrap;align-items:baseline;margin-bottom:12px}
+.pb-tally{display:flex;gap:0;flex-wrap:wrap;font-size:12px}
+.pb-tally b{font-weight:600}
+.pb-cols{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;
+  font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);
+  padding-bottom:6px;border-bottom:1px solid var(--line-2);font-weight:500}
+.pb-row{border-bottom:1px solid var(--line)}
+.pb-g{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;width:100%;
+  padding:11px 4px;text-align:left;transition:background var(--t)}
+.pb-g:hover{background:var(--surface)}
+.pb-row.open .pb-g{background:var(--surface)}
+.pb-l,.pb-r{min-width:0}
+.pb-n{display:flex;gap:9px;align-items:baseline}
+.pb-n u{text-decoration:none;color:var(--ink-3);font-size:12px;flex:0 0 auto}
+.pb-t{font-family:var(--sans);font-size:13.5px;line-height:1.45}
+.pb-c{font-family:var(--sans);font-size:11.5px;color:var(--ink-3);margin-top:3px}
+.pb-r .f{font-size:12px;display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+.pb-r .f b{font-weight:500}
+.pb-r .plus{color:var(--run)} .pb-r .minus{color:var(--fail)}
+.pb-why{font-family:var(--sans);font-size:11.5px;color:var(--ink-2);margin-top:3px;line-height:1.45}
+.vd{display:inline-flex;align-items:center;gap:5px;font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;font-weight:600;padding:1px 6px;border:1px solid;white-space:nowrap}
+.vd.matched{color:var(--ink-3);border-color:var(--line-2)}
+.vd.deviated{color:var(--wait);border-color:var(--wait);background:var(--wait-soft)}
+.vd.missed{color:var(--fail);border-color:var(--fail);background:var(--fail-soft)}
+.vd.unplanned{color:var(--run);border-color:var(--run);background:var(--run-soft)}
+.hunk{margin:0 4px 14px;background:var(--surface-2);border:1px solid var(--line);
+  padding:8px 10px;font-size:12px;line-height:1.65;overflow-x:auto;white-space:pre}
+.hunk .a{color:var(--run)} .hunk .d{color:var(--fail)} .hunk .c{color:var(--ink-3)}
+.pb-none{font-family:var(--sans);font-size:12.5px;color:var(--ink-3)}
+
+/* ── files ────────────────────────────────────────────────────── */
+.fl-h{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}
+.fl-r{display:grid;grid-template-columns:20px 1fr auto auto;gap:12px;align-items:center;
+  padding:7px 4px;border-bottom:1px solid var(--line);font-size:12.5px}
+.fl-r .p{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl-r .p b{color:var(--ink);font-weight:500}
+.fl-r .d{font-size:11.5px;white-space:nowrap}
+.fl-r .sz{color:var(--ink-3);font-size:11.5px;white-space:nowrap}
+.fl-note{font-family:var(--sans);font-size:12.5px;color:var(--ink-3);margin-top:9px;max-width:70ch}
+
+/* ── cost ─────────────────────────────────────────────────────── */
+.cs-r{display:grid;grid-template-columns:96px 1fr 76px;gap:14px;align-items:center;
+  padding:7px 4px;border-bottom:1px solid var(--line);font-size:12.5px}
+.cs-track{height:14px;background:var(--pend);display:flex}
+.cs-kept{background:var(--done)}
+.cs-waste{background:var(--fail)}
+.cs-v{text-align:right}
+.cs-sum{display:flex;gap:26px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line-2)}
+.note{border-left:3px solid var(--fail);background:var(--fail-soft);padding:10px 13px;
+  font-family:var(--sans);font-size:13.5px;margin-top:16px;max-width:74ch}
+.note.cold{border-left-color:var(--run);background:var(--run-soft)}
+.note b{font-weight:600}
+
+.statusbar{flex-shrink:0;display:flex;align-items:center;flex-wrap:wrap;
+  padding:6px 18px;background:var(--surface-2);border-top:1px solid var(--line);
+  color:var(--ink-3);font-size:11px}
+.statusbar b{color:var(--ink-2);font-weight:500}
+.kbd{border:1px solid var(--line-2);padding:0 4px;font-size:10px;color:var(--ink-2);background:var(--surface)}
+
+@media (max-width:980px){
+  .cols{grid-template-columns:1fr}
+  .aside{position:static;border-top:1px solid var(--line-2);padding-top:14px}
+  .pb-cols,.pb-g{grid-template-columns:1fr;gap:8px}
+  .pb-r{padding-left:12px;border-left:2px solid var(--line)}
+}
+@media (max-width:600px){
+  .st-h{grid-template-columns:18px 1fr auto;gap:6px 10px}
+  .st-h .st-meta:nth-child(4){display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <button class="back" id="back"><svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Board</span></button>
+    <span class="sep">/</span>
+    <span class="tid">auth-refactor</span>
+    <span id="statusPill"></span>
+    <span class="sp"></span>
+    <span id="topActs"></span>
+  </header>
+
+  <div class="scroll" id="scroll">
+    <div class="wrap">
+      <div class="hdr">
+        <h1>Rotate refresh tokens on every use</h1>
+        <p>Every refresh should hand back a new token pair and invalidate the one presented, so a
+        stolen refresh token is useful exactly once. Raised after the session audit in September.</p>
+        <div class="hnums" id="hnums"></div>
+        <div class="spine" id="spine"></div>
+      </div>
+    </div>
+
+    <div id="gateBanner"></div>
+
+    <nav class="tabs"><div class="wrap" id="tabs"></div></nav>
+
+    <div class="wrap">
+      <div class="cols">
+        <div id="main"></div>
+        <aside class="aside" id="aside"></aside>
+      </div>
+    </div>
+  </div>
+
+  <footer class="statusbar" id="sb"></footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ICON = {
+  run :'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.1" fill="currentColor"/><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".3"/></svg>',
+  gate:'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.4" y="3.2" width="2.4" height="9.6" fill="currentColor"/><rect x="9.2" y="3.2" width="2.4" height="9.6" fill="currentColor"/></svg>',
+  done:'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.3l3.1 3.1 6.1-7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  fail:'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 4.3l7.4 7.4M11.7 4.3l-7.4 7.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  idle:'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2.6"/></svg>',
+  file:'<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h5l3 3v9H4z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9 2v3h3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>',
+};
+const RATE = { haiku:0.008, sonnet:0.05, opus:0.14 };   // $ per minute
+const money = n => '$' + n.toFixed(2);
+const pad = n => String(n).padStart(2,'0');
+const dur = ms => { const s = Math.max(0, Math.round(ms/1000));
+  if (s < 90) return s + 's';
+  const m = Math.floor(s/60), r = s % 60;
+  return m < 90 ? m + 'm ' + pad(r) + 's' : Math.floor(m/60) + 'h ' + pad(m%60) + 'm'; };
+
+/* ══ the task ══════════════════════════════════════════════════════════
+   Seeded at the review gate — the same task the monitor shows waiting.  */
+const BOOT = Date.now();
+const TASK = {
+  id:'auth-refactor', repo:'flowboard/api', branch:'flowboard/auth-refactor',
+  workspace:'~/.flowboard/ws/auth-refactor', owner:'you',
+  flow:'Software delivery', flowAuthor:'@core', flowVer:4, flowLatest:5,
+  created:'today 09:14', started:'today 09:21',
+  steps:[
+    { id:'research', label:'Research', agent:'scout', model:'haiku', effort:'low',
+      state:'done', ms:92000, cost:0.012, wasted:0, attempts:1, art:['brief.md','4.1 kB'],
+      log:[['g','› read  src/auth/session.ts, src/auth/jwt.ts'],
+           ['g','› read  docs/security/session-audit-sep.md (212 lines)'],
+           ['','› write .flowboard/auth-refactor/brief.md'],
+           ['ok','✓ brief written — 6 findings, 2 open questions']] },
+    { id:'plan', label:'Plan', agent:'architect', model:'opus', effort:'high',
+      state:'done', ms:250000, cost:0.585, wasted:0, attempts:1, art:['plan.md','11.7 kB'],
+      ask:{ q:'Rotate on every use, or only when the refresh token is near expiry?',
+            answered:'Every use', after:'2m 14s' },
+      log:[['g','› read  .flowboard/auth-refactor/brief.md'],
+           ['hold','? asked you 2 questions — paused, billing stopped'],
+           ['ok','✓ resumed with your answers'],
+           ['','› write .flowboard/auth-refactor/plan.md'],
+           ['ok','✓ 3 work items with acceptance criteria']] },
+    { id:'build', label:'Build', agent:'developer', model:'opus', effort:'high',
+      state:'done', ms:480000, cost:1.120, wasted:0.480, attempts:2, art:['changes.patch','38.2 kB'],
+      failed:'attempt 1 — egress denied: registry.npmjs.org was not in the step allowlist',
+      log:[['g','› read  .flowboard/auth-refactor/plan.md'],
+           ['','› edit  src/auth/jwt.ts'],
+           ['','› edit  src/auth/family.ts'],
+           ['','› edit  src/auth/metrics.ts'],
+           ['','› run   pnpm vitest run tests/auth'],
+           ['ok','✓ 34 passed  (2.1s)'],
+           ['g','⋯ item 3 skipped — no migration tooling in this workspace']] },
+    { id:'tests', label:'Tests', agent:'tester', model:'sonnet', effort:'medium',
+      state:'done', ms:306000, cost:0.255, wasted:0, attempts:1, art:['test-report.md','2.9 kB'],
+      log:[['','› write tests/auth/rotate.test.ts'],
+           ['','› run   pnpm vitest run --coverage tests/auth'],
+           ['ok','✓ 41 passed, coverage 88% on src/auth'],
+           ['hold','◆ no test covers the token-family case — plan item 2']] },
+    { id:'review', label:'Review', agent:'reviewer', model:'sonnet', effort:'medium',
+      state:'gate', ms:192000, cost:0.160, wasted:0, attempts:1, art:['review.md','6.4 kB'],
+      since: BOOT - 5 * 60000,
+      log:[['g','› read  plan.md, changes.patch, test-report.md'],
+           ['hold','◆ item 2 deviates from the plan — revokes one token, not the family'],
+           ['hold','◆ item 3 not implemented'],
+           ['','› write .flowboard/auth-refactor/review.md'],
+           ['ok','✓ verdict: passed with 2 notes']] },
+    { id:'summarize', label:'Summarize', agent:'scribe', model:'haiku', effort:'low',
+      state:'pending', ms:0, cost:0, wasted:0, attempts:1, art:null, log:[] },
+  ],
+};
+
+/* what the plan asked for, against what landed in the workspace */
+const PLAN = [
+  { n:1, status:'matched',
+    text:'Rotate the refresh token on every use, invalidating the one presented.',
+    crit:'Replaying a spent refresh token is rejected with 401.',
+    built:[{ f:'src/auth/jwt.ts', a:48, d:12, note:'rotateRefresh() issues a new pair and revokes the token it was given.' },
+           { f:'tests/auth/rotate.test.ts', a:64, d:0, note:'Covers the happy path and the replay rejection.' }],
+    hunk:[['c','@@ src/auth/jwt.ts'],
+          ['d','-  return signPair(session)'],
+          ['a','+  await revoke(presented.jti)'],
+          ['a','+  return signPair(session, { rotate: true })']] },
+  { n:2, status:'deviated',
+    text:'Store a token family id so replaying any token in a family revokes the whole family.',
+    crit:'Replaying an old token logs the session out everywhere.',
+    built:[{ f:'src/auth/family.ts', a:31, d:4, note:'Revokes the single presented token, not the family. A stolen older token in the same family still works.' }],
+    hunk:[['c','@@ src/auth/family.ts'],
+          ['a','+  await revoke(token.jti)'],
+          ['c','   // TODO: walk the family and revoke siblings'],
+          ['c','   —  review.md flagged this as a deviation from plan item 2']] },
+  { n:3, status:'missed',
+    text:'Add a migration for the token_family column.',
+    crit:'The migration runs clean against a fresh database.',
+    built:[], why:'Build reported no migration tooling in this workspace and moved on.' },
+  { n:null, status:'unplanned',
+    built:[{ f:'src/auth/metrics.ts', a:22, d:0, note:'Counters for rotations and revocations. Useful, but nobody asked for it — and nothing tests it.' }],
+    hunk:[['c','@@ src/auth/metrics.ts (new file)'],
+          ['a','+export const rotations = counter("auth_refresh_rotations_total")'],
+          ['a','+export const revocations = counter("auth_refresh_revocations_total")']] },
+];
+
+const MEMORY = [
+  ['you','Prefers vitest; never suggest jest for this repo.'],
+  ['project','Auth lives in src/auth; sessions are Redis-backed with a 14-day refresh window.'],
+  ['task','Attempt 1 died on an egress denial — npmjs.org is now on this step\'s allowlist.'],
+];
+
+/* ══ derived ═══════════════════════════════════════════════════════════ */
+const kept  = () => TASK.steps.reduce((a, s) => a + s.cost, 0);
+const waste = () => TASK.steps.reduce((a, s) => a + s.wasted, 0);
+const bill  = () => kept() + waste();
+const elapsed = () => TASK.steps.reduce((a, s) => a + s.ms, 0);
+const gateStep = () => TASK.steps.find(s => s.state === 'gate');
+const running  = () => TASK.steps.find(s => s.state === 'running');
+const isDone   = () => TASK.steps.every(s => s.state === 'done');
+const SEG = { done:'sp-done', running:'sp-running', gate:'sp-hold', failed:'sp-failed',
+              queued:'sp-queued', pending:'sp-pending' };
+const ICO = { done:['done','done'], running:['run','run'], gate:['gate','wait'],
+              failed:['fail','fail'], queued:['idle','idle'], pending:['idle','idle'] };
+
+let tab = 'story', open = new Set(['build']), openHunk = new Set(), rejecting = false;
+
+/* ══ header ════════════════════════════════════════════════════════════ */
+function drawHeader(){
+  const g = gateStep(), r = running();
+  $('#statusPill').innerHTML = g ? `<span class="pill wait">${ICON.gate} waiting on you</span>`
+    : r ? `<span class="pill run">${ICON.run} ${r.label.toLowerCase()} running</span>`
+    : isDone() ? `<span class="pill done">${ICON.done} done</span>`
+    : `<span class="pill">in progress</span>`;
+
+  $('#topActs').innerHTML = isDone()
+    ? `<button class="act">Open workspace</button><button class="act">Clean up workspace</button>`
+    : `<button class="act">Pause</button><button class="act">Send to backlog</button>` +
+      `<button class="act danger">Cancel task</button>`;
+
+  $('#hnums').innerHTML = [
+    ['bill', money(bill()), waste() > 0.005 ? `${money(waste())} of it wasted` : 'nothing wasted'],
+    ['agent time', dur(elapsed()), `across ${TASK.steps.filter(s => s.ms).length} steps`],
+    ['waiting on you', g ? dur(Date.now() - g.since) : '—', g ? 'since the review gate opened' : 'nothing pending'],
+    ['retries', String(TASK.steps.reduce((a, s) => a + s.attempts - 1, 0)), 'build needed a second go'],
+  ].map(([l, v, s]) => `<span class="hnum"><span class="lbl">${l}</span><b${l === 'bill' && waste() > 0.005 ? '' : ''}>${v}</b><span class="lbl" style="letter-spacing:.02em;text-transform:none">${s}</span></span>`).join('');
+
+  $('#spine').innerHTML = TASK.steps.map(s => `
+    <button class="sp-step" data-jump="${s.id}" title="Jump to ${esc(s.label)} in the story">
+      <span class="sp-bar ${SEG[s.state]}"></span>
+      <span class="sp-l"><b>${esc(s.label)}</b><span>${
+        s.state === 'gate' ? 'waiting' : s.state === 'running' ? dur(s.ms)
+        : s.state === 'pending' ? '—' : dur(s.ms)}</span>${
+        s.attempts > 1 ? `<span style="color:var(--fail)">↺${s.attempts}</span>` : ''}</span>
+    </button>`).join('');
+}
+
+/* ══ gate banner ═══════════════════════════════════════════════════════ */
+function drawGate(){
+  const g = gateStep();
+  if (!g) { $('#gateBanner').innerHTML = ''; return; }
+  $('#gateBanner').innerHTML = `<section class="gate">
+    <div class="gate-h"><div class="wrap">
+      <span class="lbl">needs you</span>
+      <span>review passed with 2 notes<span class="sep">·</span>waited ${dur(Date.now() - g.since)}</span>
+    </div></div>
+    <div class="gate-b"><div class="wrap">
+      <div class="gate-q">The reviewer passed the change but flagged two things:
+        plan item 2 <em>deviated</em> — it revokes one token rather than the family — and item 3
+        was <em>never built</em>. Approve anyway, or send it back with a reason?</div>
+      <div class="gate-acts">
+        ${rejecting ? '' : `<button class="act primary" id="approve"><kbd>a</kbd>Approve</button>
+        <button class="act danger" id="rejectOpen"><kbd>r</kbd>Send back</button>
+        <button class="act" data-tab="plan">Compare plan vs built</button>`}
+      </div>
+      ${rejecting ? `<form class="reason" id="reasonForm">
+        <input id="reasonInput" placeholder="Why — this goes to the next build attempt" autocomplete="off"
+               value="Finish item 2: revoke the whole token family, not just the presented token.">
+        <button class="act danger" type="submit">Send back to build</button>
+        <button class="act" type="button" id="cancelReject">Cancel</button></form>` : ''}
+    </div></div></section>`;
+}
+
+/* ══ tabs ══════════════════════════════════════════════════════════════ */
+function drawTabs(){
+  const files = PLAN.flatMap(p => p.built).length;
+  const arts = TASK.steps.filter(s => s.art).length;
+  $('#tabs').innerHTML = [
+    ['story','Story', TASK.steps.length],
+    ['plan','Plan vs built', PLAN.length],
+    ['files','Files', files + arts],
+    ['cost','Cost', null],
+  ].map(([k, l, n]) =>
+    `<button class="tab" data-tab="${k}" aria-selected="${tab === k}">${l}${n ? `<u>${n}</u>` : ''}</button>`).join('');
+}
+
+/* ══ story ═════════════════════════════════════════════════════════════ */
+function storyHTML(){
+  return TASK.steps.map(s => {
+    const [ico, cls] = ICO[s.state];
+    const o = open.has(s.id);
+    return `<div class="st-row${o ? ' open' : ''}" id="step-${s.id}">
+      <button class="st-h" data-step="${s.id}" aria-expanded="${o}">
+        <span class="st-i ${cls}">${ICON[ico]}</span>
+        <span class="st-n"><b>${esc(s.label)}</b><span>${esc(s.agent)} · ${esc(s.model)} · ${esc(s.effort)}</span></span>
+        <span class="st-meta">${s.state === 'gate' ? 'waiting ' + dur(Date.now() - s.since)
+          : s.state === 'pending' ? 'not started' : dur(s.ms)}</span>
+        <span class="st-meta">${s.cost ? money(s.cost) : '—'}${s.wasted
+          ? `<br><span class="w" style="font-size:11px">+${money(s.wasted)} wasted</span>` : ''}</span>
+        <span class="st-meta">${s.attempts > 1 ? '↺ ' + s.attempts : ''}</span>
+      </button>
+      ${o ? `<div class="st-b">
+        ${s.failed ? `<div class="att"><b>✕ ${esc(s.failed)}</b> — ${money(s.wasted)} spent on that attempt and thrown away.</div>` : ''}
+        ${s.ask ? `<div class="qa"><span class="q">${esc(s.ask.q)}</span>
+          <span class="a">you answered <b>${esc(s.ask.answered)}</b> after ${esc(s.ask.after)} — the run resumed where it stopped</span></div>` : ''}
+        ${s.log.length ? `<div class="log">${s.log.map(([c, t]) => `<span class="${c}">${esc(t)}</span>`).join('\n')}</div>` : ''}
+        ${s.art ? `<div><button class="art">${ICON.file}<b>${esc(s.art[0])}</b><u>${esc(s.art[1])}</u></button></div>`
+                : `<div class="pb-none">Nothing written yet.</div>`}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* ══ plan vs built ═════════════════════════════════════════════════════ */
+const VERDICT = { matched:'as planned', deviated:'deviated', missed:'not built', unplanned:'unplanned' };
+function planHTML(){
+  const t = k => PLAN.filter(p => p.status === k).length;
+  return `<div class="pb-head">
+      <span class="lbl">plan.md vs the working tree</span>
+      <span class="pb-tally">
+        <b>${PLAN.filter(p => p.n).length}</b>&nbsp;planned<span class="sep">·</span>
+        <b style="color:var(--ink-3)">${t('matched')}</b>&nbsp;as planned<span class="sep">·</span>
+        <b style="color:var(--wait)">${t('deviated')}</b>&nbsp;deviated<span class="sep">·</span>
+        <b style="color:var(--fail)">${t('missed')}</b>&nbsp;not built<span class="sep">·</span>
+        <b style="color:var(--run)">${t('unplanned')}</b>&nbsp;unplanned
+      </span></div>
+    <div class="pb-cols"><span>what the plan asked for</span><span>what landed in the workspace</span></div>
+    ${PLAN.map((p, i) => {
+      const o = openHunk.has(i);
+      return `<div class="pb-row${o ? ' open' : ''}">
+        <button class="pb-g" data-hunk="${i}" aria-expanded="${o}">
+          <span class="pb-l">${p.n ? `<span class="pb-n"><u>${p.n}</u><span>
+              <span class="pb-t">${esc(p.text)}</span>
+              <span class="pb-c">accepts when: ${esc(p.crit)}</span></span></span>`
+            : `<span class="pb-c" style="margin:0">Nothing in the plan asked for this.</span>`}</span>
+          <span class="pb-r">
+            <span class="vd ${p.status}">${VERDICT[p.status]}</span>
+            ${p.built.length ? p.built.map(b => `<div style="margin-top:6px">
+                <span class="f"><b>${esc(b.f)}</b><span class="plus">+${b.a}</span><span class="minus">−${b.d}</span></span>
+                <span class="pb-why">${esc(b.note)}</span></div>`).join('')
+              : `<div class="pb-why" style="margin-top:6px">${esc(p.why || 'No file in the workspace corresponds to this item.')}</div>`}
+          </span>
+        </button>
+        ${o && p.hunk ? `<div class="hunk">${p.hunk.map(([c, t]) => `<span class="${c}">${esc(t)}</span>`).join('\n')}</div>` : ''}
+      </div>`;
+    }).join('')}
+    <div class="note"><b>Deviations are the point of this view.</b> Every step wrote a real file, so the
+    plan and the patch can be lined up mechanically — the agent's own account of what it did is not the
+    evidence. Item 2 passed review with a note; item 3 quietly did not happen at all.</div>`;
+}
+
+/* ══ files ═════════════════════════════════════════════════════════════ */
+function filesHTML(){
+  const files = PLAN.flatMap(p => p.built);
+  const add = files.reduce((a, f) => a + f.a, 0), del = files.reduce((a, f) => a + f.d, 0);
+  return `<div class="fl-h"><span class="lbl">artifacts</span>
+      <span style="font-size:12px;color:var(--ink-3)">what each step produced — the contract the next step reads</span></div>
+    ${TASK.steps.filter(s => s.art).map(s => `<div class="fl-r">
+      <span style="color:var(--ink-3)">${ICON.file}</span>
+      <span class="p">.flowboard/auth-refactor/<b>${esc(s.art[0])}</b></span>
+      <span class="d" style="color:var(--ink-3)">${esc(s.label.toLowerCase())}</span>
+      <span class="sz">${esc(s.art[1])}</span></div>`).join('')}
+
+    <div class="fl-h" style="margin-top:22px"><span class="lbl">working tree</span>
+      <span style="font-size:12px;color:var(--ink-3)">${files.length} files<span class="sep">·</span>
+      <span style="color:var(--run)">+${add}</span> <span style="color:var(--fail)">−${del}</span>
+      <span class="sep">·</span>on <b style="color:var(--ink-2)">${esc(TASK.branch)}</b></span></div>
+    ${files.map(f => `<div class="fl-r">
+      <span style="color:var(--ink-3)">${ICON.file}</span>
+      <span class="p"><b>${esc(f.f)}</b></span>
+      <span class="d"><span style="color:var(--run)">+${f.a}</span> <span style="color:var(--fail)">−${f.d}</span></span>
+      <span class="sz"></span></div>`).join('')}
+    <p class="fl-note">Everything here is an ordinary file in this task's own copy of the repo, committed
+    on its own branch — nothing is hidden in a database. The workspace stays until you clean it up, and
+    only once the task is finished or cancelled.</p>`;
+}
+
+/* ══ cost ══════════════════════════════════════════════════════════════ */
+function costHTML(){
+  const max = Math.max(...TASK.steps.map(s => s.cost + s.wasted), 0.01);
+  return `<div class="fl-h"><span class="lbl">where the money went</span>
+      <span style="font-size:12px;color:var(--ink-3)">grey is work that counted, red is work thrown away</span></div>
+    ${TASK.steps.map(s => `<div class="cs-r">
+      <span><b style="font-weight:500">${esc(s.label)}</b></span>
+      <span class="cs-track">
+        <span class="cs-kept" style="width:${(s.cost / max) * 100}%"></span>
+        <span class="cs-waste" style="width:${(s.wasted / max) * 100}%"></span>
+      </span>
+      <span class="cs-v">${s.cost + s.wasted ? money(s.cost + s.wasted) : '—'}</span></div>`).join('')}
+    <div class="cs-sum">
+      <span class="hnum"><span class="lbl">kept</span><b>${money(kept())}</b></span>
+      <span class="hnum"><span class="lbl">wasted</span><b class="w">${money(waste())}</b></span>
+      <span class="hnum"><span class="lbl">bill</span><b>${money(bill())}</b></span>
+      <span class="hnum"><span class="lbl">this recipe averages</span><b>$2.14</b>
+        <span class="lbl" style="letter-spacing:.02em;text-transform:none">across 182 tasks on v4</span></span>
+    </div>
+    <div class="note"><b>${money(waste())} went nowhere.</b> The first build attempt was killed by the
+    sandbox — it reached for <span class="sans" style="font-family:var(--mono)">registry.npmjs.org</span>,
+    which was not on that step's allowlist. The host is allowed now, so the next task down this flow
+    will not pay that toll again.</div>
+    <div class="note cold"><b>Answering is free.</b> Plan paused for ${money(0)} while it waited
+    2m 14s on your answer — a run that asks a question stops billing until you reply.</div>`;
+}
+
+/* ══ aside ═════════════════════════════════════════════════════════════ */
+function asideHTML(){
+  const g = gateStep();
+  return `<div class="ab"><span class="lbl">owner</span><span class="v"><b>${TASK.owner}</b></span></div>
+    <div class="ab"><span class="lbl">repo &amp; branch</span>
+      <span class="v"><b>${esc(TASK.repo)}</b><br>${esc(TASK.branch)}</span></div>
+    <div class="ab"><span class="lbl">workspace</span><span class="v">${esc(TASK.workspace)}</span>
+      <span class="v" style="color:var(--ink-3);margin-top:3px;display:block">its own copy of the repo — kept until you clean it up</span></div>
+    <div class="ab"><span class="lbl">flow</span>
+      <span class="v"><b>${esc(TASK.flow)}</b> ${TASK.flowAuthor} <b>v${TASK.flowVer}</b></span>
+      <span class="v" style="color:var(--wait);margin-top:3px;display:block">v${TASK.flowLatest} exists — this task keeps v${TASK.flowVer} until it finishes</span></div>
+    <div class="ab"><span class="lbl">carried in from memory</span>
+      ${MEMORY.map(([k, v]) => `<span class="mem"><i>${k}</i><span>${esc(v)}</span></span>`).join('')}</div>
+    <div class="ab"><span class="lbl">you were asked</span>
+      <span class="v"><b>1</b> question, answered in 2m 14s</span>
+      ${g ? `<span class="v" style="color:var(--wait);margin-top:3px;display:block"><b>1</b> approval still open</span>` : ''}</div>
+    <div class="ab"><span class="lbl">timeline</span>
+      <span class="v">created ${TASK.created}<br>started ${TASK.started}${
+        g ? `<br><span style="color:var(--wait)">waiting since ${new Date(g.since).getHours()}:${pad(new Date(g.since).getMinutes())}</span>` : ''}</span></div>`;
+}
+
+/* ══ render ════════════════════════════════════════════════════════════ */
+function render(){
+  drawHeader(); drawGate(); drawTabs();
+  $('#main').innerHTML = tab === 'story' ? storyHTML() : tab === 'plan' ? planHTML()
+    : tab === 'files' ? filesHTML() : costHTML();
+  $('#aside').innerHTML = asideHTML();
+  const g = gateStep(), r = running();
+  $('#sb').innerHTML = `<span><b>auth-refactor</b><span class="sep">·</span>` +
+    `${TASK.steps.filter(s => s.state === 'done').length}/${TASK.steps.length} steps done<span class="sep">·</span>` +
+    `${money(bill())} billed<span class="sep">·</span>` +
+    `${g ? 'blocked on you' : r ? r.label.toLowerCase() + ' running' : isDone() ? 'finished' : 'in progress'}` +
+    `<span class="sep">·</span>sandbox <b>container</b>, egress <b>default-deny</b></span>` +
+    `<span class="sp"></span><span>${g ? '<span class="kbd">a</span> approve <span class="sep">·</span><span class="kbd">r</span> send back <span class="sep">·</span>' : ''}<span class="kbd">1-4</span> switch tab</span>`;
+}
+
+/* ══ the small bit of engine ═══════════════════════════════════════════
+   Approving releases summarize, which actually runs and bills.          */
+let ticker = null;
+function startSummarize(){
+  const s = TASK.steps.find(x => x.id === 'summarize');
+  s.state = 'running'; s.start = Date.now(); s.planned = 7000;
+  s.log = [['g','› read  review.md, plan.md, changes.patch'],
+           ['','› write .flowboard/auth-refactor/summary.md']];
+  open.add('summarize');
+  ticker = setInterval(() => {
+    s.ms = Date.now() - s.start;
+    s.cost = (s.ms / 60000) * RATE[s.model] * 24;        // demo clock, ×24
+    if (s.ms >= s.planned) {
+      clearInterval(ticker); ticker = null;
+      s.state = 'done'; s.art = ['summary.md','1.8 kB'];
+      s.log.push(['ok','✓ summary written — the task is done']);
+    }
+    render();
+  }, 250);
+  render();
+}
+function approve(){
+  const g = gateStep(); if (!g) return;
+  g.state = 'done'; rejecting = false;
+  setTimeout(startSummarize, 500);
+  render();
+}
+function sendBack(reason){
+  const g = gateStep(); if (!g) return;
+  const b = TASK.steps.find(s => s.id === 'build');
+  b.wasted += b.cost; b.cost = 0; b.attempts++; b.state = 'queued'; b.ms = 0;
+  b.failed = `sent back by you — ${reason}`;
+  g.state = 'pending'; g.ms = 0; g.cost = 0; g.art = null; g.since = null;
+  TASK.steps.find(s => s.id === 'tests').state = 'done';
+  rejecting = false; open.add('build'); tab = 'story';
+  render();
+}
+
+/* ══ interaction ═══════════════════════════════════════════════════════ */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-tab]');
+  if (t) { tab = t.dataset.tab; $('#scroll').scrollTo({ top: 0, behavior:'smooth' }); return render(); }
+  const st = e.target.closest('[data-step]');
+  if (st) { const k = st.dataset.step; open.has(k) ? open.delete(k) : open.add(k); return render(); }
+  const h = e.target.closest('[data-hunk]');
+  if (h) { const i = +h.dataset.hunk; openHunk.has(i) ? openHunk.delete(i) : openHunk.add(i); return render(); }
+  const j = e.target.closest('[data-jump]');
+  if (j) {
+    tab = 'story'; open.add(j.dataset.jump); render();
+    document.getElementById('step-' + j.dataset.jump)?.scrollIntoView({ behavior:'smooth', block:'center' });
+    return;
+  }
+  if (e.target.closest('#approve')) return approve();
+  if (e.target.closest('#rejectOpen')) { rejecting = true; render(); $('#reasonInput')?.focus(); return; }
+  if (e.target.closest('#cancelReject')) { rejecting = false; return render(); }
+  if (e.target.closest('#back')) return;
+});
+document.addEventListener('submit', e => {
+  if (!e.target.closest('#reasonForm')) return;
+  e.preventDefault();
+  sendBack($('#reasonInput').value.trim() || 'needs another pass');
+});
+document.addEventListener('keydown', e => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.metaKey || e.ctrlKey) return;
+  const k = e.key;
+  if (k === 'a' && gateStep()) return approve();
+  if (k === 'r' && gateStep()) { rejecting = true; render(); $('#reasonInput')?.focus(); return; }
+  if (k === 'Escape' && rejecting) { rejecting = false; return render(); }
+  const tabs = ['story','plan','files','cost'];
+  if (/^[1-4]$/.test(k)) { tab = tabs[+k - 1]; render(); $('#scroll').scrollTo({ top:0 }); }
+});
+
+/* keep the waited timer honest while nothing else moves */
+setInterval(() => { if (gateStep() && !ticker) render(); }, 1000);
+render();
+</script>
