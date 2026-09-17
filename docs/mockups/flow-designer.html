@@ -1,0 +1,735 @@
+<meta charset="utf-8">
+<title>FlowBoard Flow Designer</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74;  --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --wait-ink:#FDF6EA; --wait-ink-2:#F8E8D0;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+input,select{font:inherit;color:inherit;border-radius:0}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sans{font-family:var(--sans)}
+.sep{color:var(--line-2);padding:0 .45em}
+.app{height:100dvh;display:flex;flex-direction:column}
+
+/* ── topbar ───────────────────────────────────────────────────────── */
+.topbar{
+  flex-shrink:0;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line);
+}
+.brand{font-weight:600;white-space:nowrap}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+.sp{flex:1}
+.vchip{
+  display:inline-flex;align-items:baseline;gap:7px;padding:2px 9px;
+  border:1px solid var(--line-2);background:var(--surface-2);white-space:nowrap;
+}
+.vchip b{font-weight:600}
+.dirty .vchip{border-color:var(--wait);background:var(--wait-soft);color:var(--wait)}
+.tgl{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;cursor:pointer}
+.tgl i{
+  width:26px;height:14px;border:1px solid var(--line-2);background:var(--surface-2);
+  position:relative;flex:0 0 auto;transition:background var(--t),border-color var(--t);
+}
+.tgl i::after{
+  content:"";position:absolute;top:1px;left:1px;width:10px;height:10px;
+  background:var(--ink-3);transition:transform var(--t),background var(--t);
+}
+.tgl[aria-pressed="true"] i{background:var(--run-soft);border-color:var(--run)}
+.tgl[aria-pressed="true"] i::after{transform:translateX(12px);background:var(--run)}
+.act{
+  border:1px solid var(--line-2);padding:3px 11px;font-size:12px;white-space:nowrap;
+  transition:background var(--t),border-color var(--t),color var(--t);
+}
+.act:hover:not(:disabled){background:var(--surface-2);border-color:var(--ink-3)}
+.act:disabled{opacity:.4;cursor:default}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act.primary:hover:not(:disabled){background:var(--run);color:#fff}
+.act.danger:hover{border-color:var(--fail);color:var(--fail);background:var(--fail-soft)}
+
+/* ── three-column body ────────────────────────────────────────────── */
+.body{flex:1;min-height:0;display:grid;grid-template-columns:300px 1fr 272px}
+.pane{min-width:0;min-height:0;overflow:auto;display:flex;flex-direction:column}
+.pane+.pane{border-left:1px solid var(--line-2)}
+.ph{
+  flex-shrink:0;display:flex;align-items:center;gap:9px;padding:8px 12px;
+  background:var(--surface-3);border-bottom:1px solid var(--line-2);position:sticky;top:0;z-index:5;
+}
+
+/* ── library rail ─────────────────────────────────────────────────── */
+.fl-search{flex-shrink:0;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--surface)}
+.fl-search input{
+  width:100%;padding:5px 9px;border:1px solid var(--line-2);background:var(--paper);font-size:12px;
+}
+.fl-doms{
+  flex-shrink:0;display:flex;flex-wrap:wrap;gap:4px;padding:9px 12px;
+  border-bottom:1px solid var(--line);background:var(--surface);
+}
+.fl-dom{
+  padding:2px 8px;font-size:11px;color:var(--ink-2);border:1px solid transparent;
+  transition:all var(--t);
+}
+.fl-dom:hover{border-color:var(--line-2)}
+.fl-dom[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--paper);font-weight:500}
+.fl-dom u{text-decoration:none;color:var(--ink-3);margin-left:5px}
+.fl-dom[aria-pressed="true"] u{color:var(--wait-ink-2)}
+.fl-list{flex:1}
+.fl-group{border-bottom:1px solid var(--line)}
+.fl-gh{
+  display:grid;grid-template-columns:62px 1fr auto;gap:10px;align-items:center;
+  width:100%;padding:8px 12px;transition:background var(--t);
+}
+.fl-gh:hover{background:var(--surface)}
+.fl-group.open .fl-gh{background:var(--surface);box-shadow:inset 2px 0 0 var(--ink)}
+.fl-nm{min-width:0}
+.fl-nm b{display:block;font-weight:500;font-size:13px;letter-spacing:-.01em}
+.fl-nm span{display:block;font-family:var(--sans);font-size:11.5px;color:var(--ink-3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fl-count{
+  font-size:10px;font-weight:600;letter-spacing:.06em;padding:1px 5px;
+  border:1px solid var(--wait);color:var(--wait);background:var(--wait-soft);white-space:nowrap;
+}
+.fl-one{font-size:11px;color:var(--ink-3);white-space:nowrap}
+.fl-vars{background:var(--wait-wash);border-top:1px solid var(--wait-edge);padding:7px 12px 9px}
+.fl-why{font-family:var(--sans);font-size:11.5px;color:var(--wait);margin:0 0 7px}
+.fl-var{
+  display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:baseline;
+  width:100%;padding:6px 9px;background:var(--surface);border:1px solid var(--wait-edge);
+  transition:border-color var(--t),background var(--t);
+}
+.fl-var+.fl-var{margin-top:5px}
+.fl-var:hover{border-color:var(--wait)}
+.fl-var.on{border-color:var(--ink);border-left:3px solid var(--ink)}
+.fl-au{font-weight:500;font-size:12px}
+.fl-au i{font-style:normal;color:var(--ink-3);font-weight:400;margin-left:6px}
+.fl-star{color:var(--wait);font-size:10px;letter-spacing:.06em}
+.fl-stats{grid-column:1/3;display:flex;flex-wrap:wrap;font-size:11px;color:var(--ink-3)}
+.fl-diff{grid-column:1/3;font-family:var(--sans);font-size:11.5px;color:var(--ink-2);margin-top:2px}
+.fl-diff b{color:var(--ink);font-weight:500}
+.glyph{flex:0 0 auto}
+
+/* ── canvas ───────────────────────────────────────────────────────── */
+.cv-wrap{flex:1;position:relative;overflow:auto;background:
+  linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 24px,
+  linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/24px 100%,var(--paper);
+  background-blend-mode:normal;}
+.cv{position:relative;width:880px;height:400px}
+.cv-edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.cv-e{fill:none;stroke:var(--line-2);stroke-width:1.6}
+.cv-e.pass{stroke:var(--run)}
+.cv-e.fail{stroke:var(--fail);stroke-dasharray:5 4}
+.cv-e.dim{opacity:.35}
+.cv-el{font-family:var(--mono);font-size:9.5px;fill:var(--ink-3)}
+.cv-el.pass{fill:var(--run)} .cv-el.fail{fill:var(--fail)}
+.cv-n{
+  position:absolute;width:140px;background:var(--surface);
+  border:1px solid var(--line-2);padding:6px 9px 7px;cursor:grab;
+  transition:border-color var(--t),box-shadow var(--t);
+}
+.cv-n:active{cursor:grabbing}
+.cv-n:hover{border-color:var(--ink-3)}
+.cv-n.on{border-color:var(--ink);box-shadow:inset 3px 0 0 var(--ink)}
+.cv-n.bad{border-color:var(--wait);background:var(--wait-soft)}
+.cv-n.bad.on{box-shadow:inset 3px 0 0 var(--wait)}
+.cv-n.ghost{opacity:.5;border-style:dashed;cursor:default}
+.cv-t{font-weight:500;font-size:12.5px;display:flex;align-items:center;gap:5px}
+.cv-t .g{color:var(--wait);display:inline-flex}
+.cv-s{font-size:10px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cv-m{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.cv-m span{font-size:9.5px;border:1px solid var(--line);padding:0 4px;color:var(--ink-2);background:var(--surface-2)}
+.cv-m span.b{border-color:var(--run-soft);color:var(--run)}
+.cv-bar{
+  flex-shrink:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:7px 12px;background:var(--surface-2);border-top:1px solid var(--line);
+}
+.preview-bar{
+  flex-shrink:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:7px 12px;background:var(--wait);color:var(--wait-ink);
+}
+.preview-bar .lbl{color:var(--wait-ink);font-weight:600}
+.preview-bar .act{border-color:var(--wait-ink-2);color:var(--wait-ink)}
+.preview-bar .act:hover{background:var(--wait-ink);color:var(--wait)}
+.preview-bar .act.primary{background:var(--wait-ink);color:var(--wait);border-color:var(--wait-ink)}
+
+/* ── inspector ────────────────────────────────────────────────────── */
+.in-b{padding:10px 12px;border-bottom:1px solid var(--line)}
+.in-h{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.in-f{display:grid;grid-template-columns:76px 1fr;gap:6px 9px;align-items:center;font-size:12px}
+.in-f label{color:var(--ink-3);font-size:11px}
+.in-f select,.in-f input{width:100%;padding:3px 6px;border:1px solid var(--line-2);background:var(--paper);font-size:12px}
+.in-f input[type=checkbox]{width:auto}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.chip{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:2px 7px;
+  border:1px solid var(--line-2);background:var(--surface-2);
+}
+.chip.bad{border-color:var(--wait);color:var(--wait);background:var(--wait-soft)}
+.chip.out{border-color:var(--run-soft);color:var(--run);background:var(--run-soft)}
+.chip button{color:var(--ink-3);font-size:13px;line-height:1;padding:0 0 0 2px}
+.chip button:hover{color:var(--fail)}
+.in-empty{padding:26px 14px;color:var(--ink-3);font-family:var(--sans);font-size:13px;text-align:center}
+
+/* ── validation strip ─────────────────────────────────────────────── */
+.vl{flex-shrink:0;background:var(--surface);border-top:1px solid var(--line-2)}
+.vl.bad{background:var(--wait-wash)}
+.vl-h{display:flex;align-items:center;gap:9px;padding:7px 16px}
+.vl.bad .vl-h{background:var(--wait);color:var(--wait-ink)}
+.vl.bad .vl-h .lbl{color:var(--wait-ink);font-weight:600;font-size:11px}
+.vl-ok{color:var(--run);display:inline-flex}
+.vl-list{padding:8px 16px 10px;display:flex;flex-direction:column;gap:5px}
+.vl-p{
+  display:flex;align-items:baseline;gap:9px;width:100%;padding:6px 10px;
+  background:var(--surface);border:1px solid var(--wait-edge);border-left:3px solid var(--wait);
+  font-family:var(--sans);font-size:13px;transition:border-color var(--t);
+}
+.vl-p:hover{border-color:var(--wait)}
+.vl-p b{font-family:var(--mono);font-weight:500;font-size:12px;white-space:nowrap}
+.statusbar{
+  flex-shrink:0;display:flex;align-items:center;flex-wrap:wrap;gap:0;
+  padding:6px 16px;background:var(--surface-2);border-top:1px solid var(--line);
+  color:var(--ink-3);font-size:11px;
+}
+.statusbar b{color:var(--ink-2);font-weight:500}
+.keys{margin-left:auto}
+.kbd{border:1px solid var(--line-2);padding:0 4px;font-size:10px;color:var(--ink-2);background:var(--surface)}
+
+@media (max-width:1100px){
+  .body{grid-template-columns:250px 1fr}
+  .pane.insp{display:none}
+}
+@media (max-width:760px){
+  .body{grid-template-columns:1fr}
+  .pane.lib{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after,*::before{transition-duration:.001ms!important;animation-duration:.001ms!important}
+}
+</style>
+
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="brand">flowboard<em>/</em><span>flows</span></div>
+    <span class="vchip" id="vchip"></span>
+    <span class="sp"></span>
+    <button class="tgl" id="draft" aria-pressed="false"><i></i><span class="lbl" style="letter-spacing:.06em">draft mode</span></button>
+    <button class="act" id="addStep">+ Step</button>
+    <button class="act primary" id="save" disabled>Save as v5</button>
+  </header>
+
+  <div class="body">
+    <aside class="pane lib">
+      <div class="ph"><span class="lbl">flow library</span><span class="sp"></span><span class="lbl" id="flCount"></span></div>
+      <div class="fl-search"><input id="q" placeholder="Search flows and authors…" autocomplete="off" aria-label="Search flows"></div>
+      <div class="fl-doms" id="doms"></div>
+      <div class="fl-list" id="flList"></div>
+    </aside>
+
+    <main class="pane">
+      <div class="ph"><span class="lbl">canvas</span><span class="sp"></span>
+        <span class="lbl" style="letter-spacing:.04em;text-transform:none" id="cvHint">drag a step to move it · click to edit it</span></div>
+      <div id="previewBar"></div>
+      <div class="cv-wrap" id="cvWrap">
+        <div class="cv" id="cv">
+          <svg class="cv-edges" id="edges" viewBox="0 0 880 400" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div id="nodes"></div>
+        </div>
+      </div>
+      <div class="cv-bar" id="cvBar"></div>
+    </main>
+
+    <aside class="pane insp">
+      <div class="ph"><span class="lbl">step</span><span class="sp"></span><span class="lbl" id="inName"></span></div>
+      <div id="insp"></div>
+    </aside>
+  </div>
+
+  <section class="vl" id="vl"></section>
+  <footer class="statusbar" id="sb"></footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ICON = {
+  gate:'<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.4" y="3.2" width="2.4" height="9.6" fill="currentColor"/><rect x="9.2" y="3.2" width="2.4" height="9.6" fill="currentColor"/></svg>',
+  done:'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.3l3.1 3.1 6.1-7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  warn:'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.6L14.6 13.4H1.4z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6.6v3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".9" fill="currentColor"/></svg>',
+};
+const MODELS = ['haiku','sonnet','opus'];
+const EFFORT = ['low','medium','high'];
+const SANDBOX = ['none','container','sealed container'];
+
+/* ══ the library ═══════════════════════════════════════════════════════
+   Domains come from FlowBoard's role starter packs. Several flows share a
+   name across authors on purpose — that's the problem this rail solves.  */
+const DOMAINS = [
+  ['all','All'], ['analysis','Analysis'], ['po-pm','PO / PM'], ['sdlc','SDLC'],
+  ['qa','QA'], ['platform','Platform'], ['design','Design'], ['marketing','Marketing'],
+];
+const F = (name, author, ver, domain, desc, shape, steps, gates, cost, runs, last, extra = {}) =>
+  ({ name, author, ver, domain, desc, shape, steps, gates, cost, runs, last, ...extra });
+
+const LIBRARY = [
+  F('Software delivery','@core',4,'sdlc','Plan, build and test in parallel, review behind a gate.','fanloop',6,1,2.14,182,'in use now',
+    { open:true, golden:true }),
+  F('Software delivery','@alex',2,'sdlc','Same pipeline with the review gate removed for spikes.','fan',5,0,1.61,23,'4d ago',
+    { forkOf:'@core v3', diff:'No approval gate — it merges itself. Cheaper and faster, but nothing stops a bad review.' }),
+
+  F('Code review','@core',7,'sdlc','Read the diff against the plan, write a verdict, gate on it.','linear',3,1,0.42,410,'2h ago',
+    { golden:true, diff:'The org default. Two reviewers on anything touching auth.' }),
+  F('Code review','@alex',3,'sdlc','Stripped to one pass for small diffs.','linear',2,1,0.19,64,'yesterday',
+    { forkOf:'@core v5', diff:'Single pass, <b>no security sweep</b>. Fine for docs, wrong for anything that ships.' }),
+  F('Code review','@team-sec',2,'sdlc','Adds dependency and secret scanning before the human gate.','fanloop',6,2,1.18,97,'3d ago',
+    { diff:'Adds <b>threat-model</b> and <b>secret-scan</b>. Slower and ~3× the cost — required for payment paths.' }),
+
+  F('Discovery to stories','@core',3,'analysis','Elicit requirements, model the domain, write stories with acceptance criteria.','loop',5,1,1.87,58,'6d ago',{ golden:true }),
+  F('Domain modelling','@alex',1,'analysis','Turn a transcript into entities, events and invariants.','linear',3,0,0.94,7,'2w ago'),
+
+  F('Story refinement','@core',5,'po-pm','Split an epic, size it, and get sign-off before it hits the board.','loop',4,1,0.71,143,'yesterday',{ golden:true }),
+  F('Story refinement','@pm-guild',1,'po-pm','Refinement with an explicit RICE score and a stakeholder gate.','loop',6,2,1.32,11,'9d ago',
+    { diff:'Adds <b>RICE scoring</b> and a second sign-off. Built for the quarterly planning cycle, heavy for day-to-day.' }),
+  F('Backlog triage','@core',2,'po-pm','Sweep the backlog, merge duplicates, re-prioritise.','branch',4,0,0.38,76,'5d ago'),
+
+  F('Test and triage','@core',4,'qa','Author cases, run them, loop defects back to the developer.','loop',5,1,1.44,88,'3d ago',{ golden:true }),
+  F('Release and rollback','@core',6,'platform','Deploy, watch health checks, roll back automatically if they fail.','loop',5,1,0.86,201,'11h ago',{ golden:true }),
+  F('Incident response','@team-sec',3,'platform','Triage the page, find the blast radius, write the post-mortem.','branch',6,2,2.42,14,'1mo ago'),
+  F('Design handoff','@core',2,'design','Wireframes, UI against the design system, then a usability pass.','loop',5,1,1.96,31,'8d ago'),
+
+  F('Launch campaign','@core',2,'marketing','Positioning, content, launch plan, then measure.','loop',5,1,1.12,19,'3w ago'),
+  F('Launch campaign','@growth',4,'marketing','Adds channel-by-channel briefs and a paid-spend gate.','fanloop',8,2,3.07,42,'2d ago',
+    { diff:'Fans out per channel and gates on <b>paid spend</b>. Use it when there is a budget to sign off.' }),
+  F('Positioning sprint','@growth',1,'marketing','Interview, differentiate, draft the messaging house.','linear',4,0,0.88,6,'1mo ago'),
+];
+
+/* Step names per domain, taken from FlowBoard's role starter packs, so a
+   preview shows that flow's real shape rather than a stand-in. */
+const STEPNAMES = {
+  sdlc:['Plan implementation','Implement','Write tests','Code review','Merge and integrate','Threat model','Secret scan','Sign off'],
+  analysis:['Elicit requirements','Model the domain','Write user stories','Prioritise backlog','Stakeholder sign-off'],
+  'po-pm':['Split the epic','Size it','Refine criteria','RICE score','Stakeholder sign-off','Publish to the board'],
+  qa:['Test plan','Author cases','Execute and automate','Log and triage','Regression and sign-off'],
+  platform:['Provision infra','Build CI and CD','Deploy release','Health checks','Monitor and alert','Roll back'],
+  design:['User research','IA and user flows','Wireframes','UI via design system','Prototype','Usability test'],
+  marketing:['Positioning','Create content','Channel briefs','Plan launch','Run campaign','Paid spend','Measure results','Scale up'],
+};
+const ROLE = { sdlc:'developer', analysis:'analyst', 'po-pm':'product-owner', qa:'tester',
+  platform:'sre', design:'designer', marketing:'marketer' };
+
+function buildPreview(lib){
+  const names = (STEPNAMES[lib.domain] || STEPNAMES.sdlc).slice(0, lib.steps);
+  const fan = lib.shape.startsWith('fan'), branch = lib.shape === 'branch';
+  const col = i => fan ? (i === 0 ? 0 : i <= 2 ? 1 : i - 1) : i;
+  const steps = names.map((label, i) => ({
+    id: label.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''),
+    label, agent: ROLE[lib.domain] || 'agent',
+    model: lib.cost / lib.steps > 0.3 ? 'opus' : 'sonnet', effort:'medium',
+    budget: +(lib.cost / lib.steps * 1.6).toFixed(2), gate:false, needs:[], produces:[],
+    x: 20 + col(i) * 170, y: fan && i === 1 ? 90 : fan && i === 2 ? 270 : 180,
+    retries:2, sandbox:'sealed container',
+  }));
+  for (let i = 0; i < lib.gates && steps.length > 1; i++)
+    steps[Math.max(0, steps.length - 2 - i)].gate = true;
+
+  const edges = [], id = i => steps[i].id;
+  if (branch && steps.length > 3) {
+    steps[2].x = 360; steps[2].y = 90; steps[3].x = 360; steps[3].y = 270;
+    edges.push([id(0), id(1),'always'], [id(1), id(2),'pass'], [id(1), id(3),'fail']);
+    for (let i = 4; i < steps.length; i++) { steps[i].x = 530 + (i - 4) * 170; edges.push([id(2), id(i),'always']); }
+  } else if (fan) {
+    edges.push([id(0), id(1),'always'], [id(0), id(2),'always']);
+    if (steps[3]) edges.push([id(1), id(3),'always'], [id(2), id(3),'always']);
+    for (let i = 3; i < steps.length - 1; i++) edges.push([id(i), id(i+1), i === steps.length - 2 ? 'pass' : 'always']);
+  } else {
+    for (let i = 0; i < steps.length - 1; i++)
+      edges.push([id(i), id(i+1), i === steps.length - 2 ? 'pass' : 'always']);
+  }
+  if (lib.shape.includes('loop') && steps.length > 2)
+    edges.push([id(steps.length - 2), id(1), 'fail']);
+  return { ...lib, steps, edges };
+}
+
+/* a tiny DAG glyph so you can see a recipe's shape before opening it */
+const SHAPES = {
+  linear:  { n:[[4,10],[22,10],[40,10],[58,10]], e:[[0,1],[1,2],[2,3]] },
+  fan:     { n:[[4,10],[22,10],[40,3],[40,17],[58,10]], e:[[0,1],[1,2],[1,3],[2,4],[3,4]] },
+  fanloop: { n:[[4,10],[22,10],[40,3],[40,17],[58,10]], e:[[0,1],[1,2],[1,3],[2,4],[3,4]], loop:[58,10,22,10] },
+  loop:    { n:[[4,10],[22,10],[40,10],[58,10]], e:[[0,1],[1,2],[2,3]], loop:[58,10,22,10] },
+  branch:  { n:[[4,10],[26,10],[52,3],[52,17]], e:[[0,1],[1,2],[1,3]] },
+};
+function glyph(kind){
+  const s = SHAPES[kind] || SHAPES.linear;
+  const e = s.e.map(([a,b]) =>
+    `<line x1="${s.n[a][0]+3}" y1="${s.n[a][1]}" x2="${s.n[b][0]-3}" y2="${s.n[b][1]}" stroke="#CFCBBE" stroke-width="1"/>`).join('');
+  const l = s.loop ? `<path d="M${s.loop[0]},${s.loop[1]-4} C${s.loop[0]},${-1} ${s.loop[2]},${-1} ${s.loop[2]},${s.loop[3]-4}"
+      fill="none" stroke="#B0231B" stroke-width="1" stroke-dasharray="2 2"/>` : '';
+  const n = s.n.map(([x,y]) => `<rect x="${x-3}" y="${y-3}" width="6" height="6" fill="#B8B4A8"/>`).join('');
+  return `<svg class="glyph" width="62" height="20" viewBox="0 -2 62 22" aria-hidden="true">${l}${e}${n}</svg>`;
+}
+
+/* ══ the flow on the canvas ════════════════════════════════════════════ */
+const S = (id, label, agent, model, effort, budget, gate, needs, produces, x, y, retries = 2) =>
+  ({ id, label, agent, model, effort, budget, gate, needs, produces, x, y, retries, sandbox:'sealed container' });
+
+const OPEN = {
+  name:'Software delivery', author:'@core', ver:4, domain:'sdlc',
+  adopted:'12 Sep', running:3,
+  steps:[
+    S('research','Research','scout','haiku','low',0.50,false,[],['brief.md'],20,180),
+    S('plan','Plan','architect','opus','high',2.00,false,['brief.md'],['plan.md'],190,180),
+    S('build','Build','developer','opus','high',6.00,false,['plan.md'],['changes.patch'],360,90),
+    S('tests','Tests','tester','sonnet','medium',3.00,false,['plan.md'],['test-report.md'],360,180),
+    S('threat-model','Threat model','sec-analyst','sonnet','high',2.00,false,['design.md'],['threats.md'],360,270),
+    S('review','Review','reviewer','sonnet','medium',2.00,true,['changes.patch','test-report.md'],['review.md'],530,180),
+    S('summarize','Summarize','scribe','haiku','low',0.30,false,['review.md'],['summary.md'],700,180),
+  ],
+  edges:[
+    ['research','plan','always'], ['plan','build','always'], ['plan','tests','always'],
+    ['plan','threat-model','always'], ['build','review','always'], ['tests','review','always'],
+    ['threat-model','review','always'], ['review','summarize','pass'], ['review','build','fail'],
+  ],
+};
+
+const NW = 140, NH = 56;
+let flow = structuredClone(OPEN);
+let sel = 'review', dirty = false, preview = null, dom = 'all', query = '', openGroup = 'Code review';
+
+/* ══ validation — the check §2 of the feature map actually promises ════ */
+function ancestors(f, id, seen = new Set()){
+  for (const [a,b] of f.edges) {
+    if (b !== id || seen.has(a)) continue;
+    seen.add(a); ancestors(f, a, seen);
+  }
+  return seen;
+}
+function validate(f){
+  const out = [];
+  const byId = Object.fromEntries(f.steps.map(s => [s.id, s]));
+  const entry = f.steps.find(s => !f.edges.some(([,b]) => b === s.id));
+  for (const s of f.steps) {
+    const anc = [...ancestors(f, s.id)].map(i => byId[i]).filter(Boolean);
+    for (const need of s.needs) {
+      if (!anc.some(a => a.produces.includes(need)))
+        out.push({ step:s.id, msg:`needs <b>${esc(need)}</b>, and no step before it produces that file.` });
+    }
+    if (entry && s.id !== entry.id && !f.edges.some(([,b]) => b === s.id))
+      out.push({ step:s.id, msg:'has nothing leading into it, so it would never run.' });
+  }
+  return out;
+}
+
+/* ══ canvas ════════════════════════════════════════════════════════════ */
+function edgePath(a, b){
+  const ax = a.x + NW, ay = a.y + NH / 2, bx = b.x, by = b.y + NH / 2;
+  if (bx >= ax - 4) {                                   // forward
+    const d = Math.max(26, (bx - ax) * .55);
+    return { d:`M${ax},${ay} C${ax+d},${ay} ${bx-d},${by} ${bx},${by}`, mx:(ax+bx)/2, my:(ay+by)/2 - 7 };
+  }
+  const top = Math.min(a.y, b.y) - 44;                  // backward: arc over the top
+  const cx = a.x + NW / 2, dx = b.x + NW / 2;
+  return { d:`M${cx},${a.y} C${cx},${top} ${dx},${top} ${dx},${b.y}`, mx:(cx+dx)/2, my:top + 16 };
+}
+/* edges are redrawn on their own during a drag — rebuilding the whole app
+   on every pointermove would thrash the rail and steal focus */
+function drawEdges(){
+  const f = preview || flow, live = !preview;
+  const byId = Object.fromEntries(f.steps.map(s => [s.id, s]));
+  $('#edges').innerHTML =
+    `<defs>
+      ${['#CFCBBE:a','#0E6E74:p','#B0231B:f'].map(t => { const [c,k] = t.split(':');
+        return `<marker id="m${k}" markerWidth="7" markerHeight="7" refX="6.5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="${c}"/></marker>`; }).join('')}
+    </defs>` +
+    f.edges.map(([from,to,cond]) => {
+      const a = byId[from], b = byId[to];
+      if (!a || !b) return '';
+      const p = edgePath(a, b);
+      const k = cond === 'pass' ? 'p' : cond === 'fail' ? 'f' : 'a';
+      const lbl = cond === 'always' ? '' :
+        `<text class="cv-el ${cond}" x="${p.mx}" y="${p.my}" text-anchor="middle">${cond === 'pass' ? 'passed' : 'failed ↺'}</text>`;
+      return `<path class="cv-e ${cond}${live ? '' : ' dim'}" d="${p.d}" marker-end="url(#m${k})"/>${lbl}`;
+    }).join('');
+  const w = Math.max(880, ...f.steps.map(s => s.x + NW + 40));
+  const h = Math.max(400, ...f.steps.map(s => s.y + NH + 40));
+  $('#cv').style.width = w + 'px'; $('#cv').style.height = h + 'px';
+  $('#edges').setAttribute('viewBox', `0 0 ${w} ${h}`);
+}
+function drawCanvas(){
+  const f = preview || flow, live = !preview;
+  const problems = live ? validate(f) : [];
+  const bad = new Set(problems.map(p => p.step));
+  drawEdges();
+  $('#nodes').innerHTML = f.steps.map(s => `
+    <div class="cv-n${!live ? ' ghost' : ''}${s.id === sel && live ? ' on' : ''}${bad.has(s.id) ? ' bad' : ''}"
+         data-step="${s.id}" style="left:${s.x}px;top:${s.y}px" tabindex="${live ? 0 : -1}"
+         role="button" aria-label="Step ${esc(s.label)}">
+      <div class="cv-t">${esc(s.label)}${s.gate ? `<span class="g" title="waits for your approval">${ICON.gate}</span>` : ''}</div>
+      <div class="cv-s">${esc(s.agent)}</div>
+      <div class="cv-m"><span>${draftOn ? 'haiku' : esc(s.model)}</span><span>${esc(s.effort)}</span><span class="b">$${s.budget.toFixed(2)}</span></div>
+    </div>`).join('');
+  return problems;
+}
+
+/* ══ inspector ═════════════════════════════════════════════════════════ */
+function drawInspector(problems){
+  const s = flow.steps.find(x => x.id === sel);
+  $('#inName').textContent = preview ? 'preview' : s ? s.id : '';
+  if (preview || !s) {
+    $('#insp').innerHTML = `<div class="in-empty">${preview
+      ? 'You are previewing a library flow. Use it, or go back to yours, to edit steps.'
+      : 'Select a step on the canvas to edit it.'}</div>`;
+    return;
+  }
+  const mine = problems.filter(p => p.step === s.id);
+  const byId = Object.fromEntries(flow.steps.map(x => [x.id, x]));
+  const anc = [...ancestors(flow, s.id)].map(i => byId[i]).filter(Boolean);
+  const supplied = new Set(anc.flatMap(a => a.produces));
+  $('#insp').innerHTML = `
+    <div class="in-b">
+      <div class="in-h"><span style="font-weight:600;font-size:14px">${esc(s.label)}</span></div>
+      <div class="in-f">
+        <label for="f-agent">Agent</label><input id="f-agent" value="${esc(s.agent)}" data-set="agent">
+        <label for="f-model">Model</label>
+        <select id="f-model" data-set="model">${MODELS.map(m => `<option${m === s.model ? ' selected' : ''}>${m}</option>`).join('')}</select>
+        <label for="f-effort">Effort</label>
+        <select id="f-effort" data-set="effort">${EFFORT.map(m => `<option${m === s.effort ? ' selected' : ''}>${m}</option>`).join('')}</select>
+        <label for="f-budget">Budget</label><input id="f-budget" type="number" step="0.10" min="0" value="${s.budget.toFixed(2)}" data-set="budget">
+        <label for="f-retries">Retries</label><input id="f-retries" type="number" min="0" max="5" value="${s.retries}" data-set="retries">
+      </div>
+    </div>
+    <div class="in-b">
+      <div class="in-f">
+        <label for="f-gate">Approval</label>
+        <span><label style="display:flex;gap:7px;align-items:center;font-size:12px;color:var(--ink)">
+          <input type="checkbox" id="f-gate" data-set="gate"${s.gate ? ' checked' : ''}> waits for you</label></span>
+        <label for="f-sandbox">Sandbox</label>
+        <select id="f-sandbox" data-set="sandbox">${SANDBOX.map(m => `<option${m === s.sandbox ? ' selected' : ''}>${m}</option>`).join('')}</select>
+      </div>
+      ${!s.gate && s.sandbox === 'none'
+        ? `<div class="chip bad" style="margin-top:8px">${ICON.warn} unattended and unsandboxed</div>` : ''}
+    </div>
+    <div class="in-b">
+      <div class="in-h"><span class="lbl">needs</span><span class="sp" style="flex:1"></span>
+        <span class="lbl" style="letter-spacing:.02em;text-transform:none">files an earlier step must write</span></div>
+      <div class="chips">
+        ${s.needs.map(n => `<span class="chip${supplied.has(n) ? '' : ' bad'}">${esc(n)}<button data-drop="${esc(n)}" title="Remove this requirement" aria-label="Remove ${esc(n)}">×</button></span>`).join('')
+          || '<span class="chip">nothing — it can start cold</span>'}
+      </div>
+      <div class="in-h" style="margin-top:11px"><span class="lbl">produces</span></div>
+      <div class="chips">${s.produces.map(n => `<span class="chip out">${esc(n)}</span>`).join('') || '<span class="chip">nothing</span>'}</div>
+      ${mine.length ? `<div class="chip bad" style="margin-top:9px">${ICON.warn} ${mine.length} problem${mine.length > 1 ? 's' : ''} — see the strip below</div>` : ''}
+    </div>
+    <div class="in-b"><button class="act danger" id="delStep">Delete this step</button></div>`;
+}
+
+/* ══ library rail ══════════════════════════════════════════════════════ */
+function groups(){
+  const hit = LIBRARY.filter(f =>
+    (dom === 'all' || f.domain === dom) &&
+    (!query || (f.name + ' ' + f.author + ' ' + f.desc).toLowerCase().includes(query)));
+  const m = new Map();
+  for (const f of hit) (m.get(f.name) || m.set(f.name, []).get(f.name)).push(f);
+  return [...m.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+}
+function drawLibrary(){
+  $('#doms').innerHTML = DOMAINS.map(([k, label]) => {
+    const n = k === 'all' ? LIBRARY.length : LIBRARY.filter(f => f.domain === k).length;
+    return `<button class="fl-dom" data-dom="${k}" aria-pressed="${dom === k}">${label}<u>${n}</u></button>`;
+  }).join('');
+
+  const gs = groups();
+  $('#flCount').textContent = `${gs.reduce((a, [, v]) => a + v.length, 0)} flows`;
+  $('#flList').innerHTML = gs.map(([name, vs]) => {
+    const many = vs.length > 1, open = many && openGroup === name;
+    const head = `<button class="fl-gh" data-group="${esc(name)}">
+        ${glyph(vs[0].shape)}
+        <span class="fl-nm"><b>${esc(name)}</b><span>${many
+          ? vs.map(v => v.author).join(' · ')
+          : esc(vs[0].desc)}</span></span>
+        ${many ? `<span class="fl-count">${vs.length} authors</span>`
+               : `<span class="fl-one">${vs[0].author} v${vs[0].ver}</span>`}
+      </button>`;
+    if (!open) return `<div class="fl-group">${head}</div>`;
+    return `<div class="fl-group open">${head}
+      <div class="fl-vars">
+        <p class="fl-why">Same name, ${vs.length} different recipes. Compare before you pick one.</p>
+        ${vs.map(v => `<button class="fl-var${v.open ? ' on' : ''}" data-pick="${esc(v.name)}|${esc(v.author)}">
+          <span class="fl-au">${v.author}<i>v${v.ver}</i></span>
+          <span class="fl-star">${v.golden ? '★ org default' : v.open ? 'open now' : ''}</span>
+          <span class="fl-stats">${v.steps} steps<span class="sep">·</span>${v.gates} gate${v.gates === 1 ? '' : 's'}<span class="sep">·</span>~$${v.cost.toFixed(2)}/task<span class="sep">·</span>${v.runs} runs<span class="sep">·</span>${v.last}</span>
+          ${v.forkOf ? `<span class="fl-stats">forked from ${v.forkOf}</span>` : ''}
+          ${v.diff ? `<span class="fl-diff">${v.diff}</span>` : ''}
+        </button>`).join('')}
+      </div></div>`;
+  }).join('') || `<div class="in-empty">No flow matches that. Try another domain, or clear the search.</div>`;
+}
+
+/* ══ chrome ════════════════════════════════════════════════════════════ */
+let draftOn = false;
+function drawChrome(problems){
+  const f = preview || flow;
+  $('#vchip').innerHTML = preview
+    ? `<b>${esc(preview.name)}</b><span class="lbl">${preview.author} v${preview.ver}</span><span class="lbl">preview</span>`
+    : `<b>${esc(flow.name)}</b><span class="lbl">${flow.author} v${flow.ver}</span>` +
+      `<span class="lbl">${dirty ? 'edited — saving makes v' + (flow.ver + 1) : 'adopted ' + flow.adopted}</span>`;
+  $('#app').classList.toggle('dirty', dirty && !preview);
+  $('#save').disabled = !dirty || !!preview || problems.length > 0;
+  $('#save').textContent = `Save as v${flow.ver + 1}`;
+  $('#addStep').disabled = !!preview;
+
+  $('#previewBar').innerHTML = preview ? `<div class="preview-bar">
+      <span class="lbl">previewing</span>
+      <span><b>${esc(preview.author)}/${esc(preview.name.toLowerCase().replace(/ /g,'-'))}</b> v${preview.ver}</span>
+      <span style="font-family:var(--sans);font-size:13px">${esc(preview.desc)}</span>
+      <span class="sp" style="flex:1"></span>
+      <button class="act primary" id="usePrev">Use this flow</button>
+      <button class="act" id="backPrev">Back to yours</button>
+    </div>` : '';
+
+  $('#cvBar').innerHTML =
+    `<span class="lbl">${f.steps.length} steps</span><span class="sep">·</span>` +
+    `<span class="lbl">${f.edges.filter(e => e[2] !== 'always').length} conditional routes</span><span class="sep">·</span>` +
+    `<span class="lbl">${f.steps.filter(s => s.gate).length} approval gate</span><span class="sep">·</span>` +
+    `<span class="lbl">est. $${f.steps.reduce((a, s) => a + (draftOn ? 0.05 : s.budget), 0).toFixed(2)} ceiling per task</span>` +
+    (draftOn ? `<span class="sep">·</span><span style="color:var(--run)">draft mode — every step forced to haiku</span>` : '');
+
+  const bad = problems.length > 0 && !preview;
+  $('#vl').className = 'vl' + (bad ? ' bad' : '');
+  $('#vl').innerHTML = bad
+    ? `<div class="vl-h"><span class="lbl">won't save — ${problems.length} problem${problems.length > 1 ? 's' : ''}</span>
+        <span style="font-family:var(--sans);font-size:12.5px">a step asks for a file nothing upstream writes</span></div>
+       <div class="vl-list">${problems.map(p =>
+        `<button class="vl-p" data-fix="${p.step}">${ICON.warn}<b>${p.step}</b><span>${p.msg}</span></button>`).join('')}</div>`
+    : `<div class="vl-h"><span class="vl-ok">${ICON.done}</span>
+        <span class="lbl" style="letter-spacing:.04em;text-transform:none">This recipe holds together — every step's inputs are written by a step before it.</span></div>`;
+
+  $('#sb').innerHTML =
+    `<span><b>${LIBRARY.length}</b> flows in the library <span class="sep">·</span>` +
+    `<b>${new Set(LIBRARY.map(l => l.author)).size}</b> authors <span class="sep">·</span>` +
+    `<b>${flow.running}</b> tasks still running on v${flow.ver} — they keep it until they finish</span>` +
+    `<span class="keys"><span class="kbd">del</span> remove step <span class="sep">·</span><span class="kbd">esc</span> deselect</span>`;
+}
+
+function render(){
+  const problems = drawCanvas();
+  drawInspector(problems);
+  drawLibrary();
+  drawChrome(problems);
+}
+
+/* ══ interaction ═══════════════════════════════════════════════════════ */
+let drag = null;
+$('#nodes').addEventListener('pointerdown', e => {
+  const n = e.target.closest('[data-step]');
+  if (!n || preview) return;
+  sel = n.dataset.step;
+  const s = flow.steps.find(x => x.id === sel);
+  drag = { id:sel, dx:e.clientX - s.x, dy:e.clientY - s.y };
+  // capture on the container, not the node — render() replaces the node element
+  $('#nodes').setPointerCapture(e.pointerId);
+  render();
+});
+$('#nodes').addEventListener('pointermove', e => {
+  if (!drag) return;
+  const s = flow.steps.find(x => x.id === drag.id);
+  const nx = Math.max(0, Math.round((e.clientX - drag.dx) / 10) * 10);
+  const ny = Math.max(0, Math.round((e.clientY - drag.dy) / 10) * 10);
+  if (nx === s.x && ny === s.y) return;
+  s.x = nx; s.y = ny; dirty = true;
+  const el = $(`[data-step="${CSS.escape(drag.id)}"]`);      // move just this node
+  if (el) { el.style.left = nx + 'px'; el.style.top = ny + 'px'; }
+  drawEdges();
+});
+$('#nodes').addEventListener('pointerup', e => {
+  if (!drag) return;
+  drag = null;
+  $('#nodes').releasePointerCapture(e.pointerId);
+  render();                                                   // chrome catches up once
+});
+
+document.addEventListener('click', e => {
+  const d = e.target.closest('[data-dom]');
+  if (d) { dom = d.dataset.dom; return render(); }
+  const g = e.target.closest('[data-group]');
+  if (g) { openGroup = openGroup === g.dataset.group ? null : g.dataset.group; return render(); }
+  const p = e.target.closest('[data-pick]');
+  if (p) {
+    const [name, author] = p.dataset.pick.split('|');
+    const lib = LIBRARY.find(l => l.name === name && l.author === author);
+    if (lib.open) { preview = null; return render(); }
+    preview = buildPreview(lib);
+    return render();
+  }
+  if (e.target.closest('#backPrev')) { preview = null; return render(); }
+  if (e.target.closest('#usePrev')) {
+    const p = structuredClone(preview);
+    flow = { name:p.name, author:p.author, ver:p.ver, domain:p.domain,
+             adopted:'just now', running:0, steps:p.steps, edges:p.edges };
+    preview = null; dirty = true; sel = flow.steps[0]?.id ?? null; return render();
+  }
+  const fix = e.target.closest('[data-fix]');
+  if (fix) { sel = fix.dataset.fix; $('#cvWrap').scrollTo({ left:0 }); return render(); }
+  const drop = e.target.closest('[data-drop]');
+  if (drop) {
+    const s = flow.steps.find(x => x.id === sel);
+    s.needs = s.needs.filter(n => n !== drop.dataset.drop);
+    dirty = true; return render();
+  }
+  if (e.target.closest('#delStep')) return delStep();
+  if (e.target.closest('#addStep')) {
+    const n = flow.steps.length + 1;
+    const id = 'step-' + n;
+    flow.steps.push(S(id, 'New step', 'agent', 'sonnet', 'medium', 1.00, false, [], [id + '.md'], 700, 300));
+    flow.edges.push(['review', id, 'pass']);
+    sel = id; dirty = true; return render();
+  }
+  if (e.target.closest('#draft')) {
+    draftOn = !draftOn;
+    $('#draft').setAttribute('aria-pressed', String(draftOn));
+    return render();
+  }
+});
+function delStep(){
+  if (!sel || preview) return;
+  flow.steps = flow.steps.filter(s => s.id !== sel);
+  flow.edges = flow.edges.filter(([a, b]) => a !== sel && b !== sel);
+  sel = flow.steps[0]?.id ?? null; dirty = true; render();
+}
+document.addEventListener('input', e => {
+  const k = e.target.dataset.set;
+  if (!k) return;
+  const s = flow.steps.find(x => x.id === sel);
+  s[k] = e.target.type === 'checkbox' ? e.target.checked
+       : (k === 'budget' || k === 'retries') ? +e.target.value : e.target.value;
+  dirty = true;
+  const keep = document.activeElement?.id;
+  render();
+  if (keep) document.getElementById(keep)?.focus();
+});
+document.addEventListener('keydown', e => {
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if (e.key === 'Escape') { if (preview) preview = null; else sel = null; render(); }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && sel) { e.preventDefault(); delStep(); }
+});
+$('#q').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); drawLibrary(); });
+
+render();
+</script>

@@ -32,6 +32,19 @@ browser, or run `python3 -m http.server` in this folder.
   > **today** total *shrink*, because the spend moved to `wasted` and the two
   > were never added back together.
 
+- **[`flow-designer.html`](./flow-designer.html)** — where a recipe gets built.
+  A library rail that filters by domain (the role starter packs) and, where
+  several authors publish a flow under the *same name*, groups them into one
+  entry you expand to compare — steps, gates, cost per task, adoption, fork
+  lineage, and a line on what each one actually does differently. Previewing
+  one draws that author's real graph on the canvas.
+  The canvas has draggable steps, fan-out, joins, and pass/fail routes
+  including the retry loop; the inspector edits model, effort, budget, retries,
+  the approval gate, the sandbox level and the artifact contract. A live
+  validator checks every step's inputs are written by a step before it and
+  **blocks Save until they are**.
+  [Hosted copy](https://claude.ai/artifact/4T1TN3NcZDkj1PdbnbXPEa) (private link).
+
 ## Conventions
 
 Run `/mockup` and these are applied for you — the skill carries the tokens, a skeleton, the
