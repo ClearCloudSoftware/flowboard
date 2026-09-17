@@ -45,6 +45,14 @@ browser, or run `python3 -m http.server` in this folder.
   **blocks Save until they are**.
   [Hosted copy](https://claude.ai/artifact/4T1TN3NcZDkj1PdbnbXPEa) (private link).
 
+- **[`flow-designer-guide.html`](./flow-designer-guide.html)** — the field guide to
+  that screen. What to compare when two authors publish the same name (and in
+  what order), how to read nodes and pass/fail routes, every step setting and
+  what going wrong looks like, the version model, and what the validator checks.
+  Its walkthrough borrows a step from `@team-sec/code-review` into your own
+  flow, hits the validation wall, and fixes it.
+  [Hosted copy](https://claude.ai/artifact/7gZh2YiHmntbkGnNA5fa1T) (private link).
+
 ## Conventions
 
 Run `/mockup` and these are applied for you — the skill carries the tokens, a skeleton, the

@@ -1,0 +1,711 @@
+<meta charset="utf-8">
+<title>Flow Designer Field Guide</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74; --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --wait-ink:#FDF6EA; --wait-ink-2:#F8E8D0;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+:focus-visible{outline:2px solid var(--run);outline-offset:2px}
+code,.m{font-family:var(--mono);font-size:.92em;font-variant-numeric:tabular-nums}
+.lbl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sep{color:var(--line-2);padding:0 .45em}
+.you{color:var(--wait);font-weight:500}
+.auto{color:var(--run);font-weight:500}
+
+/* ── chrome ───────────────────────────────────────────── */
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 24px;
+  background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-family:var(--mono);font-weight:600;font-size:13px;white-space:nowrap}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+.top .sp{flex:1}
+.openlink{font-family:var(--mono);font-size:12px;color:var(--run);border:1px solid var(--run);
+  padding:3px 11px;background:var(--run-soft);transition:background var(--t),color var(--t)}
+.openlink:hover{background:var(--run);color:#fff}
+.gnav{position:sticky;top:0;z-index:30;display:flex;gap:2px;flex-wrap:wrap;padding:0 24px;
+  background:var(--surface-3);border-top:2px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.gnav a{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);text-decoration:none;padding:9px 12px;border-bottom:2px solid transparent;
+  margin-bottom:-1px;transition:color var(--t),border-color var(--t)}
+.gnav a:hover{color:var(--ink)}
+.gnav a.on{color:var(--ink);border-bottom-color:var(--run);font-weight:500}
+.wrap{max-width:1000px;margin:0 auto;padding:0 24px 80px}
+section{padding-top:44px;scroll-margin-top:60px}
+h1{font-size:30px;line-height:1.15;margin:34px 0 10px;letter-spacing:-.02em;text-wrap:balance;font-weight:600}
+h2{font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:600;margin:0 0 4px;padding-bottom:9px;border-bottom:2px solid var(--ink)}
+h3{font-size:17px;font-weight:600;margin:28px 0 6px;letter-spacing:-.01em}
+p{margin:10px 0;max-width:70ch}
+.lede{font-size:17px;color:var(--ink-2);max-width:66ch;margin-bottom:8px}
+.sub{color:var(--ink-3);font-size:13px;margin:8px 0 0;max-width:72ch}
+ol,ul{margin:10px 0;padding-left:20px;max-width:70ch}
+li{margin:6px 0}
+a{color:var(--run)}
+
+/* ── tables ───────────────────────────────────────────── */
+.spec{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+.spec th{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;text-align:left;padding:0 12px 7px 0;border-bottom:1px solid var(--line-2)}
+.spec td{padding:12px 12px 12px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.spec tr:last-child td{border-bottom:0}
+.spec .sample{width:1%;white-space:nowrap;padding-right:18px}
+.spec .nm{width:1%;white-space:nowrap;font-family:var(--mono);font-weight:500}
+.spec .nm small{display:block;font-weight:400;color:var(--ink-3);font-size:11px;letter-spacing:.02em}
+.spec td.act{width:1%;white-space:nowrap}
+.tw{overflow-x:auto}
+
+/* ── live specimens, lifted from the screen ───────────── */
+.gnode{width:132px;background:var(--surface);border:1px solid var(--line-2);padding:5px 8px 6px;
+  font-family:var(--mono);display:inline-block;vertical-align:top}
+.gnode.on{border-color:var(--ink);box-shadow:inset 3px 0 0 var(--ink)}
+.gnode.bad{border-color:var(--wait);background:var(--wait-soft)}
+.gnode.ghost{opacity:.5;border-style:dashed}
+.gnode .t{font-weight:500;font-size:12px;display:flex;align-items:center;gap:5px}
+.gnode .t .g{color:var(--wait);display:inline-flex}
+.gnode .s{font-size:9.5px;color:var(--ink-3)}
+.gnode .m{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
+.gnode .m span{font-size:9px;border:1px solid var(--line);padding:0 3px;color:var(--ink-2);background:var(--surface-2)}
+.gchip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;
+  padding:2px 7px;border:1px solid var(--line-2);background:var(--surface-2)}
+.gchip.bad{border-color:var(--wait);color:var(--wait);background:var(--wait-soft)}
+.gchip.out{border-color:var(--run-soft);color:var(--run);background:var(--run-soft)}
+.gcount{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;padding:1px 5px;
+  border:1px solid var(--wait);color:var(--wait);background:var(--wait-soft);white-space:nowrap}
+.gstar{font-family:var(--mono);color:var(--wait);font-size:10px;letter-spacing:.06em}
+.gvchip{display:inline-flex;align-items:baseline;gap:7px;padding:2px 9px;font-family:var(--mono);
+  font-size:12px;border:1px solid var(--line-2);background:var(--surface-2);white-space:nowrap}
+.gvchip.dirty{border-color:var(--wait);background:var(--wait-soft);color:var(--wait)}
+.gvchip b{font-weight:600}
+.eg{display:inline-block;vertical-align:middle}
+
+/* ── variant comparison specimen ──────────────────────── */
+.gvars{background:var(--wait-wash);border:1px solid var(--wait-edge);padding:9px 11px;max-width:420px}
+.gvar{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:baseline;
+  padding:6px 9px;background:var(--surface);border:1px solid var(--wait-edge);font-family:var(--mono)}
+.gvar+.gvar{margin-top:5px}
+.gvar.on{border-color:var(--ink);border-left:3px solid var(--ink)}
+.gvar .au{font-weight:500;font-size:12px}
+.gvar .au i{font-style:normal;color:var(--ink-3);font-weight:400;margin-left:6px}
+.gvar .st{grid-column:1/3;font-size:11px;color:var(--ink-3)}
+.gvar .df{grid-column:1/3;font-family:var(--sans);font-size:11.5px;color:var(--ink-2);margin-top:2px}
+.gvar .df b{color:var(--ink);font-weight:500}
+
+/* ── validation strip specimen ────────────────────────── */
+.gvl{border:1px solid var(--line-2);max-width:640px}
+.gvl.bad{background:var(--wait-wash);border-color:var(--wait-edge)}
+.gvl .h{display:flex;align-items:center;gap:9px;padding:7px 12px;font-family:var(--mono);font-size:11px}
+.gvl.bad .h{background:var(--wait);color:var(--wait-ink)}
+.gvl.bad .h .lbl{color:var(--wait-ink);font-weight:600}
+.gvl .ok{color:var(--run);display:inline-flex}
+.gvl .p{margin:8px 12px 10px;padding:6px 10px;background:var(--surface);
+  border:1px solid var(--wait-edge);border-left:3px solid var(--wait);font-size:13px;
+  display:flex;align-items:baseline;gap:9px}
+.gvl .p b{font-family:var(--mono);font-weight:500;font-size:12px;white-space:nowrap}
+
+/* ── anatomy schematic ────────────────────────────────── */
+.anat{border:1px solid var(--line-2);background:var(--surface);margin:18px 0;font-family:var(--mono);font-size:12px}
+.a-top{display:flex;align-items:center;gap:12px;padding:9px 40px 9px 12px;position:relative;
+  border-bottom:1px solid var(--line);overflow:hidden}
+.a-cols{display:grid;grid-template-columns:200px 1fr 170px;min-height:190px}
+.a-col{padding:8px 34px 10px 12px;position:relative;overflow:hidden}
+.a-col+.a-col{border-left:1px solid var(--line-2)}
+.a-colh{background:var(--surface-3);margin:-8px -34px 9px -12px;padding:5px 12px;
+  border-bottom:1px solid var(--line-2)}
+.a-canvas{background:
+  linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 22px,
+  linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/22px 100%,var(--paper)}
+.a-strip{padding:7px 40px 7px 12px;position:relative;background:var(--wait);color:var(--wait-ink);
+  font-weight:600;font-size:11px;letter-spacing:.06em;border-top:1px solid var(--line-2)}
+.a-sb{padding:6px 40px 6px 12px;position:relative;background:var(--surface-2);color:var(--ink-3);
+  font-size:11px;border-top:1px solid var(--line)}
+.pin{position:absolute;right:9px;top:50%;transform:translateY(-50%);width:20px;height:20px;
+  border:1px solid var(--ink);background:var(--paper);color:var(--ink);font-family:var(--mono);
+  font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;
+  transition:background var(--t),color var(--t)}
+.a-col .pin{top:9px;transform:none}
+.pin:hover,.pin:focus-visible{background:var(--ink);color:var(--paper)}
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:0 24px;margin-top:14px}
+.legend div{display:flex;gap:9px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+.legend b{font-family:var(--mono);font-size:11px;border:1px solid var(--ink);width:19px;height:19px;
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-weight:600}
+
+/* ── state diagram ────────────────────────────────────── */
+.diag{overflow-x:auto;border:1px solid var(--line);background:var(--surface);padding:10px;margin:18px 0}
+.diag svg{display:block;min-width:700px;width:100%;max-width:820px;margin:0 auto;height:auto}
+.d-box{fill:var(--surface);stroke:var(--line-2);stroke-width:1}
+.d-box.wait{stroke:var(--wait);stroke-width:1.5;fill:var(--wait-soft)}
+.d-box.run{stroke:var(--run);stroke-width:1.5}
+.d-t{font-family:var(--mono);font-size:12px;font-weight:600;fill:var(--ink)}
+.d-s{font-family:var(--mono);font-size:9.5px;fill:var(--ink-3)}
+.d-e{fill:none;stroke:var(--line-2);stroke-width:1.4}
+.d-e.you{stroke:var(--wait);stroke-dasharray:5 3}
+.d-l{font-family:var(--mono);font-size:9.5px;fill:var(--ink-3)}
+.d-l.you{fill:var(--wait)}
+
+/* ── scrubber ─────────────────────────────────────────── */
+.scrub{border:1px solid var(--line-2);background:var(--surface);margin:18px 0}
+.sc-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px;
+  background:var(--surface-2);border-bottom:1px solid var(--line)}
+.sc-stage{padding:16px 14px;display:grid;gap:18px;grid-template-columns:minmax(300px,1.15fr) minmax(250px,.85fr);align-items:start}
+.sc-why{border-left:3px solid var(--ink);padding:0 0 0 13px}
+.sc-why h4{margin:0 0 4px;font-size:15px;font-weight:600}
+.sc-why p{margin:0;font-size:14px;color:var(--ink-2);max-width:54ch}
+.sc-rule{margin-top:10px;font-family:var(--mono);font-size:11.5px;line-height:1.55;color:var(--ink-2);
+  background:var(--surface-2);border:1px solid var(--line);padding:7px 10px}
+.sc-rule b{color:var(--ink)}
+.sc-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px;
+  background:var(--surface-2);border-top:1px solid var(--line)}
+.sc-foot input[type=range]{flex:1;min-width:160px;accent-color:var(--run)}
+.nav-b{font-family:var(--mono);font-size:12px;border:1px solid var(--line-2);padding:3px 11px;transition:all var(--t)}
+.nav-b:hover:not(:disabled){border-color:var(--ink);background:var(--surface)}
+.nav-b:disabled{opacity:.35;cursor:default}
+.beat-n{font-family:var(--mono);font-size:11px;color:var(--ink-3);white-space:nowrap}
+.stagebox{min-height:150px}
+
+.note{border-left:3px solid var(--wait);background:var(--wait-wash);padding:11px 14px;
+  margin:18px 0;font-size:14px;max-width:74ch}
+.note.cold{border-left-color:var(--run);background:var(--run-soft)}
+.kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line-2);padding:1px 5px;
+  background:var(--surface);white-space:nowrap}
+.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0 28px;margin-top:14px}
+.keys div{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.keys .k{flex:0 0 76px}
+.foot{border-top:1px solid var(--line-2);margin-top:50px;padding-top:18px;color:var(--ink-3);font-size:13px}
+
+@media (max-width:820px){
+  .sc-stage{grid-template-columns:1fr}
+  .a-cols{grid-template-columns:1fr}
+  .a-col+.a-col{border-left:0;border-top:1px solid var(--line-2)}
+  h1{font-size:25px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after{transition-duration:.001ms!important;animation-duration:.001ms!important}
+  html{scroll-behavior:auto}
+}
+html{scroll-behavior:smooth}
+</style>
+
+<header class="top">
+  <div class="brand">flowboard<em>/</em><span>flows</span><em>·</em><span>field guide</span></div>
+  <span class="sp"></span>
+  <a class="openlink" href="./flow-designer.html">Open the designer →</a>
+</header>
+
+<nav class="gnav" id="gnav">
+  <a href="#anatomy">Anatomy</a>
+  <a href="#library">Library</a>
+  <a href="#canvas">Canvas</a>
+  <a href="#inspector">Inspector</a>
+  <a href="#versions">Versions</a>
+  <a href="#walk">Adopt &amp; adapt</a>
+  <a href="#actions">Actions</a>
+  <a href="#keys">Keyboard</a>
+</nav>
+
+<div class="wrap">
+
+<h1>Building a recipe, and choosing one to start from</h1>
+<p class="lede">The designer does two jobs. On the left you <b>choose</b> — and the hard part is that
+good flows get forked, so three different recipes can share one name. In the middle you
+<b>build</b> — and the screen refuses to save a recipe that can't actually run. This guide covers
+both, and every mark and control in between.</p>
+
+<!-- ══ ANATOMY ══════════════════════════════════════════ -->
+<section id="anatomy">
+  <h2>Anatomy</h2>
+  <p>A topbar that states which version you're editing, three columns, and a validation strip that
+  sits between you and the Save button.</p>
+
+  <div class="anat" aria-label="Schematic of the flow designer">
+    <div class="a-top">
+      <span style="font-weight:600">flowboard/flows</span>
+      <span class="gvchip"><b>Software delivery</b><span class="lbl">@core v4</span><span class="lbl">adopted 12 Sep</span></span>
+      <span style="flex:1"></span>
+      <span style="color:var(--ink-3)">draft mode <span class="sep">·</span> + Step <span class="sep">·</span> Save as v5</span>
+      <button class="pin" data-go="versions" title="Jump to Versions">1</button>
+    </div>
+    <div class="a-cols">
+      <div class="a-col">
+        <div class="a-colh lbl">flow library</div>
+        <div style="color:var(--ink-3);font-size:11px">search · domain chips</div>
+        <div style="margin-top:7px;display:flex;align-items:center;gap:8px">
+          <span style="font-weight:500">Code review</span><span class="gcount">3 authors</span>
+        </div>
+        <div style="color:var(--ink-3);font-size:11px;margin-top:3px">@core · @alex · @team-sec</div>
+        <button class="pin" data-go="library" title="Jump to Library">2</button>
+      </div>
+      <div class="a-col a-canvas">
+        <div class="a-colh lbl" style="background:var(--surface-3)">canvas</div>
+        <div style="display:flex;gap:16px;align-items:center;margin-top:6px">
+          <span class="gnode"><span class="t">Plan</span><span class="s">architect</span></span>
+          <span style="color:var(--line-2)">→</span>
+          <span class="gnode bad"><span class="t">Threat model</span><span class="s">sec-analyst</span></span>
+        </div>
+        <button class="pin" data-go="canvas" title="Jump to Canvas">3</button>
+      </div>
+      <div class="a-col">
+        <div class="a-colh lbl">step</div>
+        <div style="color:var(--ink-3);font-size:11px">agent · model · effort<br>budget · retries<br>gate · sandbox<br>needs / produces</div>
+        <button class="pin" data-go="inspector" title="Jump to Inspector">4</button>
+      </div>
+    </div>
+    <div class="a-strip">WON'T SAVE — 1 PROBLEM<button class="pin" data-go="versions" title="Jump to Versions">5</button></div>
+    <div class="a-sb">17 flows · 5 authors · 3 tasks still running on v4<button class="pin" data-go="versions" title="Jump to Versions">6</button></div>
+  </div>
+
+  <div class="legend">
+    <div><b>1</b><span><strong>Version chip.</strong> Which recipe, whose, which version, and whether you've changed it.</span></div>
+    <div><b>2</b><span><strong>Library.</strong> Every flow you can start from, filtered by domain, grouped when names collide.</span></div>
+    <div><b>3</b><span><strong>Canvas.</strong> The graph. Drag to arrange, click to edit, and read the routes off the edges.</span></div>
+    <div><b>4</b><span><strong>Inspector.</strong> Everything about the selected step, including what it needs and makes.</span></div>
+    <div><b>5</b><span><strong>Validation.</strong> Green when the recipe holds together; amber, and Save is disabled, when it doesn't.</span></div>
+    <div><b>6</b><span><strong>Status bar.</strong> Library totals, and how many tasks are still running on the version you're editing.</span></div>
+  </div>
+</section>
+
+<!-- ══ LIBRARY ══════════════════════════════════════════ -->
+<section id="library">
+  <h2>The library, and the same-name problem</h2>
+  <p>Flows get forked. Someone takes the org's <code>code-review</code>, strips a step for speed, and
+  publishes it under the same name — because it <em>is</em> code review. So a name alone can't tell
+  you which recipe you're about to run, and picking the wrong one is how a security sweep silently
+  stops happening.</p>
+
+  <h3>One entry per name, expanded to compare</h3>
+  <p>When two or more authors publish the same name, the rail collapses them into one entry with a
+  count. Expanding it puts the variants side by side with the facts that actually separate them —
+  never a name on its own.</p>
+
+  <div class="gvars" style="margin-top:14px">
+    <p style="font-family:var(--sans);font-size:11.5px;color:var(--wait);margin:0 0 7px">Same name, 3 different recipes. Compare before you pick one.</p>
+    <div class="gvar"><span class="au">@core<i>v7</i></span><span class="gstar">★ org default</span>
+      <span class="st">3 steps<span class="sep">·</span>1 gate<span class="sep">·</span>~$0.42/task<span class="sep">·</span>410 runs<span class="sep">·</span>2h ago</span>
+      <span class="df">The org default. Two reviewers on anything touching auth.</span></div>
+    <div class="gvar"><span class="au">@alex<i>v3</i></span><span></span>
+      <span class="st">2 steps<span class="sep">·</span>1 gate<span class="sep">·</span>~$0.19/task<span class="sep">·</span>64 runs<span class="sep">·</span>yesterday</span>
+      <span class="st">forked from @core v5</span>
+      <span class="df">Single pass, <b>no security sweep</b>. Fine for docs, wrong for anything that ships.</span></div>
+    <div class="gvar"><span class="au">@team-sec<i>v2</i></span><span></span>
+      <span class="st">6 steps<span class="sep">·</span>2 gates<span class="sep">·</span>~$1.18/task<span class="sep">·</span>97 runs<span class="sep">·</span>3d ago</span>
+      <span class="df">Adds <b>threat-model</b> and <b>secret-scan</b>. Slower and ~3× the cost — required for payment paths.</span></div>
+  </div>
+
+  <h3>What to compare, in what order</h3>
+  <div class="tw"><table class="spec" id="compareTbl"></table></div>
+
+  <h3>The shape glyph</h3>
+  <p class="sub">Every entry carries a small diagram of its graph, so you can see whether a recipe
+  branches or loops before you open it. Grey squares are steps; a dashed red arc is a route that
+  sends work back.</p>
+  <div class="tw"><table class="spec" id="shapeTbl"></table></div>
+
+  <div class="note"><b>Filtering is by domain, not by folder.</b> The chips come from FlowBoard's role
+  starter packs — Analysis, PO/PM, SDLC, QA, Platform, Design, Marketing — so a flow is filed by the
+  job it does, not by who wrote it. Search matches names, authors and descriptions together, which is
+  how you find "everything @team-sec published" in one go.</div>
+</section>
+
+<!-- ══ CANVAS ═══════════════════════════════════════════ -->
+<section id="canvas">
+  <h2>Reading the canvas</h2>
+  <p>Steps are boxes, routes are edges. Everything you need to judge a recipe — what each step costs,
+  which ones stop for you, and where work can loop — is on the graph itself.</p>
+
+  <h3>Step states</h3>
+  <div class="tw"><table class="spec" id="nodeTbl"></table></div>
+
+  <h3>Routes between steps</h3>
+  <p class="sub">A route can always fire, or only when the step before it passed, or only when it
+  failed. The last one is what makes a rework loop possible.</p>
+  <div class="tw"><table class="spec" id="edgeTbl"></table></div>
+
+  <h3>Branching and joining</h3>
+  <p>Two things the graph says that a list of steps can't:</p>
+  <ul>
+    <li><b>A fan-out</b> — one step feeding several — means those steps run <em>at the same time</em>,
+      each taking its own worker. It buys wall-clock time at the cost of parallel spend.</li>
+    <li><b>A join</b> — several steps feeding one — means that step waits for <em>all</em> of them.
+      <code>review</code> sits behind <code>build</code> and <code>tests</code>, so it cannot start on a
+      half-finished task however fast one branch is.</li>
+  </ul>
+  <div class="note cold"><b>The canvas is arrangement, not meaning.</b> Dragging a step changes where
+  it sits, never what runs when — that's the edges. Position is for your reading comfort, and it's
+  saved with the version so the recipe looks the same to whoever opens it next.</div>
+</section>
+
+<!-- ══ INSPECTOR ════════════════════════════════════════ -->
+<section id="inspector">
+  <h2>Every setting on a step</h2>
+  <p>Select a step to open it. Each field is a guardrail — the things that decide what a step may
+  spend, how hard it thinks, and how much rope it has when running unattended.</p>
+  <div class="tw"><table class="spec" id="fieldTbl"></table></div>
+
+  <h3>Needs and produces — the contract between steps</h3>
+  <p>Every step declares the files it must be given and the files it writes. Those declarations are
+  what let steps hand off without a shared conversation: <code>plan</code> writes
+  <code>plan.md</code>, and <code>build</code> reads it. They're also what the validator checks.</p>
+  <p>A requirement shows <span class="gchip">plain</span> when some earlier step writes that file, and
+  <span class="gchip bad">amber</span> when nothing does. Outputs are always
+  <span class="gchip out">petrol</span> — they're the promise this step makes to whatever comes next.</p>
+
+  <div class="note"><b>The one combination the inspector argues with:</b> a step with no approval gate
+  and no sandbox is an agent running unattended with full access to your machine. The inspector flags
+  it rather than blocking it — but in the real product that's the combination the sandbox rule
+  refuses outright.</div>
+</section>
+
+<!-- ══ VERSIONS ═════════════════════════════════════════ -->
+<section id="versions">
+  <h2>Editing, validating, saving</h2>
+  <p>You never edit a recipe in place. Editing produces a <em>new version</em>, and tasks already
+  running keep the one they started on — which is why the status bar tells you how many are still on
+  v4 while you're building v5.</p>
+
+  <div class="diag">
+    <svg viewBox="0 0 820 300" role="img" aria-label="State diagram: adopted, edited, invalid, saved">
+      <defs>
+        <marker id="ga" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#CFCBBE"/></marker>
+        <marker id="gw" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#A35A00"/></marker>
+      </defs>
+      <path class="d-e you" d="M175,75 H305" marker-end="url(#gw)"/>
+      <text class="d-l you" x="240" y="67" text-anchor="middle">you change anything</text>
+      <path class="d-e" d="M350,105 V156" marker-end="url(#ga)"/>
+      <text class="d-l" x="340" y="132" text-anchor="end">a step needs a file</text>
+      <text class="d-l" x="340" y="144" text-anchor="end">nothing writes</text>
+      <path class="d-e you" d="M455,186 C520,186 520,90 459,90" marker-end="url(#gw)"/>
+      <text class="d-l you" x="528" y="146">you fix it</text>
+      <path class="d-e you" d="M455,75 H585" marker-end="url(#gw)"/>
+      <text class="d-l you" x="520" y="42" text-anchor="middle">Save as v5</text>
+      <path class="d-e" d="M660,105 C660,240 175,240 105,105" marker-end="url(#ga)"/>
+      <text class="d-l" x="385" y="253" text-anchor="middle">v5 becomes the version you're editing · v4 keeps running for tasks already on it</text>
+      <g><rect class="d-box" x="30" y="52" width="145" height="53"/>
+        <text class="d-t" x="46" y="74">adopted</text><text class="d-s" x="46" y="90">v4, unchanged</text></g>
+      <g><rect class="d-box wait" x="305" y="52" width="150" height="53"/>
+        <text class="d-t" x="321" y="74">edited</text><text class="d-s" x="321" y="90">saving makes v5</text></g>
+      <g><rect class="d-box wait" x="305" y="160" width="150" height="53"/>
+        <text class="d-t" x="321" y="182">won't save</text><text class="d-s" x="321" y="198">doesn't hold together</text></g>
+      <g><rect class="d-box run" x="585" y="52" width="150" height="53"/>
+        <text class="d-t" x="601" y="74">saved</text><text class="d-s" x="601" y="90">v5, new version</text></g>
+    </svg>
+  </div>
+
+  <h3>What the validator checks</h3>
+  <div class="tw"><table class="spec" id="ruleTbl"></table></div>
+
+  <h3>The two states of the strip</h3>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px">
+    <div class="gvl"><div class="h"><span class="ok" id="okIco"></span>
+      <span class="lbl" style="letter-spacing:.04em;text-transform:none">This recipe holds together — every step's inputs are written by a step before it.</span></div></div>
+    <div class="gvl bad"><div class="h"><span class="lbl">won't save — 1 problem</span>
+      <span style="font-family:var(--sans);font-size:12px">a step asks for a file nothing upstream writes</span></div>
+      <div class="p" id="badRow"></div></div>
+  </div>
+  <p class="sub">Each problem is a button — clicking it selects the offending step so you can fix it
+  without hunting the canvas.</p>
+
+  <div class="note"><b>Draft mode isn't a version.</b> It forces every step onto the cheapest model
+  while you're iterating on the <em>recipe</em> rather than the code, and the cost ceiling in the
+  canvas bar drops to match. It's a switch on how runs execute, not an edit to the flow, so it never
+  makes a new version and never shows as unsaved.</div>
+</section>
+
+<!-- ══ WALKTHROUGH ══════════════════════════════════════ -->
+<section id="walk">
+  <h2>Adopt and adapt — one pass through the whole screen</h2>
+  <p>You want the security sweep that another team already built, without swallowing their entire
+  pipeline. Step through it.</p>
+
+  <div class="scrub">
+    <div class="sc-head"><span class="lbl">walkthrough</span>
+      <span style="font-size:13px;color:var(--ink-3)">Borrowing a step from <span class="m">@team-sec/code-review</span> into <span class="m">Software delivery v4</span></span></div>
+    <div class="sc-stage">
+      <div class="stagebox" id="wStage"></div>
+      <div>
+        <div class="sc-why"><h4 id="wTitle"></h4><p id="wWhy"></p></div>
+        <div class="sc-rule" id="wRule"></div>
+      </div>
+    </div>
+    <div class="sc-foot">
+      <button class="nav-b" id="wPrev">← Prev</button>
+      <button class="nav-b" id="wNext">Next →</button>
+      <input type="range" id="wRange" min="0" max="1" value="0" step="1" aria-label="Step">
+      <span class="beat-n" id="wN"></span>
+    </div>
+  </div>
+  <p class="sub">Arrow keys work once you've clicked into the walkthrough.</p>
+</section>
+
+<!-- ══ ACTIONS ══════════════════════════════════════════ -->
+<section id="actions">
+  <h2>Every control</h2>
+  <div id="actionTables"></div>
+</section>
+
+<!-- ══ KEYBOARD ═════════════════════════════════════════ -->
+<section id="keys">
+  <h2>Keyboard</h2>
+  <div class="keys" id="keyList"></div>
+  <div class="foot">
+    Companion to <a href="./flow-designer.html">flow-designer.html</a>. The monitoring screen has its
+    own guide at <a href="./monitor-guide.html">monitor-guide.html</a>. Both screens and both guides
+    are single self-contained files — open any of them straight from disk.
+  </div>
+</section>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const ICON = {
+  gate:'<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.4" y="3.2" width="2.4" height="9.6" fill="currentColor"/><rect x="9.2" y="3.2" width="2.4" height="9.6" fill="currentColor"/></svg>',
+  done:'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.3l3.1 3.1 6.1-7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  warn:'<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.6L14.6 13.4H1.4z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6.6v3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".9" fill="currentColor"/></svg>',
+};
+$('#okIco').innerHTML = ICON.done;
+$('#badRow').innerHTML = `${ICON.warn}<b>threat-model</b><span>needs <b>design.md</b>, and no step before it produces that file.</span>`;
+
+/* a step box, exactly as the canvas draws it */
+const node = (label, agent, cls = '', gate = false, chips = ['sonnet','medium','$2.00']) =>
+  `<span class="gnode ${cls}"><span class="t">${label}${gate ? `<span class="g">${ICON.gate}</span>` : ''}</span>
+    <span class="s">${agent}</span><span class="m">${chips.map(c => `<span>${c}</span>`).join('')}</span></span>`;
+
+/* a short edge specimen */
+const edge = (kind) => {
+  const col = kind === 'pass' ? '#0E6E74' : kind === 'fail' ? '#B0231B' : '#CFCBBE';
+  const dash = kind === 'fail' ? ' stroke-dasharray="5 4"' : '';
+  const lbl = kind === 'pass' ? 'passed' : kind === 'fail' ? 'failed ↺' : '';
+  return `<svg class="eg" width="112" height="30" viewBox="0 0 112 30" aria-hidden="true">
+    <defs><marker id="e${kind}" markerWidth="7" markerHeight="7" refX="6.5" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 z" fill="${col}"/></marker></defs>
+    <text x="56" y="10" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="${col}">${lbl}</text>
+    <path d="M4,21 H100" fill="none" stroke="${col}" stroke-width="1.6"${dash} marker-end="url(#e${kind})"/></svg>`;
+};
+
+/* the library shape glyph, same generator as the rail */
+const SHAPES = {
+  linear:{ n:[[4,10],[22,10],[40,10],[58,10]], e:[[0,1],[1,2],[2,3]] },
+  fan:{ n:[[4,10],[22,10],[40,3],[40,17],[58,10]], e:[[0,1],[1,2],[1,3],[2,4],[3,4]] },
+  fanloop:{ n:[[4,10],[22,10],[40,3],[40,17],[58,10]], e:[[0,1],[1,2],[1,3],[2,4],[3,4]], loop:[58,10,22,10] },
+  loop:{ n:[[4,10],[22,10],[40,10],[58,10]], e:[[0,1],[1,2],[2,3]], loop:[58,10,22,10] },
+  branch:{ n:[[4,10],[26,10],[52,3],[52,17]], e:[[0,1],[1,2],[1,3]] },
+};
+function glyph(kind){
+  const s = SHAPES[kind];
+  const e = s.e.map(([a,b]) => `<line x1="${s.n[a][0]+3}" y1="${s.n[a][1]}" x2="${s.n[b][0]-3}" y2="${s.n[b][1]}" stroke="#CFCBBE" stroke-width="1"/>`).join('');
+  const l = s.loop ? `<path d="M${s.loop[0]},${s.loop[1]-4} C${s.loop[0]},-1 ${s.loop[2]},-1 ${s.loop[2]},${s.loop[3]-4}" fill="none" stroke="#B0231B" stroke-width="1" stroke-dasharray="2 2"/>` : '';
+  const n = s.n.map(([x,y]) => `<rect x="${x-3}" y="${y-3}" width="6" height="6" fill="#B8B4A8"/>`).join('');
+  return `<svg width="62" height="20" viewBox="0 -2 62 22" aria-hidden="true">${l}${e}${n}</svg>`;
+}
+
+/* ── tables ────────────────────────────────────────────────────────── */
+const T = (el, head, rows) => $(el).innerHTML =
+  `<tr>${head.map(h => `<th${h[1] ? ' class="' + h[1] + '"' : ''}>${h[0]}</th>`).join('')}</tr>` +
+  rows.map(r => `<tr>${r.map((c, i) => `<td${head[i][1] ? ' class="' + head[i][1] + '"' : ''}>${c}</td>`).join('')}</tr>`).join('');
+
+T('#compareTbl', [['Look at','nm'],['Because'],['A bad sign']], [
+  ['Runs &amp; last used','Adoption is the honest signal. 410 runs and used two hours ago means it is load-bearing and someone would notice if it broke.','Six runs, last touched a month ago — that is someone\'s experiment, not a standard.'],
+  ['★ org default','Someone decided this is the one everybody should use. Deviating is a choice you should be able to defend.','Picking a fork over the default without a reason you could say out loud.'],
+  ['Gates','Each gate is a place the flow stops and waits for a human. More gates, more of your time, fewer surprises.','Zero gates on anything that ships. Nothing is standing between the agent and the merge.'],
+  ['~$/task','What it typically costs end to end. @team-sec\'s is roughly 3× @core\'s.','Paying for the heavy recipe on work that never needed it.'],
+  ['Forked from','Lineage. "Forked from @core v5" means it started as the default and diverged — the difference line tells you how.','A fork of a version well behind the current default: it may be missing fixes.'],
+  ['The difference line','The one sentence on what this variant actually does differently. It is the thing to read first and the thing to write when you publish.','No difference line at all — then you are picking on vibes.'],
+]);
+
+T('#shapeTbl', [['Glyph','sample'],['Shape','nm'],['What it tells you']], [
+  [glyph('linear'),'straight','Every step waits for the one before it. Predictable, and slower by exactly the sum of its parts.'],
+  [glyph('fan'),'fans out','Work splits and runs in parallel, then rejoins. Faster in wall-clock, and it occupies more than one worker at a time.'],
+  [glyph('loop'),'loops back','Something can send work back to an earlier step — a failed review, a defect. Cheap to add, expensive when it fires often.'],
+  [glyph('fanloop'),'both','Parallel work <em>and</em> a rework path. FlowBoard\'s own delivery pipeline is this shape.'],
+  [glyph('branch'),'branches','The flow takes one route or another and does not rejoin — a pass path and a failure path that end differently.'],
+]);
+
+T('#nodeTbl', [['On the canvas','sample'],['State','nm'],['Means']], [
+  [node('Plan','architect','','',['opus','high','$2.00']),'normal','A step as it sits. The three chips are its model, its thinking effort, and the most it may spend on one attempt.'],
+  [node('Review','reviewer','on',true,['sonnet','medium','$2.00']),'selected','Open in the inspector. Click any step to select it; the dark rail matches the row treatment on the monitor.'],
+  [node('Threat model','sec-analyst','bad','',['sonnet','high','$2.00']),'has a problem','The validator found something wrong with this step — almost always a file it needs that nothing upstream writes.'],
+  [node('Implement','developer','ghost','',['sonnet','medium','$0.31']),'preview','You are looking at a library flow, not yours. Ghosted steps can\'t be selected, dragged or edited until you adopt the flow.'],
+  [`<span class="gnode"><span class="t">Review <span class="g">${ICON.gate}</span></span><span class="s">waits for you</span></span>`,'gate','The pause bars mean this step stops when its agent is done and waits for your approval before anything downstream starts.'],
+]);
+
+T('#edgeTbl', [['Route','sample'],['Condition','nm'],['When it fires']], [
+  [edge('always'),'always','Unconditional. The moment the step before it finishes, this one becomes eligible.'],
+  [edge('pass'),'on passed','Only when the previous step reported success. This is the happy path out of a review or a health check.'],
+  [edge('fail'),'on failed','Only when it failed — and it usually points <em>backwards</em>, which is what makes a rework loop. Arced over the top of the graph so it can\'t be confused with forward flow.'],
+]);
+
+T('#fieldTbl', [['Field','nm'],['What it does'],['Get it wrong and']], [
+  ['Agent','The named role that runs this step — its instructions, its personality, its allowed tools. Reusable across recipes.','A generic agent does generic work. The role is most of the quality.'],
+  ['Model','Which model runs it. Cheap ones for reading and summarising; expensive ones where a wrong answer is costly to unwind.','Opus on a summarize step burns money for no gain; haiku on a plan step costs you the whole task.'],
+  ['Effort','How hard it thinks before acting. Trades latency and cost against care.','High effort everywhere is the most common way a flow quietly doubles in price.'],
+  ['Budget','The most this step may spend on one attempt. The canvas bar totals these into a ceiling per task.','No ceiling means a looping agent has no financial brake — only the sandbox\'s time limit.'],
+  ['Retries','How many attempts before the step gives up and fails the task.','Set high on a step that fails deterministically and you pay for the same failure several times.'],
+  ['Approval','Whether the step stops and waits for you when it\'s done. This is what puts it in the monitor\'s <em>Needs you</em> band.','No gate on the last step before a merge means nothing human ever sees the result.'],
+  ['Sandbox','How locked down the run is: none, a container, or a sealed container with no network.','<b>none</b> on an unattended step is an agent with your machine and your keys, reading untrusted content.'],
+]);
+
+T('#ruleTbl', [['Rule','nm'],['What it means'],['How to fix it']], [
+  ['Inputs are produced upstream','Every file a step lists under <b>needs</b> must be written by some step that runs before it. This is the check that makes hand-offs safe — a step can rely on its inputs existing.','Either drop the requirement in the inspector, or wire in a step that produces that file before it.'],
+  ['Every step is reachable','A step with nothing leading into it would never run, so it is flagged rather than silently ignored.','Draw a route into it, or delete it.'],
+]);
+
+/* ── walkthrough ──────────────────────────────────────────────────── */
+const libEntry = (open) => `
+  <div style="border:1px solid var(--line-2);background:var(--surface);max-width:400px">
+    <div style="display:grid;grid-template-columns:62px 1fr auto;gap:10px;align-items:center;padding:8px 12px${open ? ';box-shadow:inset 2px 0 0 var(--ink)' : ''}">
+      ${glyph('linear')}
+      <span><b style="font-family:var(--mono);font-size:13px;font-weight:500">Code review</b>
+        <span style="display:block;font-size:11.5px;color:var(--ink-3)">@core · @alex · @team-sec</span></span>
+      <span class="gcount">3 authors</span>
+    </div>
+    ${open ? `<div class="gvars" style="border:0;border-top:1px solid var(--wait-edge)">
+      <div class="gvar"><span class="au">@core<i>v7</i></span><span class="gstar">★ org default</span>
+        <span class="st">3 steps · 1 gate · ~$0.42/task · 410 runs</span></div>
+      <div class="gvar"><span class="au">@alex<i>v3</i></span><span></span>
+        <span class="st">2 steps · 1 gate · ~$0.19/task · 64 runs</span>
+        <span class="df">Single pass, <b>no security sweep</b>.</span></div>
+      <div class="gvar on"><span class="au">@team-sec<i>v2</i></span><span></span>
+        <span class="st">6 steps · 2 gates · ~$1.18/task · 97 runs</span>
+        <span class="df">Adds <b>threat-model</b> and <b>secret-scan</b>.</span></div>
+    </div>` : ''}
+  </div>`;
+
+const strip = (bad) => bad
+  ? `<div class="gvl bad" style="max-width:420px"><div class="h"><span class="lbl">won't save — 1 problem</span></div>
+      <div class="p">${ICON.warn}<b>threat-model</b><span>needs <b>design.md</b>, and no step before it produces that file.</span></div></div>`
+  : `<div class="gvl" style="max-width:420px"><div class="h"><span class="ok">${ICON.done}</span>
+      <span class="lbl" style="letter-spacing:.04em;text-transform:none">This recipe holds together.</span></div></div>`;
+
+const vchip = (txt, dirty) => `<span class="gvchip${dirty ? ' dirty' : ''}"><b>Software delivery</b>
+  <span class="lbl" style="color:inherit">@core v4</span><span class="lbl" style="color:inherit">${txt}</span></span>`;
+
+const BEATS = [
+  { t:'Where you start', stage:() => vchip('adopted 12 Sep', false) + strip(false) +
+      `<p class="sub">Three tasks are running on v4 right now.</p>`,
+    why:'Your project has adopted <b>Software delivery v4</b>. It holds together, nothing is unsaved, and the Save button is inert because there is nothing to save.',
+    rule:'<b>adopted</b> · the version chip is quiet and the strip is green.' },
+  { t:'You need a security sweep', stage:() => `<div style="display:flex;gap:6px;flex-wrap:wrap;font-family:var(--mono);font-size:11px">
+      ${['All 17','Analysis 2','PO / PM 3','SDLC 5','QA 1','Platform 2','Design 1','Marketing 3']
+        .map((d,i) => `<span style="padding:2px 8px;border:1px solid ${i===4?'var(--ink)':'transparent'};${i===4?'background:var(--ink);color:var(--paper);font-weight:500':'color:var(--ink-2)'}">${d}</span>`).join('')}
+      </div><p class="sub">Filtering to SDLC narrows 17 flows to 5.</p>`,
+    why:'Something in the codebase touches payments, and you want the threat-model step another team already wrote. You filter the library to the domain that would have it.',
+    rule:'Domains come from the role starter packs — a flow is filed by the <b>job it does</b>, not by its author.' },
+  { t:'Three recipes, one name', stage:() => libEntry(false),
+    why:'"Code review" is published by three different authors. The rail refuses to show them as three lookalike rows — it collapses them into one entry and tells you how many authors are behind it.',
+    rule:'<b>Names are not identifiers.</b> A forked flow keeps the name, because it is still code review.' },
+  { t:'Expand and compare', stage:() => libEntry(true),
+    why:'Now the facts that separate them are side by side: adoption, gates, cost, lineage, and one sentence on what each actually does differently. @alex\'s fork drops the security sweep — exactly wrong for this task. @team-sec\'s adds it.',
+    rule:'Compare <b>runs</b>, <b>gates</b>, <b>cost</b> and the <b>difference line</b> — never the name alone.' },
+  { t:'Preview before you commit', stage:() => `<div style="display:flex;gap:10px;flex-wrap:wrap">
+      ${node('Plan implementation','developer','ghost','',['sonnet','medium','$0.31'])}
+      ${node('Implement','developer','ghost','',['sonnet','medium','$0.31'])}
+      ${node('Threat model','developer','ghost','',['sonnet','medium','$0.31'])}</div>
+      <p class="sub">Ghosted — this is theirs, not yours.</p>`,
+    why:'Clicking a variant draws <em>that author\'s</em> graph on the canvas, ghosted and read-only. You can see its shape, its gates and its costs without touching your own recipe.',
+    rule:'<b>preview</b> · the inspector is disabled and Save is inert until you go back or adopt.' },
+  { t:'Take the step, not the pipeline', stage:() => vchip('edited — saving makes v5', true) +
+      `<div style="margin-top:10px">${node('Threat model','sec-analyst','bad','',['sonnet','high','$2.00'])}</div>`,
+    why:'You do not want their whole pipeline — yours is fine. You go back to your flow and add just the threat-model step, wired after <code>plan</code>. The version chip turns amber: there are now unsaved changes.',
+    rule:'<b>edited</b> · any change — even dragging a step — marks the recipe unsaved.' },
+  { t:'It does not hold together', stage:() => strip(true) +
+      `<div style="margin-top:10px">${node('Threat model','sec-analyst','bad','',['sonnet','high','$2.00'])}</div>`,
+    why:'The borrowed step expects a <code>design.md</code>, because in @team-sec\'s pipeline an earlier step writes one. Yours has no such step. The validator catches it, and <b>Save is disabled</b> — the recipe would fail on its first run.',
+    rule:'<b>won\'t save</b> · every file under <b>needs</b> must be written by a step that runs before it.' },
+  { t:'Fix it, two ways', stage:() => `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span class="gchip bad">design.md <span style="color:var(--ink-3)">×</span></span>
+      <span style="font-family:var(--sans);font-size:13px;color:var(--ink-3)">drop the requirement</span></div>
+      <div style="margin:10px 0;font-family:var(--sans);font-size:13px;color:var(--ink-3)">— or —</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span class="gchip out">design.md</span>
+        <span style="font-family:var(--sans);font-size:13px;color:var(--ink-3)">wire in a step that produces it</span></div>`,
+    why:'Either remove the requirement in the inspector — this step can work from the plan instead — or add a design step upstream that writes the file. The strip re-checks on every change, so the answer arrives as you type.',
+    rule:'Clicking a problem selects the offending step, so you never hunt the canvas for it.' },
+  { t:'Save as v5', stage:() => strip(false) + `<div style="margin-top:10px">${vchip('adopted just now', false)}</div>
+      <p class="sub">The three tasks already running stay on v4 until they finish.</p>`,
+    why:'Green strip, Save enabled. Saving does not overwrite v4 — it creates v5 and points your project at it. Work already in flight keeps the recipe it started on, so your edit cannot disturb a running task.',
+    rule:'<b>saved</b> · editing always makes a new version; running tasks keep theirs.' },
+];
+
+let beat = 0;
+function paintBeat(){
+  const b = BEATS[beat];
+  $('#wTitle').textContent = b.t;
+  $('#wWhy').innerHTML = b.why;
+  $('#wRule').innerHTML = b.rule;
+  $('#wStage').innerHTML = b.stage();
+  $('#wPrev').disabled = beat === 0;
+  $('#wNext').disabled = beat === BEATS.length - 1;
+  $('#wRange').max = BEATS.length - 1;
+  $('#wRange').value = beat;
+  $('#wN').textContent = `step ${beat + 1} / ${BEATS.length}`;
+}
+$('#wPrev').onclick = () => { beat = Math.max(0, beat - 1); paintBeat(); };
+$('#wNext').onclick = () => { beat = Math.min(BEATS.length - 1, beat + 1); paintBeat(); };
+$('#wRange').oninput = e => { beat = +e.target.value; paintBeat(); };
+$('.scrub').addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') { $('#wNext').click(); e.preventDefault(); }
+  if (e.key === 'ArrowLeft')  { $('#wPrev').click(); e.preventDefault(); }
+});
+paintBeat();
+
+/* ── actions ──────────────────────────────────────────────────────── */
+const ACTIONS = [
+  ['In the library rail', [
+    ['Domain chip','Filters to one role pack. The number on each chip is how many flows are filed there.','—'],
+    ['Search','Matches name, author and description together — type <span class="m">@team-sec</span> to see everything one author published.','—'],
+    ['A flow entry','Single-author flows open directly. Where a name has several authors, it expands into the comparison instead.','—'],
+    ['A variant','Previews that author\'s flow on the canvas, ghosted. Your own recipe is untouched.','—'],
+    ['Use this flow','Adopts the previewed flow as the one you are editing. Marks it unsaved immediately.','Replaces what is on the canvas'],
+    ['Back to yours','Leaves preview and returns to your recipe, exactly as you left it.','—'],
+  ]],
+  ['On the canvas', [
+    ['Click a step','Selects it and opens it in the inspector.','—'],
+    ['Drag a step','Moves it on a snapped grid. Arrangement only — it never changes what runs when.','Marks unsaved'],
+    ['+ Step','Adds a new step wired off <code>review</code> on the passed route, selected and ready to edit.','Marks unsaved'],
+    ['Delete this step','Removes the step and every route into or out of it.','Marks unsaved'],
+  ]],
+  ['In the topbar', [
+    ['Draft mode','Forces every step onto the cheapest model while you iterate on the recipe. The cost ceiling in the canvas bar drops to match.','Not an edit — makes no version'],
+    ['Save as v<i>n</i>','Writes a new version and points the project at it. Disabled while the recipe has problems, while previewing, and when nothing has changed.','Creates a version'],
+  ]],
+  ['In the validation strip', [
+    ['A problem row','Selects the step it names, so you can fix it without hunting.','—'],
+  ]],
+];
+$('#actionTables').innerHTML = ACTIONS.map(([group, rows]) =>
+  `<h3>${group}</h3><div class="tw"><table class="spec">
+    <tr><th class="nm">Control</th><th>What it does</th><th class="act">Effect</th></tr>` +
+  rows.map(([n, w, m]) => `<tr><td class="nm">${n}</td><td>${w}</td><td class="act">${m}</td></tr>`).join('') +
+  `</table></div>`).join('');
+
+$('#keyList').innerHTML = [
+  ['del','Remove the selected step and its routes'],
+  ['esc','Deselect, or leave preview'],
+  ['← →','Step through the walkthrough above'],
+].map(([k, d]) => `<div><span class="k"><span class="kbd">${k}</span></span><span>${d}</span></div>`).join('');
+
+/* ── nav ──────────────────────────────────────────────────────────── */
+document.querySelectorAll('[data-go]').forEach(b =>
+  b.onclick = () => document.getElementById(b.dataset.go).scrollIntoView({ block:'start' }));
+const links = [...document.querySelectorAll('#gnav a')];
+const spy = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  links.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
+}), { rootMargin:'-55px 0px -70% 0px' });
+document.querySelectorAll('section[id]').forEach(s => spy.observe(s));
+</script>
