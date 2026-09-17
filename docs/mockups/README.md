@@ -72,6 +72,18 @@ browser, or run `python3 -m http.server` in this folder.
   review gate item by item, then taking either branch and seeing what it costs.
   [Hosted copy](https://claude.ai/artifact/Ps7zX6Jn151u1m2jgr7Bh1) (private link).
 
+- **[`capability-library.html`](./capability-library.html)** — the skills, agents
+  and packs that steps draw on (the *Capability library* group in
+  [`flowboard-ideation.drawio`](../flowboard-ideation.drawio)). A capability is
+  the logical thing; a **pack is one packaging of it for one provider**, so each
+  entry shows its Claude and Codex coverage and warns that a step can't use a
+  capability with no pack for the provider it runs on. Also: the tools each one
+  may use (network-capable ones flagged against default-deny egress), and
+  **which flows would break if you removed it** — removal is blocked while
+  anything references it. *Install from GitHub* clones, parses `SKILL.md`, shows
+  you the manifest and the tools it asks for, and only then installs.
+  [Hosted copy](https://claude.ai/artifact/VgdQJScx6bb6kJjxCu6L7W) (private link).
+
 ## Conventions
 
 Run `/mockup` and these are applied for you — the skill carries the tokens, a skeleton, the
