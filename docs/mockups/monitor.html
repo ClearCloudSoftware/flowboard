@@ -18,8 +18,10 @@
   --run-soft:#0E6E7414;
   --wait:#A35A00;
   --wait-soft:#A35A0014;
-  --wait-wash:#FBF4E8;
-  --wait-edge:#E7D6B8;
+  --wait-wash:#F7EAD3;
+  --wait-edge:#DCC49A;
+  --wait-ink:#FDF6EA;
+  --wait-ink-2:#F8E8D0;
   --fail:#B0231B;
   --fail-soft:#B0231B12;
   --fail-edge:#EBD0CC;
@@ -92,21 +94,30 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;te
 /* ─── needs you (#1) ─────────────────────────────────────── */
 /* the band owns its own ground, and only lights up when something wants you */
 .needs{
-  flex-shrink:0;max-height:40vh;overflow:auto;
-  background:var(--surface);border-bottom:1px solid var(--line-2);
+  flex-shrink:0;max-height:42vh;overflow:auto;
+  background:var(--surface);
 }
-.needs.hot{background:var(--wait-wash);padding-bottom:9px}
+.needs.hot{background:var(--wait-wash);padding-bottom:11px}
 .needs-head{display:flex;align-items:center;gap:10px;padding:9px 18px 7px}
+/* a solid zone header — the one place the accent is spent at full strength */
+.needs.hot .needs-head{
+  position:sticky;top:0;z-index:2;
+  background:var(--wait);color:var(--wait-ink);
+  padding:7px 18px;margin-bottom:11px;
+}
+.needs.hot .needs-head .lbl{color:var(--wait-ink);font-weight:600;font-size:11px}
+.needs.hot .needs-head .hint{color:var(--wait-ink-2);font-weight:400}
 .needs-head .count{
   background:var(--wait);color:#fff;font-size:10px;font-weight:600;
   padding:1px 6px;letter-spacing:.06em;
 }
+.needs.hot .needs-head .count{background:var(--wait-ink);color:var(--wait)}
 .clear{padding:10px 18px 12px;color:var(--ink-2);display:flex;align-items:center;gap:8px}
 .clear .ok{color:var(--run)}
 /* each thing waiting on you is a discrete object, not another row */
 .need{
   display:grid;gap:2px 12px;grid-template-columns:20px 1fr auto;align-items:start;
-  margin:0 18px 7px;padding:8px 13px 10px;
+  margin:0 18px 8px;padding:9px 13px 11px;
   background:var(--surface);
   border:1px solid var(--wait-edge);border-left:3px solid var(--wait);
 }
@@ -119,9 +130,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;te
 .need-ico.wait{color:var(--wait)}
 .need-ico.fail{color:var(--fail)}
 .need-where{display:flex;align-items:center;flex-wrap:wrap;gap:0}
-.need-where b{font-weight:600}
+.need-where b{font-weight:600;font-size:14px}
 .need-where .step{color:var(--ink-2)}
-.need-ask{grid-column:2/4;font-family:var(--sans);font-size:13.5px;line-height:1.4;color:var(--ink);max-width:78ch}
+.need-ask{grid-column:2/4;font-family:var(--sans);font-size:14px;line-height:1.42;color:var(--ink);max-width:76ch}
 .need-meta{display:flex;align-items:center;gap:0;color:var(--ink-3);font-size:12px;white-space:nowrap;justify-self:end}
 .esc{color:var(--wait);border:1px solid var(--wait);padding:0 5px;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
 .need-acts{grid-column:2/4;display:flex;gap:7px;flex-wrap:wrap;margin-top:5px}
@@ -148,8 +159,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;te
 /* ─── view switcher ──────────────────────────────────────── */
 .bar{
   display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;
-  padding:0 18px;background:var(--surface-2);
-  border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);
+  padding:0 18px;background:var(--surface-3);
+  border-top:2px solid var(--line-2);border-bottom:1px solid var(--line-2);
 }
 .tab{
   padding:9px 14px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
@@ -714,7 +725,7 @@ function renderNeeds(){
     return;
   }
   let h = `<div class="needs-head"><span class="lbl">needs you</span><span class="count">${list.length}</span>
-    <span class="lbl" style="letter-spacing:.02em;text-transform:none">oldest first — clear these and everything else runs itself</span></div>`;
+    <span class="lbl hint" style="letter-spacing:.02em;text-transform:none">oldest first — clear these and everything else runs itself</span></div>`;
   list.forEach(({ t, r }, i) => {
     const waited = since(r.since || r.end);
     const escd = (now() - (r.since || r.end)) > 10 * MIN;
