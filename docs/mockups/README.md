@@ -19,6 +19,19 @@ browser, or run `python3 -m http.server` in this folder.
   `v` cycle views, `w` workers.
   [Hosted copy](https://claude.ai/artifact/43h2ufrCza5oYuCWX8Pd5N) (private link).
 
+- **[`monitor-guide.html`](./monitor-guide.html)** — the field guide to that screen.
+  Names every status mark and every button, the four rules that move a task
+  between steps, and what each decision costs. Its centrepiece is a scrubber
+  that walks `auth-refactor` from backlog to done, beat by beat, down either
+  branch of the approval gate — the fastest way to understand fan-out, join,
+  and the send-back loop.
+  [Hosted copy](https://claude.ai/artifact/EsaJgrMfq9iZ2usQLzzAuC) (private link).
+
+  > Documentation is a design tool here: writing this guide surfaced a real
+  > accounting bug in the screen — sending a step back made the topbar's
+  > **today** total *shrink*, because the spend moved to `wasted` and the two
+  > were never added back together.
+
 ## Conventions
 
 So the next mockup looks like it belongs to the same product:

@@ -1067,8 +1067,9 @@ function renderTop(){
   const d = new Date(now());
   $('#clock').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   $('#burn').textContent = money(burnRate());
-  const total = TASKS.reduce((a, t) => a + costOf(t), 0);
+  const kept  = TASKS.reduce((a, t) => a + costOf(t), 0);
   const waste = TASKS.reduce((a, t) => a + wasteOf(t), 0);
+  const total = kept + waste;                    // the real bill: kept work + thrown-away attempts
   $('#today').textContent = money(total);
   $('#wasted').textContent = money(waste);
   $('#wastedPct').textContent = total ? `(${Math.round((waste / total) * 100)}%)` : '';
