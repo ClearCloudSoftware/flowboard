@@ -84,6 +84,17 @@ browser, or run `python3 -m http.server` in this folder.
   you the manifest and the tools it asks for, and only then installs.
   [Hosted copy](https://claude.ai/artifact/VgdQJScx6bb6kJjxCu6L7W) (private link).
 
+- **[`capability-library-guide.html`](./capability-library-guide.html)** — the
+  field guide to that screen. Leads with the idea everything else follows from —
+  **a capability is not a pack** — diagrammed as one capability, a pack per
+  provider, each mounted into a step. Then the three kinds, the rail's dots,
+  what an amber tool chip actually means (installing grants nothing; the step's
+  allowlist still decides), and the asymmetry that bites: tasks are pinned to a
+  flow version, **flows are not pinned to a capability version**. Its
+  walkthrough installs one from GitHub, then branches on whether the step you
+  wire it into runs on Claude or Codex.
+  [Hosted copy](https://claude.ai/artifact/TSKBXrSguykDxA2d4Q8wwe) (private link).
+
 ## Conventions
 
 Run `/mockup` and these are applied for you — the skill carries the tokens, a skeleton, the

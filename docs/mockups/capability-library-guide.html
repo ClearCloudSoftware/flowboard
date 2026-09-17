@@ -1,0 +1,597 @@
+<meta charset="utf-8">
+<title>Capability Library Field Guide</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74; --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --wait-ink:#FDF6EA; --wait-ink-2:#F8E8D0;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+:focus-visible{outline:2px solid var(--run);outline-offset:2px}
+code,.m{font-family:var(--mono);font-size:.92em;font-variant-numeric:tabular-nums}
+.lbl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sep{color:var(--line-2);padding:0 .45em}
+.you{color:var(--wait);font-weight:500}
+
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:11px 24px;
+  background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-family:var(--mono);font-weight:600;font-size:13px;white-space:nowrap}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+.top .sp{flex:1}
+.openlink{font-family:var(--mono);font-size:12px;color:var(--run);border:1px solid var(--run);
+  padding:3px 11px;background:var(--run-soft);transition:background var(--t),color var(--t)}
+.openlink:hover{background:var(--run);color:#fff}
+.gnav{position:sticky;top:0;z-index:30;display:flex;gap:2px;flex-wrap:wrap;padding:0 24px;
+  background:var(--surface-3);border-top:2px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.gnav a{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);text-decoration:none;padding:9px 12px;border-bottom:2px solid transparent;
+  margin-bottom:-1px;transition:color var(--t),border-color var(--t)}
+.gnav a:hover{color:var(--ink)}
+.gnav a.on{color:var(--ink);border-bottom-color:var(--run);font-weight:500}
+.wrap{max-width:1000px;margin:0 auto;padding:0 24px 80px}
+section{padding-top:44px;scroll-margin-top:60px}
+h1{font-size:30px;line-height:1.15;margin:34px 0 10px;letter-spacing:-.02em;text-wrap:balance;font-weight:600}
+h2{font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:600;margin:0 0 4px;padding-bottom:9px;border-bottom:2px solid var(--ink)}
+h3{font-size:17px;font-weight:600;margin:28px 0 6px;letter-spacing:-.01em}
+p{margin:10px 0;max-width:70ch}
+.lede{font-size:17px;color:var(--ink-2);max-width:66ch;margin-bottom:8px}
+.sub{color:var(--ink-3);font-size:13px;margin:8px 0 0;max-width:72ch}
+ul,ol{margin:10px 0;padding-left:20px;max-width:70ch}
+li{margin:6px 0}
+a{color:var(--run)}
+
+.spec{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+.spec th{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;text-align:left;padding:0 12px 7px 0;border-bottom:1px solid var(--line-2)}
+.spec td{padding:12px 12px 12px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.spec tr:last-child td{border-bottom:0}
+.spec .sample{width:1%;white-space:nowrap;padding-right:18px}
+.spec .nm{width:1%;white-space:nowrap;font-family:var(--mono);font-weight:500}
+.spec .nm small{display:block;font-weight:400;color:var(--ink-3);font-size:11px;letter-spacing:.02em}
+.spec td.act{width:1%;white-space:nowrap}
+.tw{overflow-x:auto}
+
+/* ── specimens lifted from the screen ─────────────────── */
+.gdot{display:inline-block;width:8px;height:8px;background:var(--done);vertical-align:1px}
+.gdot.up{background:var(--wait)}
+.gdot.orphan{background:transparent;box-shadow:inset 0 0 0 1px var(--line-2)}
+.gkind{display:inline-flex;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;font-weight:600;padding:2px 7px;border:1px solid var(--ink-3);color:var(--ink-2)}
+.gkind.skill{border-color:var(--run);color:var(--run);background:var(--run-soft)}
+.gkind.agent{border-color:var(--ink);color:var(--ink)}
+.gkind.pack{border-color:var(--wait);color:var(--wait);background:var(--wait-soft)}
+.gpv{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10.5px;
+  padding:1px 6px;border:1px solid var(--line-2);color:var(--ink-3);white-space:nowrap}
+.gpv.has{border-color:var(--run);color:var(--run);background:var(--run-soft)}
+.gpv.none{border-style:dashed}
+.gtool{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11.5px;
+  padding:2px 8px;border:1px solid var(--line-2);background:var(--surface-2);margin:0 5px 5px 0}
+.gtool.net{border-color:var(--wait);color:var(--wait);background:var(--wait-soft)}
+.gcode{background:var(--surface-2);border:1px solid var(--line);padding:9px 11px;
+  font-family:var(--mono);font-size:12px;line-height:1.7;overflow-x:auto;white-space:pre;margin:10px 0;max-width:560px}
+.gcode .k{color:var(--ink-3)} .gcode .s{color:var(--run)} .gcode .w{color:var(--wait)}
+.gpvrow{display:grid;grid-template-columns:104px 1fr auto;gap:12px;align-items:center;
+  padding:7px 10px;border:1px solid var(--line);background:var(--surface);font-family:var(--mono);font-size:12px;max-width:480px}
+.gpvrow+.gpvrow{border-top:0}
+.gpvrow.missing{background:var(--surface-2);color:var(--ink-3)}
+.gpvrow .n{font-weight:500}
+.gpvrow .d{font-size:11.5px;font-family:var(--sans)}
+.grow{display:grid;grid-template-columns:1fr auto;gap:2px 9px;padding:8px 11px;
+  border:1px solid var(--line);background:var(--surface);font-family:var(--mono);max-width:330px}
+.grow .n{font-weight:500;font-size:13px;display:flex;align-items:center;gap:7px}
+.grow .a{font-size:11px;color:var(--ink-3)}
+.grow .s{grid-column:1/3;font-family:var(--sans);font-size:11.5px;color:var(--ink-3)}
+.grow .m{grid-column:1/3;font-size:11px;color:var(--ink-3)}
+.gstp{display:grid;grid-template-columns:18px 1fr;gap:10px;align-items:baseline;padding:4px 0;
+  font-family:var(--mono);font-size:12.5px}
+.gstp .i{display:inline-flex;color:var(--line-2)}
+.gstp.done .i{color:var(--run)}
+.gstp.wait{color:var(--ink-3)}
+
+/* ── anatomy ──────────────────────────────────────────── */
+.anat{border:1px solid var(--line-2);background:var(--surface);margin:18px 0;font-family:var(--mono);font-size:12px}
+.a-b{padding:8px 40px 8px 12px;position:relative;border-bottom:1px solid var(--line);overflow:hidden}
+.a-b:last-child{border-bottom:0}
+.a-flex{display:flex;align-items:center;gap:12px}
+.a-cols{display:grid;grid-template-columns:200px 1fr;min-height:150px}
+.a-col{padding:8px 34px 10px 12px;position:relative;overflow:hidden}
+.a-col+.a-col{border-left:1px solid var(--line-2)}
+.a-colh{background:var(--surface-3);margin:-8px -34px 9px -12px;padding:5px 12px;border-bottom:1px solid var(--line-2)}
+.a-sb{background:var(--surface-2);color:var(--ink-3);font-size:11px}
+.pin{position:absolute;right:9px;top:50%;transform:translateY(-50%);width:20px;height:20px;
+  border:1px solid var(--ink);background:var(--paper);color:var(--ink);font-family:var(--mono);
+  font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;
+  transition:background var(--t),color var(--t)}
+.a-col .pin{top:9px;transform:none}
+.pin:hover,.pin:focus-visible{background:var(--ink);color:var(--paper)}
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:0 24px;margin-top:14px}
+.legend div{display:flex;gap:9px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+.legend b{font-family:var(--mono);font-size:11px;border:1px solid var(--ink);width:19px;height:19px;
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-weight:600}
+
+/* ── diagram ──────────────────────────────────────────── */
+.diag{overflow-x:auto;border:1px solid var(--line);background:var(--surface);padding:10px;margin:18px 0}
+.diag svg{display:block;min-width:660px;width:100%;max-width:800px;margin:0 auto;height:auto}
+.d-box{fill:var(--surface);stroke:var(--line-2);stroke-width:1}
+.d-box.cap{stroke:var(--ink);stroke-width:1.5}
+.d-box.pk{stroke:var(--run);stroke-width:1.5;fill:var(--run-soft)}
+.d-box.miss{stroke:var(--wait);stroke-width:1.5;fill:var(--wait-soft);stroke-dasharray:5 3}
+.d-t{font-family:var(--mono);font-size:12px;font-weight:600;fill:var(--ink)}
+.d-s{font-family:var(--mono);font-size:9.5px;fill:var(--ink-3)}
+.d-e{fill:none;stroke:var(--line-2);stroke-width:1.4}
+.d-l{font-family:var(--mono);font-size:9.5px;fill:var(--ink-3)}
+
+/* ── scrubber ─────────────────────────────────────────── */
+.scrub{border:1px solid var(--line-2);background:var(--surface);margin:18px 0}
+.sc-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px;
+  background:var(--surface-2);border-bottom:1px solid var(--line)}
+.sc-branch{display:flex;margin-left:auto}
+.sc-branch button{font-family:var(--mono);font-size:11px;padding:3px 11px;
+  border:1px solid var(--line-2);color:var(--ink-2);transition:all var(--t)}
+.sc-branch button+button{border-left:0}
+.sc-branch button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:500}
+.sc-stage{padding:16px 14px;display:grid;gap:18px;grid-template-columns:minmax(290px,1.05fr) minmax(250px,.95fr);align-items:start}
+.stagebox{min-height:164px}
+.sc-why{border-left:3px solid var(--ink);padding:0 0 0 13px}
+.sc-why h4{margin:0 0 4px;font-size:15px;font-weight:600}
+.sc-why p{margin:0;font-size:14px;color:var(--ink-2);max-width:54ch}
+.sc-ask{margin-top:10px;font-family:var(--mono);font-size:11.5px;line-height:1.55;color:var(--ink-2);
+  background:var(--surface-2);border:1px solid var(--line);padding:7px 10px}
+.sc-ask b{color:var(--ink)}
+.sc-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px;
+  background:var(--surface-2);border-top:1px solid var(--line)}
+.sc-foot input[type=range]{flex:1;min-width:160px;accent-color:var(--run)}
+.nav-b{font-family:var(--mono);font-size:12px;border:1px solid var(--line-2);padding:3px 11px;transition:all var(--t)}
+.nav-b:hover:not(:disabled){border-color:var(--ink);background:var(--surface)}
+.nav-b:disabled{opacity:.35;cursor:default}
+.beat-n{font-family:var(--mono);font-size:11px;color:var(--ink-3);white-space:nowrap}
+
+.callout{border-left:3px solid var(--wait);background:var(--wait-wash);padding:11px 14px;
+  margin:18px 0;font-size:14px;max-width:74ch}
+.callout.cold{border-left-color:var(--run);background:var(--run-soft)}
+.callout.hot{border-left-color:var(--fail);background:var(--fail-soft)}
+.callout b{font-weight:600}
+.kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line-2);padding:1px 5px;
+  background:var(--surface);white-space:nowrap}
+.foot{border-top:1px solid var(--line-2);margin-top:50px;padding-top:18px;color:var(--ink-3);font-size:13px}
+
+@media (max-width:820px){
+  .sc-stage{grid-template-columns:1fr}
+  .a-cols{grid-template-columns:1fr}
+  .a-col+.a-col{border-left:0;border-top:1px solid var(--line-2)}
+  h1{font-size:25px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after{transition-duration:.001ms!important;animation-duration:.001ms!important}
+  html{scroll-behavior:auto}
+}
+html{scroll-behavior:smooth}
+</style>
+
+<header class="top">
+  <div class="brand">flowboard<em>/</em><span>library</span><em>·</em><span>field guide</span></div>
+  <span class="sp"></span>
+  <a class="openlink" href="./capability-library.html">Open the library →</a>
+</header>
+
+<nav class="gnav" id="gnav">
+  <a href="#anatomy">Anatomy</a>
+  <a href="#model">Capability vs pack</a>
+  <a href="#kinds">The three kinds</a>
+  <a href="#marks">Marks</a>
+  <a href="#tools">Tools &amp; egress</a>
+  <a href="#walk">Adding one</a>
+  <a href="#lifecycle">Update &amp; remove</a>
+  <a href="#actions">Actions</a>
+</nav>
+
+<div class="wrap">
+
+<h1>The building blocks steps draw on</h1>
+<p class="lede">Flows reference capabilities; the library is where those come from. The one idea to get
+right before anything else: <b>a capability is the logical thing a step asks for, and a pack is one
+packaging of it for one agent CLI.</b> Almost everything odd about this screen follows from that.</p>
+
+<!-- ══ ANATOMY ══════════════════════════════════════════ -->
+<section id="anatomy">
+  <h2>Anatomy</h2>
+  <div class="anat" aria-label="Schematic of the capability library">
+    <div class="a-b a-flex">
+      <span style="font-weight:600">flowboard/library</span>
+      <span style="color:var(--ink-3)">7 skills · 7 agents · 3 packs</span>
+      <span style="flex:1"></span>
+      <span style="color:var(--ink-3)">+ Define agent · + Install from GitHub</span>
+      <button class="pin" data-go="walk" title="Jump to Adding one">1</button>
+    </div>
+    <div class="a-cols">
+      <div class="a-col">
+        <div class="a-colh lbl">capabilities</div>
+        <div style="color:var(--ink-3);font-size:11px">search<br>kind · provider filters</div>
+        <div style="margin-top:9px;display:flex;align-items:center;gap:7px">
+          <span class="gdot"></span><span style="font-weight:500">code-review</span></div>
+        <div style="margin-top:5px;display:flex;align-items:center;gap:7px">
+          <span class="gdot up"></span><span style="font-weight:500">secret-scan</span></div>
+        <div style="margin-top:5px;display:flex;align-items:center;gap:7px">
+          <span class="gdot orphan"></span><span style="font-weight:500">release-notes</span></div>
+        <button class="pin" data-go="marks" title="Jump to Marks">2</button>
+      </div>
+      <div class="a-col">
+        <div class="a-colh lbl">the selected capability</div>
+        <div style="color:var(--ink-3);font-size:11px;line-height:1.8">
+          what it is · packs per provider<br>
+          SKILL.md, or an agent's prompt, or a pack's contents<br>
+          tools it may use<br>
+          source repository and commit<br>
+          used by — which flows draw on it</div>
+        <button class="pin" data-go="model" title="Jump to Capability vs pack">3</button>
+      </div>
+    </div>
+    <div class="a-b a-sb">17 capabilities · 1 update available · 1 used by nothing · codex packs for 7 of 17 · store ~/.flowboard/capabilities
+      <button class="pin" data-go="lifecycle" title="Jump to Update &amp; remove">4</button></div>
+  </div>
+  <div class="legend">
+    <div><b>1</b><span><strong>Topbar.</strong> The two ways things enter the library: clone one from GitHub, or define an agent here.</span></div>
+    <div><b>2</b><span><strong>Rail.</strong> Everything installed, grouped by kind, filtered by kind and by provider.</span></div>
+    <div><b>3</b><span><strong>Detail.</strong> One capability in full — including what would break if you removed it.</span></div>
+    <div><b>4</b><span><strong>Status bar.</strong> The portfolio view: what needs updating, what nothing uses, and how far your Codex coverage goes.</span></div>
+  </div>
+</section>
+
+<!-- ══ MODEL ════════════════════════════════════════════ -->
+<section id="model">
+  <h2>A capability is not a pack</h2>
+  <p>A step says "run <code>code-review</code>". It does not say how. The <b>capability</b> is that
+  logical name. A <b>pack</b> is the actual bundle of files one agent CLI knows how to mount — for
+  Claude Code that's a plugin directory; another provider has its own format. The registry stores the
+  packs; the adapter knows how to mount them.</p>
+
+  <div class="diag">
+    <svg viewBox="0 0 800 316" role="img" aria-label="One capability, a pack per provider, each mounted into a step">
+      <defs><marker id="ca" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#CFCBBE"/></marker></defs>
+      <path class="d-e" d="M400,74 C400,112 220,100 220,132" marker-end="url(#ca)"/>
+      <path class="d-e" d="M400,74 C400,112 580,100 580,132" marker-end="url(#ca)"/>
+      <text class="d-l" x="400" y="108" text-anchor="middle">packaged as</text>
+      <path class="d-e" d="M220,200 V240" marker-end="url(#ca)"/>
+      <path class="d-e" d="M580,200 V240" marker-end="url(#ca)"/>
+      <text class="d-l" x="230" y="226">mounted into</text>
+      <text class="d-l" x="590" y="226">mounted into</text>
+      <g><rect class="d-box cap" x="300" y="22" width="200" height="52"/>
+        <text class="d-t" x="316" y="44">code-review</text><text class="d-s" x="316" y="60">the capability a step names</text></g>
+      <g><rect class="d-box pk" x="120" y="132" width="200" height="68"/>
+        <text class="d-t" x="136" y="154">claude pack v2.1</text>
+        <text class="d-s" x="136" y="170">.claude-plugin/plugin.json</text>
+        <text class="d-s" x="136" y="184">skills/code-review/SKILL.md</text></g>
+      <g><rect class="d-box pk" x="480" y="132" width="200" height="68"/>
+        <text class="d-t" x="496" y="154">codex pack v0.4</text>
+        <text class="d-s" x="496" y="170">that provider's own format</text>
+        <text class="d-s" x="496" y="184">same capability, different files</text></g>
+      <g><rect class="d-box" x="120" y="240" width="200" height="48"/>
+        <text class="d-t" x="136" y="262">a step on Claude</text><text class="d-s" x="136" y="278">can use it</text></g>
+      <g><rect class="d-box" x="480" y="240" width="200" height="48"/>
+        <text class="d-t" x="496" y="262">a step on Codex</text><text class="d-s" x="496" y="278">can use it</text></g>
+    </svg>
+  </div>
+
+  <h3>What happens when a pack is missing</h3>
+  <p><code>secret-scan</code> is packaged for Claude only. The detail pane says so, and says what it
+  costs you:</p>
+  <div class="gpvrow"><span class="n">Claude Code</span><span class="d">installed <b>v1.3</b> · 2 Sep</span>
+    <span class="gpv has" id="pvYes"></span></div>
+  <div class="gpvrow missing"><span class="n">Codex CLI</span><span class="d">not packaged for this provider</span>
+    <span class="gpv none" id="pvNo"></span></div>
+  <div class="callout" id="missWarn"></div>
+  <p class="sub">The status bar keeps the portfolio version of the same fact —
+  <span class="m">codex packs for 7 of 17</span>. That number is how much of your library survives
+  switching a flow to another agent CLI.</p>
+</section>
+
+<!-- ══ KINDS ════════════════════════════════════════════ -->
+<section id="kinds">
+  <h2>The three kinds</h2>
+  <div class="tw"><table class="spec" id="kindTbl"></table></div>
+  <div class="callout cold"><b>A pack is a bundle, not a wrapper.</b> Installing one installs every
+  skill, agent and flow inside it. Removing it leaves behind anything a flow still draws on — the
+  library will not pull the rug out from under a running recipe.</div>
+</section>
+
+<!-- ══ MARKS ════════════════════════════════════════════ -->
+<section id="marks">
+  <h2>Marks in the rail</h2>
+  <p>One dot per row, carrying the only three states worth interrupting you for.</p>
+  <div class="tw"><table class="spec" id="dotTbl"></table></div>
+  <p class="sub">Each row also carries its author, the providers it's packaged for, and its use count —
+  so the rail answers "whose is this, will it work here, does anything need it" without opening it.</p>
+</section>
+
+<!-- ══ TOOLS ════════════════════════════════════════════ -->
+<section id="tools">
+  <h2>Tools, and why some are amber</h2>
+  <p>Every capability declares the tools it may use. Most are local and unremarkable. The ones that can
+  reach outside the workspace are marked, because they interact with the sandbox:</p>
+  <div style="margin:14px 0"><span class="gtool">Read</span><span class="gtool">Grep</span>
+    <span class="gtool">Write</span><span class="gtool">Edit</span>
+    <span class="gtool net" id="tBash"></span><span class="gtool net" id="tWeb"></span></div>
+  <div class="callout"><b>Installing a capability does not open the wall.</b> Egress is default-deny at
+  the <em>step</em>, not the capability. A skill that asks for <span class="m">WebFetch</span> will
+  still fail closed until the host it needs is on that step's allowlist — which is exactly the failure
+  that burned <span class="m">$0.48</span> on the build in the task detail screen.</div>
+  <p>So the amber chip is not a warning that something is unsafe. It is a note that <b>this capability
+  will not work until someone also changes a step's allowlist</b> — and that you should know which host
+  before you approve that change.</p>
+</section>
+
+<!-- ══ WALKTHROUGH ══════════════════════════════════════ -->
+<section id="walk">
+  <h2>Adding a capability, and what it costs you</h2>
+  <p>A flow needs a dependency audit and nothing in the library does it. Step through the install, then
+  pick which provider the step you're adding it to runs on.</p>
+
+  <div class="scrub">
+    <div class="sc-head"><span class="lbl">walkthrough</span>
+      <span style="font-size:13px;color:var(--ink-3)">installing <span class="m">acme-sec/fb-dependency-audit</span></span>
+      <span class="sc-branch">
+        <button data-branch="claude" aria-pressed="true">Step runs on Claude</button>
+        <button data-branch="codex" aria-pressed="false">…on Codex</button>
+      </span></div>
+    <div class="sc-stage">
+      <div class="stagebox" id="wStage"></div>
+      <div>
+        <div class="sc-why"><h4 id="wTitle"></h4><p id="wWhy"></p></div>
+        <div class="sc-ask" id="wAsk"></div>
+      </div>
+    </div>
+    <div class="sc-foot">
+      <button class="nav-b" id="wPrev">← Prev</button>
+      <button class="nav-b" id="wNext">Next →</button>
+      <input type="range" id="wRange" min="0" max="1" value="0" step="1" aria-label="Step">
+      <span class="beat-n" id="wN"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ LIFECYCLE ════════════════════════════════════════ -->
+<section id="lifecycle">
+  <h2>Updating and removing</h2>
+
+  <h3>Updating changes every flow at once</h3>
+  <p>This is the asymmetry worth knowing. A <em>task</em> is pinned to the flow version it started on,
+  so editing a flow never disturbs work in flight. A <em>flow</em> is <b>not</b> pinned to a capability
+  version. Update <code>secret-scan</code> from 1.3 to 1.5 and every flow that draws on it uses 1.5 on
+  its next run — immediately, with no version bump of its own.</p>
+  <div class="tw"><table class="spec" id="pinTbl"></table></div>
+  <div class="callout hot"><b>So read the update note before you take it.</b> "Stops flagging example
+  keys in docs" sounds harmless until you notice it also means a real key in a docs file stops being
+  caught. The library shows you the note; it cannot decide for you.</div>
+
+  <h3>Removing is blocked while anything uses it</h3>
+  <p>The <b>used by</b> list is the check. Anything referenced by a step cannot be removed, and the
+  button says how many steps are holding it. A capability nothing uses shows a hollow dot in the rail
+  and can go — the argument for removing it is that every installed capability is another row in the
+  step editor's picker.</p>
+  <div class="callout cold"><b>Removing is the only destructive action here</b>, and it is the only one
+  the screen refuses outright. Everything else — installing, updating, defining an agent — is additive
+  or reversible by re-installing from the same commit.</div>
+</section>
+
+<!-- ══ ACTIONS ══════════════════════════════════════════ -->
+<section id="actions">
+  <h2>Every control</h2>
+  <div id="actionTables"></div>
+  <div class="foot">
+    Companion to <a href="./capability-library.html">capability-library.html</a>. The other screens and
+    their guides: <a href="./monitor-guide.html">monitor</a>,
+    <a href="./flow-designer-guide.html">flow designer</a>,
+    <a href="./task-detail-guide.html">task detail</a>.
+    <span class="kbd">esc</span> closes the install dialog.
+  </div>
+</section>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const ICON = {
+  done:'<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.3l3.1 3.1 6.1-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  dash:'<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  warn:'<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.6L14.6 13.4H1.4z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6.6v3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r=".9" fill="currentColor"/></svg>',
+  up  :'<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 12.5V4M4.4 7.2L8 3.5l3.6 3.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+$('#pvYes').innerHTML = ICON.done + 'claude';
+$('#pvNo').innerHTML  = ICON.dash + 'codex';
+$('#tBash').innerHTML = ICON.warn + 'Bash';
+$('#tWeb').innerHTML  = ICON.warn + 'WebFetch';
+$('#missWarn').innerHTML = `${ICON.warn} <b>No Codex CLI pack.</b> A step set to run on Codex CLI can't
+  use this — the flow editor refuses to save that combination, because a pack's provider has to match
+  the step's. It is not a soft warning; the recipe will not save.`;
+
+const T = (el, head, rows) => $(el).innerHTML =
+  `<tr>${head.map(h => `<th${h[1] ? ' class="' + h[1] + '"' : ''}>${h[0]}</th>`).join('')}</tr>` +
+  rows.map(r => `<tr>${r.map((c, i) => `<td${head[i][1] ? ' class="' + head[i][1] + '"' : ''}>${c}</td>`).join('')}</tr>`).join('');
+
+T('#kindTbl', [['Kind','sample'],['Is','nm'],['Carries'],['Reach for it when']], [
+  [`<span class="gkind skill">skill</span>`,'skill','A packaged instruction, invoked like a slash command. Its <span class="m">SKILL.md</span> declares what it does, what it produces, and the tools it may use.','A step needs a repeatable procedure — review this diff, scan for secrets, write a plan.'],
+  [`<span class="gkind agent">agent</span>`,'agent','A named role: a prompt, default model and effort, and an allowed-tools list. Provider-neutral apart from the model id, which is logical and mapped by the adapter.','A step needs a <em>who</em> rather than a <em>how</em> — the reviewer, the architect, the scout.'],
+  [`<span class="gkind pack">pack</span>`,'pack','Skills, agents and flows bundled as one installable unit.','You want a whole way of working at once — the delivery starter set, or the security team\'s expectations.'],
+]);
+
+T('#dotTbl', [['Dot','sample'],['Means','nm'],['When you see it'],['Do']], [
+  [`<span class="gdot"></span>`,'in use','At least one step in one flow references it. Ordinary; most rows look like this.','Nothing.'],
+  [`<span class="gdot up"></span>`,'update available','The source repository has moved past the commit you installed.','Read the note, then take it or leave it — see below for why the timing matters.'],
+  [`<span class="gdot orphan"></span>`,'used by nothing','Installed, but no step references it.','Remove it, or wire it into a flow. Either is better than leaving it in the picker.'],
+]);
+
+T('#pinTbl', [['Thing','nm'],['Pinned to'],['So when it changes']], [
+  ['task','The flow version it started on.','Nothing happens to it. You can edit the flow freely while it runs.'],
+  ['flow','<b>Nothing.</b> It names capabilities, not capability versions.','Every flow drawing on that capability picks up the new version on its next run.'],
+]);
+
+/* ── walkthrough ──────────────────────────────────────────────────── */
+const stp = (d, done) => `<div class="gstp ${done ? 'done' : 'wait'}"><span class="i">${done ? ICON.done : ICON.dash}</span><span>${d}</span></div>`;
+const manifest = `<div class="gcode"><span class="k">name:</span><span class="s">dependency-audit</span><span class="k">
+version:</span><span>1.0.2</span><span class="k">
+description:</span><span>Audit dependencies for advisories and unpinned versions.</span><span class="k">
+invokes:</span><span class="s">set_outcome</span><span class="k">
+allowed-tools:</span><span>Read, Bash, </span><span class="w">WebFetch</span></div>`;
+
+const COMMON = [
+  { t:'Nothing in the library does this', stage:() => `<div style="font-family:var(--mono);font-size:12px;color:var(--ink-3)">
+      search <b style="color:var(--ink)">dependency</b> — 0 of 17 capabilities</div>
+      <div style="margin-top:12px;font-family:var(--sans);font-size:13px;color:var(--ink-3)">
+      Nothing matches. Clear the search or widen the filters.</div>`,
+    why:'You want a step that audits the dependency tree. Search comes back empty across all three kinds, so this has to come from outside.',
+    ask:'Search matches <b>name, author and description</b> together — so an empty result really does mean nothing installed covers it.' },
+  { t:'Paste the repository', stage:() => `<div class="gcode" style="white-space:normal">https://github.com/acme-sec/fb-dependency-audit</div>
+      <div style="font-family:var(--sans);font-size:13px;color:var(--ink-3);margin-top:8px">
+      FlowBoard clones the repository into its capability store, reads the manifest, and shows you what it
+      found before anything is installed.</div>`,
+    why:'Install from GitHub takes a URL and nothing else. The clone lands in the capability store on your machine — this is local-first, so nothing is fetched at run time.',
+    ask:'<b>Nothing is written until you confirm.</b> The clone and the parse are a preview, not the install.' },
+  { t:'It clones and parses', stage:() => stp('git clone into the capability store', true) +
+      stp('read .claude-plugin/plugin.json and skills/*/SKILL.md', true) +
+      stp('check the tools it asks for, and which providers it packages', true),
+    why:'Three checks, in order. The second is the one that matters — the manifest is what FlowBoard reads to learn what this thing is and how a step would invoke it.',
+    ask:'A repository that does not parse stops here. You never get a half-installed capability.' },
+  { t:'What was found', stage:() => `<div style="font-family:var(--mono);font-size:12px;line-height:1.9">
+      <div><span style="color:var(--ink-3);display:inline-block;width:92px">name</span><b>dependency-audit</b></div>
+      <div><span style="color:var(--ink-3);display:inline-block;width:92px">version</span>1.0.2</div>
+      <div><span style="color:var(--ink-3);display:inline-block;width:92px">kind</span>skill <span style="color:var(--ink-3)">(Claude plugin dir)</span></div>
+      <div><span style="color:var(--ink-3);display:inline-block;width:92px">invoked as</span><b>/dependency-audit</b></div>
+      <div><span style="color:var(--ink-3);display:inline-block;width:92px">commit</span>b62f10d</div></div>` + manifest,
+    why:'The manifest, as read. Name, version, how a step invokes it, and the exact commit — so this install is reproducible and you can see later what you actually took.',
+    ask:'The commit is recorded on the capability. That is what an <b>update available</b> dot later compares against.' },
+  { t:'The tools it asks for', stage:() => `<div style="margin-bottom:10px"><span class="gtool">Read</span>
+      <span class="gtool net">${ICON.warn}Bash</span><span class="gtool net">${ICON.warn}WebFetch</span></div>
+      <div class="callout" style="margin:0;max-width:none">${ICON.warn} <b>It asks for WebFetch.</b> This
+      capability wants to reach the network. Egress stays default-deny — a step using it will still fail
+      closed until you add the host it needs to that step's allowlist.</div>`,
+    why:'This is the screen you should actually read. A dependency auditor needs the network to check advisories, which is reasonable — but it means wiring it up is a two-part job, not one.',
+    ask:'<b>Installing does not grant anything.</b> The capability declares what it wants; the step\'s sandbox still decides what it gets.' },
+  { t:'One provider, not two', stage:() => `<div class="gpvrow"><span class="n">Claude Code</span>
+        <span class="d">packaged</span><span class="gpv has">${ICON.done}claude</span></div>
+      <div class="gpvrow missing"><span class="n">Codex CLI</span>
+        <span class="d">no pack in this repository</span><span class="gpv none">${ICON.dash}codex</span></div>`,
+    why:'The repository ships a Claude plugin directory and nothing else. That is normal — most capabilities start life packaged for one provider.',
+    ask:'Note it now. Which provider your step runs on decides whether this install was useful, and the two branches below go different ways from here.' },
+  { t:'Installed', stage:() => `<div class="grow"><span class="n"><span class="gdot orphan"></span>dependency-audit</span>
+        <span class="a">@acme-sec</span>
+        <span class="s">Audit the dependency tree for known advisories and versions that are not pinned.</span>
+        <span class="m">claude<span class="sep">·</span>0 uses</span></div>
+      <div style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-top:10px">
+        status bar now: codex packs for <b style="color:var(--ink)">7</b> of 18</div>`,
+    why:'It joins the library with a hollow dot — installed, but no step references it yet. It is now selectable in the step editor.',
+    ask:'Your Codex coverage just got slightly worse: 7 of 18 rather than 7 of 17. That ratio is the honest measure of how portable your library is.' },
+];
+const TAIL_CLAUDE = [
+  { t:'Wired into a Claude step', stage:() => `<div class="gpvrow"><span class="n">Claude Code</span>
+        <span class="d">installed <b>v1.0.2</b> · just now</span><span class="gpv has">${ICON.done}claude</span></div>
+      <div style="font-family:var(--mono);font-size:12px;margin-top:12px">
+        <span class="lbl">used by</span><br><b>Code review</b> <span style="color:var(--ink-3)">@team-sec v2</span>
+        <span style="color:var(--ink-3)"> · step dependency-audit</span></div>`,
+    why:'The step runs on Claude, the capability has a Claude pack, so the flow editor saves without complaint. The dot in the rail turns solid — something uses it now.',
+    ask:'One thing left, and the library cannot do it for you: <b>add the advisory host to that step\'s egress allowlist</b>, or the first run fails closed.' },
+  { t:'Later — an update lands', stage:() => `<div class="grow"><span class="n"><span class="gdot up"></span>dependency-audit</span>
+        <span class="a">@acme-sec</span><span class="m">claude<span class="sep">·</span>1 use</span></div>
+      <div class="callout" style="margin:12px 0 0;max-width:none"><b>1.1 is available.</b> Updating replaces
+        the installed pack for every flow that draws on it — flows are not pinned to a capability version
+        the way tasks are pinned to a flow version.</div>`,
+    why:'The upstream repository moved past the commit you took. The dot turns amber and the detail pane offers the update with its note.',
+    ask:'Because flows are not version-pinned, taking this changes behaviour for every flow using it <b>on its next run</b>. Read the note first.' },
+];
+const TAIL_CODEX = [
+  { t:'The flow editor refuses', stage:() => `<div class="gpvrow missing"><span class="n">Codex CLI</span>
+        <span class="d">not packaged for this provider</span><span class="gpv none">${ICON.dash}codex</span></div>
+      <div class="callout" style="margin:12px 0 0;max-width:none">${ICON.warn} <b>No Codex CLI pack.</b>
+        A step set to run on Codex CLI can't use this — the flow editor refuses to save that combination,
+        because a pack's provider has to match the step's.</div>`,
+    why:'The step runs on Codex; the capability has no Codex pack. This is not a warning you can click past — validation blocks the save, the same way it blocks a step needing a file nothing writes.',
+    ask:'The check fires in the <b>flow editor</b>, not at run time. You find out while designing, not when a task is halfway through.' },
+  { t:'Three ways out', stage:() => `<div style="font-family:var(--sans);font-size:13.5px;line-height:1.7">
+      <div style="padding:7px 0;border-bottom:1px solid var(--line)"><b>Switch the step to Claude.</b>
+        Steps name their provider individually — one flow can mix them.</div>
+      <div style="padding:7px 0;border-bottom:1px solid var(--line)"><b>Package it for Codex.</b>
+        Same logical capability, a second pack in that provider's format.</div>
+      <div style="padding:7px 0"><b>Use something else.</b> Filter the rail to
+        <span class="m">Codex CLI</span> and see what your 7 portable capabilities can do instead.</div></div>`,
+    why:'None of these is a workaround — they are the three honest options, and the provider filter in the rail exists to make the third one quick.',
+    ask:'This is why the status bar carries <b>codex packs for 7 of 17</b>. It is a portability budget, and you spend it every time you install something packaged for one provider only.' },
+];
+
+let branch = 'claude', beat = 0;
+const beats = () => COMMON.concat(branch === 'claude' ? TAIL_CLAUDE : TAIL_CODEX);
+function paint(){
+  const list = beats(), b = list[Math.min(beat, list.length - 1)];
+  $('#wTitle').textContent = b.t;
+  $('#wWhy').innerHTML = b.why;
+  $('#wAsk').innerHTML = b.ask;
+  $('#wStage').innerHTML = b.stage();
+  $('#wPrev').disabled = beat === 0;
+  $('#wNext').disabled = beat >= list.length - 1;
+  $('#wRange').max = list.length - 1;
+  $('#wRange').value = beat;
+  $('#wN').textContent = `step ${beat + 1} / ${list.length}`;
+}
+$('#wPrev').onclick = () => { beat = Math.max(0, beat - 1); paint(); };
+$('#wNext').onclick = () => { beat = Math.min(beats().length - 1, beat + 1); paint(); };
+$('#wRange').oninput = e => { beat = +e.target.value; paint(); };
+document.querySelectorAll('[data-branch]').forEach(btn => btn.onclick = () => {
+  branch = btn.dataset.branch;
+  document.querySelectorAll('[data-branch]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+  beat = Math.max(beat, COMMON.length - 1);
+  paint();
+});
+$('.scrub').addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') { $('#wNext').click(); e.preventDefault(); }
+  if (e.key === 'ArrowLeft')  { $('#wPrev').click(); e.preventDefault(); }
+});
+paint();
+
+/* ── actions ──────────────────────────────────────────────────────── */
+const ACTIONS = [
+  ['In the rail', [
+    ['Kind filter','Narrows to skills, agents or packs. The count on each chip is how many are installed.'],
+    ['Provider filter','Narrows to capabilities packaged for one agent CLI — the fastest way to see what survives a provider switch.'],
+    ['Search','Matches name, author and description together. Type an author to see everything they published.'],
+    ['A row','Opens it in the detail pane.'],
+  ]],
+  ['In the detail pane', [
+    ['Update to <i>n</i>','Replaces the installed pack with the newer commit. Offered only when the source has moved.'],
+    ['Open on GitHub','The source repository, at the commit you installed.'],
+    ['Remove','Deletes it from the capability store. <b>Disabled while any step references it</b>, with the count shown beside the button.'],
+  ]],
+  ['In the topbar', [
+    ['+ Install from GitHub','Clone, parse, review, confirm. Nothing is written until the last step.'],
+    ['+ Define agent','Creates an agent here rather than cloning one — a prompt, a default model and effort, and an allowed-tools list.'],
+  ]],
+];
+$('#actionTables').innerHTML = ACTIONS.map(([g, rows]) =>
+  `<h3>${g}</h3><div class="tw"><table class="spec">
+    <tr><th class="nm">Control</th><th>What it does</th></tr>` +
+  rows.map(r => `<tr><td class="nm">${r[0]}</td><td>${r[1]}</td></tr>`).join('') +
+  `</table></div>`).join('');
+
+/* ── nav ──────────────────────────────────────────────────────────── */
+document.querySelectorAll('[data-go]').forEach(b =>
+  b.onclick = () => document.getElementById(b.dataset.go).scrollIntoView({ block:'start' }));
+const links = [...document.querySelectorAll('#gnav a')];
+const spy = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  links.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
+}), { rootMargin:'-55px 0px -70% 0px' });
+document.querySelectorAll('section[id]').forEach(s => spy.observe(s));
+</script>
