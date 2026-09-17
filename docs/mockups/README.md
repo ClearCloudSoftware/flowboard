@@ -85,6 +85,15 @@ browser, or run `python3 -m http.server` in this folder.
   `a`/`r` approve or send back.
   [Hosted copy](https://claude.ai/artifact/3cFhjbVxQt93eGzLddopgB) (private link).
 
+- **[`inbox-guide.html`](./inbox-guide.html)** — the field guide to that screen.
+  The five question shapes rendered as their real controls, and the keyboard
+  contract they make possible (one open card, so a key never has to ask "which
+  one?"). Why five questions are one card, what a waiting question actually
+  costs — **a parked run isn't billing you** — and the escalation timeline from
+  asked to answered. Its walkthrough clears the queue to empty, branching on
+  whether the escalated question gets answered here or in chat.
+  [Hosted copy](https://claude.ai/artifact/19TTeDcT6WV6tMsQc3bJyP) (private link).
+
 - **[`capability-library.html`](./capability-library.html)** — the skills, agents
   and packs that steps draw on (the *Capability library* group in
   [`flowboard-ideation.drawio`](../flowboard-ideation.drawio)). A capability is
