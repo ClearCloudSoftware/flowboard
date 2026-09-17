@@ -1,0 +1,539 @@
+<meta charset="utf-8">
+<title>FlowBoard Inbox</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74; --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --wait-ink:#FDF6EA; --wait-ink-2:#F8E8D0;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);
+  font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+input,textarea{font:inherit;color:inherit;border-radius:0}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sep{color:var(--line-2);padding:0 .45em}
+.sp{flex:1}
+.app{height:100dvh;display:flex;flex-direction:column}
+
+/* ── topbar ───────────────────────────────────────────────────── */
+.topbar{flex-shrink:0;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-weight:600;white-space:nowrap}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+.count{display:inline-flex;align-items:center;gap:7px;padding:1px 9px;font-weight:600;
+  background:var(--wait);color:var(--wait-ink);white-space:nowrap}
+.count.clear{background:var(--run-soft);color:var(--run);border:1px solid var(--run);font-weight:500}
+.chip{padding:2px 9px;font-size:11px;color:var(--ink-2);border:1px solid transparent;transition:all var(--t)}
+.chip:hover{border-color:var(--line-2)}
+.chip[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--paper);font-weight:500}
+.act{border:1px solid var(--line-2);padding:4px 11px;font-size:12px;white-space:nowrap;
+  transition:background var(--t),border-color var(--t),color var(--t)}
+.act:hover:not(:disabled){background:var(--surface-2);border-color:var(--ink-3)}
+.act:disabled{opacity:.4;cursor:default}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act.primary:hover:not(:disabled){background:var(--run);color:#fff}
+.act.danger:hover:not(:disabled){border-color:var(--fail);color:var(--fail);background:var(--fail-soft)}
+.act kbd{font-size:10px;color:var(--ink-3);border:1px solid var(--line);padding:0 3px;margin-right:6px}
+.act.primary kbd{border-color:currentColor;color:inherit;opacity:.65}
+
+.body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 292px}
+.queue{min-width:0;overflow:auto;padding:14px 16px 60px}
+.ctx{min-width:0;overflow:auto;border-left:1px solid var(--line-2);background:var(--surface)}
+
+/* ── cards ────────────────────────────────────────────────────── */
+.ib-card{border:1px solid var(--line-2);background:var(--surface);margin-bottom:9px;
+  transition:border-color var(--t),box-shadow var(--t)}
+.ib-card.on{border-color:var(--ink);box-shadow:inset 3px 0 0 var(--ink)}
+.ib-card.fail.on{box-shadow:inset 3px 0 0 var(--fail)}
+.ib-card.gone{opacity:0;transform:translateY(-6px);transition:opacity 200ms,transform 200ms}
+.ib-h{display:grid;grid-template-columns:18px 1fr auto;gap:11px;align-items:center;
+  width:100%;padding:10px 13px;transition:background var(--t)}
+.ib-h:hover{background:var(--surface-2)}
+.ib-i{display:inline-flex}
+.ib-i.wait{color:var(--wait)} .ib-i.fail{color:var(--fail)}
+.ib-who{display:flex;align-items:baseline;gap:0;min-width:0;flex-wrap:wrap}
+.ib-who b{font-weight:600;font-size:13.5px}
+.ib-who span{color:var(--ink-2)}
+.ib-sum{grid-column:2/4;font-family:var(--sans);font-size:13px;color:var(--ink-3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+.ib-meta{display:flex;align-items:center;gap:0;font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.esc{color:var(--wait);border:1px solid var(--wait);padding:0 5px;font-size:10px;
+  letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.esc.soon{color:var(--ink-3);border-color:var(--line-2)}
+.ib-b{padding:2px 13px 14px 42px;border-top:1px solid var(--line);background:var(--wait-wash)}
+.ib-card.fail .ib-b{background:var(--fail-soft)}
+
+/* ── batch ────────────────────────────────────────────────────── */
+.bt-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0 9px}
+.pips{display:flex;gap:5px}
+.pip{width:9px;height:9px;border:1px solid var(--wait);background:transparent;padding:0}
+.pip.done{background:var(--wait)}
+.pip.cur{box-shadow:0 0 0 2px var(--wait-wash),0 0 0 3px var(--wait)}
+.bt-q{font-family:var(--sans);font-size:15.5px;line-height:1.4;max-width:62ch;margin:4px 0 11px}
+.bt-nav{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:13px;
+  padding-top:11px;border-top:1px solid var(--wait-edge)}
+
+/* ── controls ─────────────────────────────────────────────────── */
+.opts{display:flex;gap:7px;flex-wrap:wrap}
+.opt{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--wait-edge);
+  background:var(--surface);padding:6px 12px;font-size:13px;transition:all var(--t)}
+.opt:hover{border-color:var(--wait)}
+.opt.on{border-color:var(--wait);background:var(--wait);color:var(--wait-ink);font-weight:500}
+.opt kbd{font-size:10px;border:1px solid var(--line-2);padding:0 4px;color:var(--ink-3)}
+.opt.on kbd{border-color:currentColor;color:inherit;opacity:.7}
+.opt .box{width:11px;height:11px;border:1px solid var(--ink-3);flex:0 0 auto}
+.opt.on .box{background:var(--wait-ink);border-color:var(--wait-ink)}
+.num-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.num-row input{width:140px;padding:6px 9px;border:1px solid var(--wait-edge);background:var(--surface)}
+.num-row .unit{color:var(--ink-3);font-size:12px}
+.txt{width:100%;max-width:62ch;min-height:64px;padding:7px 10px;border:1px solid var(--wait-edge);
+  background:var(--surface);font-family:var(--sans);font-size:13.5px;line-height:1.5;resize:vertical}
+.reason{display:flex;gap:7px;margin-top:9px;max-width:62ch}
+.reason input{flex:1;padding:5px 9px;border:1px solid var(--wait-edge);background:var(--surface)}
+.hint{font-family:var(--sans);font-size:12.5px;color:var(--ink-2);margin:9px 0 0;max-width:64ch}
+.hint b{font-weight:600}
+
+/* ── context panel ────────────────────────────────────────────── */
+.cx-h{display:flex;align-items:center;gap:9px;padding:8px 13px;background:var(--surface-3);
+  border-bottom:1px solid var(--line-2);position:sticky;top:0;z-index:4}
+.cx-b{padding:11px 13px;border-bottom:1px solid var(--line)}
+.cx-b>.lbl{display:block;margin-bottom:6px}
+.slot{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:5px 0;font-size:11.5px;
+  border-bottom:1px solid var(--line)}
+.slot:last-child{border-bottom:0}
+.slot b{font-weight:500;font-size:12px}
+.slot .s{grid-column:1/3;color:var(--ink-3)}
+.big{font-size:19px;font-weight:600}
+.cx-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  font-size:12px;padding:3px 0}
+.cx-row span:last-child{color:var(--ink-2)}
+.ans{display:grid;grid-template-columns:1fr auto;gap:1px 8px;padding:6px 0;
+  border-bottom:1px solid var(--line);font-size:11.5px}
+.ans:last-child{border-bottom:0}
+.ans b{font-weight:500;font-size:12px}
+.ans .v{grid-column:1/3;color:var(--ink-3);font-family:var(--sans)}
+.via{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:0 5px;
+  border:1px solid var(--line-2);color:var(--ink-3);white-space:nowrap}
+.via.slack{border-color:var(--run);color:var(--run);background:var(--run-soft)}
+
+/* ── empty ────────────────────────────────────────────────────── */
+.clear-state{border:1px solid var(--line);background:var(--surface);padding:34px 20px;text-align:center}
+.clear-state .ico{color:var(--run);display:inline-flex}
+.clear-state h2{font-family:var(--sans);font-size:19px;font-weight:600;margin:9px 0 5px}
+.clear-state p{font-family:var(--sans);font-size:14px;color:var(--ink-2);margin:0 auto;max-width:48ch}
+
+/* ── toast ────────────────────────────────────────────────────── */
+.toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);z-index:70;
+  display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--ink);
+  color:var(--paper);font-size:12.5px;max-width:calc(100vw - 32px)}
+.toast .via{border-color:var(--paper);color:var(--paper)}
+
+.statusbar{flex-shrink:0;display:flex;align-items:center;flex-wrap:wrap;
+  padding:6px 16px;background:var(--surface-2);border-top:1px solid var(--line);
+  color:var(--ink-3);font-size:11px}
+.statusbar b{color:var(--ink-2);font-weight:500}
+.kbd{border:1px solid var(--line-2);padding:0 4px;font-size:10px;color:var(--ink-2);background:var(--surface)}
+
+@media (max-width:900px){
+  .body{grid-template-columns:1fr}
+  .ctx{border-left:0;border-top:1px solid var(--line-2)}
+  .ib-b{padding-left:16px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after{transition-duration:.001ms!important;animation-duration:.001ms!important}
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">flowboard<em>/</em><span>inbox</span></div>
+    <span id="count"></span>
+    <span class="sp"></span>
+    <span class="lbl">show</span>
+    <button class="chip" data-filter="mine" aria-pressed="true">Waiting on me</button>
+    <button class="chip" data-filter="all" aria-pressed="false">Everyone</button>
+  </header>
+
+  <div class="body">
+    <div class="queue" id="queue"></div>
+    <aside class="ctx" id="ctx"></aside>
+  </div>
+
+  <footer class="statusbar" id="sb"></footer>
+</div>
+<div id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ICON = {
+  ask :'<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6.15 6.35a1.9 1.9 0 1 1 2.5 1.8c-.52.2-.72.58-.72 1.05v.35" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="7.93" cy="11.5" r=".95" fill="currentColor"/></svg>',
+  gate:'<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.4" y="3.2" width="2.4" height="9.6" fill="currentColor"/><rect x="9.2" y="3.2" width="2.4" height="9.6" fill="currentColor"/></svg>',
+  fail:'<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 4.3l7.4 7.4M11.7 4.3l-7.4 7.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  done:'<svg width="22" height="22" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.3l3.1 3.1 6.1-7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  slack:'<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 9.5a1.5 1.5 0 1 1-1.5-1.5H4zM5 9.5A1.5 1.5 0 0 1 8 9.5v3.9a1.5 1.5 0 0 1-3 0zM6.5 4A1.5 1.5 0 1 1 8 2.5V4zM6.5 5a1.5 1.5 0 0 1 0 3H2.6a1.5 1.5 0 1 1 0-3zM12 6.5A1.5 1.5 0 1 1 13.5 8H12zM11 6.5a1.5 1.5 0 0 1-3 0V2.6a1.5 1.5 0 0 1 3 0zM9.5 12a1.5 1.5 0 1 1-1.5 1.5V12zM9.5 11a1.5 1.5 0 0 1 0-3h3.9a1.5 1.5 0 0 1 0 3z" fill="currentColor"/></svg>',
+};
+const MIN = 60000, ESCALATE = 10 * MIN, BOOT = Date.now();
+const money = n => '$' + n.toFixed(2);
+const pad = n => String(n).padStart(2, '0');
+const dur = ms => { const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 90) return s + 's';
+  const m = Math.floor(s / 60); return m < 90 ? m + 'm ' + pad(s % 60) + 's' : Math.floor(m / 60) + 'h ' + pad(m % 60) + 'm'; };
+const waited = it => Date.now() - it.since;
+
+/* ══ what is waiting ═══════════════════════════════════════════════════
+   Oldest first — the same rule the monitor's band uses. One card is open
+   at a time: you work it, it goes, the next opens itself.               */
+const ITEMS = [
+  { key:'billing-webhook', step:'build', kind:'failure', who:'you', since: BOOT - 42 * MIN,
+    sum:'Attempt 3 of 3 failed — egress denied to api.stripe.com',
+    detail:'The sandbox refused the call: <b>api.stripe.com</b> was not on this step\'s allowlist. Three attempts, $1.44 spent and thrown away.' },
+
+  { key:'csv-export', step:'plan', kind:'batch', who:'you', since: BOOT - 12.5 * MIN,
+    sum:'5 questions from one step — answer them together',
+    qs:[
+      { type:'one', text:'Stream the ledger export straight from Postgres, or stage it to object storage first?',
+        opts:['Stream from Postgres','Stage to object storage','You decide'],
+        note:'Streaming is cheaper but holds a connection open for the whole export.' },
+      { type:'yesno', text:'Should a failed export retry automatically?' },
+      { type:'num', text:'How many rows per chunk?', unit:'rows', def:50000,
+        note:'Bigger chunks are faster and use more memory on the worker.' },
+      { type:'many', text:'Which output formats should it emit?', opts:['CSV','TSV','JSONL','Parquet'] },
+      { type:'text', text:'Anything about the ledger schema the plan should know?',
+        placeholder:'Optional — leave blank if nothing comes to mind' },
+    ] },
+
+  { key:'provider-codex', step:'research', kind:'question', who:'you', since: BOOT - 9.7 * MIN,
+    sum:'Codex CLI reports no per-call cost — how should we record spend?',
+    q:{ type:'one', text:'The Codex CLI reports no per-call cost. Estimate spend from token counts, or record it as unknown and leave the totals honest?',
+        opts:['Estimate from tokens','Record as unknown'] } },
+
+  { key:'auth-refactor', step:'review', kind:'gate', who:'you', since: BOOT - 5 * MIN,
+    sum:'Review passed with 2 notes — approve, or send it back?',
+    detail:'Plan item 2 <b>deviated</b> — it revokes one token rather than the family — and item 3 was <b>never built</b>.' },
+
+  { key:'pdf-import', step:'plan', kind:'question', who:'dana', since: BOOT - 21 * MIN,
+    sum:'Which supplier PDF layouts must it handle on day one?',
+    q:{ type:'many', text:'Which supplier PDF layouts must it handle on day one?',
+        opts:['Northwind','Acme','Vertex','Anything with a table'] } },
+];
+
+const RUNNING = [
+  ['sandbox-egress','build','opus', 0.14],
+  ['mem0-adapter','build','opus', 0.14],
+  ['mem0-adapter','tests','sonnet', 0.05],
+  ['docs-pass','research','haiku', 0.008],
+];
+const ANSWERED = [
+  { key:'flow-versioning', step:'plan', q:'Pin to the flow version, or the latest?', a:'Pin to the version', via:'web', at:'14m ago' },
+  { key:'inbox-keyboard', step:'review', q:'Approve the keyboard map?', a:'Approved', via:'slack', at:'38m ago' },
+  { key:'cost-rollup', step:'research', q:'Roll up by model, or by step?', a:'Both', via:'web', at:'1h 02m ago' },
+];
+
+let filter = 'mine', focus = null, answers = {}, cursor = {}, rejecting = false, toast = null;
+let answeredToday = 11;
+
+const visible = () => ITEMS.filter(it => filter === 'all' || it.who === 'you');
+const isEscalated = it => waited(it) >= ESCALATE;
+
+function ensureFocus(){
+  const v = visible();
+  if (!v.length) { focus = null; return; }
+  if (!v.some(it => it.key === focus)) focus = v[0].key;
+}
+
+/* ══ question controls ═════════════════════════════════════════════════ */
+function control(itKey, qi, q){
+  const id = itKey + ':' + qi, a = answers[id];
+  if (q.type === 'one' || q.type === 'yesno') {
+    const opts = q.type === 'yesno' ? ['Yes','No'] : q.opts;
+    return `<div class="opts">${opts.map((o, i) =>
+      `<button class="opt${a === o ? ' on' : ''}" data-pick="${esc(id)}" data-val="${esc(o)}">
+        <kbd>${i + 1}</kbd>${esc(o)}</button>`).join('')}</div>`;
+  }
+  if (q.type === 'many') {
+    const set = new Set(a || []);
+    return `<div class="opts">${q.opts.map((o, i) =>
+      `<button class="opt${set.has(o) ? ' on' : ''}" data-toggle="${esc(id)}" data-val="${esc(o)}">
+        <span class="box"></span><kbd>${i + 1}</kbd>${esc(o)}</button>`).join('')}</div>`;
+  }
+  if (q.type === 'num') {
+    return `<div class="num-row"><input type="number" data-num="${esc(id)}" value="${a ?? q.def}"
+      aria-label="${esc(q.text)}"><span class="unit">${esc(q.unit)}</span></div>`;
+  }
+  return `<textarea class="txt" data-text="${esc(id)}" placeholder="${esc(q.placeholder || '')}"
+    aria-label="${esc(q.text)}">${esc(a || '')}</textarea>`;
+}
+function answered(itKey, qi, q){
+  const a = answers[itKey + ':' + qi];
+  if (q.type === 'text') return true;                 // free text may be left blank
+  if (q.type === 'many') return Array.isArray(a) && a.length > 0;
+  return a !== undefined && a !== '';
+}
+
+/* ══ cards ═════════════════════════════════════════════════════════════ */
+function bodyHTML(it){
+  if (it.kind === 'batch') {
+    const qi = cursor[it.key] ?? 0, q = it.qs[qi];
+    const doneN = it.qs.filter((x, i) => answered(it.key, i, x)).length;
+    const all = doneN === it.qs.length;
+    return `<div class="bt-top">
+        <span class="lbl">question ${qi + 1} of ${it.qs.length}</span>
+        <span class="pips">${it.qs.map((x, i) =>
+          `<button class="pip${answered(it.key, i, x) ? ' done' : ''}${i === qi ? ' cur' : ''}"
+            data-goq="${it.key}|${i}" aria-label="Question ${i + 1}"></button>`).join('')}</span>
+        <span class="sp"></span>
+        <span class="lbl" style="letter-spacing:.02em;text-transform:none">${doneN} of ${it.qs.length} answered</span>
+      </div>
+      <p class="bt-q">${esc(q.text)}</p>
+      ${control(it.key, qi, q)}
+      ${q.note ? `<p class="hint">${esc(q.note)}</p>` : ''}
+      <div class="bt-nav">
+        <button class="act" data-step="${it.key}|-1"${qi === 0 ? ' disabled' : ''}>← Prev</button>
+        <button class="act" data-step="${it.key}|1"${qi === it.qs.length - 1 ? ' disabled' : ''}>Next →</button>
+        <span class="sp"></span>
+        <button class="act primary" data-submit="${it.key}"${all ? '' : ' disabled'}>
+          <kbd>↵</kbd>Submit all ${it.qs.length}</button>
+      </div>
+      <p class="hint">${all ? '<b>All answered.</b> Submitting sends them as one batch — the run picks up where it stopped, with every answer in hand.'
+        : 'The agent asked these together and is parked until it has all of them. Answering one at a time would restart the wait each time.'}</p>`;
+  }
+  if (it.kind === 'question') {
+    const q = it.q, done = answered(it.key, 0, q);
+    return `<p class="bt-q">${esc(q.text)}</p>
+      ${control(it.key, 0, q)}
+      <div class="bt-nav"><span class="sp"></span>
+        <button class="act primary" data-submit="${it.key}"${done ? '' : ' disabled'}><kbd>↵</kbd>Send answer</button></div>`;
+  }
+  if (it.kind === 'gate') {
+    return `<p class="bt-q">${it.detail}</p>
+      ${rejecting === it.key ? `<form class="reason" data-reject="${it.key}">
+          <input id="reasonInput" placeholder="Why — this goes to the next build attempt" autocomplete="off"
+            value="Finish item 2: revoke the whole token family, not just the presented token.">
+          <button class="act danger" type="submit">Send back</button>
+          <button class="act" type="button" data-cancelreject="1">Cancel</button></form>`
+        : `<div class="bt-nav" style="border-top:0;padding-top:0;margin-top:11px">
+            <button class="act primary" data-approve="${it.key}"><kbd>a</kbd>Approve</button>
+            <button class="act danger" data-rejectopen="${it.key}"><kbd>r</kbd>Send back</button>
+            <button class="act">Open the task</button></div>`}
+      <p class="hint">Approving costs nothing and wastes nothing. Sending back re-queues <b>build</b> and
+      moves everything the last attempt spent into <b>wasted</b>.</p>`;
+  }
+  return `<p class="bt-q">${it.detail}</p>
+    <div class="bt-nav" style="border-top:0;padding-top:0;margin-top:11px">
+      <button class="act primary" data-submit="${it.key}"><kbd>↵</kbd>Allow host &amp; retry</button>
+      <button class="act" data-submit="${it.key}">Retry as-is</button>
+      <button class="act">Open the log</button></div>
+    <p class="hint">Allowing the host adds <b>api.stripe.com</b> to this step's egress allowlist, then
+    re-queues the run. The failed attempt's spend stays wasted either way.</p>`;
+}
+
+function drawQueue(){
+  ensureFocus();
+  const v = visible();
+  if (!v.length) {
+    $('#queue').innerHTML = `<div class="clear-state">
+      <span class="ico">${ICON.done}</span>
+      <h2>Nothing is waiting on you</h2>
+      <p>Four agents are still working. The next decision should land in about four minutes — you'll be
+      nudged in chat if you're not here.</p></div>`;
+    return;
+  }
+  $('#queue').innerHTML = v.map(it => {
+    const w = waited(it), escd = isEscalated(it), soon = !escd && w > ESCALATE - 3 * MIN;
+    const open = focus === it.key;
+    const ico = it.kind === 'failure' ? 'fail' : it.kind === 'gate' ? 'gate' : 'ask';
+    return `<div class="ib-card${open ? ' on' : ''}${it.kind === 'failure' ? ' fail' : ''}" id="c-${it.key}">
+      <button class="ib-h" data-focus="${it.key}" aria-expanded="${open}">
+        <span class="ib-i ${ico === 'fail' ? 'fail' : 'wait'}">${ICON[ico]}</span>
+        <span class="ib-who"><b>${it.key}</b><span class="sep">·</span><span>${it.step}</span>
+          ${it.who !== 'you' ? `<span class="sep">·</span><span class="lbl" style="letter-spacing:.04em">waiting on ${it.who}</span>` : ''}</span>
+        <span class="ib-meta">
+          ${escd ? `<span class="esc">escalated</span><span class="sep">·</span>`
+            : soon ? `<span class="esc soon">escalates in ${dur(ESCALATE - w)}</span><span class="sep">·</span>` : ''}
+          waited ${dur(w)}</span>
+        <span class="ib-sum">${esc(it.sum)}</span>
+      </button>
+      ${open ? `<div class="ib-b">${bodyHTML(it)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* ══ context panel ═════════════════════════════════════════════════════ */
+function drawCtx(){
+  const burn = RUNNING.reduce((a, r) => a + r[3], 0) * 60;
+  $('#ctx').innerHTML = `
+    <div class="cx-h"><span class="lbl">while you're here</span></div>
+    <div class="cx-b"><span class="lbl">running now</span>
+      ${RUNNING.map(([t, s, m]) => `<div class="slot"><b>${t}</b><span style="color:var(--ink-3)">${m}</span>
+        <span class="s">${s}</span></div>`).join('')}</div>
+    <div class="cx-b"><span class="lbl">costing you</span>
+      <div class="big">${money(burn)}<span class="lbl" style="letter-spacing:.06em"> /hr</span></div>
+      <div class="cx-row"><span style="color:var(--ink-3)">today</span><span>$19.46</span></div>
+      <div class="cx-row"><span style="color:var(--ink-3)">wasted</span><span style="color:var(--fail)">$2.55</span></div></div>
+    <div class="cx-b"><span class="lbl">next decision</span>
+      <div style="font-family:var(--sans);font-size:13.5px;color:var(--ink-2)">In about <b>4 minutes</b>,
+        when <span class="lbl" style="letter-spacing:.02em;text-transform:none;color:var(--ink)">sandbox-egress</span>
+        reaches its review gate.</div></div>
+    <div class="cx-b"><span class="lbl">answered today</span>
+      <div class="cx-row"><span style="color:var(--ink-3)">questions</span><span><b>${answeredToday}</b></span></div>
+      <div class="cx-row"><span style="color:var(--ink-3)">median reply</span><span>3m 20s</span></div>
+      <div class="cx-row"><span style="color:var(--ink-3)">from chat</span><span>${ANSWERED.filter(a => a.via === 'slack').length + 2} of ${answeredToday}</span></div></div>
+    <div class="cx-b" style="border-bottom:0"><span class="lbl">recently answered</span>
+      ${ANSWERED.map(a => `<div class="ans"><b>${a.key}</b>
+        <span class="via${a.via === 'slack' ? ' slack' : ''}">${a.via === 'slack' ? ICON.slack + ' slack' : 'web'}</span>
+        <span class="v">${esc(a.q)} → <b style="color:var(--ink-2)">${esc(a.a)}</b> · ${a.at}</span></div>`).join('')}</div>`;
+}
+
+function drawChrome(){
+  const v = visible(), escd = v.filter(isEscalated).length;
+  $('#count').outerHTML = v.length
+    ? `<span class="count" id="count">${v.length} waiting${escd ? ` · ${escd} escalated` : ''}</span>`
+    : `<span class="count clear" id="count">all clear</span>`;
+  $('#sb').innerHTML = `<span><b>${ITEMS.length}</b> open<span class="sep">·</span>` +
+    `<b>${ITEMS.filter(i => i.who === 'you').length}</b> on you<span class="sep">·</span>` +
+    `escalation after <b>10m</b><span class="sep">·</span>answers sync both ways with chat</span>` +
+    `<span class="sp"></span><span><span class="kbd">j</span> <span class="kbd">k</span> move ` +
+    `<span class="sep">·</span><span class="kbd">1-9</span> pick <span class="sep">·</span>` +
+    `<span class="kbd">←</span> <span class="kbd">→</span> in a batch <span class="sep">·</span>` +
+    `<span class="kbd">↵</span> submit <span class="sep">·</span><span class="kbd">a</span> approve</span>`;
+}
+function drawToast(){
+  $('#toast').innerHTML = toast
+    ? `<div class="toast"><span class="via slack">${ICON.slack} slack</span><span>${toast}</span></div>` : '';
+}
+const render = () => { drawQueue(); drawCtx(); drawChrome(); drawToast(); };
+
+/* ══ resolving ═════════════════════════════════════════════════════════ */
+function resolve(key, note, via = 'web'){
+  const el = $('#c-' + CSS.escape(key));
+  const it = ITEMS.find(i => i.key === key);
+  if (!it) return;
+  const wasFocused = focus === key;           // someone else's answer must not move your cursor
+  const at = visible().indexOf(it);
+  ANSWERED.unshift({ key, step:it.step, q:it.sum, a:note, via, at:'just now' });
+  answeredToday++;
+  const go = () => {
+    ITEMS.splice(ITEMS.indexOf(it), 1);
+    if (wasFocused) { const nv = visible(); focus = nv[Math.min(at, nv.length - 1)]?.key ?? null; }
+    render();
+  };
+  if (el) { el.classList.add('gone'); setTimeout(go, 200); } else go();
+}
+function submit(key){
+  const it = ITEMS.find(i => i.key === key);
+  if (!it) return;
+  if (it.kind === 'batch') {
+    if (!it.qs.every((q, i) => answered(key, i, q))) return;
+    resolve(key, `${it.qs.length} answers sent`);
+  } else if (it.kind === 'question') {
+    if (!answered(key, 0, it.q)) return;
+    const a = answers[key + ':0'];
+    resolve(key, Array.isArray(a) ? a.join(', ') : String(a));
+  } else if (it.kind === 'failure') {
+    resolve(key, 'host allowed, retried');
+  }
+}
+
+/* ══ interaction ═══════════════════════════════════════════════════════ */
+document.addEventListener('click', e => {
+  const f = e.target.closest('[data-filter]');
+  if (f) { filter = f.dataset.filter;
+    document.querySelectorAll('[data-filter]').forEach(b => b.setAttribute('aria-pressed', String(b === f)));
+    return render(); }
+  const fo = e.target.closest('[data-focus]');
+  if (fo) { focus = focus === fo.dataset.focus ? focus : fo.dataset.focus; return render(); }
+  const p = e.target.closest('[data-pick]');
+  if (p) { answers[p.dataset.pick] = p.dataset.val; return render(); }
+  const t = e.target.closest('[data-toggle]');
+  if (t) {
+    const id = t.dataset.toggle, set = new Set(answers[id] || []);
+    set.has(t.dataset.val) ? set.delete(t.dataset.val) : set.add(t.dataset.val);
+    answers[id] = [...set]; return render();
+  }
+  const g = e.target.closest('[data-goq]');
+  if (g) { const [k, i] = g.dataset.goq.split('|'); cursor[k] = +i; return render(); }
+  const st = e.target.closest('[data-step]');
+  if (st) {
+    const [k, d] = st.dataset.step.split('|');
+    const it = ITEMS.find(x => x.key === k);
+    cursor[k] = Math.max(0, Math.min(it.qs.length - 1, (cursor[k] ?? 0) + +d));
+    return render();
+  }
+  const s = e.target.closest('[data-submit]'); if (s) return submit(s.dataset.submit);
+  const ap = e.target.closest('[data-approve]'); if (ap) return resolve(ap.dataset.approve, 'approved');
+  const ro = e.target.closest('[data-rejectopen]');
+  if (ro) { rejecting = ro.dataset.rejectopen; render(); $('#reasonInput')?.focus(); return; }
+  if (e.target.closest('[data-cancelreject]')) { rejecting = false; return render(); }
+});
+document.addEventListener('submit', e => {
+  const f = e.target.closest('[data-reject]'); if (!f) return;
+  e.preventDefault();
+  const k = f.dataset.reject; rejecting = false;
+  resolve(k, 'sent back — ' + ($('#reasonInput').value.trim() || 'needs another pass'));
+});
+document.addEventListener('input', e => {
+  const n = e.target.dataset.num;  if (n) { answers[n] = e.target.value; return drawChrome(); }
+  const x = e.target.dataset.text; if (x) { answers[x] = e.target.value; }
+});
+document.addEventListener('keydown', e => {
+  if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName) || e.metaKey || e.ctrlKey || e.altKey) {
+    if (e.key === 'Escape' && rejecting) { rejecting = false; render(); }
+    return;
+  }
+  const v = visible(), i = v.findIndex(x => x.key === focus), it = v[i];
+  const k = e.key;
+  if (k === 'j' || k === 'ArrowDown') { focus = v[Math.min(v.length - 1, i + 1)]?.key; e.preventDefault(); return render(); }
+  if (k === 'k' || k === 'ArrowUp')   { focus = v[Math.max(0, i - 1)]?.key; e.preventDefault(); return render(); }
+  if (!it) return;
+  if (k === 'ArrowRight' && it.kind === 'batch') { cursor[it.key] = Math.min(it.qs.length - 1, (cursor[it.key] ?? 0) + 1); e.preventDefault(); return render(); }
+  if (k === 'ArrowLeft'  && it.kind === 'batch') { cursor[it.key] = Math.max(0, (cursor[it.key] ?? 0) - 1); e.preventDefault(); return render(); }
+  if (k === 'Enter') { e.preventDefault(); return it.kind === 'gate' ? resolve(it.key, 'approved') : submit(it.key); }
+  if (k === 'a' && it.kind === 'gate') return resolve(it.key, 'approved');
+  if (k === 'r' && it.kind === 'gate') { rejecting = it.key; render(); $('#reasonInput')?.focus(); return; }
+  if (/^[1-9]$/.test(k)) {
+    const qi = it.kind === 'batch' ? (cursor[it.key] ?? 0) : 0;
+    const q = it.kind === 'batch' ? it.qs[qi] : it.q;
+    if (!q) return;
+    const opts = q.type === 'yesno' ? ['Yes','No'] : q.opts;
+    if (!opts) return;
+    const val = opts[+k - 1]; if (val === undefined) return;
+    const id = it.key + ':' + qi;
+    if (q.type === 'many') {
+      const set = new Set(answers[id] || []);
+      set.has(val) ? set.delete(val) : set.add(val);
+      answers[id] = [...set];
+    } else answers[id] = val;
+    e.preventDefault(); return render();
+  }
+});
+
+/* ══ the world keeps moving ════════════════════════════════════════════
+   Timers tick, one card crosses the escalation threshold while you watch,
+   and a teammate answers one in Slack — which closes it here.           */
+setInterval(() => { if (!document.querySelector('.reason')) { drawQueue(); drawChrome(); } }, 1000);
+setTimeout(() => {
+  const it = ITEMS.find(i => i.key === 'pdf-import');
+  if (!it) return;
+  toast = `dana answered <b>pdf-import · plan</b> in chat — it's closed here too`;
+  resolve('pdf-import', 'Northwind, Acme, anything with a table', 'slack');
+  drawToast();
+  setTimeout(() => { toast = null; drawToast(); }, 5200);
+}, 9000);
+
+render();
+</script>

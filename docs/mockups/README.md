@@ -72,6 +72,19 @@ browser, or run `python3 -m http.server` in this folder.
   review gate item by item, then taking either branch and seeing what it costs.
   [Hosted copy](https://claude.ai/artifact/Ps7zX6Jn151u1m2jgr7Bh1) (private link).
 
+- **[`inbox.html`](./inbox.html)** — every question and approval waiting on you,
+  oldest first, one card open at a time so you work the queue rather than browse
+  it. Its centrepiece is the **batch**: an agent that posed five questions at
+  once, stepped through with number keys and submitted as one — because
+  answering them one at a time would restart the wait each time. All five
+  question shapes are here (yes/no, pick-one, pick-many, number, free text).
+  Escalation timers tick live and one card crosses the ten-minute threshold
+  while you watch; a few seconds later a teammate answers one in chat and it
+  closes here too, without moving your cursor.
+  Keys: `j`/`k` move, `1`–`9` pick, `←`/`→` within a batch, `↵` submit,
+  `a`/`r` approve or send back.
+  [Hosted copy](https://claude.ai/artifact/3cFhjbVxQt93eGzLddopgB) (private link).
+
 - **[`capability-library.html`](./capability-library.html)** — the skills, agents
   and packs that steps draw on (the *Capability library* group in
   [`flowboard-ideation.drawio`](../flowboard-ideation.drawio)). A capability is
