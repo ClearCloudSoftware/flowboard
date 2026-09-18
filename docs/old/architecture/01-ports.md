@@ -1,7 +1,11 @@
-# 01 — The five ports
+# 01 — The ports
 
 The genericization contract. Every sketch is TypeScript-shaped pseudocode; the point is the *shape of the
 seam*, not the exact fields. Core code programs against these; adapters implement them.
+
+Five ports carry the whole program (AgentProvider, Notifier, Workspace, ArtifactStore, TaskSource); a sixth,
+**MemoryStore**, is *additive* — a run happens without it, it only makes runs warmer. It is documented last, and
+in full in [09 — memory](./09-memory.md).
 
 ← back to [README](./README.md)
 
@@ -210,3 +214,33 @@ interface TaskSource {
 ```
 
 Idempotent upsert on `(project_id, import_key)`: re-import twice = 0 created, N updated.
+
+---
+
+## MemoryStore (additive)
+
+The sixth port, and the only optional one — cross-task memory so runs start warm instead of cold.
+[Mem0](https://github.com/mem0ai/mem0) is the first adapter (self-hosted by default; managed cloud is the remote
+tier), with a `local` SQLite adapter and a `none` no-op. Two calls, brokered by the runner **on the host** so the
+sandboxed agent never talks to the memory store (and it stays off the egress allowlist). Full design, scopes, and
+the trust boundary: [09 — memory](./09-memory.md).
+
+```ts
+type MemoryScope =
+  | { kind: 'user' }                        // the single operator: standing prefs + decisions
+  | { kind: 'project'; projectId: string }  // one codebase: conventions, gotchas, layout
+  | { kind: 'agent'; agentId: string }      // one role/skill: knowledge it accrues across runs
+  | { kind: 'task'; taskId: string };       // within a task, across attempts (rework warm-start)
+
+interface MemoryStore {
+  id: 'mem0' | 'mem0-cloud' | 'local' | 'none';
+  recall(q: { scopes: MemoryScope[]; query: string; limit?: number }): Promise<MemoryHit[]>;
+  write(input: { scope: MemoryScope; content: MessageLike; metadata?: Record<string, unknown> }):
+    Promise<{ added: string[]; updated: string[] }>;   // adapter does fact-extraction + contradiction-resolution
+}
+```
+
+**Recall** (before `launch()`) turns the scope union into a 7th prompt part — *background context, not
+instructions*. **Write** (after a run succeeds) commits salient output distilled from **declared artifacts and
+answers only**; the adapter resolves contradictions so FlowBoard never diffs facts by hand. The port is queried
+by the runner, never from a route ([06 §15](./06-cost-and-platform.md#15-settings-draft-mode-api)).

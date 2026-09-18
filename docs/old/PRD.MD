@@ -348,11 +348,13 @@ Run with `cwd` set to the task's worktree path. `--strict-mcp-config` is importa
 
 That last line matters. A headless agent that ends with "let me know if you also want tests" is a stuck run.
 
+When the memory layer is enabled (§11.2), a **seventh part** is inserted just before the closing instruction: a short "context you've learned before" block from `MemoryStore.recall`, scoped to *user + project + agent + task*, labelled as background rather than instructions. With memory off (`none`), the prompt is exactly the six parts above.
+
 **Event handling.** Stream stdout line by line, parse each as JSON, write to `run_events` with an incrementing `seq`, and push onto an in-memory per-run emitter that the SSE endpoint subscribes to. Normalise each event into one of the `type` values in the schema and produce a one-line `summary` for the viewer (e.g. `Read src/auth/session.ts`, `Bash: pnpm test`).
 
 **Cost.** Take the final result event's total cost as authoritative for `runs.cost_usd`. Accumulate per-message token usage as you stream so the live view shows a running number before the run ends. Verify the actual field names against your `docs/stream-sample.jsonl` probe.
 
-**Completion.** On exit code 0, set the run to `succeeded`, scan for artifacts, then apply the advancement rules in §8. On non-zero exit, set `failed`, record stderr in `runs.error`, and put the task into `blocked` rather than retrying automatically.
+**Completion.** On exit code 0, set the run to `succeeded`, scan for artifacts, then apply the advancement rules in §8. On non-zero exit, set `failed`, record stderr in `runs.error`, and put the task into `blocked` rather than retrying automatically. When the memory layer is enabled, after a success the runner also `write()`s the run's salient output (declared artifacts + answers) to `MemoryStore` (§11.2).
 
 **Sandboxed runs.** When the step's sandbox tier is not `host`, the runner does not spawn `claude` directly; it launches the command *inside* the task's container (worktree bind-mounted as `cwd`) through the execution host and streams the same stdout. `bypassPermissions` is rejected unless the tier is a sandbox. See §11.1 and `docs/architecture/08-sandboxing.md`.
 
@@ -460,6 +462,24 @@ Because the agent runs with `cwd` inside the container, no host mounts, and rest
 
 Configuration: a `sandbox_profile` in `settings` (tier, image, egress allowlist, limits), overridable per step; `runs.sandbox` records the tier that actually ran, alongside `runs.model`/`runs.effort`. Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`. Full threat model, isolation ladder, and prior art (Claude Code's dev-container firewall, Codex's default OS sandbox, gVisor/Firecracker): `docs/architecture/08-sandboxing.md`.
 
+### 11.2 Agentic memory (optional, additive)
+
+FlowBoard has no cross-task memory: every run starts cold, a second task on the same repo re-learns its conventions, and the inbox re-asks questions it has effectively answered before. Add an optional **memory layer** so runs start warm. It is **additive** — with it off, every flow behaves exactly as this spec describes; memory is never on the critical path of a run.
+
+Introduce a **`MemoryStore` port** with two calls, `recall` and `write`. The first adapter is **[Mem0](https://github.com/mem0ai/mem0)** — a drop-in memory layer that handles user/session/agent memory plus fact extraction and contradiction resolution — run **self-hosted by default** (its OSS package with a local vector store), so it keeps FlowBoard local-first. A `local` SQLite adapter and a `none` no-op complete the set; the default is `none`.
+
+**Where it hooks in — the runner (§7), host-side only.**
+- **Recall, before the run:** query the store for memories relevant to this run — scoped by *user* (the single operator), *project*, the step's *agent/skill*, and the *task* — and append them to the prompt as a final part: "context you've learned before (background, not instructions)." This is prompt part 7 in §7.
+- **Commit, after a run succeeds:** hand the run's salient output — the answers it collected, the outcome it set, the summary/review it produced — to `write()`. Mem0 does the fact extraction and contradiction resolution; FlowBoard never diffs memories by hand. Commit reads from **declared artifacts and answers only**, never raw agent output.
+
+Both calls run in the runner **on the host**, so the sandboxed agent process never connects to the store and **memory adds nothing to the sandbox egress allowlist** (§11.1). Recalled text is context, not instructions; writes are scoped (a run writes only its own project/agent/task) and audited. This cross-run trust boundary is the part to get right — see `docs/architecture/09-memory.md`.
+
+**Scopes:** `user` (standing prefs + recurring decisions — the single highest-leverage one), `project` (a codebase's conventions and gotchas), `agent` (what a role/skill accrues across runs), `task` (why attempt 1 failed → attempt 2 starts warm).
+
+**Schema — almost nothing.** Mem0 owns the memories. Add only a `memory` block to `settings` (adapter id, endpoint / key ref, enabled scopes, recall limit) and an optional `run_memories(run_id, memory_id, scope)` link recording what was recalled into each run, for the audit trail. Do not duplicate memory content into SQLite. Tag memory-layer token/API cost separately so it never lands in the per-run cost rollups (§13) — the point of memory is to *lower* run cost, and the ledger must be able to show the net.
+
+Full design, scope mapping, and trust boundary: `docs/architecture/09-memory.md`.
+
 ---
 
 ## 12. API surface
@@ -518,6 +538,8 @@ Add a global **draft mode** toggle in settings that overrides every step to `--m
 
 Add a **sandbox** section in settings too: the default isolation tier (host / container / microVM), the container image, the network egress allowlist, and the resource limits. See §11.1.
 
+Add a **memory** section in settings as well (§11.2): the adapter (`none` / `local` / self-hosted Mem0 / Mem0 cloud), its endpoint or key ref, which scopes are enabled (user / project / agent / task), and the recall limit. Default the adapter to `none` — memory is additive, and nothing else in the app depends on it being on.
+
 ---
 
 ## 14. Build order
@@ -539,6 +561,8 @@ Commit after each milestone.
 **M7 — Library and import.** Skills install from GitHub, agent CRUD, markdown backlog import.
 
 **M8 — Cost views and flow editor UI.**
+
+**M9 — Memory (optional, additive).** The `MemoryStore` port with a self-hosted Mem0 adapter and a `none` no-op (default). Recall injects the seventh prompt part before a run; commit writes the run's declared artifacts + answers to Mem0 after a success; both host-side. Off by default; ships last because it depends on runs, questions, and artifacts already existing. Proof it works: a preference answered once in the inbox is recalled into the next task and not asked again — and turning memory off returns the app to exactly its M1–M8 behaviour. See §11.2 and `docs/architecture/09-memory.md`.
 
 ---
 
@@ -583,9 +607,14 @@ When you are done, all of these must be true:
 - [ ] The task detail sheet diffs `plan.md` against `summary.md`
 - [ ] `/costs` shows spend per step definition and a separate wasted-spend figure
 - [ ] Draft mode forces every step to haiku/low
+- [ ] With memory enabled, a preference answered in the inbox is recalled into the next task's run and not asked again
+- [ ] With memory disabled (`none`), every flow behaves exactly as in M1–M8 — memory is additive, never a precondition
+- [ ] Recall and commit happen host-side; a sandboxed run needs no egress-allowlist entry for the memory store
 
 ## 17. Out of scope
 
 Do not build: authentication, user accounts, roles, deployment config, multi-machine support, a plugin marketplace, or anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI.
 
 Note on Docker: shipping or *deploying* FlowBoard itself in a container is out of scope. **Sandboxing agent execution** in a container/microVM (§11.1) is in scope but optional — it isolates the agent on the same single machine; it is not multi-tenancy or remote execution.
+
+Note on memory: the **agentic memory** layer (§11.2) is in scope but **additive and off by default**, and **self-hosted** — it keeps FlowBoard local-first. The Mem0 *managed cloud* platform is out of scope for v1; it is the later shared/remote tier, the same decision as a remote workspace. Memory must never become a precondition for a run: with the `none` adapter the app behaves exactly as the rest of this spec describes.

@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net">
+<mxfile host="app.diagrams.net" pages="3">
   <diagram name="FlowBoard ideation" id="flowboard-ideation">
     <mxGraphModel dx="4900" dy="4082" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
@@ -215,6 +215,427 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="link-3" edge="1" parent="1" source="engine-7" style="endArrow=none;dashed=1;html=1;strokeColor=#8a91a3;" target="editor-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mem" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Memory (Mem0) · additive&lt;/b&gt;&lt;br&gt;Cross-task memory so runs start warm. Off by default; every flow runs without it." vertex="1">
+          <mxGeometry height="392" width="640" x="2100" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="mem-1" parent="mem" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Recall before a run&lt;/b&gt;&lt;br&gt;Inject what you've learned — you, project, agent, task — as a 7th prompt part: background, not instructions." vertex="1">
+          <mxGeometry height="94" width="290" x="16" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="mem-2" parent="mem" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Commit after a run&lt;/b&gt;&lt;br&gt;Mem0 extracts facts and resolves contradictions — from declared artifacts and answers only." vertex="1">
+          <mxGeometry height="94" width="290" x="322" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="mem-3" parent="mem" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Remembers your answers&lt;/b&gt;&lt;br&gt;A preference answered once stops surfacing in the inbox on the next task." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="mem-4" parent="mem" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Host-side broker&lt;/b&gt;&lt;br&gt;The runner does recall/commit; the sandboxed agent never touches the store — off the egress allowlist." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="164" as="geometry" />
+        </mxCell>
+        <mxCell id="mem-5" parent="mem" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;D10 · Self-host vs managed&lt;/b&gt;&lt;br&gt;Default self-hosted Mem0 (local-first); managed cloud = the later shared/remote tier." vertex="1">
+          <mxGeometry height="76" width="290" x="16" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="mem-6" parent="mem" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Pays for itself, or it's off&lt;/b&gt;&lt;br&gt;Warm starts cut wasted spend; memory's own cost is tagged apart, so /costs shows the net." vertex="1">
+          <mxGeometry height="76" width="290" x="322" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="link-mem-0" edge="1" parent="1" source="mem-1" style="endArrow=none;dashed=1;html=1;strokeColor=#8a91a3;" target="runs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="Logical components" id="flowboard-logical">
+    <mxGraphModel dx="1400" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1240" pageHeight="1160" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ui" value="&lt;b&gt;Web UI  ·  Next.js routes&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="1160" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-board" value="&lt;b&gt;Board  /p/[slug]&lt;/b&gt;&lt;br&gt;projection of task + step state" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="ui">
+          <mxGeometry x="16" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-inbox" value="&lt;b&gt;Inbox  /inbox&lt;/b&gt;&lt;br&gt;open questions across projects" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="ui">
+          <mxGeometry x="302" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-flow" value="&lt;b&gt;Flow editor  /p/[slug]/flow&lt;/b&gt;&lt;br&gt;edit DAG → new flow version" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="ui">
+          <mxGeometry x="588" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-runs" value="&lt;b&gt;Run viewer  /runs/[id]&lt;/b&gt;&lt;br&gt;live event stream (SSE)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="ui">
+          <mxGeometry x="874" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-lib" value="&lt;b&gt;Skills &amp; agents&lt;/b&gt;&lt;br&gt;install, edit, list" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="ui">
+          <mxGeometry x="16" y="118" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ui-costs" value="&lt;b&gt;Costs  /costs&lt;/b&gt;&lt;br&gt;rollups and draft-mode toggle" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="ui">
+          <mxGeometry x="302" y="118" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="core" value="&lt;b&gt;Core  ·  no adapter imports&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="270" width="1160" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="core-engine" value="&lt;b&gt;Flow engine&lt;/b&gt;&lt;br&gt;versioned DAG, advance modes, attempts, artifact contracts" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="core">
+          <mxGeometry x="16" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="core-state" value="&lt;b&gt;Task &amp; run state&lt;/b&gt;&lt;br&gt;step def → step instance → run" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="core">
+          <mxGeometry x="302" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="core-questions" value="&lt;b&gt;Question service&lt;/b&gt;&lt;br&gt;ask · park · resume · answer" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="core">
+          <mxGeometry x="588" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="core-queue" value="&lt;b&gt;Job queue&lt;/b&gt;&lt;br&gt;enqueue / claim" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="core">
+          <mxGeometry x="874" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="core-worker" value="&lt;b&gt;Run orchestrator&lt;/b&gt;&lt;br&gt;spawns run, parses stream-json, emits events" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="core">
+          <mxGeometry x="16" y="118" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="core-costs" value="&lt;b&gt;Cost rollup&lt;/b&gt;&lt;br&gt;per project · step · model; wasted spend" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="core">
+          <mxGeometry x="302" y="118" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ports" value="&lt;b&gt;Ports&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="1160" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="port-agent" value="&lt;b&gt;AgentProvider&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="ports">
+          <mxGeometry x="16" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="port-notifier" value="&lt;b&gt;Notifier&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="ports">
+          <mxGeometry x="302" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="port-workspace" value="&lt;b&gt;Workspace&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="ports">
+          <mxGeometry x="588" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="port-artifacts" value="&lt;b&gt;ArtifactStore&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="ports">
+          <mxGeometry x="874" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="port-tasks" value="&lt;b&gt;TaskSource&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="ports">
+          <mxGeometry x="16" y="118" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="adapters" value="&lt;b&gt;Adapters&lt;/b&gt;&lt;br&gt;dashed = not in v1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="730" width="1160" height="262" as="geometry" />
+        </mxCell>
+        <mxCell id="ad-claude" value="&lt;b&gt;Claude Code CLI&lt;/b&gt;&lt;br&gt;headless, stream-json" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="adapters">
+          <mxGeometry x="16" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ad-codex" value="&lt;b&gt;Codex CLI&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="adapters">
+          <mxGeometry x="302" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ad-replay" value="&lt;b&gt;ReplayProvider&lt;/b&gt;&lt;br&gt;recorded streams, tests" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="adapters">
+          <mxGeometry x="588" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ad-mcp" value="&lt;b&gt;MCP ask tool&lt;/b&gt;&lt;br&gt;inbound: agent asks the human" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="adapters">
+          <mxGeometry x="874" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ad-slack" value="&lt;b&gt;Slack&lt;/b&gt;&lt;br&gt;Block Kit + signature check" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="adapters">
+          <mxGeometry x="16" y="118" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ad-worktree" value="&lt;b&gt;Git worktree&lt;/b&gt;&lt;br&gt;one per task" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="adapters">
+          <mxGeometry x="302" y="118" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ad-fs" value="&lt;b&gt;Filesystem artifacts&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="adapters">
+          <mxGeometry x="588" y="118" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ad-md" value="&lt;b&gt;Markdown / Issues import&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="adapters">
+          <mxGeometry x="874" y="118" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ad-sandbox" value="&lt;b&gt;Container workspace&lt;/b&gt;&lt;br&gt;devcontainer · Docker sandbox · remote host" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="adapters">
+          <mxGeometry x="16" y="190" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-sandbox" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;dashed=1;" edge="1" parent="1" source="port-workspace" target="ad-sandbox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="data" value="&lt;b&gt;Stores&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1032" width="1160" height="118" as="geometry" />
+        </mxCell>
+        <mxCell id="db" value="&lt;b&gt;Database&lt;/b&gt;&lt;br&gt;flows, tasks, steps, runs, questions, costs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#5f6675;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="data">
+          <mxGeometry x="16" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="disk" value="&lt;b&gt;Disk&lt;/b&gt;&lt;br&gt;worktrees, artifacts, skills, session logs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#5f6675;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="data">
+          <mxGeometry x="302" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="lk0" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="ui-board" target="core-state">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk1" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="ui-inbox" target="core-questions">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk2" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="ui-flow" target="core-engine">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk3" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="ui-runs" target="core-worker">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk4" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="ui-costs" target="core-costs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk5" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="ui-lib" target="disk">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk6" value="enqueue step" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="core-engine" target="core-queue">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk7" value="claim" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="core-queue" target="core-worker">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk8" value="events, cost" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="core-worker" target="core-state">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk9" value="step done → advance" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="core-worker" target="core-engine">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk10" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="core-worker" target="port-agent">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk11" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="core-worker" target="port-workspace">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk12" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="core-worker" target="port-artifacts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk13" value="escalate at 5 min" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="core-questions" target="port-notifier">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk14" value="ask" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="ad-mcp" target="core-questions">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk15" value="answers → resume" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="core-questions" target="core-engine">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk16" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="port-agent" target="ad-claude">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk17" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="port-agent" target="ad-codex">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk18" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="port-agent" target="ad-replay">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk19" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="port-notifier" target="ad-slack">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk20" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="port-workspace" target="ad-worktree">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk21" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="port-artifacts" target="ad-fs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk22" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="port-tasks" target="ad-md">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk23" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="ad-md" target="port-tasks">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk24" value="import tasks" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="port-tasks" target="core-state">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk25" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="core-state" target="db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk26" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="core-costs" target="db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk27" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="ad-worktree" target="disk">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk28" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;" edge="1" parent="1" source="ad-fs" target="disk">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="core-memory" value="&lt;b&gt;Memory&lt;/b&gt;&lt;br&gt;recall before a run, commit after (additive)" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="core">
+          <mxGeometry x="588" y="118" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="port-memory" value="&lt;b&gt;MemoryStore&lt;/b&gt;&lt;br&gt;sixth port · additive · off by default" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="ports">
+          <mxGeometry x="302" y="118" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="ad-mem0" value="&lt;b&gt;Mem0 memory&lt;/b&gt;&lt;br&gt;self-host (default) · managed cloud" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="adapters">
+          <mxGeometry x="302" y="190" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="memstore" value="&lt;b&gt;Memory store&lt;/b&gt;&lt;br&gt;Mem0 vectors + history (self-hosted)" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#5f6675;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="data">
+          <mxGeometry x="588" y="46" width="270" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-mem0" value="recall / commit (host-side)" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;dashed=1;" edge="1" parent="1" source="core-worker" target="port-memory">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-mem1" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;dashed=1;" edge="1" parent="1" source="port-memory" target="ad-mem0">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lk-mem2" value="" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;endSize=6;dashed=1;" edge="1" parent="1" source="ad-mem0" target="memstore">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="Functional components" id="flowboard-functional">
+    <mxGraphModel dx="843" dy="603" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1280" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="f-intake" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Intake&lt;/b&gt;" vertex="1">
+          <mxGeometry height="190" width="580" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="f-intake-0" parent="f-intake" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Import backlog&lt;/b&gt;&lt;br&gt;markdown headings + bullets → tasks" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-intake-1" parent="f-intake" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Create / edit task&lt;/b&gt;" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-intake-2" parent="f-intake" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Promote Backlog → Todo&lt;/b&gt;&lt;br&gt;the only drag that means anything" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-intake-3" parent="f-intake" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Seed project&lt;/b&gt;&lt;br&gt;default flow + sample tasks" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-design" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Flow design&lt;/b&gt;" vertex="1">
+          <mxGeometry height="190" width="580" x="660" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="f-design-0" parent="f-design" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Author steps&lt;/b&gt;&lt;br&gt;skill or agent, model, effort, advance mode" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-design-1" parent="f-design" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Wire connections&lt;/b&gt;&lt;br&gt;branches and joins" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-design-2" parent="f-design" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Validate artifact contract&lt;/b&gt;&lt;br&gt;requires / produces, at design time" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-design-3" parent="f-design" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Version the flow&lt;/b&gt;&lt;br&gt;edit = new version; in-flight tasks pinned" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-library" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Capability library&lt;/b&gt;" vertex="1">
+          <mxGeometry height="190" width="580" x="40" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="f-library-0" parent="f-library" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Install skill from GitHub&lt;/b&gt;&lt;br&gt;clone, parse SKILL.md, update, remove" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-library-1" parent="f-library" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Define agent&lt;/b&gt;&lt;br&gt;prompt, model, effort, allowed tools" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-library-2" parent="f-library" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Bundle capability pack&lt;/b&gt;&lt;br&gt;skills + agents + flows as one unit" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-exec" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Execution&lt;/b&gt;&lt;br&gt;dashed = not in v1" vertex="1">
+          <mxGeometry height="334" width="580" x="660" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="f-exec-0" parent="f-exec" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Start task&lt;/b&gt;&lt;br&gt;pin flow version" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-exec-1" parent="f-exec" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Run a step&lt;/b&gt;&lt;br&gt;spawn headless session in its worktree" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-exec-2" parent="f-exec" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Advance&lt;/b&gt;&lt;br&gt;auto · on approval · on answers" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-exec-3" parent="f-exec" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Rework loop&lt;/b&gt;&lt;br&gt;attempt 2, 3… guarded by max_attempts" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-exec-4" parent="f-exec" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Split &amp; join&lt;/b&gt;&lt;br&gt;parallel branches from one card" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="f-exec-5" parent="f-exec" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Stop&lt;/b&gt;&lt;br&gt;kill the process" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="f-exec-6" parent="f-exec" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Isolate the workspace&lt;/b&gt;&lt;br&gt;worktree per task today; devcontainer / Docker sandbox / remote host later" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="262" as="geometry" />
+        </mxCell>
+        <mxCell id="f-human" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Human in the loop&lt;/b&gt;" vertex="1">
+          <mxGeometry height="190" width="580" x="40" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="f-human-0" parent="f-human" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Answer questions&lt;/b&gt;&lt;br&gt;yes/no · select · multi · text · number" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-human-1" parent="f-human" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Work a batch&lt;/b&gt;&lt;br&gt;5–8 questions from one step, as a group" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-human-2" parent="f-human" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Approve / reject a step&lt;/b&gt;" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-human-3" parent="f-human" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Answer from Slack&lt;/b&gt;&lt;br&gt;resolves the inbox card" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-observe" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Observability&lt;/b&gt;" vertex="1">
+          <mxGeometry height="190" width="580" x="660" y="644" as="geometry" />
+        </mxCell>
+        <mxCell id="f-observe-0" parent="f-observe" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Watch a live session&lt;/b&gt;&lt;br&gt;normalised events, collapsible tool calls" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-observe-1" parent="f-observe" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Read the step timeline&lt;/b&gt;&lt;br&gt;state, attempts, cost, duration" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-observe-2" parent="f-observe" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Open artifacts&lt;/b&gt;&lt;br&gt;plan.md vs summary.md diff" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-observe-3" parent="f-observe" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;See status at a glance&lt;/b&gt;&lt;br&gt;state dot, current step, split badge" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-cost" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Cost &amp; control&lt;/b&gt;" vertex="1">
+          <mxGeometry height="262" width="580" x="40" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="f-cost-0" parent="f-cost" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Ticking run cost&lt;/b&gt;&lt;br&gt;live, per card and per run" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-cost-1" parent="f-cost" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Spend rollups&lt;/b&gt;&lt;br&gt;project · step def · model × effort · over time" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-cost-2" parent="f-cost" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Wasted spend&lt;/b&gt;&lt;br&gt;money burnt by rework loops" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-cost-3" parent="f-cost" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Cost per completed task&lt;/b&gt;&lt;br&gt;trended by flow version" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-cost-4" parent="f-cost" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Draft mode&lt;/b&gt;&lt;br&gt;force haiku / low effort while iterating" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="f-notify" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Escalation&lt;/b&gt;" vertex="1">
+          <mxGeometry height="190" width="580" x="660" y="874" as="geometry" />
+        </mxCell>
+        <mxCell id="f-notify-0" parent="f-notify" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Escalate after 5 min&lt;/b&gt;&lt;br&gt;Block Kit message to Slack" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-notify-1" parent="f-notify" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Verify inbound&lt;/b&gt;&lt;br&gt;signature check on interactions" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-notify-2" parent="f-notify" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#e2b93b;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Resolve everywhere&lt;/b&gt;&lt;br&gt;answered once, closed in both places" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="fk0" edge="1" parent="1" source="f-intake" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;strokeWidth=2;endSize=6;" target="f-exec" value="tasks">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fk1" edge="1" parent="1" source="f-design" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;strokeWidth=2;endSize=6;" target="f-exec" value="flow version">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fk2" edge="1" parent="1" source="f-library" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;strokeWidth=2;endSize=6;" target="f-design" value="steps draw on these">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fk3" edge="1" parent="1" source="f-exec" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;strokeWidth=2;endSize=6;" target="f-human" value="asks / waits">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fk4" edge="1" parent="1" source="f-human" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;strokeWidth=2;endSize=6;" target="f-exec" value="answers / approval">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fk5" edge="1" parent="1" source="f-exec" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;strokeWidth=2;endSize=6;" target="f-observe" value="events">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fk6" edge="1" parent="1" source="f-exec" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;strokeWidth=2;endSize=6;" target="f-cost" value="usage">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fk7" edge="1" parent="1" source="f-human" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;strokeWidth=2;endSize=6;" target="f-notify" value="unanswered too long">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="f-memory" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#8a91a3;fillColor=#f4f5f8;fontColor=#5f6675;align=left;verticalAlign=top;spacing=8;container=1;" value="&lt;b&gt;Memory&lt;/b&gt;&lt;br&gt;additive · dashed = optional" vertex="1">
+          <mxGeometry height="190" width="580" x="40" y="1010" as="geometry" />
+        </mxCell>
+        <mxCell id="f-mem-0" parent="f-memory" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Recall before a step&lt;/b&gt;&lt;br&gt;inject learned context (7th prompt part)" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-mem-1" parent="f-memory" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Distil after a step&lt;/b&gt;&lt;br&gt;facts + contradiction resolution (Mem0)" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="46" as="geometry" />
+        </mxCell>
+        <mxCell id="f-mem-2" parent="f-memory" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Scopes&lt;/b&gt;&lt;br&gt;user · project · agent · task" vertex="1">
+          <mxGeometry height="56" width="270" x="16" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="f-mem-3" parent="f-memory" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#a06cf0;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Self-hosted, off by default&lt;/b&gt;&lt;br&gt;local-first; managed cloud later" vertex="1">
+          <mxGeometry height="56" width="270" x="294" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="fk-mem0" edge="1" parent="1" source="f-exec" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;strokeWidth=2;endSize=6;dashed=1;" target="f-memory" value="run output → memory">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fk-mem1" edge="1" parent="1" source="f-human" style="endArrow=block;html=1;rounded=1;strokeColor=#8a91a3;strokeWidth=2;endSize=6;dashed=1;" target="f-memory" value="answers → memory">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>

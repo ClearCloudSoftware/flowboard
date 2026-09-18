@@ -22,7 +22,8 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **C. You in the loop** — [11 Questions](#11-questions) · [12 The inbox](#12-the-inbox) · [13 Notifications](#13-notifications)
 - **D. Files & building blocks** — [14 Workspaces](#14-workspaces) · [15 Artifacts](#15-artifacts) · [16 The library](#16-the-library) · [17 Importing work](#17-importing-work)
 - **E. Seeing & steering** — [18 Cost tracking](#18-cost-tracking) · [19 Settings](#19-settings) · [20 Plumbing](#20-plumbing)
-- **F.** [Across everything](#across-everything) · [Parking lot](#parking-lot)
+- **F. What it remembers** — [21 Memory](#21-memory)
+- **G.** [Across everything](#across-everything) · [Parking lot](#parking-lot)
 
 ---
 
@@ -36,7 +37,9 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **Create a new project** — A short form: name it and choose which recipe new tasks should follow (or start empty).
 - **A default recipe per project** — Each project remembers which recipe to use, so new work starts the right way without you picking every time.
 
-**💡 Ideas:** _(add ideas)_
+**💡 Ideas:**
+
+- **Who can see each project** — a teammate can be given access to a project and its repo, or not, so not everyone sees every codebase.
 
 ### 2. Flows
 *The recipe a task follows — an ordered set of steps, each one an agent doing a single job.*
@@ -54,7 +57,10 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **A visual editor** — Build and rewire recipes on a canvas (drag steps, draw connections) or as a simple list, with a live warning if the recipe doesn't hold together.
 - **Ready-made recipes** — Ships with a couple of complete ones (a full software-development pipeline and a research pipeline) so you're not starting from a blank page.
 
-**💡 Ideas:** _(add ideas)_
+**💡 Ideas:**
+
+- **Assign a step to a person or role** — a manual or approval step can name who does it (a specific teammate, or a role like "reviewer"), so the recipe itself says who owns each human part.
+- **Role starter packs** — ship a ready-made recipe per function (UX/UI, business analyst, cloud/DevOps, QA, marketing…), each bundling the skills, tools, and design system that role reaches for, plus sensible default models and guardrails. Assign a task or step to a function and its workflow is already wired instead of a blank page. → [Appendix: Role starter flows](#appendix-role-starter-flows)
 
 ### 3. Tasks
 *The individual pieces of work — a feature, a bug, a question — that move through a recipe.*
@@ -65,7 +71,11 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **A detail view per task** — Open a task to see its whole story: each step, how long it took, what it cost, whether it needed approval, links to everything it produced, and a side-by-side "what we planned vs what got built."
 - ❓ Should starting a task happen automatically when you pull it out of the backlog, or be a separate "Start" button?
 
-**💡 Ideas:** _(add ideas)_
+**💡 Ideas:**
+
+- **An owner per task** — a task can belong to a teammate; hand it off or reassign it as it moves.
+- **Pull a teammate in** — @mention someone on a task to drop a light "take a look" into their inbox, no formal gate needed.
+- **Separation of duties** — whoever ran the build can't be the one who approves its own review.
 
 ### 4. The engine
 *The behind-the-scenes decision-maker that works out what happens next after each step.* → [deep dive](./old/architecture/02-core-and-engine.md#3-flow-execution-engine-write-model)
@@ -77,7 +87,10 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **Your call wins** — If you approve or reject a step, your decision overrides whatever the agent concluded, and a rejection carries your reason into the next attempt.
 - ❓ Exactly how many retries before we declare a task failed.
 
-**💡 Ideas:** _(add ideas)_
+**💡 Ideas:**
+
+- **Route the next human step to a teammate** _(your handoff example)_ — when a step finishes, the engine drops the following approval/manual step into another person's queue (a finished build sends code-review to the reviewer), who can start their own work from there.
+- **Two sign-offs on one gate** — a step can require approval from two people (say security and a lead) — the same "join" that waits for parallel branches, applied to humans.
 
 ### 5. The board
 *The at-a-glance view: columns are the steps of the recipe, and each task sits in whichever step it has reached.*
@@ -88,7 +101,9 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **Click to dive in** — Opens the task's detail view.
 - **Keyboard-friendly** — Move around and open cards without reaching for the mouse.
 
-**💡 Ideas:** _(add ideas)_
+**💡 Ideas:**
+
+- **Show who owns what** — each card shows its owner and who a waiting gate is on ("waiting on Alice" vs "waiting on you"); filter the board to yourself, a teammate, or unassigned, and see who the bottleneck reviewer is.
 
 ---
 
@@ -169,7 +184,10 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **Stays in sync** — Answer the same question somewhere else (like chat) and the inbox updates itself instantly.
 - **A context panel** — What's running right now, what it's costing, and roughly when the next decision will land.
 
-**💡 Ideas:** _(add ideas)_
+**💡 Ideas:**
+
+- **A "my inbox" filter** — each teammate sees only what is waiting on them.
+- **A shared pool to claim from** — unassigned questions and gates sit in a team queue anyone can pick up, like support tickets.
 
 ### 13. Notifications
 *When a question sits unanswered, FlowBoard nudges you on another channel so nothing stalls silently.* → [deep dive](./old/architecture/04-hitl-and-notify.md#10-notification--escalation--notifier-port)
@@ -178,7 +196,10 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **Answer from anywhere** — Answer in chat and the web updates; answer on the web and the chat message updates to show it's handled — and whoever answers first wins.
 - **More than one channel** — Built so chat, email, or other channels can all plug in, not just one.
 
-**💡 Ideas:** _(add ideas)_
+**💡 Ideas:**
+
+- **Nudge the right person** — escalate a waiting question to the assigned teammate's own DM instead of one shared channel.
+- **An escalation ladder** — if they don't answer in time, bump it up to their backup or lead (an SLA-style hop, reusing the existing nudge timer).
 
 ---
 
@@ -200,7 +221,9 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **A tidy hand-off** — Each step says what it produces, and FlowBoard automatically files away the matching outputs when the step finishes.
 - **Read them nicely** — Open any artifact in a formatted viewer, and compare two of them (like the plan against the final summary) side by side.
 
-**💡 Ideas:** _(add ideas)_
+**💡 Ideas:**
+
+- **Discuss an artifact** — comment on the plan or the review and @mention a teammate, so the conversation lives next to the document it is about.
 
 ### 16. The library
 *Your reusable building blocks: skills (packaged instructions) and agents (defined roles) that steps draw from.* → [deep dive](./old/architecture/05-environment-and-registry.md#13-skillagent-registry--capability-packs)
@@ -209,7 +232,10 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **Define agents** — Create a named role with its own instructions, preferred AI model, and allowed tools, then reuse it across recipes.
 - **A starter set** — Comes with a handful of ready skills and agents so the sample recipes work out of the box.
 
-**💡 Ideas:** _(add ideas)_
+**💡 Ideas:**
+
+- **A shared, governed library** — teammates publish flows, agents, and skills the whole team draws from, with an owner who controls who can change the "golden" recipes everyone relies on.
+- **Team guardrails vs personal defaults** — the team can pin rules nobody can quietly lift (a review step must wait for approval, a budget cap holds), kept separate from each person's own preferences.
 
 ### 17. Importing work
 *Bring an existing backlog into FlowBoard from a document — and, later, from tools like GitHub or Linear.* → [deep dive](./old/architecture/05-environment-and-registry.md#14-ingestion--tasksource-port)
@@ -232,7 +258,10 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **Wasted spend, called out** — A specific number for money burned on work that got redone or thrown away, so you can actually go after it.
 - **Cost per finished task** — Tracked across recipe versions, so you can tell whether a change made things cheaper or more expensive.
 
-**💡 Ideas:** _(add ideas)_
+**💡 Ideas:**
+
+- **Spend by person and team** — break the bill down by teammate and by team, not only by project, step, and model.
+- **A team budget** — give a team a monthly cap and alert its lead as it fills.
 
 ### 19. Settings
 *The global switches.*
@@ -254,6 +283,25 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 
 ---
 
+## F. What it remembers
+
+### 21. Memory
+*What FlowBoard carries from one task to the next, so agents stop starting from scratch every time.* → [deep dive](./old/architecture/09-memory.md)
+
+- **Start warm, not cold** — Before a step runs, FlowBoard hands the agent the relevant things it has already learned: your standing preferences, this project's conventions, what worked (and what didn't) on earlier tasks. So it isn't re-discovering the same facts run after run.
+- **Remember your answers** — When you answer a question in the inbox, or reject a step with a reason, FlowBoard remembers it. The next task doesn't ask you the same thing again — the screen you live in gets quieter over time.
+- **Four kinds of memory** — About *you* (how you like things done), about a *project* (its quirks and layout), about an *agent or skill* (what that role has picked up), and within a *task* (so attempt 2 knows why attempt 1 failed).
+- **It sorts itself out** — A new fact that contradicts an old one replaces it ("now uses vitest, not jest") instead of piling up, so the memory stays true without you curating it. This is a drop-in memory layer (Mem0) doing that work, not something FlowBoard hand-rolls.
+- **Yours, on your machine** — Memory is self-hosted by default, right next to your repos and keys — nothing about how you work leaves your laptop. (A hosted option exists for a future shared setup, but that's a later, separate choice.)
+- **Off until you want it** — It's an add-on, not a requirement: every flow runs exactly as before with memory switched off. Turn it on and runs get cheaper (less re-deriving) and the inbox gets lighter — and both show up on the cost view and the inbox, so you can tell whether it's earning its keep.
+- ❓ Which memory to switch on first — just *your* preferences (the cheapest win), or project memory too?
+
+**💡 Ideas:**
+
+- **A shared team memory** — today the "about you" memory is one person's; a team could share a pool of standing decisions and conventions, so a question answered once helps everyone instead of just the person who answered it.
+
+---
+
 ## Across everything
 
 Themes that touch many parts at once — dump ideas here when they don't belong to a single box.
@@ -268,6 +316,10 @@ Themes that touch many parts at once — dump ideas here when they don't belong 
   - **💡** _(add ideas)_
 - **Keeping the pieces swappable** — the discipline that lets you change one part (the AI tool, the chat channel, where work runs) without rewriting the rest.
   - **💡** _(add ideas)_
+- **Memory across tasks** — what the system carries forward so agents start warm instead of cold, and the inbox stops re-asking settled questions; self-hosted, off until you turn it on, and paid for only if it lowers cost. → [Memory](#21-memory)
+  - **💡** _(add ideas)_
+- **Teams & collaboration** — the cross-cutting foundation every team idea above sits on: identities for the people involved, light roles and permissions (who can edit recipes, approve gates, install skills, see costs, open a repo), and a *who* stamped on every human approve/reject/answer in the record. This is the one genuinely new foundation the team ideas need — and the fork between staying a local tool with named teammates and becoming a shared service everyone logs into (see Parking lot).
+  - **💡** _Local-collab first — named people, assignees, and per-person routing need no accounts server; full roles and per-repo access are the heavier, later step._
 
 ---
 
@@ -283,4 +335,114 @@ Whole new components that don't exist yet. Seeded with a few starters — add yo
 - **💡 A trends dashboard** — throughput over time, how fast questions get answered, cost per feature.
 - **💡 Replay any past run** — step through exactly what happened, to debug it after the fact.
 - **💡 Check for hidden manipulation** — scan the files agents produce (and the untrusted things they read) for prompt-injection before the next step trusts them.
+- **💡 A shared team tier** — the multi-user version: accounts, roles, per-repo access, and runs that happen on a shared server rather than one laptop. The big fork the pitch keeps flagging as "a later, separate decision" — keep the collaboration ideas above working locally first, so this stays optional rather than a rewrite.
 - **💡** _(add your own)_
+
+---
+
+## Appendix: Role starter flows
+
+*Refining the "role packs" idea — and a shared reference for what each function actually does.*
+
+A predefined flow is just a **DAG**, and so is the way a role actually works: a handful of core responsibilities in a rough order, with a review or two and the odd loop back. So FlowBoard can ship a **starter pack per function** — the role's flow already wired, pre-loaded with the **skills, tools, and design system** that role reaches for, plus its sensible default models and guardrails. Assign a task (or a single step) to a function and its pack is waiting, instead of a blank canvas.
+
+What makes this more than a template gallery:
+
+- **Packs are seed flows, not screenshots.** Each DAG below is a candidate flow FlowBoard seeds — the same engine as the built-in dev pipeline, tuned per role — so it's versioned and editable like any recipe once you adopt it. It extends today's two ready-made recipes into a per-role library.
+- **The arrows *between* roles are the handoffs.** One role's output — a signed-off story, a design spec, a verified build — becomes the next role's inbox item. That's exactly the [role-assigned routing](#2-flows) the teams feature adds; the last diagram shows the whole relay.
+- **The pack carries the role's toolbox.** UX gets the design-system skills and tokens; cloud gets the infra-as-code and deploy tools; the business analyst gets the requirements and story-writing skills — presented by function so nobody hunts for them.
+
+Each role lists its **top ~5 core responsibilities** and sketches them as a simple DAG. A company has more roles — security, data, support, tech lead — but they follow the same shape; these are the common delivery six.
+
+### Business analyst / Product owner
+*Owns what to build and why.* **Top responsibilities:** elicit requirements · model the domain · write user stories with acceptance criteria · prioritize the backlog · get stakeholder sign-off.
+
+```mermaid
+flowchart LR
+  A[Elicit requirements] --> B[Model domain and process]
+  B --> C[Write user stories]
+  C --> D[Prioritize backlog]
+  D --> E{Stakeholder sign-off}
+  E -->|approved| F[Handoff to design]
+  E -->|changes| A
+```
+
+### UX / UI designer
+*Owns how it looks and feels.* **Top responsibilities:** user research · information architecture and flows · wireframes · UI design against the design system · prototype and usability-test before handoff.
+
+```mermaid
+flowchart LR
+  A[User research] --> B[IA and user flows]
+  B --> C[Wireframes]
+  C --> D[UI design via design system]
+  D --> E[Prototype]
+  E --> F{Usability test}
+  F -->|passes| G[Handoff specs to dev]
+  F -->|issues| C
+```
+
+### Software developer
+*Owns turning the spec into working code.* **Top responsibilities:** plan the implementation · build the feature · write tests · pass code review · merge and integrate. (This is FlowBoard's own built-in pipeline — a fan-out to build and tests, a join at review, and a rework loop.)
+
+```mermaid
+flowchart LR
+  A[Plan implementation] --> B[Implement]
+  A --> C[Write tests]
+  B --> D{Code review}
+  C --> D
+  D -->|approved| E[Merge and integrate]
+  D -->|changes| B
+```
+
+### Cloud / DevOps engineer
+*Owns getting it running and keeping it up.* **Top responsibilities:** provision infrastructure as code · build the CI and CD pipeline · deploy releases · watch health and roll back on failure · monitor and alert.
+
+```mermaid
+flowchart LR
+  A[Provision infra as code] --> B[Build CI and CD pipeline]
+  B --> C[Deploy release]
+  C --> D{Health checks}
+  D -->|healthy| E[Monitor and alert]
+  D -->|failing| F[Roll back]
+  F --> C
+```
+
+### QA / Test engineer
+*Owns proving it works.* **Top responsibilities:** plan the testing · author test cases · execute and automate · triage defects back to dev · run regression and sign off.
+
+```mermaid
+flowchart LR
+  A[Test plan] --> B[Author test cases]
+  B --> C[Execute and automate]
+  C --> D{Defects found}
+  D -->|yes| E[Log and triage]
+  E --> C
+  D -->|no| F[Regression and sign-off]
+```
+
+### Marketing / Product marketing
+*Owns telling the world.* **Top responsibilities:** positioning and messaging · create content · plan the launch · run the campaign · measure and iterate.
+
+```mermaid
+flowchart LR
+  A[Positioning and messaging] --> B[Create content]
+  B --> C[Plan launch]
+  C --> D[Run campaign]
+  D --> E{Measure results}
+  E -->|on target| F[Scale up]
+  E -->|missed| B
+```
+
+### Across the team — the handoff relay
+Packs together: each role's flow feeds the next, and FlowBoard routes the handoff into the next person's inbox. The back-edges are what make it a team, not a conveyor belt — QA bounces defects to dev, and market feedback re-opens analysis.
+
+```mermaid
+flowchart LR
+  BA[Business analyst] --> UX[UX / UI designer]
+  UX --> DEV[Developer]
+  DEV --> QA[QA engineer]
+  QA --> CD[Cloud / DevOps]
+  CD --> MKT[Marketing]
+  QA -->|defects| DEV
+  MKT -->|feedback| BA
+```

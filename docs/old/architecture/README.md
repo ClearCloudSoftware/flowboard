@@ -82,6 +82,13 @@ Full interface sketches: [`01-ports.md`](./01-ports.md).
 `ExecHost` seam (any provider × any isolation tier), and is the recommended default whenever `bypassPermissions`
 is on. Threat model and design: [08 — sandboxing](./08-sandboxing.md).
 
+**Agentic memory** — a **sixth, additive port, `MemoryStore`** ([Mem0](https://github.com/mem0ai/mem0) as the
+first adapter, self-hosted by default) — gives runs memory *across* tasks: the operator's standing decisions, a
+project's conventions, what an agent has learned. It is **not** load-bearing — a flow runs unchanged with it off
+— but it turns "start cold, re-learn, re-ask" into "start warm", which is a **wasted-spend** control (§12) as
+much as a quality gain. The runner brokers it host-side (recall before a run, commit after), so it stays off the
+sandbox egress allowlist. Design: [09 — memory](./09-memory.md).
+
 ## Suggested module layout
 
 ```
@@ -90,12 +97,14 @@ core/            # depends on NOTHING provider-specific
   engine/        # advancement, fan-out, join, rework       (02)
   hitl/          # question protocol, park/resume           (04)
   cost/          # ledger + pricing                         (06)
-  ports/         # AgentProvider, Notifier, Workspace, ArtifactStore, TaskSource
+  memory/        # recall before a run, commit after        (09)
+  ports/         # AgentProvider, Notifier, Workspace, ArtifactStore, TaskSource, MemoryStore
 adapters/
   agent/claude/  codex/  replay/                            (03)
   notify/slack/  discord/  email/                           (04)
   workspace/worktree/  container/                           (05)
   source/markdown/  github/                                 (05)
+  memory/mem0/  local/                                      (09)
 runner/          # generic execution loop — imports ports, not adapters (03)
 worker/          # queue + lifecycle                        (03)
 app/             # Next.js routes + UI                      (03, 06)
@@ -124,6 +133,7 @@ Runnable reference implementations of the ports and two example adapters live un
 | 13 | Skill/Agent registry → Capability packs | [05](./05-environment-and-registry.md#13-skillagent-registry--capability-packs) |
 | 14 | Ingestion → TaskSource port | [05](./05-environment-and-registry.md#14-ingestion--tasksource-port) |
 | 15 | Settings, draft mode, API | [06](./06-cost-and-platform.md#15-settings-draft-mode-api) |
+| 16 | Agentic memory → MemoryStore port (additive) | [09](./09-memory.md) |
 
 Each component is documented as **Role · Seam · Genericize · Composes with · Idea**.
 
@@ -139,5 +149,9 @@ Each component is documented as **Role · Seam · Genericize · Composes with ·
 3. **Sandbox posture** ([08](./08-sandboxing.md)): default isolation tier (host vs container), container vs
    gVisor/microVM strength, and HITL-in-sandbox (artifact-file vs host broker). Recommendation: container +
    egress allowlist whenever `bypassPermissions` is on. Tracked as D7–D9 in the backlog.
-4. Plus the spec's own open items (`docs/REBUILD-BACKLOG.md` §"Decisions to close"): auto-start vs explicit
+4. **Memory posture** ([09](./09-memory.md)): self-hosted Mem0 (keeps it local-first) vs the managed platform
+   (the shared/remote tier); which scopes are on by default; and the cross-run trust boundary — recalled
+   memories are context, not instructions, and writes come only from declared artifacts/answers. Recommendation:
+   self-host, additive/off by default, `user` scope first. Off the egress allowlist because the runner brokers it.
+5. Plus the spec's own open items (`docs/REBUILD-BACKLOG.md` §"Decisions to close"): auto-start vs explicit
    Start, undo window, `max_attempts` semantics, hook isolation, import parser shape.

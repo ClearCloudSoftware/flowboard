@@ -32,12 +32,20 @@ The money view (a primary product surface, not an afterthought) and the thin pla
 - **Idea:** keep the price table **versioned and dated**. When rates change, historical cost stays reproducible
   because each run prices against the table in effect at its `started_at`. Pairs with the append-only journal:
   cost is never rewritten, only re-derivable.
+- **Memory's effect on the ledger** ([09](./09-memory.md)): warm-start is a **wasted-spend** lever — fewer
+  rework re-derivations, fewer repeated inbox questions. The ledger is where that shows up or doesn't (baseline
+  before enabling memory, compare after). The memory layer has its own small token/API cost; **tag it
+  separately** (e.g. `memory` bucket) so it never lands in the per-run rollups — the honest number is *net*: run
+  spend saved minus memory spend added. If that stays negative, the memory posture (09) is wrong, and the same
+  meter says so.
 
 ## 15. Settings, draft mode, API
 
 - **Role:** global overrides and the thin presentation layer.
 - **Seam:**
-  - **Settings** (`settings` table): draft mode, escalation threshold (minutes), theme (light/dark/system).
+  - **Settings** (`settings` table): draft mode, escalation threshold (minutes), theme (light/dark/system), and a
+    **memory** block ([09](./09-memory.md)) — adapter id (`mem0`/`local`/`none`), endpoint or key ref, enabled
+    scopes, recall limit. Off (`none`) by default; memory is additive.
   - **API:** REST route handlers under `src/app/api/` are *thin* — validate with zod, call a function in
     `src/lib/`, return JSON. Every port is called from `src/lib/`, **never from a route**, so the whole system
     stays testable headless.

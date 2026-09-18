@@ -14,6 +14,7 @@ core/
     workspace.ts          # per-task isolation port (+ TaskRef)
     artifact-store.ts     # step-output store port
     task-source.ts        # ingestion port
+    memory-store.ts       # agentic memory port (additive) — see ../architecture/09-memory.md
   hitl/
     question.ts           # the one question schema (MCP / inbox / Slack)
 adapters/

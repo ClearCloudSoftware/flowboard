@@ -103,6 +103,15 @@ defense-in-depth.)
 - **Cost/limits** ([12](./06-cost-and-platform.md#12-cost--usage-ledger--pricingservice)): the sandbox's
   physical limits complement the budget caps; `runs.sandbox` records the tier for audit alongside
   `runs.model`/`runs.effort`.
+- **Memory** ([09](./09-memory.md)): the runner does recall/commit **on the host**, before and after the run — so
+  the sandboxed agent never opens a connection to the memory store, and **memory adds nothing to the egress
+  allowlist**. Same reasoning as the `ask_user` broker: keep the sealed process talking only to the host. Memory
+  does open a *new cross-run trust channel*, so it is fenced the same way as everything else the agent reads:
+  recalled text is labelled **context, not instructions** and is only ever the operator's own prior memory;
+  writes are committed **from declared artifacts/answers only** (not raw agent chatter), **scoped** (a run writes
+  its own project/agent/task, never another's), and **audited** (`run_memories` records what was recalled). A
+  prompt injection can still poison *what a run proposes to remember* — which is exactly why commit is narrowed to
+  structured, declared output and self-hosting keeps the store local.
 
 ## Prior art (what others do)
 

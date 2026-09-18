@@ -33,6 +33,12 @@ come from (ingestion). Three ports, each turning a hardwired assumption in the s
   produce what this step requires?), never the bytes. Keep it that way and any store works, local or remote.
   Worktree hygiene: append `.vibe-worktrees/` to `<repo>/.git/info/exclude` so the parent repo stays clean;
   cleanup only via explicit action, only when done/cancelled/failed.
+- **Artifacts vs memory** ([MemoryStore, 09](./09-memory.md)): two different jobs, don't conflate them. An
+  **artifact** is the *verbatim, within-task* output — a real file on disk, git-tracked, diffable, the contract
+  the next step reads. **Memory** is the *cross-task distillation* — the facts worth carrying to the next task,
+  extracted and de-duplicated by Mem0. Artifacts stay the source of truth inside a task; memory is what survives
+  it. The runner *writes* memory *from* declared artifacts and answers (never the reverse, and never from raw
+  agent output), so the artifact contract stays the authority and memory is a downstream, auditable projection.
 
 ## 13. Skill/Agent registry → Capability packs
 

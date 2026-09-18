@@ -46,6 +46,13 @@ leases work (7), and the stream that shows it live (8). Components 6–8 contain
   (container/microVM), downgrading to an approval/auto mode on the `host` tier; and maps the logical
   `max_turns` / `max_budget_usd` caps to the sandbox's physical `--memory` / `--cpus` / `--pids-limit` /
   wall-clock backstops.
+- **Memory (additive):** the runner brackets `launch()` with the [MemoryStore](./09-memory.md) port when it is
+  enabled. **Before:** `recall({ scopes: user + project + agent + task, query })` and append the hits as a **7th
+  prompt part** — background context, not instructions. **After a success:** `write()` the run's salient output,
+  distilled from declared artifacts/answers only, so the adapter (Mem0) can extract facts and resolve
+  contradictions. Both calls run **host-side** — the sandboxed agent never touches the store, so memory stays off
+  the egress allowlist ([08](./08-sandboxing.md)). With the `none` adapter this is a no-op and nothing else
+  changes — memory is additive, not on the critical path.
 - **Composes with:** leased by the worker (7); calls the provider (5); writes instances/outcomes for the engine
   ([02 §3](./02-core-and-engine.md#3-flow-execution-engine-write-model)); feeds the viewer (8).
 - **Idea:** snapshot the resolved `RunSpec` to `data/runs/<id>/spec.json`. Reproducibility becomes
