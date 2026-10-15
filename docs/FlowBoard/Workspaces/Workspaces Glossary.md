@@ -33,7 +33,7 @@ module: Workspaces
 
 | Term | Meaning | Source |
 |---|---|---|
-| **Promote** | Backlog → Todo; pins the flow and creates the worktree | PRD §12 |
+| **Promote** | Backlog → Todo; pins the flow and creates the worktree. Other sources put the pin (PRD §4, architecture README, drawio) or the worktree (feature map §14) on **Start** instead; see [[Workspaces Open Questions]] #1 and [[Execution Open Questions]] #2 | PRD §11, §12 |
 | **Demote** | Todo → Backlog; keeps the worktree | backlog 2.1 |
 | **Send to backlog** | Task-detail action, from any state; keeps the workspace | task-detail guide |
 | ⚠ **Clean up** | Remove the workspace: *"Removes the branch and the folder."* | task-detail guide |

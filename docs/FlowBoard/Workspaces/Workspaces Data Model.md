@@ -19,7 +19,7 @@ Workspaces add no table. They use a few columns on existing tables, a settings k
 | `artifacts.path` | `TEXT NOT NULL` | *"absolute path on disk"*, inside the worktree | PRD §5 |
 | `runs.sandbox` | — | *"records the tier that actually ran"* | PRD §11.1, backlog 1.1, drawio *SQLite* card (*"runs (… sandbox)"*) |
 | `step_defs.sandbox_profile` | — | *"an optional `step_defs.sandbox_profile` override"* | backlog 1.1 (**NEW**) |
-| `settings` key `sandbox_profile` | `settings.value TEXT NOT NULL`; the encoding is not given | *"tier, image, egress allowlist, limits"* | PRD §5, §11.1; drawio *SQLite* card (*"settings (memory, sandbox_profile)"*) |
+| `settings` key `sandbox_profile` | `settings.value TEXT NOT NULL` (PRD §5's generic key/value table); the encoding is not given | *"tier, image, egress allowlist, limits"* | key named in PRD §11.1, backlog 1.1 and the drawio *SQLite* card (*"settings (memory, sandbox_profile)"*) |
 
 `runs.sandbox` and `step_defs.sandbox_profile` are not in the PRD §5 SQL. They come from §11.1's prose, backlog 1.1 and the drawio. Their types are not given. See [[Sandboxing Data Model]] and [[Sandboxing Open Questions]] #8 and #9.
 
