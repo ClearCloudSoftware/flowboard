@@ -17,7 +17,7 @@ Cost has no seed data of its own. It has defaults, and every mockup carries samp
 | `step_defs.max_turns` | none (nullable) | PRD §5 |
 | `step_defs.max_attempts` | 3 | PRD §5 |
 | Infra retries | up to 3, backoff 30 s · 2 min · 8 min | PRD §7 |
-| Draft mode | off; when on, `haiku` / `low` | PRD §13 |
+| Draft mode | off (**inferred**: no source states it; see [[Settings Defaults]]); when on, `haiku` / `low` | PRD §13 |
 | Memory | `none` (off) | PRD §13 |
 | `memory.max_recall_chars` | 6,000 (≈1,500 tokens) | PRD §7 |
 | Mockup new step | `sonnet`, `medium`, budget `$1.00`, retries 2 | `flow-designer.html:700` |
@@ -36,7 +36,7 @@ Used by the monitor, inbox and task-detail mockups. Simulation only, not real pr
 | sonnet | 0.05 | $3.00 | *"Tests and review — judgement, but bounded."* |
 | opus | 0.14 | $8.40 | *"Plan and build — where a wrong answer is expensive to unwind."* |
 
-`monitor.html:436`, `inbox.html` `RUNNING`, `task-detail.html:274`. The monitor runs a ×10 demo clock. The task-detail mockup multiplies by 24.
+`monitor.html:436`, `inbox.html:235` (`RUNNING`), `task-detail.html:274`. The monitor runs a ×10 demo clock. The task-detail mockup multiplies by 24.
 
 ## Sample figures
 
@@ -49,6 +49,7 @@ Used by the monitor, inbox and task-detail mockups. Simulation only, not real pr
 | Task detail `auth-refactor` | kept $2.13 · wasted $0.48 · bill $2.61; recipe average $2.14 over 182 tasks on v4 | `task-detail.html`, task-detail guide |
 | Flow library | `~$/task` from $0.19 (`Code review @alex` v3) to $3.07 (`Launch campaign @growth` v4); `Software delivery @core v4` $2.14 over 182 runs | `flow-designer.html:292`–`321` |
 | Flow designer | `Code review @team-sec`: *"Slower and ~3× the cost — required for payment paths."* | `flow-designer.html:303` |
+| Old design handoff | chrome `4 running · $28.40 today`; board header `14 tasks · $28.40 today`; the prototype ticks the figure up from `28.4` | `docs/old/design/README.md`, `Vibe Kanban.dc.html` |
 | Pitch | *"[$96k/year]"* agent spend, *"[~$24k]"* wasted, *"[~25%, ~$24k/year]"* evaporating on thrown-away runs. Marked as *"illustrative placeholder"* | `docs/pitch.md` |
 
 > [!note] The inbox sample is over the guideline

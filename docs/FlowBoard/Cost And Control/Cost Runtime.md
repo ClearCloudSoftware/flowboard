@@ -9,7 +9,7 @@ How a run's cost moves from the provider to the screen.
 
 ## Before launch: the transform chain
 
-The runner builds a `RunSpec` from the step definition and applies transforms before `launch()`:
+The runner builds a `RunSpec` from the step definition and applies transforms before `launch()`. No source fixes their order; the list follows the **proposal** in [[Settings Overrides And Spec Transforms]] (draft mode, then sandbox, then the permission gate; [[Settings And Plumbing Open Questions]] #10). Limits are not a transform: they ride on the `RunSpec` from `step_defs`.
 
 1. **Draft mode**, if on: `s => ({ ...s, model: 'fast-cheap', effort: 'low' })` (`06` §15).
 2. **Sandbox profile**: *"draft mode and the sandbox profile compose as `RunSpec` transformers."* (backlog 3.5)

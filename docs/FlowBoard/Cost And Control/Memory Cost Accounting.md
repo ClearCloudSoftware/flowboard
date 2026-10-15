@@ -26,8 +26,8 @@ Memory is optional and off by default (PRD §11.2). When it is on, it has to pro
 ## What it costs
 
 - The `local` adapter is *"an FTS5 table in `flowboard.db`: no embeddings, no extraction model, no extra container"* (`09-memory.md`). It has no model spend.
-- Recall adds a capped seventh prompt part: *"`settings.memory.max_recall_chars`, default 6,000 — roughly 1,500 tokens"* (PRD §7). **Inferred:** those tokens are billed inside the run, so they would land in run cost, not in the memory bucket, and the *net* figure would not see them. No source says which side they count on. See [[Cost And Control Open Questions]] #15.
-- Mem0 adds *"fact extraction and contradiction resolution, at the price of an extraction model's spend and a vector store"* (PRD §11.2). Adopt it *"only once the cost and inbox views show `local` memory paying off"*.
+- Recall adds a capped seventh prompt part: *"`settings.memory.max_recall_chars`, default 6,000 — roughly 1,500 tokens"* (PRD §7). **Inferred:** those tokens are billed inside the run, so they would land in run cost, not in the memory bucket, and the *net* figure would not see them. No source says which side they count on. See [[Cost And Control Open Questions]] #15 and [[Memory Open Questions]] #22.
+- Mem0 adds *"fact extraction and contradiction resolution, at the price of an extraction model's spend and a vector store"* (PRD §11.2). Adopt it *"only once the cost and inbox views show `local` memory paying off"*. The drawio *Mem0 OSS server (later)* card adds *"its extraction LLM is metered separately"*. No source names that model or says how its spend is captured ([[Memory Open Questions]] #24, [[Cost And Control Open Questions]] #23).
 
 ## Measuring it
 
@@ -42,3 +42,5 @@ Memory is optional and off by default (PRD §11.2). When it is on, it has to pro
 - [[Spend Rollups]]
 - [[Answers And Memory]]
 - [[Memory Carried Into A Task]]
+- [[Measuring Memory Payoff]]
+- [[Mem0 Adapter]]

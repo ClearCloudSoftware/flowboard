@@ -38,7 +38,7 @@ Every rollup starts from `runs`. **Proposal** (no source spells out the joins):
 
 ## Model × effort needs the run's own record
 
-`runs.model` and `runs.effort` are not in the PRD §5 schema. Backlog 1.1 adds them: *"`runs.model`, `runs.effort` (draft mode must not corrupt cost views)"*. `02` §1 agrees. Without them, a draft-mode run on haiku/low would be booked to the step's opus/high. See [[Draft Mode]].
+`runs.model` and `runs.effort` are not in the PRD §5 schema. Backlog 1.1 adds them: *"`runs.model`, `runs.effort` (draft mode must not corrupt cost views)"*. `02` §1 agrees. Without them, a draft-mode run on haiku/low would be booked to the step's opus/high. Which id `runs.model` holds (alias, logical id, or the CLI's `claude-fable-5-1`) is [[Cost And Control Open Questions]] #24. See [[Draft Mode]].
 
 ## Cost per finished task
 

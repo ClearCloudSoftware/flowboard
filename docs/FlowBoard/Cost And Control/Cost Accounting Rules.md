@@ -53,7 +53,7 @@ From the monitor and inbox guides. The full table is in [[Monitor Actions And Co
 | Retry a failure | *"The failed attempts are already spent. Retrying spends again."* | inbox guide |
 | Answer a question | *"Answering is free."* | task-detail mockup |
 | Leave a question waiting | *"a parked run is not billing you … Leaving the inbox full costs calendar time and a worker slot's worth of throughput — not money."* | inbox guide |
-| Stop | Spend becomes wasted (guides); run finalised as `cancelled` (backlog 3.4) | monitor guide, backlog |
+| Stop | Spend becomes wasted (guides). The monitor guide records the run *"as failed"*; backlog 3.4 says *"finalise as cancelled"* | monitor guide, backlog |
 
 ## The life of a run's cost
 
@@ -70,7 +70,7 @@ stateDiagram-v2
   Zero --> Recorded: cost_usd = 0
   RecordedWasted --> [*]
   Recorded --> [*]
-  RecordedBlocked --> [*]: wasted? not specified
+  RecordedBlocked --> [*]: wasted per the guides, PRD silent
 ```
 
 > [!note] Flipping the flag is not rewriting cost

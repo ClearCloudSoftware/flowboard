@@ -25,7 +25,7 @@ module: Cost And Control
 | **Ledger** | The cost and usage ledger, component #12: the rollups over the `runs` journal plus the PricingService. See [[Cost Ledger]] | `06` §12 |
 | **Live cost** | A running figure during a run, from per-message token usage, replaced by the result's total at the end. See [[Live Cost]] | PRD §7 |
 | **Logical cap** | `max_turns` and `max_budget_usd`, passed to the agent CLI | PRD §11.1 |
-| **Logical model id** | A provider-neutral id (`reasoning-high`, `fast-cheap`, `default`) resolved per provider | `01-ports.md` |
+| **Logical model id** | A provider-neutral id (`reasoning-high`, `fast-cheap`, `default`) resolved per provider. In v1 the Claude aliases serve as the logical ids (`agents.default_model`, *"a Claude alias, used as the logical model id"*; [[Capability Library Decisions]] D20). See [[Logical Model Ids]] | `01-ports.md`, PRD §5 |
 | **Memory bucket** | A separate tag for memory-layer token and API cost, kept out of per-run rollups | `06` §12 |
 | **Native cost** | The `native_cost` capability: the provider reports dollars. Claude has it; Codex does not | `01-ports.md`, `agent-provider.ts` |
 | **Passthrough** | The PricingService does nothing when the provider already set `costUsd` | `06` §12 |
@@ -34,9 +34,9 @@ module: Cost And Control
 | **Rate table** | The `(provider, model) → rates` table the PricingService uses for providers without native cost. *"Versioned and dated"* is an idea | `06` §12 |
 | **Rollup** | An aggregate over `runs`: per project, step definition, model × effort, wasted, per finished task. See [[Spend Rollups]] | PRD §13 |
 | **SpecTransform** | A pure function `RunSpec → RunSpec` applied before `launch()`. Draft mode is one | `06` §15 |
-| **Today** ⚠ | (1) The monitor's daily bill, kept plus wasted. (2) The inbox context panel's `today`. (3) Chrome *"spend today"* (backlog 9.2). No source defines the day boundary | monitor, inbox, backlog |
+| **Today** ⚠ | (1) The monitor's daily bill, kept plus wasted. (2) The inbox context panel's `today`. (3) Chrome *"spend today"* (backlog 9.2), drawn in the old handoff as `$28.40 today` in the chrome and the board header. No source defines the day boundary | monitor, inbox, backlog |
 | **Usage** | The normalized record of tokens, turns and optional `costUsd` that a provider reports. See [[Usage And Native Cost]] | `events.ts` |
-| **Wasted** ⚠ | (1) The flag `runs.wasted = 1`. (2) The rollup, the sum of `cost_usd` where flagged. Sources disagree on what earns the flag: rework only, rework plus infra retries, or also stopped runs. See [[Wasted Spend]] | PRD §5, §13; guides |
+| **Wasted** ⚠ | (1) The flag `runs.wasted = 1`. (2) The rollup, the sum of `cost_usd` where flagged. Sources disagree on what earns the flag: rework only, rework plus infra retries, or also stopped and failed runs. See [[Wasted Spend]] | PRD §5, §13; guides |
 | **This week's spend** | The figure on each projects-list card. Rolling seven days or calendar week is an open decision | PRD §13, backlog 1.3 |
 
 ## Related

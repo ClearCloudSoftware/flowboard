@@ -19,7 +19,7 @@ The per-step controls that bound what a run can spend, and the physical limits b
 | Physical, per run | `--memory`, `--cpus`, `--pids-limit`, wall-clock | sandbox profile | PRD §11.1 |
 | Global | [[Draft Mode]] | `settings` | PRD §13 |
 
-PRD §11.1: resource limits *"physically backstop the logical `max_turns`/`max_budget_usd` caps."* `08-sandboxing.md`: *"A runaway or looping agent is contained at the OS level, not only at the token level."* Feature map §10: *"**Hard limits** — Ceilings on memory, processing, and time, so a runaway agent is stopped by the box, not just by its spending budget."*
+PRD §11.1: resource limits *"physically backstop the logical `max_turns`/`max_budget_usd` caps."* `08-sandboxing.md`: *"A runaway or looping agent is contained at the OS level, not only at the token level."* Feature map §10: *"**Hard limits** — Ceilings on memory, processing, and time, so a runaway agent is stopped by the box, not just by its spending budget."* The port shape for the physical side is `SandboxProfile.limits?: { memoryMb?, cpus?, pids?, wallClockMs? }` (`01-ports.md`). See [[Resource Limits]].
 
 ## The budget field
 
@@ -30,13 +30,13 @@ PRD §11.1: resource limits *"physically backstop the logical `max_turns`/`max_b
 
 ### Enforced, or advisory
 
-The `budget_cap` capability: *"honours maxBudgetUsd; else it is advisory"* (`agent-provider.ts`). Claude passes the flag to the CLI; a provider without the capability does not stop at the cap. No source says whether FlowBoard enforces the cap itself (for example, by stopping a run whose live cost passes it) for providers without `budget_cap`. See [[Cost And Control Open Questions]] #8.
+The `budget_cap` capability: *"honours maxBudgetUsd; else it is advisory"* (`agent-provider.ts`). Claude passes the flag to the CLI; a provider without the capability does not stop at the cap. No source says whether FlowBoard enforces the cap itself (for example, by stopping a run whose live cost passes it) for providers without `budget_cap`. No capability covers `maxTurns` at all ([[Agent Providers Open Questions]] #25). See [[Cost And Control Open Questions]] #8.
 
 ## When a cap is hit
 
 PRD §7 classifies the non-zero exit: *"Anything else, or a 4th transient failure (budget or turn cap hit, auth error, bad config, unknown): put the task into `blocked`, as before. Retrying these would only burn the same money again."* Backlog 3.5: *"Map logical `max_turns`/`max_budget_usd` to physical limits; a limit/timeout hit marks the run failed with reason."* (**NEW**). The drawio *Permission gate*: *"budget caps map to --memory / --cpus / --pids-limit"*.
 
-A cap hit is **not** an infra retry. It does not retry automatically. What happens to that run's spend (wasted or kept) is not specified. See [[Wasted Spend]].
+A cap hit is **not** an infra retry. It does not retry automatically. The PRD sets no `wasted` flag on that run; the guides count any failed run's spend as wasted. See [[Wasted Spend]] and [[Cost And Control Open Questions]] #1.
 
 ## Attempts are a budget too
 

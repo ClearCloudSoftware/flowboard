@@ -12,7 +12,7 @@ module: Cost And Control
 | GET | `/api/costs?project=&from=&to=` | The rollups behind `/costs` | PRD §12 |
 | GET | `/api/runs/:id` | One run; the PRD gives no response shape | PRD §12 |
 | GET | `/api/runs/:id/stream` | SSE for the viewer; *"replays existing `run_events` for the run, then streams new ones"* | PRD §12 |
-| GET | `/api/projects/:id/board` | Board projection, cards with live cost | PRD §12 |
+| GET | `/api/projects/:id/board` | Board projection: *"columns + cards"* (§12); each card shows *"a live cost figure"* (§13) | PRD §12, §13 |
 
 Pages: `/costs` and the projects list `/` (*"this week's spend"*) (PRD §13).
 
@@ -23,7 +23,7 @@ Backlog 8.1: *"Add project filter and real `from`/`to` (API supports both, UI se
 ## Not specified
 
 > [!question] No settings endpoint
-> PRD §12 lists no route to read or change settings, so nothing toggles draft mode. Backlog 8.3 requires the toggle. **Proposal:** `GET /api/settings` and `PATCH /api/settings` with `{ draft_mode: boolean }`. See [[Cost And Control Open Questions]] #12.
+> PRD §12 lists no route to read or change settings, so nothing toggles draft mode. Backlog 8.3 requires the toggle. **Proposal**, shared with [[Settings And Plumbing API And Routes]], Memory and Sandboxing: `GET /api/settings` returns one settings object, and `PATCH /api/settings` takes a partial update, here `{ draft_mode: boolean }`. See [[Cost And Control Open Questions]] #12 and [[Settings And Plumbing Open Questions]] #2.
 
 > [!question] No response shape for `/api/costs`
 > **Proposal**, one call that returns every rollup:
