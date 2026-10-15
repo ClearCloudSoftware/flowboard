@@ -53,7 +53,7 @@ From the backlog, not PRD §12:
 > ```
 > `PATCH` merges at the top-level key, so sending `{ memory: {...} }` replaces the memory block whole. Secrets never travel through it: the memory block holds a *key ref*, not a key. A server action can call the same core function instead of the route. Listed in [[Settings And Plumbing Open Questions]] #2.
 >
-> Two newer sets propose differently: [[Memory API And Routes]] has `GET` / `PUT /api/settings`, and [[Sandboxing API And Routes]] has `GET` / `PUT /api/settings/sandbox`. One shape needs picking.
+> [[Memory API And Routes]] and [[Sandboxing API And Routes]] propose the same pair, with `memory` and `sandbox_profile` as keys of the one settings object, so all five sets agree. It is still a proposal: no source defines a settings route.
 
 ## Web routes
 
