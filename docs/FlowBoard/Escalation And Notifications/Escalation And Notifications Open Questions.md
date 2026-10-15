@@ -60,7 +60,7 @@ PRD §10 wants the repaint to show *"by whom"*; `updateResolved(ref, by)` carrie
 
 ### 11. Repainting a cancelled or expired question
 
-`updateResolved` is the only repaint. When a run fails, pending questions are cancelled *"so they stop escalating"* (`04` §9); when a task is cancelled, too (backlog 2.1). But a message already in Slack keeps its live buttons. `expired` is never set (backlog 1.1, **BUG**; HITL #17). **Proposal:** call `updateResolved(ref, 'cancelled')`, or add an `updateCancelled(ref, reason)` method. See [[Escalation Lifecycle]].
+`updateResolved` is the only repaint. When a run fails, pending questions are cancelled *"so they stop escalating"* (`04` §9); when a task is cancelled, too (backlog 2.1). But a message already in Slack keeps its live buttons. `expired` is never set (backlog 1.1, **BUG**). Same as HITL #17. **Proposal:** call `updateResolved(ref, 'cancelled')`, or add an `updateCancelled(ref, reason)` method. See [[Escalation Lifecycle]].
 
 ### 12. What does the loser of a race see?
 
@@ -80,7 +80,7 @@ Old handoff 1e: *"No colour flash, no toast, no motion beyond the opacity change
 
 ### 16. "Only writer of questions"
 
-PRD §9: the broker *"is the only writer of the `questions` table"*; `04` §9, `08` (*"which alone writes `questions`"*) and the drawio broker card (*"only writer of questions"*) repeat it. Web answers, Slack answers and the escalation job's `saveRef` also write it. First-write-wins needs every answer to go through one conditional UPDATE. Not reconciled. See [[Escalation Runtime]].
+PRD §9: the broker *"is the only writer of the `questions` table"*; `04` §9, `08` (*"which alone writes `questions`"*) and the drawio broker card (*"only writer of questions"*) repeat it. Web answers, Slack answers and the escalation job's `saveRef` also write it. First-write-wins needs every answer to go through one conditional UPDATE. Not reconciled. Same as HITL #36. See [[Escalation Runtime]].
 
 ### 17. No settings route
 
@@ -100,7 +100,7 @@ The old handoff ramps colour, collapses escalated batches by default (*"asserted
 
 ### 21. Does the run park before or after escalation?
 
-PRD §9 holds the agent's call open for 20 minutes before parking; the inbox guide's diagram draws *parked* before *escalated*. Same as Monitor #8. See [[Escalation Lifecycle]].
+PRD §9 holds the agent's call open for 20 minutes before parking; the inbox guide's diagram draws *parked* before *escalated*. Same as HITL #5 and Monitor #8. See [[Escalation Lifecycle]].
 
 ### 22. How does a Slack interaction reach the adapter?
 
