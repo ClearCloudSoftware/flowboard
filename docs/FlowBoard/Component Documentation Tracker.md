@@ -16,7 +16,7 @@ Siblings of the Capability Library on the drawio *Functional components* page.
 |---|---|---|---|---|---|
 | ✅ | [[Capability Library Index\|Capability Library]] | Skills, agents, bundle packs, provider packs, install, update, remove | `capability-library` | §16 The library | #13 Skill/Agent registry → Capability packs |
 | ✅ | [[Flow Design Index\|Flow Design]] | Versioned DAG, step editor, artifact contract, flow library | `flow-designer` | §2 Flows | #2 Flow definition & validation |
-| ✅ | [[Human In The Loop Index\|Human In The Loop]] | Questions, batches, approvals, the inbox | `inbox` | §11 Questions, §12 The inbox | #9 Human-in-the-loop protocol |
+| ✅ | [[Human In The Loop Index\|Human In The Loop]] | Questions, batches, park and resume, approvals and send-backs, failures and escalated loops, the inbox, its side of chat escalation | `inbox` (also the monitor's *Needs you* band and the task-detail gate) | §11 Questions, §12 The inbox (also §4, §13) | #9 Human-in-the-loop protocol (also #10) |
 | ✅ | [[Monitor Index\|Monitor]] | Status at a glance, needs-you, worker slots, burn / today / wasted, pulse, timeline and pipeline views, live run viewer | `monitor` (the live run viewer has no mockup) | §5 The board, §9 Live run viewer (also §8, §13, §18) | #4 Board projection, #8 Event stream & live viewer (also #7, #12) |
 | ✅ | [[Task Detail Index\|Task Detail]] | One task's whole story: timeline, artifacts, cost | `task-detail` | §3 Tasks, §15 Artifacts | #11 Artifact store & workspace |
 | ✅ | [[Execution Index\|Execution]] | Start, run a step, advance, rework loop, split and join, stop | partial (via task detail) | §4 The engine, §7 The runner, §8 The work queue | #3 Flow execution engine, #6 Runner, #7 Job queue & worker lifecycle |

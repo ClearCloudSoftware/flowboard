@@ -18,7 +18,7 @@ FlowBoard runs headless agents. A headless agent has no terminal to ask into, so
 | *Approve / reject a step* | the approval gate — see [[Approving And Sending Back]] |
 | *Answer from Slack* | *resolves the inbox card* — see [[Escalation To Chat]] |
 
-The PRD calls the inbox *"the most important screen in the app"* and says *"this is the screen I will spend the most time on"* (§10). The old design brief: *"An agent mid-run has stopped and needs an answer to continue, so latency here directly costs money and wall-clock time."*
+The PRD's one-line framing: *"Some steps advance automatically when they finish; others park and wait for me to approve or answer questions."* (§1). It calls the inbox *"the most important screen in the app"* and says *"this is the screen I will spend the most time on"* (§10). The pitch: *"approval gates and questions are the design, not a bug"*, and *"only real decisions surface (in one inbox, answered in seconds)"*. The old design brief: *"An agent mid-run has stopped and needs an answer to continue, so latency here directly costs money and wall-clock time."*
 
 ## Where it sits
 
@@ -27,17 +27,17 @@ flowchart LR
   EX[Execution] -- asks / waits --> HITL[Human in the loop]
   HITL -- answers / approval --> EX
   HITL -- unanswered too long --> ESC[Escalation]
-  HITL -- answers → memory --> MEM[Memory]
+  HITL -. answers → memory .-> MEM[Memory]
 ```
 
-These are the drawio *Functional components* edges. On the *Logical components* page the inbox UI calls the **Question service** (*ask · park · resume · answer*). The MCP ask tool feeds it (*ask*), it hands answers to the flow engine (*answers → resume*), and it escalates through the **Notifier** port (*escalate at 5 min*).
+These are the drawio *Functional components* edges (the memory edge is dashed: optional). On the *Logical components* page the inbox UI calls the **Question service** (*ask · park · resume · answer*). The MCP ask tool feeds it (*ask*), it hands answers to the flow engine (*answers → resume*), and it escalates through the **Notifier** port (*escalate at 5 min*).
 
-The architecture names HITL as one of FlowBoard's three halves: *"a durable workflow engine + human-in-the-loop protocol + cost ledger"* (`docs/old/architecture/README.md`). Component #9 is the HITL protocol and #10 is the Notifier (`04-hitl-and-notify.md`).
+The architecture names HITL as one of FlowBoard's three parts: *"a durable workflow engine + human-in-the-loop protocol + cost ledger"* (`docs/old/architecture/README.md`). Component #9 is the HITL protocol and #10 is the Notifier (`04-hitl-and-notify.md`).
 
 ## The central reframe
 
 > [!important] The protocol is a file exchange; MCP is sugar
-> *"agent emits a `questions` artifact → engine **parks** the run → human answers → engine **resumes** with an `answers` artifact in context."* MCP `ask_user` / `ask_user_batch` *"is sugar that makes this feel synchronous"*. Park and resume are *"the durable primitive"* (`04-hitl-and-notify.md` §9). See [[Ask Park And Resume]] and [[Ask User MCP Server]].
+> *"agent emits a `questions` artifact → engine **parks** the run → human answers → engine **resumes** with an `answers` artifact in context."* MCP `ask_user` / `ask_user_batch` "is sugar that makes this *feel* synchronous". Park and resume are *"the durable primitive"* (`04-hitl-and-notify.md` §9). See [[Ask Park And Resume]] and [[Ask User MCP Server]].
 
 ## Design principles
 
@@ -59,7 +59,7 @@ The architecture names HITL as one of FlowBoard's three halves: *"a durable work
 | Decision | Cost | Source |
 |---|---|---|
 | Answer a question or a batch | Nothing | inbox guide card table |
-| Approve a gate | *"Approving is free"*: the next step queues | inbox guide, monitor guide |
+| Approve a gate | *"Approving is free"*: the next step queues | inbox guide; the monitor and task-detail guides say it in their own words (*"the only decision here that is free"*, *"The only free decision on this screen is approving."*) |
 | Send a gate back | *"moves the last attempt's spend to wasted"* | inbox guide |
 | Retry a failure | *"The failed attempts are already spent. Retrying spends again."* | inbox guide |
 
@@ -67,7 +67,8 @@ The architecture names HITL as one of FlowBoard's three halves: *"a durable work
 
 - Defining which steps gate is Flow Design's job: [[Approval Gates]].
 - The run, the engine and the rework loop are Execution. This set covers only the points where they stop for you.
-- Chat escalation is partly here ([[Escalation To Chat]]). The tracker suggests folding *Escalation And Notifications* into this set.
+- Chat escalation is partly here ([[Escalation To Chat]]). The rest (the Notifier port, channels, the Slack transport) has its own set, [[Escalation And Notifications Index]]. The tracker lists folding the two together as a possible merge; it is not decided.
+- The monitor guide counts four decisions that are yours: *"approve, send back, answer, retry or stop"*. The engine moves everything else.
 
 ## Related
 
@@ -75,3 +76,5 @@ The architecture names HITL as one of FlowBoard's three halves: *"a durable work
 - [[Human In The Loop Glossary]]
 - [[Ask Park And Resume]]
 - [[Human In The Loop Screen]]
+- [[Escalation And Notifications Index]]
+- [[Execution Index]]

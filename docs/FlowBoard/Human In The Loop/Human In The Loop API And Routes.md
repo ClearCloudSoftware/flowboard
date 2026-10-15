@@ -10,7 +10,7 @@ module: Human In The Loop
 | Route | Screen | Source |
 |---|---|---|
 | `/inbox` | The inbox | PRD §10, §13 |
-| `/runs/[id]` | Live session viewer, linked from each question (*"a link to the live session"*) | PRD §10, §13 |
+| `/runs/[id]` | Live session viewer, linked from each question (*"a link to the live session"*); its stream is `GET /api/runs/:id/stream` | PRD §10, §12, §13 |
 | `/p/[slug]` and its task detail sheet | Approve / Reject on the awaiting step | PRD §13 |
 
 The drawio *Harness architecture* names the inbox *"Inbox /inbox / questions, approval gates, escalated loops; j / k, 1–9, Enter"* and task detail `/t/[id]`.
@@ -42,11 +42,12 @@ From the backlog:
 | Endpoint | Source |
 |---|---|
 | `POST /api/questions/:id/unanswer` | Story 4.4 (**NEW**), only if the undo window is kept |
-| `/api/inbox/summary` | Story 4.3: two of the old build's *"three overlapping pollers"* (`/api/inbox/summary` ×2 + `/api/questions?state=pending`), to be collapsed *"into one"*. `04` §9 makes that one the SSE snapshot stream |
+| `/api/inbox/summary` | Story 4.3: two of the old build's *"three overlapping pollers"* (`/api/inbox/summary` ×2 + `/api/questions?state=pending`), to be collapsed *"into one"* (**BUG (perf)**). `04` §9 makes that one the SSE snapshot stream. Story 9.2 asks for *"one summary poller"* for the nav's amber inbox count |
 
 ## Live updates
 
-- *"the inbox subscribes to an SSE stream"* (PRD §10).
+- *"the inbox subscribes to an SSE stream"* (PRD §10). PRD §12 names only one SSE endpoint, the run stream: *"The SSE endpoint replays existing `run_events` for the run, then streams new ones. Reconnect with `Last-Event-ID`."*
+- Feature map §20: *"**Live updates** — A steady stream keeps the board, the viewer, and the inbox current without you refreshing."* Transport in full: [[Live Updates]].
 - *"One SSE snapshot stream (pending + recently-answered) so Slack answers repaint the open page — collapse the three overlapping pollers the backlog flags into that one stream."* (`04` §9 *Inbox notes*)
 - Backlog Story 4.3: *"SSE snapshot stream (pending + answered in last 2 min)"*.
 - The drawio harness: *"SSE endpoints / tail run_events by seq, questions and task state from SQLite (works across processes; catches up on reconnect)"*.
@@ -60,10 +61,12 @@ From the backlog:
 | Endpoint | Why | OQ |
 |---|---|---|
 | `GET /api/inbox` → `{ items: [question \| batch \| gate \| failure], recent: […] }` | The mockup's queue mixes gates and failures with questions; the PRD's feed lists only questions | #1 |
-| `GET /api/inbox/stream` (SSE) | The one snapshot stream `04` §9 asks for; the path is not named anywhere | #1 |
+| `GET /api/inbox/stream` (SSE) | The one snapshot stream `04` §9 asks for; PRD §12 names only the run stream | #1 |
 | `POST /api/questions/batch/:batchId/answer` with `{ answers: { [id]: value } }` | *"One submission, one resume"* (inbox guide); avoids a half-answered batch | #15 |
 | `POST /api/step-instances/:id/fail-task` (or `reject` with `{ failTask: true }`) | PRD §8's **Fail task** choice has no endpoint | #24 |
 | `POST /api/step-instances/:id/allow-host` `{ host }` | The failure card's *Allow host & retry* | #26 |
+
+Sibling sets propose other shapes for the same actions: Fail task as `POST /api/tasks/:id/fail` ([[Task Detail API And Routes]], [[Execution API And Routes]]), and Allow host & retry as `retry` with `{ note?, allowHost? }` ([[Monitor API And Routes]]). [[Sandboxing API And Routes]] repeats the allow-host endpoint above. One shape should be picked: [[Execution Open Questions]] #47.
 
 ## Related
 
@@ -71,3 +74,5 @@ From the backlog:
 - [[Escalation To Chat]]
 - [[Approving And Sending Back]]
 - [[Flow Design API And Routes]]
+- [[Escalation API And Routes]]
+- [[Execution API And Routes]]

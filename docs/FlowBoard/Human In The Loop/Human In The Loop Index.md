@@ -5,7 +5,7 @@ module: Human In The Loop
 
 # Human In The Loop Index
 
-Human In The Loop is the FlowBoard module for every point where a headless agent stops for a person. It covers questions asked in five fixed shapes, batches answered as one, approval gates, failures and spent loops, the `/inbox` screen where you work them, and the chat escalation that finds you when you're away.
+Human In The Loop is the FlowBoard module for every point where a headless agent stops for a person. It covers questions asked in five fixed shapes, batches answered as one, approval gates, failures and spent loops, the `/inbox` screen where you work them, and the chat escalation that finds you when you're away. The Notifier and Slack side has its own set, [[Escalation And Notifications Index]].
 
 > [!important] The one idea to get right first
 > The protocol is **park and resume**, not a live conversation. The agent asks, saves its place and stops. You answer, here or in chat, and the first answer wins. The run then resumes with your answers in hand. A parked run costs time, not money. See [[Ask Park And Resume]].
@@ -51,11 +51,19 @@ Human In The Loop is the FlowBoard module for every point where a headless agent
 
 - [[Seeded Questions And Gates]] — `grill`, `explain`, `review`, `ask-three`, and the mockup's sample data
 - [[Human In The Loop Roadmap]] — v1 scope, designed beyond the PRD, ideas, out of scope
-- [[Human In The Loop Open Questions]] — 35 places where the sources disagree or leave a gap
+- [[Human In The Loop Open Questions]] — 43 places where the sources disagree or leave a gap
 - [[Human In The Loop Sources]] — where every fact in these notes comes from
 
 ## Related
 
 - [[Flow Design Index]] — where gates are designed ([[Approval Gates]])
 - [[Capability Library Index]] — the skills that ask (`grill-me`) and decide (`code-review`)
+- [[Escalation And Notifications Index]] — the Notifier port, Slack, signed inbound, resolve everywhere
+- [[Execution Index]] — the engine, the runner, park and resume from the run's side, the loop guard
+- [[Monitor Index]] — the *Needs you* band
+- [[Task Detail Index]] — the gate banner and the questions within a task
+- [[Cost And Control Index]] — wasted spend on a send-back; what waiting costs
+- [[Sandboxing Index]] — the `ask_user` broker on every tier, egress denials
+- [[Memory Index]] — answers into the `user` scope
+- [[Settings And Plumbing Index]] — nudge timing, live updates
 - [[Component Documentation Tracker]]

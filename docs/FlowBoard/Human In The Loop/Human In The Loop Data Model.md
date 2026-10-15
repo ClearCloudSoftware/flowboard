@@ -39,14 +39,14 @@ CREATE INDEX questions_pending ON questions(state, created_at);
 | `step_defs.max_attempts` | default 3 | Spent loop → escalation gate | PRD §5, §8 |
 | `step_instances.state` | `… 'awaiting_answers' \| 'awaiting_approval' …` | The two waiting states | PRD §5 |
 | `step_instances.outcome` | `'pass' \| 'fail' \| null` | Approve sets pass, reject sets fail; null with conditional edges → gate | PRD §5, §8 |
-| `step_instances.reason` | text | *"rejection/failure text shown on the card"* | backlog Story 1.1, `02` §1 (not in PRD §5) |
+| `step_instances.reason` | text | *"rejection/failure text shown on the card"* | backlog Story 1.1, `02` §1 (not in PRD §5, although PRD §8 already sets a reason, *"no outcome reported"*) |
 | `runs.state` | `… 'parked' …` | A run that exited to wait | PRD §5, §9 |
-| `runs.claude_session_id` | uuid | What a resume continues | PRD §5, §9 |
+| `runs.claude_session_id` | uuid | What a resume continues | PRD §5, §7, §9. `02` §1 renames it `agent_session_id` ([[Agent Providers Open Questions]] #16) |
 | `runs.fingerprint` | hash | Stuck-loop detection | PRD §5, §8 |
 | `runs.wasted` | 0/1 | Send-back and retry spend | PRD §5 |
 | `tasks.status` | `… 'blocked' …` | Escalated loop; non-transient failure; park (backlog 4.2) | PRD §5, §7, §8 |
 | `jobs.kind` | `'escalate_question'`, `'start_run'` | Escalation timer; resume | PRD §5 |
-| `settings` | `escalation_threshold_ms` (default 5 min) | Chat escalation | `04` §10, backlog Story 6.1 |
+| `settings` | `escalation_threshold_ms` (default 5 min) | Chat escalation | `04` §10, backlog Story 6.1. No such key in the PRD, which hard-codes 5 minutes (§10) and makes `settings` a bare key/value table (§5) |
 | `artifacts.type` | `questions`, `answers` | Seeded artifact types | PRD §6 |
 
 Backlog Story 1.1 also asks: *"`jobs.kind` includes `resume_step` (or drop it, see 4.4)."* (**DEC**). See [[Human In The Loop Open Questions]] #7.
@@ -78,6 +78,7 @@ erDiagram
 | `questions.summary` | The card's one-line `sum` for a batch or lone question | #12 |
 | `questions.answered_by` (+ an assignee on the item) | *Waiting on me / Everyone*, *"dana answered"*, PRD's *"resolved and by whom"* | #4 |
 | `step_instances.escalated_at`, `notify_channel`, `notify_ref` | If gates and failures escalate to chat as the mockup shows | #19 |
+| `step_instances.awaiting_since` | A gate card shows *waited 5m*; nothing records when a gate started waiting (same as [[Monitor Open Questions]] #22) | #43 |
 | Generic `notify_channel` / `notify_ref` instead of `slack_channel` / `slack_ts` | The Notifier port's `PostedRef { channel, ref }` is channel-neutral | #22 |
 
 ## Related
@@ -86,3 +87,6 @@ erDiagram
 - [[Human In The Loop Storage]]
 - [[Question Lifecycle]]
 - [[Flow Data Model]]
+- [[Escalation Data Model]]
+- [[Execution Data Model]]
+- [[Task Data Model]]

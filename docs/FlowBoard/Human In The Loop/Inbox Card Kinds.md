@@ -14,7 +14,7 @@ Everything waiting on a person is one card in the queue. The inbox guide names f
 | **gate** | `‖` (pause bars) | *"A step finished and wants approval before anything downstream starts."* | *"Approve, or send it back with a reason."* | *"Approving is free. Sending back moves the last attempt's spend to wasted."* |
 | **failure** | `✕` | *"A step ran out of attempts. Nothing is running; nothing is being spent."* | *"Decide whether to retry, and whether to change anything first."* | *"The failed attempts are already spent. Retrying spends again."* |
 
-Questions, batches and gates use the amber *wait* colour. Failure cards use the red *fail* colour: the card body is tinted, and an open failure card has a red left rule (mockup CSS).
+Questions, batches and gates use the amber *wait* colour. Failure cards use the red *fail* colour: the card body is tinted, and an open failure card has a red left rule (mockup CSS). The old handoff used two colours for *"act now"* (amber for a question with a clock, accent for an approval) where the mockups use one ([[Monitor Open Questions]] #43). The sample gate is a passed review; PRD §8 opens a gate for three different reasons (approval mode, *"no outcome reported"*, a spent or stuck loop), and the mockups give no wording for the other two ([[Monitor Open Questions]] #33).
 
 ## What each card offers
 
@@ -46,10 +46,14 @@ Questions, batches and gates use the amber *wait* colour. Failure cards use the 
 | 4 | `auth-refactor · review` | gate | 5m | you | *Review passed with 2 notes — approve, or send it back?* |
 | 5 | `pdf-import · plan` | question (pick many) | 21m | dana | *Which supplier PDF layouts must it handle on day one?* |
 
-Card 5 is hidden under *Waiting on me*. Under *Everyone* the queue sorts by age, so card 5 (21m) comes second. Nine seconds after load, dana answers it in chat. A toast announces it and it moves to *recently answered* with a `slack` tag.
+Card 5 is hidden under *Waiting on me*. Under *Everyone* the queue sorts by age, so card 5 (21m) comes second. Nine seconds after load, dana answers it in chat. A toast announces it, even under *Waiting on me* where the card was never shown, and it moves to *recently answered* with a `slack` tag. About 18 s after load card 3 (`provider-codex`, 9.7m) crosses the 10-minute threshold while you watch.
+
+The monitor seeds different questions for the same tasks: `csv-export · plan` is a single pick-one (*Stream from Postgres / Stage to object storage / Decide it yourself*), and `provider-codex · research` has waited 8m with *Estimate from tokens / Record as unknown*.
 
 ## Related
 
 - [[Human In The Loop Screen]]
 - [[Inbox Order And Filters]]
 - [[Decisions Outside The Inbox]]
+- [[Needs You Band]]
+- [[Escalation Scope]]

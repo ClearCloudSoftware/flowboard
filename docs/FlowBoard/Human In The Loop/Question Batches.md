@@ -18,18 +18,18 @@ A batch is the set of questions one step asks in one call: `ask_user_batch(quest
 > [!quote] inbox guide
 > *"When a step needs several things decided, it asks for all of them at once and parks. That is deliberate, and the reason is on the card: the run is waiting for the whole set. Answering one at a time would mean the agent wakes, finds it still can't proceed, and parks again — restarting your wait each time and paying to re-read its own context."*
 
-The PRD's reason is the blocking problem. A batch answered in one sitting usually comes back before the 20-minute sentinel, so the run never parks: *"Answering seven questions in one screen is better than a drip feed, and it avoids the blocking problem entirely for most steps."* (§9). It also asks skill authors to *"Structure `/grill-me` and similar skills to emit their whole question set at once via `ask_user_batch`."*
+The PRD's reason is the blocking problem: *"Answering seven questions in one screen is better than a drip feed, and it avoids the blocking problem entirely for most steps."* (§9). Our reading (inference): a batch answered in one sitting comes back before the 20-minute sentinel, so the run never parks. It also asks skill authors to *"Structure `/grill-me` and similar skills to emit their whole question set at once via `ask_user_batch`."*
 
 ## Anatomy of a batch card (mockup)
 
-| Element | Means | Detail (inbox guide) |
+| Element | Means | Detail |
 |---|---|---|
-| `question 3 of 5` | Where you are | — |
-| The pips | One per question | *"Filled means answered, ringed means the one you are looking at. They are also buttons — click straight to any question."* |
-| `2 of 5 answered` (the tally) | Progress | *"Independent of where you are in the batch. You can answer them in any order."* |
-| `← Prev` / `Next →` | Move within the batch | Disabled at the ends |
-| `↵ Submit all 5` | Submit | *"Greyed until every non-optional question has a value. One submission, one resume."* |
-| Hint line | Why you can't send part of it | Before: *"The agent asked these together and is parked until it has all of them. Answering one at a time would restart the wait each time."* After: *"All answered. Submitting sends them as one batch — the run picks up where it stopped, with every answer in hand."* |
+| `question 3 of 5` | Where you are | The guide's sample card |
+| The pips | One per question | *"Filled means answered, ringed means the one you are looking at. They are also buttons — click straight to any question."* (inbox guide) |
+| `2 of 5 answered` (the tally) | Progress | *"Independent of where you are in the batch. You can answer them in any order."* (inbox guide) |
+| `← Prev` / `Next →` | Move within the batch | Disabled at the ends (mockup) |
+| `↵ Submit all 5` | Submit | *"Greyed until every non-optional question has a value. One submission, one resume."* (inbox guide) |
+| Hint line | Why you can't send part of it | Before (mockup): *"The agent asked these together and is parked until it has all of them. Answering one at a time would restart the wait each time."* After (mockup; guide beat 5): *"All answered. Submitting sends them as one batch — the run picks up where it stopped, with every answer in hand."* |
 
 One question shows at a time. `←` / `→` move between them, and answers are kept as you move (mockup `answers` map). `j` / `k` leave the card without losing your answers (inbox guide actions: *"Your answers are kept."*).
 

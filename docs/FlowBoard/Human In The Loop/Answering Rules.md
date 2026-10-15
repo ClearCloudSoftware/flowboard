@@ -12,9 +12,9 @@ The rules that decide whether an answer counts, which answer wins, and what happ
 > [!quote] PRD §10
 > *"**Idempotent answers.** First write wins. If the question is already `answered`, the second submitter gets 'already answered by <channel>'."*
 
-- *"First write wins via a conditional UPDATE; loser sees 'already answered by <channel>' (PRD wording)."* (backlog Story 6.2)
-- Web and chat write through one path: *"writes answers back through the **same** idempotent path as the web inbox, so web and channel can't diverge."* (`04` §10)
-- The guide's version: *"Whoever answers first wins. The loser is not an error; the second place simply closes."* And: *"The same question is never open in two places once it's been answered in one."*
+- *"First write wins via conditional UPDATE; loser sees 'already answered by <channel>' (PRD wording)."* (backlog Story 6.2). `04` §10: *"first write wins via a conditional UPDATE"*.
+- Web and chat write through one path: "writes answers back through the *same* idempotent path as the web inbox, so web and channel can't diverge." (`04` §10)
+- The guide's version: *"Whoever answers first wins. The loser is not an error; the second place simply closes."* And: *"The same question is never open in two places once it's been answered in one."* Where the PRD's *"already answered by <channel>"* would show, given the guide's *"not an error"*, is [[Escalation And Notifications Open Questions]] #12. Full rule: [[First Write Wins]].
 
 ## Required and optional
 
@@ -33,7 +33,7 @@ The mockup ties optional to the free-text kind; the PRD ties it to a per-questio
 > [!important] inbox guide
 > *"An answer from someone else does not move your cursor. If a teammate closes a card while you are mid-batch, that card disappears and you carry on where you were — the queue re-orders around you rather than under you."*
 
-The mockup's `resolve()` keeps focus where it is unless the closed card was the focused one. The old handoff: *"resolution never moves the row the developer is currently on, and never re-sorts the batch"*. It also kept `draftAnswers` *"local until submit, so a partly-typed textarea survives a push update to another row."*
+The mockup's `resolve()` keeps focus where it is unless the closed card was the focused one. The old handoff: *"resolution never moves the row the developer is currently on, and never re-sorts the batch"*, and *"Batches only re-sort when the developer navigates away and back."* It also kept `draftAnswers` *"local until submit, so a partly-typed textarea survives a push update to another row."* Backlog Story 4.3 tracks focus *"by question id"*; the mockup tracks it by card.
 
 ## Answers stay local until you submit
 
@@ -49,7 +49,7 @@ In the mockup, picks live in a client-side `answers` map until **Send answer** o
 > - Feature map §11: *"❓ Keep a short 'undo' window after you answer, or make answers final."*
 > - Backlog Story 4.4: *"**Decide:** keep the 10 s undo (costs 10 s per batch for the agent and delays resumes) or drop it and make Slack/web answers final. If kept: hold only in the web path, not inside the MCP tool."* Plus `POST /api/questions/:id/unanswer` and `chat.update` on undo.
 > - Backlog decision D2, a default recommendation: *"Drop from the MCP path; keep web-side undo only while no agent is waiting."* The drawio card *D2 · Keep the 10 s undo window?* gives the same default.
-> - The old handoff has an `undo` link on answered rows, matching *"the 10s collapse"*. `04` §10 repaints *"on web answer, channel answer, and undo"*, and `01-ports.md` says *"repaint on answer/undo"*.
+> - The old handoff has an `undo` link on answered rows, matching *"the 10s collapse"*. `04` §10 repaints *"on web answer, channel answer, and undo"*, and `01-ports.md` says *"repaint on answer/undo"*. Backlog Story 6.2 has *"`chat.update` on web answer, Slack answer, and undo"* and tags it **PRD**, though the PRD has no undo.
 > - The inbox mockup has no undo.
 >
 > See [[Human In The Loop Open Questions]] #16.
