@@ -15,14 +15,17 @@ There is no mockup for escalation itself, and no mockup of the chat message. Thi
 | Where | What it shows | Rule in the mockup |
 |---|---|---|
 | Card meta, before the last 3 minutes | `waited 5m 00s` (`auth-refactor` at load) | no chip |
-| Card meta, last 3 minutes | `escalates in 2m 14s · waited …` (*"still only here"*) | `soon = !escd && w > ESCALATE - 3 * MIN` |
+| Card meta, last 3 minutes | `escalates in 2m 14s` (*"still only here"*) in the guide's legend; the mockup shows `escalates in 18s · waited 9m 42s` on `provider-codex` at load | `soon = !escd && w > ESCALATE - 3 * MIN` |
 | Card meta, past the threshold | `escalated · waited 12m 30s` (`csv-export` at load, *"also in chat now"*) | `isEscalated = waited(it) >= ESCALATE` |
-| Topbar count | `4 waiting · 2 escalated` | counts escalated cards in the current filter |
+| Topbar count | `4 waiting · 2 escalated` at load, `3 escalated` once `provider-codex` crosses | counts escalated cards in the current filter |
 | Status bar | `escalation after 10m · answers sync both ways with chat` | guide: *"The escalation window, and the reminder that answers sync both ways with chat."* |
-| Toast | `slack` tag + *"dana answered **pdf-import · plan** in chat — it's closed here too"*, gone after 5.2 s | fired 9 s after load |
+| Toast | `slack` tag + *"dana answered **pdf-import · plan** in chat — it's closed here too"*, gone after 5.2 s | fired 9 s after load; `pdf-import` waits on dana, so its card is not in the default *Waiting on me* view |
 | Context panel, *answered today* | `questions 11`, `median reply 3m 20s`, `from chat 3 of 11` at load | from chat = slack answers in the list + 2 |
 | Context panel, *recently answered* | each answer with a `web` or `slack` tag | — |
 | Empty state | *"Nothing is waiting on you … you'll be nudged in chat if you're not here."* | — |
+
+> [!note] The mockups README tells it in a different order
+> *"one card crosses the ten-minute threshold while you watch; a few seconds later a teammate answers one in chat"* (`docs/mockups/README.md`). In the script the chat answer comes first (9 s) and the crossing second (18 s).
 
 The `slack` tag uses the run colour (`.via.slack{border-color:var(--run);color:var(--run)…}`). The `escalated` chip uses the wait colour (`.esc{color:var(--wait);border:1px solid var(--wait)…}`); the countdown chip is grey (`.esc.soon{color:var(--ink-3);border-color:var(--line-2)}`). Both rules are in `inbox.html`; `monitor.html` repeats the first.
 

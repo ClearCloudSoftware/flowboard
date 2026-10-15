@@ -18,6 +18,9 @@ How long a question waits before it is posted to chat. The feature map calls it 
 | backlog Story 8.3 | *"escalation threshold in minutes"* (**PRD/NEW**) |
 | old design handoff | *"Escalation threshold is a setting (default 5 minutes); the prototype exposes it as a tweak."* |
 | old design prototype | `escalationMinutes ?? 5`; the tweak is an int in minutes, *"default":5,"min":1,"max":30* (`Vibe Kanban.dc.html`) |
+| drawio *Harness architecture* | Not a setting: the SQLite card lists *"settings (memory, sandbox_profile)"* only, and every page fixes it at 5 minutes |
+
+So the threshold is a stored setting only in `04` §10, `06` §15 and backlog 6.1 and 8.3. The feature map (§19) and the old handoff call it a setting without naming a key. PRD §10 fixes it.
 
 ## The default
 
@@ -26,7 +29,7 @@ How long a question waits before it is posted to chat. The feature map calls it 
 >
 > **10 minutes:** inbox mockup (`ESCALATE = 10 * MIN`, status bar *"escalation after 10m"*); inbox guide (*"Ten minutes without an answer…"*, *"10m, no answer"*, *"past the ten-minute window"*); monitor mockup (`> 10 * MIN`); mockups README (*"one card crosses the ten-minute threshold"*).
 >
-> Since the value is a setting, this is only the default. See [[Escalation And Notifications Open Questions]] #1.
+> Where the value is a setting (`04` §10, `06` §15, backlog 6.1, 8.3), this is only the default; in PRD §10 it is fixed. See [[Escalation And Notifications Open Questions]] #1.
 
 > [!warning] Milliseconds or minutes?
 > `04` §10 and backlog 6.1 name the key `escalation_threshold_ms`. `06` §15 and backlog 8.3 describe the setting in minutes, and the old prototype's `escalationMinutes` is in minutes, from 1 to 30. That range is the only bound any source gives. Probably minutes in the UI and milliseconds in storage, but no source says so. Open Questions #2.
@@ -38,7 +41,7 @@ The inbox guide gives the one tuning rule in the sources: *"If **from chat** is 
 Nothing says whether a change applies to questions already waiting. Their `escalate_question` job already has a fixed `run_after` (PRD §10), so as written a change only affects new questions. See [[Escalation And Notifications Open Questions]] #19.
 
 > [!question] No route changes it
-> PRD §12 lists no settings endpoint. The same gap is raised for draft mode in [[Cost API And Routes]]. See [[Escalation API And Routes]].
+> PRD §12 lists no settings endpoint. The same gap is raised for draft mode in [[Cost API And Routes]]; the shared proposal is in [[Settings And Plumbing API And Routes]]. See [[Escalation API And Routes]].
 
 ## Related
 
@@ -46,3 +49,4 @@ Nothing says whether a change applies to questions already waiting. Their `escal
 - [[Escalation Data Model]]
 - [[Escalation Defaults And Sample Content]]
 - [[Waiting And Escalation]]
+- [[Nudge Timing Setting]]

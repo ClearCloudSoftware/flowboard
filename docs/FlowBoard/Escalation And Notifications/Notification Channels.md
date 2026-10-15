@@ -16,7 +16,7 @@ A channel is one adapter behind the [[Notifier Port]].
 | **Slack** | `inline_answer` (Block Kit) | v1, the only adapter (PRD M6) | PRD §10, architecture README |
 | **Discord** | `inline_answer` (*"Discord components"*) | later | `01-ports.md`, architecture README, `notifier.ts` |
 | **Email** | `link_only` | later | `01-ports.md` (*"`link_only` channels (email) send a deep link to `/inbox`"*) |
-| **Webhook** | `link_only` (*"a bare webhook"*) | later | `04` §10, `01-ports.md` |
+| **Webhook** | `link_only` (*"a bare webhook"*, `04` §10) | later | `04` §10; named in `01-ports.md`'s `id` union, the README and `notifier.ts` |
 | **Desktop** | not stated | later | architecture README, drawio (*"Slack today → Discord, email, webhook, desktop tomorrow"*) |
 | **Console** | `link_only` | example only | `07-ports-in-practice.md` |
 

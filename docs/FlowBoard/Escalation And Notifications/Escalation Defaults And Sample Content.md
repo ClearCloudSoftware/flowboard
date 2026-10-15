@@ -11,7 +11,7 @@ Escalation ships no seed data. PRD §15 seeds a project, a flow, agents and skil
 
 | Setting | Default | Source |
 |---|---|---|
-| Threshold | 5 minutes (mockups: 10) | PRD §10, `04` §10, backlog 6.1; see [[Escalation Threshold]] |
+| Threshold | 5 minutes (mockups: 10). Fixed in PRD §10; a default in `04` §10 and backlog 6.1 | PRD §10, `04` §10, backlog 6.1; see [[Escalation Threshold]] |
 | Channel | Slack if `SLACK_BOT_TOKEN` is set, otherwise log only | PRD §10 |
 | Target | `SLACK_CHANNEL_ID`, one channel | PRD §10 |
 | Replay window | 300 s | backlog 6.2 |
@@ -26,8 +26,8 @@ From `inbox.html` and `inbox-guide.html`:
 | Item | Sample |
 |---|---|
 | Threshold shown | `escalation after 10m` |
-| Escalated at load | `billing-webhook · build` (failure, waited 42m), `csv-export · plan` (batch, waited 12.5m), `pdf-import · plan` (question for dana, waited 21m) |
-| Escalates during the demo | `provider-codex · research` (waited 9.7m at load) |
+| Escalated at load | `billing-webhook · build` (failure, waited 42m), `csv-export · plan` (batch, waited 12.5m), `pdf-import · plan` (question for dana, waited 21m; hidden under the default *Waiting on me* filter) |
+| Escalates during the demo | `provider-codex · research` (waited 9.7m at load, so `escalates in 18s`; it crosses 18 s after load) |
 | Not escalated | `auth-refactor · review` (gate, waited 5m) |
 | Answered from chat | `pdf-import · plan` by dana, 9 s after load: *"Northwind, Acme, anything with a table"* |
 | Toast | *"dana answered **pdf-import · plan** in chat — it's closed here too"* |
@@ -51,3 +51,4 @@ The monitor mockup uses the same 10-minute cut (`monitor.html:731`).
 - [[Escalation Threshold]]
 - [[Escalation In The UI]]
 - [[Seeded Questions And Gates]]
+- [[Settings Defaults]]

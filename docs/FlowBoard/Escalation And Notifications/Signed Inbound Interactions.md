@@ -55,7 +55,7 @@ sequenceDiagram
 
 Answers take "the *same* idempotent path as the web inbox" (`04` §10). See [[First Write Wins]].
 
-The route follows the PRD's rule for every handler: *"All handlers are thin: validate with zod, call a function in `packages/core`, return JSON."* (PRD §12).
+The route follows the PRD's rule for every handler: *"All handlers are thin: validate with zod, call a function in `packages/core`, return JSON."* (PRD §12). `06` §15 adds *"Every port is called from `src/lib/`, **never from a route**"*, so the diagram's direct route-to-adapter call is itself open: [[Escalation And Notifications Open Questions]] #22.
 
 > [!warning] Socket Mode would replace this, and the drawio disagrees with itself
 > The drawio *Harness architecture* uses *"Slack Socket Mode + Block Kit, so no public URL"* and *"Socket Mode WebSocket, outbound only"*. Its other pages keep the check: *Logical components* has *"Slack / Block Kit + signature check"*, *Functional components* has *"Verify inbound"*, and the ideation page has *"Verification"*. The rules above assume HTTP. How signing works over a WebSocket is Slack's business, not the sources'; none of them says. See [[Escalation And Notifications Open Questions]] #6.

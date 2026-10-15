@@ -65,7 +65,10 @@ A question that never escalated has no ref, so nothing is repainted.
 | *"Answered‑elsewhere row swaps in place, collapses after the window."* | backlog 4.3 |
 | *"Stays in sync — Answer the same question somewhere else (like chat) and the inbox updates itself instantly."* | feature map §12 |
 | *"An answer from someone else does not move your cursor. If a teammate closes a card while you are mid-batch, that card disappears and you carry on where you were — the queue re-orders around you rather than under you."* | inbox guide |
+| *"Answer here and the chat message updates to show it's handled. Answer in chat and the card closes here. The same question is never open in two places once it's been answered in one."* | inbox guide |
+| *"Live updates — A steady stream keeps the board, the viewer, and the inbox current without you refreshing."* | feature map §20 |
 | *"Cards resolve calmly when answered from Slack."* | drawio ideation |
+| *"Questions can be **answered from Slack while I'm looking at this page**. Design the state where a card resolves under me — it should be clear and not jarring."* | old brief |
 | *"Rule: resolution never moves the row the developer is currently on, and never re-sorts the batch."* | old design handoff 1e |
 
 How the inbox shows it is in [[Escalation In The UI]].
