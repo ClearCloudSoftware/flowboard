@@ -24,7 +24,7 @@ All memory configuration lives in one **memory block** in `settings`.
 | PRD §11.2 | *"Add a `memory` block to `settings` (adapter id, endpoint / key ref, enabled scopes, recall limit, `max_recall_chars`)"* |
 | PRD §13 | *"the adapter (`none` / `local` / self-hosted Mem0 / Mem0 cloud), its endpoint or key ref, which scopes are enabled (user / project / agent / task), and the recall limit"* (no `max_recall_chars`) |
 | `09-memory.md` | *"a `memory` block in `settings` — adapter id, endpoint (self-host URL / cloud key ref), enabled scopes, recall `limit`, `max_recall_chars`"* |
-| `06` §15 | *"a **memory** block — adapter id (`mem0`/`local`/`none`), endpoint or key ref, enabled scopes, recall limit"* (no `mem0-cloud`, no `max_recall_chars`) |
+| `06` §15 | *"a **memory** block … — adapter id (`mem0`/`local`/`none`), endpoint or key ref, enabled scopes, recall limit"* (no `mem0-cloud`, no `max_recall_chars`) |
 | Drawio harness | SQLite card: *"settings (memory, sandbox_profile)"* |
 
 ## Shape
@@ -43,9 +43,9 @@ PRD §7 names the cap `settings.memory.max_recall_chars`, a path into a nested b
 > [!example] Proposal (not in the sources)
 > One row with `key = 'memory'` and a JSON `value`:
 > ```json
-> { "adapter": "none", "endpoint": null, "scopes": ["user"], "limit": null, "max_recall_chars": 6000 }
+> { "adapter": "none", "endpoint": null, "key_ref": null, "scopes": ["user"], "recall_limit": null, "max_recall_chars": 6000 }
 > ```
-> `scopes: ["user"]` follows `09`'s *"`user` scope first"*; the sources give no default. A key ref names a secret, it does not hold one. See [[Memory Open Questions]] #3, #21.
+> The field names match the Settings And Plumbing proposal ([[Settings Data Model]]), which gives `scopes` no default. `scopes: ["user"]` follows the README's *"`user` scope first"*; the sources give no default. A key ref names a secret, it does not hold one. See [[Memory Open Questions]] #3, #21.
 
 ## Not in settings
 
@@ -57,4 +57,5 @@ PRD §7 names the cap `settings.memory.max_recall_chars`, a path into a nested b
 - [[Memory Off By Default]]
 - [[Memory Data Model]]
 - [[Draft Mode]]
+- [[Memory Settings Block]]
 - [[Memory Index]]

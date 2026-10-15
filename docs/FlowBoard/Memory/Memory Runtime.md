@@ -13,7 +13,7 @@ Where memory's code lives and who calls it.
 |---|---|
 | PRD §3 | `packages/core/ports/` holds *"AgentProvider, ExecHost, MemoryStore, Notifier, TaskSource interfaces"*; `packages/adapters/memory/` holds *"none, local"* |
 | Architecture README | `core/memory/ # recall before a run, commit after (09)`; `core/ports/` includes `MemoryStore`; `adapters/memory/mem0/ local/` |
-| Drawio harness *Code layout* | *"packages/adapters : agent · exec · notify · memory"* |
+| Drawio harness *Code layout* | *"packages/adapters: agent · exec · notify · memory"* |
 | Reference | `docs/old/reference/core/ports/memory-store.ts` (the port only; no adapter) |
 
 The PRD ships `none` and `local`; the architecture README sketches `mem0` and `local`. The PRD rule that matters: *"`packages/core` imports no framework, no database driver and no CLI."* So the `local` adapter, which needs SQLite, lives in `adapters`, not in core (inferred from the rule).
@@ -34,7 +34,7 @@ Only the runner, in the worker process.
 
 | Pipeline step | Call | Source |
 |---|---|---|
-| Before launch, after the prompt's six parts are built | `recall()`, then render part 7 | PRD §7, `03` §6 |
+| Before launch, after the prompt's six parts are built | `recall()`, then render part 7 | PRD §7, `03` §6; drawio *Life of one step* **C** (prompt built) then **D** (recall) |
 | After exit 0, with the artifact scan | `write()` | PRD §7 *Completion*, §11.2 |
 
 The Execution set numbers these steps 2 and 10 in [[Runner Pipeline]], and notes there that *"Memory `write()` and §8 advancement both follow a success; their order is not stated."* See [[Memory Open Questions]] #15.
@@ -56,7 +56,7 @@ The position of `write()` before advancement in this diagram is a proposal, not 
 
 ## Resolving the adapter
 
-Settings pick the adapter id (PRD §13). How the worker builds the adapter from it, and whether a settings change reaches a running worker, is not stated.
+Settings pick the adapter id (PRD §13). How the worker builds the adapter from it, and whether a settings change reaches a running worker, is not stated. See [[Memory Open Questions]] #29.
 
 ## Related
 

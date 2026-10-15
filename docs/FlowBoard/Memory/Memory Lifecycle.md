@@ -29,6 +29,8 @@ sequenceDiagram
   end
 ```
 
+Where the `run_memories` record falls relative to launch is drawn for illustration; no source fixes it.
+
 The drawio *Life of one step*, letter **D**: *"If memory is on, the runner recalls (capped) before launch and writes after success. Host side only."* The Execution set places these as steps 2 and 10 of the [[Runner Pipeline]].
 
 ## One memory, across tasks

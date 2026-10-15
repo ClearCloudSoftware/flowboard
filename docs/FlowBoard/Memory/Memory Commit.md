@@ -38,6 +38,9 @@ The second call. After a run succeeds, the runner hands its salient, structured 
 
 A run that sets `fail` still succeeded as a run (PRD §7: *"work verdicts arrive as outcomes"*), so a rework's cause can be committed. A run that exits non-zero is an infrastructure failure, and commits nothing.
 
+> [!note] Where PRD §7 puts the sentence
+> The PRD §7 sentence quoted above closes the bullet *"**Anything else**, or a 4th transient failure … put the task into `blocked`, as before."*, not the success path. Read in place it sits among failures; its own words (*"after a success"*), §11.2 and `03` §6 make the meaning clear. See [[Memory Open Questions]] #27.
+
 ## Which scope gets what
 
 `09-memory.md` gives each scope its sources:

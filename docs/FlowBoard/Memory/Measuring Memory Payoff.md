@@ -39,8 +39,8 @@ flowchart LR
 
 > [!question] Gaps
 > - No inbox-repeats meter is designed, and no rule says what counts as a repeat. #25
-> - Part 7's tokens are billed in the run, so they are on the *saved* side of the net, not the *added* side. #22
-> - No baseline period, comparison window or threshold is given.
+> - Part 7's tokens are billed in the run (inferred), so they would land on the run-spend side of the net, not in *"memory spend added"*. #22
+> - No baseline period, comparison window or threshold is given. #25
 >
 > Numbers refer to [[Memory Open Questions]].
 

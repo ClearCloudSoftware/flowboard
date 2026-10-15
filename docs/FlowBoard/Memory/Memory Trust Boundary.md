@@ -43,7 +43,7 @@ PRD §16 acceptance: *"Recall and commit happen host-side; a sandboxed run needs
 
 ## Later: an injection scan
 
-The drawio *Harness architecture* plans *"Injection scan (later) — LLM Guard over artifacts before the next step or memory trusts them"*. It would sit between a run's artifacts and commit.
+The drawio *Harness architecture* plans a dashed *Injection scan (later)* card: *"LLM Guard over artifacts before the next step or memory trusts them"*. It would sit between a run's artifacts and commit (inferred).
 
 > [!question] A tension
 > `09` says recalled memory is *"never third-party content promoted to "fact""*, but project memory is written from *"research briefs"*, and research reads the web. A brief is a declared artifact the operator's run produced, so it passes the rule while carrying third-party content. See [[Memory Open Questions]] #17.

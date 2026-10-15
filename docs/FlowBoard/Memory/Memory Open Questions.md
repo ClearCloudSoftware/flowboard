@@ -11,12 +11,13 @@ Every place the sources disagree or leave a gap. Nothing here is decided. Where 
 
 ### 1. Which adapter comes first?
 
-**`local` first:** PRD §11.2 and §14, `01-ports.md`, `09-memory.md`, the architecture README, feature map §21, drawio *Harness architecture* (*"none (default) · local SQLite FTS5 (first) · mem0 (later)"*), PRD §3 (`adapters/memory/ # none, local`).
-**Mem0 first:** the `memory-store.ts` header (*"Mem0 … is the first adapter"*), drawio *FlowBoard ideation* (*"Memory (Mem0)"*, D10) and *Logical components* (Mem0 is the only adapter and store), `05` §11 (*"extracted and de-duplicated by Mem0"*). The later sources agree on `local` first; the others look unrevised. See [[Memory Adapters]].
+**`local` first:** PRD §11.2 and §14, `01-ports.md`, `09-memory.md` (opening and recommendation 1), the architecture README (*Agentic memory* and open decision 4), feature map §21, drawio *Harness architecture* (*"none (default) · local SQLite FTS5 (first) · mem0 (later)"*, and concept 3 *"local first, Mem0 later"*), PRD §3 (`adapters/memory/ # none, local`).
+**Mem0 first or Mem0 only:** the `memory-store.ts` header (*"Mem0 … is the first adapter"*), drawio *FlowBoard ideation* (*"Memory (Mem0)"*, D10), *Logical components* (Mem0 is the only adapter and store) and *Functional components* (*"contradiction resolution (Mem0)"*), `05` §11 (*"extracted and de-duplicated by Mem0"*), `03` §6 (*"the adapter (Mem0)"*), and `09-memory.md`'s own *The port* and *How it maps to Mem0* sections (*"**Self-hosted OSS is the default**"*).
+The `local`-first wording reads like a later revision that did not reach every passage (inferred; the sources carry no dates). See [[Memory Adapters]].
 
 ### 2. Is Mem0 cloud a v1 option?
 
-PRD §17 puts it out of scope for v1. PRD §13 offers *"Mem0 cloud"* in the settings adapter list, and the port's `id` includes `'mem0-cloud'`. `06` §15 lists only *"`mem0`/`local`/`none`"*.
+PRD §17 puts it out of scope for v1. PRD §13 offers *"Mem0 cloud"* in the settings adapter list, and the port's `id` includes `'mem0-cloud'`. `06` §15 lists only *"`mem0`/`local`/`none`"*. Same as [[Settings And Plumbing Open Questions]] #9.
 
 ### 3. Which scopes are on by default?
 
@@ -24,7 +25,7 @@ Feature map §21 ❓: *"Which memory to switch on first — just *your* preferen
 
 ### 4. Global, per flow, or per step?
 
-The PRD has one global adapter setting. `09` says *"default `none` until the first flow opts in"* and *"`project`/`agent`/`task` per step"*. No flow or step field exists for either. See [[Memory Off By Default]].
+The PRD has one global adapter setting. `09` says *"default `none` until the first flow opts in"* and *"`project`/`agent`/`task` per step"*. No flow or step field exists for either. Same as [[Settings And Plumbing Open Questions]] #9; a per-project override is [[Projects Open Questions]] #23. See [[Memory Off By Default]].
 
 ## Recall
 
@@ -34,7 +35,7 @@ The PRD has one global adapter setting. `09` says *"default `none` until the fir
 
 ### 6. Where does part 7 go?
 
-Before the closing instruction (PRD §7, `09`) or at the end (PRD §11.2, `03` §6, drawio *"+7"*). `PromptParts` has six fields and no slot. Same as [[Execution Open Questions]] #51. See [[Recalled Memory In The Prompt]].
+Before the closing instruction (PRD §7, `09`) or at the end (PRD §11.2, `03` §6, drawio *"+7"*). `PromptParts` has six fields and no slot. Same as [[Execution Open Questions]] #51 and [[Capability Library Open Questions]] #17. See [[Recalled Memory In The Prompt]].
 
 ### 7. What is the query, and what is the limit?
 
@@ -72,7 +73,7 @@ A shell step's run has no answers and one artifact, `check_output`; a non-zero e
 
 ### 15. Commit before or after advancement?
 
-Both follow a success; the order is not stated. Logged in [[Runner Pipeline]]. If advancement starts the next run first, that run cannot recall what was just learned (inferred).
+Both follow a success; the order is not stated. Logged in [[Runner Pipeline]]. If advancement starts the next run first, that run cannot recall what was just learned (inferred). Parallel branches (`implement` ∥ `tests`) both commit to the same task scope, with no ordering rule between them either. See [[Task Memory Scope]].
 
 ### 16. Undo after commit
 
@@ -86,11 +87,11 @@ An answer undone after commit stays in memory. Same as [[Human In The Loop Open 
 
 ### 18. Forgetting, editing, retention
 
-No source covers deleting, editing, expiring or exporting memories; what happens to task memories after the task ends or to project memories when a project is removed; or migrating from `local` to Mem0. Under `local`, stale facts are only outranked, never removed. See [[Contradictions And Freshness]].
+No source covers deleting, editing, expiring or exporting memories; what happens to task memories after the task ends or to project memories when a project is removed; or migrating from `local` to Mem0. Under `local`, stale facts are only outranked, never removed. Project deletion, which would leave `memories` rows behind (no foreign key), is [[Projects Open Questions]] #9. See [[Contradictions And Freshness]].
 
 ### 19. No way to see memories
 
-No screen, route or mockup lists memories, and the *"why did it think that?"* trace has no UI. Routes are proposed in [[Memory API And Routes]], which also notes that `01-ports.md` forbids routes from calling the port.
+No screen, route or mockup lists memories, and the *"why did it think that?"* trace has no UI. Nothing shows whether memory is on, and nothing says what the task-detail aside shows when it is off ([[Task Detail Open Questions]] #26). Routes are proposed in [[Memory API And Routes]], which also notes that `01-ports.md` forbids routes from calling the port.
 
 ## Schema and storage
 
@@ -100,11 +101,11 @@ PRD §11.2 gives five columns and no id, metadata or `updated_at`, while `Memory
 
 ### 21. The settings block
 
-`settings` is key–value (PRD §5). PRD §7's `settings.memory.max_recall_chars` implies a nested block. PRD §13 and `06` §15 omit `max_recall_chars` from the field list. A JSON row is proposed in [[Memory Settings]].
+`settings` is key–value (PRD §5). PRD §7's `settings.memory.max_recall_chars` implies a nested block. PRD §13 and `06` §15 omit `max_recall_chars` from the field list. A JSON row is proposed in [[Memory Settings]]. Same as [[Settings And Plumbing Open Questions]] #5.
 
 ### 22. The memory bucket, and part 7's tokens
 
-No source gives the bucket storage. Part 7's tokens are billed inside the run. Same as [[Cost And Control Open Questions]] #15. See [[Memory Cost Accounting]].
+No source gives the bucket storage. Part 7's tokens are billed inside the run (inferred), so the *net* figure may never see them. Same as [[Cost And Control Open Questions]] #15. See [[Memory Cost Accounting]].
 
 ### 23. Mem0 mapping of `project` and `task`
 
@@ -118,7 +119,7 @@ The drawio places it on `fb-memory`, host-only. The monitor sample shows `docker
 
 ### 25. The inbox-repeats meter
 
-`09` says wasted spend and inbox repeats *"both already have meters (§12, the inbox)"*. The inbox mockup has *answered today* and *from chat*, but nothing that counts repeats, and no rule defines a repeat. See [[Measuring Memory Payoff]].
+`09` says wasted spend and inbox repeats *"both already have meters (§12, the inbox)"*. The inbox mockup has *answered today* and *from chat*, but nothing that counts repeats, and no rule defines a repeat. *"Baseline before enabling, compare after"* (`09`) gives no baseline period, comparison window or threshold. See [[Measuring Memory Payoff]].
 
 ## Source drift
 
@@ -129,14 +130,19 @@ No M9 epic, no memory section in Story 8.3, no part 7 in Story 3.2, none of the 
 ### 27. Paths, numbers and edges
 
 - PRD §11.2 and `memory-store.ts` cite `docs/architecture/09-memory.md`; the file is `docs/old/architecture/09-memory.md`.
-- The [[Component Documentation Tracker]] gives memory architecture component *#16*. The architecture docs number components 1–15; `09-memory.md` is unnumbered.
+- The architecture README's component index numbers memory **#16** (*"Agentic memory → MemoryStore port (additive)"*), but `09-memory.md` itself has no numbered section, unlike components 1–15 in `02`–`06`.
 - The drawio *D10 · Self-host vs managed* shares its number with Capability Library D10 and has no backlog row (backlog decisions stop at D9). Same as [[Task Detail Open Questions]] #33.
 - The drawio *Functional components* page draws *Execution → Memory* and *Human in the loop → Memory*, but no edge for recall back into execution.
-- `09`'s scope table reads `user` *"into every run's prompt preamble"*; everything else puts recalled memory in part 7, not part 1.
+- `09`'s scope table reads `user` into *"every run's prompt preamble"*; everything else puts recalled memory in part 7, not part 1.
+- PRD §7 puts its only commit sentence (*"after a success the runner also `write()`s …"*) at the end of the *"Anything else … `blocked`"* failure bullet, not with the success path. See [[Memory Commit]].
 
 ### 28. When memory itself fails
 
 No source says what happens when recall or commit fails (store down, FTS error, Mem0 timeout). *"never on the critical path of a run"* (PRD §11.2) suggests the run goes ahead without memory, and a failed commit doesn't fail the run (inferred). Nothing says whether either is logged, retried, or shown. See [[Memory Off By Default]].
+
+### 29. Building the adapter, and settings changes
+
+Settings name the adapter (PRD §13). No source says how the worker constructs it, or whether a change to the memory block reaches a worker that is already running or a run already queued. The general question is [[Settings And Plumbing Open Questions]] #10. See [[Memory Runtime]].
 
 ## Related
 

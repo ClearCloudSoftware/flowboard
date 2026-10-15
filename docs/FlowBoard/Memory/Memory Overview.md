@@ -30,16 +30,16 @@ flowchart LR
   MEM -. "memory bucket" .-> COST[Cost & control]
 ```
 
-The two solid edges are on the drawio *Functional components* page (*"run output → memory"*, *"answers → memory"*), with the Memory group dashed: *"additive · dashed = optional"*. The page draws no edge back from Memory to Execution, although recall is the whole point. The dotted edges come from PRD §7 and §11.2.
+The two inbound edges are on the drawio *Functional components* page (*"run output → memory"*, *"answers → memory"*). Both are dashed, like the Memory group itself: *"additive · dashed = optional"*. The page draws no edge back from Memory to Execution, although recall is the whole point. The two dotted edges above are not on that page: recall comes from PRD §7 and §11.2, the memory bucket from PRD §11.2 and `06` §12.
 
 | Drawio page | What it shows |
 |---|---|
-| *FlowBoard ideation* | A dashed card group *"Memory (Mem0) · additive"* with six cards: recall, commit, remembers your answers, host-side broker, *D10 · Self-host vs managed*, *Pays for itself, or it's off*. An edge from *Recall before a run* to *Runner & live viewer*. |
-| *Logical components* | `Memory` in Core (*"recall before a run, commit after (additive)"*), `MemoryStore` in Ports (*"sixth port · additive · off by default"*), `Mem0 memory` in Adapters, `Memory store` in Stores. Edge *Run orchestrator → MemoryStore: "recall / commit (host-side)"*. |
+| *FlowBoard ideation* | A dashed card group *"Memory (Mem0) · additive"* with six cards: recall, commit, remembers your answers, host-side broker, *D10 · Self-host vs managed*, *Pays for itself, or it's off*. A dashed, arrowless link from *Recall before a run* to *Runner & live viewer*. |
+| *Logical components* | `Memory` in Core (*"recall before a run, commit after (additive)"*), `MemoryStore` in Ports (*"sixth port · additive · off by default"*), `Mem0 memory` in Adapters, `Memory store` in Stores. Edge *Run orchestrator → MemoryStore: "recall / commit (host-side)"*. All four cards and their edges are dashed. |
 | *Functional components* | The Memory group: recall before a step, distil after a step, scopes, self-hosted and off by default. |
-| *Harness architecture* | The `MemoryStore port` card in the worker, arrow **D** *"recall / write (local adapter)"* to SQLite, a dashed *Mem0 OSS server (later)*, and concept 3 *Durable memory*. |
+| *Harness architecture* | The `MemoryStore port` card in the worker, arrow **D** *"recall / write (local adapter)"* to SQLite, a dashed *Mem0 OSS server (later)*, and concept 3 *Durable memory*: *"a memory store (local first, Mem0 later) carries lessons across tasks"*. |
 
-In the architecture, `MemoryStore` is the **sixth port**, and the only optional one: *"Five ports carry the whole program (AgentProvider, Notifier, Workspace, ArtifactStore, TaskSource); a sixth, **MemoryStore**, is *additive* — a run happens without it, it only makes runs warmer."* (`01-ports.md`)
+In the architecture, memory is component **#16**, *"Agentic memory → MemoryStore port (additive)"* (architecture README, *Component index*). `MemoryStore` is the **sixth port**, and the only optional one: *"Five ports carry the whole program (AgentProvider, Notifier, Workspace, ArtifactStore, TaskSource); a sixth, **MemoryStore**, is *additive* — a run happens without it, it only makes runs warmer."* (`01-ports.md`)
 
 ## What the component does
 

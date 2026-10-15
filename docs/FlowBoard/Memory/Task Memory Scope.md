@@ -25,7 +25,7 @@ This is the one scope that does not cross the task boundary. It overlaps with wh
 > [!question] Gaps
 > - **Failed runs write nothing.** Commit happens *"after a run succeeds"* (PRD §7, §11.2). A rework after a `fail` outcome works, because a run that sets `fail` still exits 0. The mockup's egress-denial line describes an infrastructure failure, which is a failed run and so commits nothing. See [[Memory Open Questions]] #13.
 > - **After the task ends** no source says whether task memories are kept, archived or deleted. See [[Memory Open Questions]] #18.
-> - **Parallel branches** (`implement` ∥ `tests`) both write the task scope. No ordering rule; with `local` both are stored as written.
+> - **Parallel branches** (`implement` ∥ `tests`) both write the task scope. No ordering rule; with `local` both are stored as written. See [[Memory Open Questions]] #15.
 
 ## Related
 

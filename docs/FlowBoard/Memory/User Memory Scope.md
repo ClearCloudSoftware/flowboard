@@ -14,6 +14,8 @@ module: Memory
 
 PRD §11.2 calls it *"the single highest-leverage one"*. `09` recommendation 2: *"The user scope is the cheapest, highest-leverage win (fewer inbox repeats)."*
 
+The feature map §21: *"**Remember your answers** — When you answer a question in the inbox, or reject a step with a reason, FlowBoard remembers it. The next task doesn't ask you the same thing again — the screen you live in gets quieter over time."* The drawio *FlowBoard ideation* card *Remembers your answers*: *"A preference answered once stops surfacing in the inbox on the next task."*
+
 | | |
 |---|---|
 | Holds | *"uses pnpm", "rejects speculative abstractions", recurring answers* (`09`) |

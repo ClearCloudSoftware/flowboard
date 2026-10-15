@@ -27,7 +27,7 @@ It runs where the runner runs. The drawio arrow **D** goes from the worker's `Me
 ## Why it comes first
 
 - *"nothing extra to install or pay for"* (feature map §21).
-- It costs no model spend: the memory bucket stays near zero until Mem0. See [[Memory Cost Accounting]].
+- It needs no model: *"No embeddings, no extraction model"* (PRD §11.2). That the memory bucket therefore stays near zero until Mem0 is inferred; part 7's tokens are a separate question ([[Memory Open Questions]] #22). See [[Memory Cost Accounting]].
 - It lets the cost and inbox views show whether memory pays off before buying a vector store and an extraction model. *"Move to self-hosted Mem0 only when the cost and inbox views show memory paying off and recall quality is the limit."* (`09`)
 
 > [!question] Open

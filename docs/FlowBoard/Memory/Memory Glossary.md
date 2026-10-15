@@ -34,6 +34,8 @@ module: Memory
 | **Inbox repeats** | Questions asked again that memory should have answered. One of memory's two success meters. | `09-memory.md` |
 | **Host-side broker** | The runner doing recall and commit outside the sandbox, so the agent never talks to the store. | `09-memory.md`, `08-sandboxing.md`, drawio |
 | **Poisoning** | A prompt-injected run writing false facts that later runs trust. | `09-memory.md` |
+| **Component #16** | The architecture README's component-index entry for this component: *"Agentic memory → MemoryStore port (additive)"*, documented in `09-memory.md`. | architecture README |
+| **Durable memory** | Drawio harness concept 3: *"a memory store (local first, Mem0 later) carries lessons across tasks. Nothing lives only in a context window."* | drawio *Harness architecture* |
 | **D10 · Self-host vs managed** | The drawio decision card: *"Default self-hosted Mem0 (local-first); managed cloud = the later shared/remote tier."* Not the Capability Library's D10. | drawio *FlowBoard ideation* |
 
 ## Overloaded words
@@ -41,7 +43,8 @@ module: Memory
 > [!warning] *memory*
 > 1. **Agentic memory**, this component.
 > 2. The sandbox's **resource limit** `--memory` (`memoryMb` in `exec-host.ts`), PRD §11.1, `08-sandboxing.md`. Nothing to do with this component.
-> 3. **In-memory** state: the SSE *"in-memory emitter"* (PRD §7) and the mockups' in-memory model. Also unrelated.
+> 3. **In-memory** state: the SSE *"in-memory emitter"* (PRD §7; `03` §8). Also unrelated.
+> 4. Worker **RAM**: the inbox mockup's sample number question notes *"Bigger chunks are faster and use more memory on the worker."* Also unrelated.
 
 > [!warning] *commit*
 > 1. **Memory commit**: the `write()` after a successful run.

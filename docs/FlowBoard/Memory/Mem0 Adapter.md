@@ -38,15 +38,19 @@ All from `09-memory.md`: *"The mapping is direct … One adapter method each way
 | PRD | — | *"The Mem0 *managed cloud* platform is out of scope for v1; it is the later shared/remote tier, the same decision as a remote workspace."* (§17) |
 | Drawio | *D10 · Self-host vs managed*: *"Default self-hosted Mem0 (local-first); managed cloud = the later shared/remote tier."* | |
 
+The *"later decision"* `09` points at is in `docs/pitch.md`: *"The architecture leaves a clean path to a shared/remote tier, but that is a later, separate decision."*
+
+`09-memory.md` cites three external sources for Mem0: its docs (`docs.mem0.ai`), its GitHub repo (OSS, self-hosting), and the paper *Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory* (arXiv 2504.19413).
+
 ## Deployment, as drawn
 
-The drawio *Harness architecture* page has a dashed Docker-side card: *"Mem0 OSS server (later) — only once local memory pays off · on fb-memory, reachable from the host only, never from the sandbox / its extraction LLM is metered separately"*, reached from the `MemoryStore port` by a dashed *"later"* arrow.
+The drawio *Harness architecture* page has a dashed Docker-side card, *Mem0 OSS server (later)*: *"only once local memory pays off · on fb-memory, reachable from the host only, never from the sandbox"* and *"its extraction LLM is metered separately"*. A dashed *"later"* arrow reaches it from the `MemoryStore port`.
 
 The monitor mockup's sample task `mem0-adapter` (*"Wire the self-hosted memory port behind the seam"*) shows a log of `docker compose up -d mem0` and `✓ mem0 healthy on :8088`. That is sample data, not a design. See [[Memory Defaults And Sample Content]].
 
 ## Cost
 
-Its extraction model is the memory layer's main spend. *"its extraction LLM is metered separately"* (drawio). See [[Memory Cost Accounting]].
+PRD §11.2 prices Mem0 at *"an extraction model's spend and a vector store"*; the drawio card: *"its extraction LLM is metered separately"*. That the extraction model is the memory layer's main spend is inferred. See [[Memory Cost Accounting]].
 
 > [!question] Open
 > The `project` / `task` mapping (#23), the deployment (#24), and whether `mem0-cloud` is even a v1 setting (#2). See [[Memory Open Questions]].

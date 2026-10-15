@@ -39,9 +39,9 @@ The label is a safety control, not decoration. See [[Memory Trust Boundary]].
 > - **At the end**: PRD §11.2 (*"append them to the prompt as a final part"*), `03` §6 (*"append the hits as a **7th prompt part**"*), and the drawio *Prompt builder* card (*"6 headless: use ask_user · +7 recalled memory, ≤ max_recall_chars"*).
 > - **Nowhere yet**: `PromptParts` in `agent-provider.ts` has six fields and says adapters must not reorder.
 >
-> Already logged as [[Execution Open Questions]] #51 and Capability Library OQ17. Here: [[Memory Open Questions]] #6.
+> Already logged as [[Execution Open Questions]] #51 and [[Capability Library Open Questions]] #17. Here: [[Memory Open Questions]] #6.
 
-The order matters: PRD §7 explains why part 6 is last: *"A headless agent that ends with "let me know if you also want tests" is a stuck run."* Putting memory after it would make background the last thing the agent reads.
+The order matters: PRD §7 explains why part 6 is last: *"A headless agent that ends with "let me know if you also want tests" is a stuck run."* Putting memory after it would make background the last thing the agent reads (inferred).
 
 ## Prompt shape with memory on
 

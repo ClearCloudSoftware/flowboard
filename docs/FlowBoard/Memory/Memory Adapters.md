@@ -29,12 +29,15 @@ PRD §11.2: *"Three adapters, in build order: `none` … `local` … Mem0, later
 
 `09-memory.md` recommendation 1: *"**Adapter = `local` first** (an FTS5 table in `flowboard.db`: no embeddings, no extraction model, no extra container), default `none` until the first flow opts in. Move to self-hosted Mem0 only when the cost and inbox views show memory paying off and recall quality is the limit."*
 
-The drawio *Harness architecture* card agrees: *"adapters: none (default) · local SQLite FTS5 (first) · mem0 (later)"*. PRD §3 lists only `adapters/memory/ # none, local`.
+The drawio *Harness architecture* card agrees: *"adapters: none (default) · local SQLite FTS5 (first) · mem0 (later)"*, and so does its concept 3: *"a memory store (local first, Mem0 later)"*. PRD §3 lists only `adapters/memory/ # none, local`.
 
 > [!warning] Sources that still put Mem0 first
 > - `memory-store.ts` header: *"Mem0 (self-hosted OSS by default, managed cloud as the remote tier) is the first adapter"*.
 > - Drawio *FlowBoard ideation*: the group is titled *"Memory (Mem0) · additive"*, and *D10* reads *"Default self-hosted Mem0 (local-first)"*.
-> - Drawio *Logical components*: the only adapter is *"Mem0 memory · self-host (default) · managed cloud"*, the only store *"Mem0 vectors + history (self-hosted)"*.
+> - Drawio *Logical components*: the only adapter card is *Mem0 memory* (*"self-host (default) · managed cloud"*), the only store *"Mem0 vectors + history (self-hosted)"*.
+> - Drawio *Functional components*: *Distil after a step* reads *"facts + contradiction resolution (Mem0)"*.
+> - `09-memory.md` itself is split. Its opening and recommendation 1 put `local` first, but *The port* names *"Mem0 (self-host / cloud), a trivial `local` SQLite adapter, and a `none` no-op"* as the adapters, and *How it maps to Mem0* says *"**Self-hosted OSS is the default**"*.
+> - `03` §6: commit is distilled *"so the adapter (Mem0) can extract facts and resolve contradictions"*.
 > - `05` §11: memory is *"extracted and de-duplicated by Mem0"*.
 > - `06` §15 lists adapter ids *"`mem0`/`local`/`none`"*, with no `mem0-cloud`.
 >

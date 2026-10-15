@@ -18,7 +18,7 @@ module: Memory
 
 With Mem0: *"Mem0 owns the memories (vector store + history)"* and *"No memory *content* is duplicated into SQLite."* (`09`). Only `settings` and `run_memories` remain on the FlowBoard side.
 
-None of these is in the PRD §5 schema. The drawio *Harness architecture* SQLite card does list them: *"settings (memory, sandbox_profile) · run_memories · memories + FTS5"*.
+None of these is in the PRD §5 schema (which has the `settings` table, but no memory block in it). The drawio *Harness architecture* SQLite card lists the first three: *"settings (memory, sandbox_profile) · run_memories · memories + FTS5"*.
 
 ## Types (port)
 
