@@ -69,7 +69,7 @@ Then:
 
 ## Parked runs
 
-After 20 minutes waiting on a question the run parks: *"After 20 minutes the agent parks and resumes later with --resume"* (drawio life-of-a-step beat H). The resume is a new CLI process. Whether it is a new `runs` row or continues the parked one decides whether a resumed run's cost is one figure or two. PRD §5 has `parked` as a run state, which reads as the same row. See [[Ask Park And Resume]].
+After 20 minutes waiting on a question the run parks: *"After 20 minutes the agent parks and resumes later with --resume"* (drawio life-of-a-step beat H). The resume is a new run: PRD §9 *"enqueue[s] a new `start_run`"*, so the parked row and the resumed row each record their own cost. How the two roll up, and whether the resumed total is cumulative over the forked session, is [[Cost And Control Open Questions]] #16. See [[Ask Park And Resume]].
 
 ## Testing at $0
 

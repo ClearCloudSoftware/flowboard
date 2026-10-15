@@ -120,9 +120,9 @@ No mockup, no guide. No layout, empty state, drill-down, or trend axis for *cost
 
 A second gap: recall adds a seventh prompt part of up to 6,000 characters (PRD §7). Those tokens are billed inside the run (**inferred**). Do they count as run cost, or are they memory's cost? If they count as run cost, the *net* figure never sees them. Same as [[Memory Open Questions]] #22. See [[Memory Cost Accounting]].
 
-### 16. A resumed run: one cost or two?
+### 16. A resumed run: how do the two costs roll up?
 
-A parked run resumes in a new CLI process (`--resume … --fork-session`). PRD §5 has `parked` as a run state, which suggests the same row. Then two result events, each with its own `total_cost_usd`, land on one row. Are they added? Is the second total cumulative over the fork? Not specified. See [[Ask Park And Resume]].
+A resume is a new run: *"When the last required answer arrives, enqueue a new `start_run` that resumes with `--resume <claude_session_id> --fork-session`"* (PRD §9). The parked run keeps its row in state `parked`, so there is one row per process, each with its own `total_cost_usd` (see [[Execution State Machines]]). Not specified: whether the resumed run's total covers only its own process or is cumulative over the forked session, so that summing the two rows double-counts; how the step's and the task's cost add the parked and resumed rows together; and whether either counts toward `max_attempts` or could be flagged wasted. See [[Ask Park And Resume]], [[Human In The Loop Open Questions]] #38 (fork or prompt replay) and #42 (what a resume carries, including cost).
 
 ### 17. Flagging wasted after the fact
 
