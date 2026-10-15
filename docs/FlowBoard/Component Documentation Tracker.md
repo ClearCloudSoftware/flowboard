@@ -20,7 +20,7 @@ Siblings of the Capability Library on the drawio *Functional components* page.
 | ✅ | [[Monitor Index\|Monitor]] | Status at a glance, needs-you, worker slots, burn / today / wasted, pulse, timeline and pipeline views, live run viewer | `monitor` (the live run viewer has no mockup) | §5 The board, §9 Live run viewer (also §8, §13, §18) | #4 Board projection, #8 Event stream & live viewer (also #7, #12) |
 | ✅ | [[Task Detail Index\|Task Detail]] | One task's whole story: timeline, artifacts, cost | `task-detail` | §3 Tasks, §15 Artifacts | #11 Artifact store & workspace |
 | ⬜ | Execution | Start, run a step, advance, rework loop, split and join, stop | partial (via task detail) | §4 The engine, §7 The runner, §8 The work queue | #3 Flow execution engine, #6 Runner, #7 Job queue & worker lifecycle |
-| ⬜ | Cost And Control | Live cost, rollups, wasted spend, draft mode | — | §18 Cost tracking | #12 Cost & usage ledger + PricingService |
+| ✅ | [[Cost And Control Index\|Cost And Control]] | Live cost, rollups, wasted spend, draft mode | — | §18 Cost tracking | #12 Cost & usage ledger + PricingService |
 | ⬜ | Escalation And Notifications | Slack escalation, signed inbound, resolve everywhere | — | §13 Notifications | #10 Notifier port |
 | ⬜ | Intake And Import | Backlog import, create task, promote, seed project | — | §17 Importing work | #14 TaskSource port |
 | ⬜ | Memory | Recall, distil, four scopes, off by default | — | §21 Memory | #16 MemoryStore port (`09-memory.md`) |
