@@ -54,8 +54,13 @@ Copy the prompt below into Claude Code from the repo root. Replace `{{COMPONENT}
 Generate the documentation set for the FlowBoard component "{{COMPONENT}}" in the
 Obsidian vault at docs/FlowBoard/, the same way the Capability Library set was made.
 
-1. Branch. Create feature/{{component-kebab-case}} off dev. Commit only the files
-   you create; leave any other uncommitted changes in the working tree alone.
+1. Worktree. Do this component's work in its own git worktree, never in the main
+   checkout, so several components can be documented in parallel:
+     git worktree add .claude/worktrees/{{component-kebab-case}} \
+       -b feature/{{component-kebab-case}} dev
+   Run every later step, edit and commit from inside that worktree. Do not switch
+   branches in the main checkout. Leave the worktree in place when you finish so
+   the branch can be reviewed.
 
 2. Gather every source that mentions the component. Look the component up in
    docs/FlowBoard/Component Documentation Tracker.md for its mockup, feature-map
@@ -101,7 +106,8 @@ Obsidian vault at docs/FlowBoard/, the same way the Capability Library set was m
    status to ✅ and link its name to its index note, e.g. [[{{COMPONENT}} Index|{{COMPONENT}}]].
 
 6. Commit with: docs: {{COMPONENT}} notes in the Obsidian vault
-   Do not push. Report the branch, commit, note list, and anything you inferred.
+   Do not push. Report the worktree path, branch, commit, note list, and anything
+   you inferred.
 ```
 
 ## Related
