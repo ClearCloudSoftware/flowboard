@@ -33,7 +33,7 @@ Cross-cutting pieces under every functional component. Better documented as arch
 | ------ | --------------------- | ----------------------------------------------------------------------------------- | -------------------------- | ---------------------------------- |
 | ⬜      | Agent Providers       | AgentProvider port, capability negotiation, logical models, Claude / Codex / replay | §6 Agent providers         | #5 AgentProvider, `01-ports.md`    |
 | ⬜      | Sandboxing            | Container, egress allowlist, mounts, in-agent hooks                                 | §10 Sandboxing             | `08-sandboxing.md`                 |
-| ⬜      | Workspaces            | Git worktree per task, branches, cleanup                                            | §14 Workspaces             | #11 Workspace port                 |
+| ✅      | [[Workspaces Index\|Workspaces]] | Git worktree per task, branches, cleanup                                            | §14 Workspaces             | #11 Workspace port                 |
 | ⬜      | Projects              | Projects, repos, check command, visibility                                          | §1 Projects                | #1 Domain model & migrations       |
 | ⬜      | Settings And Plumbing | Settings, draft mode, API surface, DB, migrations                                   | §19 Settings, §20 Plumbing | #15 Settings, draft mode, API · #1 |
 
