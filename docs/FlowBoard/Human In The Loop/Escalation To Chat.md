@@ -25,7 +25,7 @@ The full Notifier component has its own tracker row (*Escalation And Notificatio
 
 | Waiting time | Card meta (mockup) |
 |---|---|
-| Below *threshold − 3 min* | `waited 7m 12s` |
+| Below *threshold − 3 min* | `waited 5m 00s` (no chip) |
 | In the last 3 minutes | `escalates in 2m 14s · waited …` (grey chip): *"still only here"* |
 | Past the threshold | `escalated · waited …` (amber chip): *"also in chat now"* |
 
@@ -60,6 +60,7 @@ sequenceDiagram
     C->>N: updateResolved(ref, by)
   else answered in Slack
     N->>C: signed interaction → answer (same path)
+    C->>N: updateResolved(ref, by)
     C-->>W: SSE pushes the change, card closes
   end
 ```
