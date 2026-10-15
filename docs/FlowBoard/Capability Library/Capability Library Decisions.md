@@ -45,7 +45,7 @@ The v1 design, settled in a grilling session on 2026-10-15 that worked through [
 |---|---|---|
 | D14 | **A run mounts only what the step names**: the plugin of the step's skill, plus the step's `extra_plugin_ids`. Agent steps mount only their extras. Mounts are read-only into the container. PRD §7 mounts every installed plugin into every run; this overrides it. | OQ15 |
 | D15 | **Host tier fails closed for git-sourced plugins.** Without Docker, a step whose plugins (skill or extras) came from a git URL does not run. Seeds still run on the host tier. | — |
-| D16 | **Skills are invoked fully qualified**: `/<plugin>:<slug>`, which is how Claude Code namespaces plugin skills. Two plugins may both ship `code-review`. Add to backlog Story 0.1 (probe the CLI): confirm the qualified form invokes reliably in headless `-p` mode. | — |
+| D16 | **Skills are invoked fully qualified**: `/<plugin>:<slug>`, which is how Claude Code namespaces plugin skills. Two plugins may both ship `code-review`. Backlog Story 0.1 (probe the CLI) confirms the qualified form invokes reliably in headless `-p` mode — open question 19. | — |
 
 ## Removal and usage
 
@@ -92,7 +92,7 @@ The source documents were brought in line with these decisions on 2026-10-15:
 
 Still open:
 
-- **Seed renames (D22)** are not applied to the PRD's seed flow (§15) or backlog Story 1.2, because `explain-simply`, `backlog-importer` and the research agents are still undecided — see [[Seeded Capabilities]].
+- **Seed renames (D22)** are not applied to the PRD's seed flow (§15) or backlog Story 1.2, because `explain-simply`, `backlog-importer` and the research agents are still undecided — open question 18.
 - Drift from OQ17 that the decisions do not touch: the drawio *Prompt builder* memory order, and `tool_hooks` missing from `agent-provider.ts`. The `--add-dir`, eight-step and git-remote drift was fixed in commits `198e7de` and `c4b01fd`.
 
 ## Related

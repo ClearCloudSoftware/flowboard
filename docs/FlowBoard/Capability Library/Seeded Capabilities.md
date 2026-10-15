@@ -31,7 +31,7 @@ How seeds are delivered:
 - Seeded agents are read-only, with **Duplicate to edit** (D21).
 
 > [!question] Not settled by D22
-> `explain-simply` (the seed flow's approval step), the builtin `backlog-importer`, and the research agents of the second flow template (`web-researcher`, `research-summarizer`, `fact-checker`) were not discussed. Decide them when writing the seed flows.
+> `explain-simply` (the seed flow's approval step), the builtin `backlog-importer`, and the research agents of the second flow template (`web-researcher`, `research-summarizer`, `fact-checker`) were not discussed. Decide them when writing the seed flows — tracked as [[Capability Library Open Questions#18. Which seeds does D22 leave out?|open question 18]].
 
 ## v1 seed (PRD §15, backlog Story 1.2)
 

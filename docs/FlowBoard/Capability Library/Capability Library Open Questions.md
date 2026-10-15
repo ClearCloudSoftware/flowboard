@@ -110,8 +110,27 @@ The harness diagram mounts `ro skills/ → /skills`. `08-sandboxing.md` says *mo
 - The drawio *Prompt builder* puts recalled memory after the headless instruction; PRD §7 and `09-memory.md` put it before.
 - `01-ports.md` adds the `tool_hooks` flag; `agent-provider.ts` lacks it.
 
+## 18. Which seeds does D22 leave out?
+
+> [!question] **Open.** Raised by the 2026-10-15 session.
+
+D22 settles the seed set as mockup names with the PRD's contract skills, but four PRD/backlog seeds were never discussed:
+
+- `explain-simply`: the seed flow's `explain` step, an **approval** step. Keep it, or cover the step with another skill or agent?
+- `backlog-importer`: the builtin agent behind markdown backlog import (Story 7.3). It is needed whatever the library decides, so the only question is its name and whether it is a seed like the others.
+- `web-researcher`, `research-summarizer`, `fact-checker`: the agents of backlog Story 1.2's second flow template. Rename them to fit the mockup roles (`scout`, `scribe`…), or keep them as their own roles?
+
+Until this is decided, the PRD seed flow (§15) and backlog Story 1.2 keep their original names. See [[Seeded Capabilities]].
+
+## 19. Does `/<plugin>:<slug>` invoke reliably in headless mode?
+
+> [!question] **Open — needs a probe, not a decision.** Tracked in backlog Story 0.1.
+
+D16 invokes every plugin skill fully qualified, because Claude Code namespaces plugin skills and two plugins may ship the same slug. Nothing yet confirms that `claude -p` with `--plugin-dir` resolves `/<plugin>:<slug>` in the prompt the way interactive mode does. If it doesn't, the fallback is D16's rejected option: bare `/slug`, with slugs unique per project and colliding installs refused. That would put a `UNIQUE (project_id, slug)` constraint back on `skills`. See [[Capability Runtime Mounting]].
+
 ## Related
 
 - [[Capability Library Decisions]]
+- [[Seeded Capabilities]]
 - [[Capability Library Index]]
 - [[Capability Library Roadmap]]
