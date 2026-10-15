@@ -90,7 +90,7 @@ Inferred from PRD §5's columns, PRD §7's command and the `RunSpec` fields; no 
 | `agents.system_prompt` | none (`--append-system-prompt`) |
 | `tasks.capability_pins`, `step_defs.extra_plugin_ids` | `capabilities` |
 | `tasks.worktree_path` | `cwd` |
-| `settings` `sandbox_profile`, `step_defs.sandbox_profile` (PRD §11.1; backlog 1.1) | `exec` (via `workspace.execHost(task)`) |
+| `settings` `sandbox_profile` (PRD §11.1, *"overridable per step"*), `step_defs.sandbox_profile` (backlog 1.1) | `exec` (via `workspace.execHost(task)`) |
 | `settings` draft mode | applied as a `SpecTransform` |
 
 > [!note] No provider column anywhere

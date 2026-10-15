@@ -52,9 +52,6 @@ No table is written out; where it lives (adapter code, settings, DB) and what an
 ### 13. Draft mode target
 `haiku`/`low` (PRD §13, drawio, backlog) vs `fast-cheap`/`low` (`06` §15). See [[Execution Open Questions]] #45. → [[Draft Mode And Spec Transforms]]
 
-### 29. Effort on other providers
-`Effort` adds `xhigh` and `max`; the flow-designer mockup offers `low`/`medium`/`high` (also [[Flow Design Open Questions]] #15). How effort maps to Codex is unstated. → [[Logical Model Ids]]
-
 ## Choosing a provider
 
 ### 14. How does a step pick its provider?
@@ -100,6 +97,19 @@ Backlog 0.1 **DEC**: empty `--settings` or `CLAUDE_CONFIG_DIR`. D5 recommends *"
 ### 26. Capability data at design time
 Validation and greying happen in `apps/web` and the browser; providers are adapters core may not import; PRD §12 has no capabilities route. **Proposal:** static capability descriptors per provider id in `core/ports`. → [[Capability Negotiation]], [[Agent Providers API And Routes]]
 
+## Minor
+
+### 27. "Three members"
+`07` says *"the same three members"* and lists four. → [[AgentProvider Port]]
+
+### 28. Gemini CLI
+Named once (architecture README table), nowhere else. → [[Adding A Provider]]
+
+## Models and environment, continued
+
+### 29. Effort on other providers
+`Effort` adds `xhigh` and `max`; the flow-designer mockup offers `low`/`medium`/`high` (also [[Flow Design Open Questions]] #15). How effort maps to Codex is unstated. → [[Logical Model Ids]]
+
 ### 30. Re-attaching after restart
 Restart recovery re-attaches by pid (`03` §7), but the port only gives a stream through `launch()`. How a new worker re-reads a live process's output is unstated. Same as [[Execution Open Questions]] #31. → [[Agent Providers Runtime]]
 
@@ -124,14 +134,6 @@ Labelled in place, listed here so none reads as sourced: which component consume
 
 ### 36. Agent calls outside a step
 The backlog's import agent (Story 7.3: *"haiku, `--tools ""`"*, *"Isolate the importer from global hooks"*) is a Claude call with no step. Whether it goes through the `AgentProvider` port is [[Intake And Import Open Questions]] #12. → [[Provider Boundary Rules]]
-
-## Minor
-
-### 27. "Three members"
-`07` says *"the same three members"* and lists four. → [[AgentProvider Port]]
-
-### 28. Gemini CLI
-Named once (architecture README table), nowhere else. → [[Adding A Provider]]
 
 ## Related
 
