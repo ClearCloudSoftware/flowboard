@@ -15,7 +15,7 @@ Workspaces add no table. They use a few columns on existing tables, a settings k
 | `tasks.branch_name` | `TEXT` | the task's branch; nullable, so presumably null until created *(inference)* | PRD §5, §11 |
 | `tasks.worktree_path` | `TEXT` | the task's folder; every run's `cwd` | PRD §5, §11 |
 | `tasks.status` | `TEXT NOT NULL` | decides when cleanup may be offered | PRD §5 |
-| `tasks.flow_id` | `TEXT` | *"null while in backlog, pinned on promotion"*, the same moment the worktree is made | PRD §5 |
+| `tasks.flow_id` | `TEXT` | *"null while in backlog, pinned on promotion"* (PRD §5, also PRD §12 and backlog 2.1), the same moment the worktree is made. PRD §4 (*"version-pinned at task start"*), the architecture README (*"a task pins its version at start"*), the drawio (*Start task / pin flow version*) and feature map §3 pin at **start** instead. See [[Workspaces Open Questions]] #1 and [[Flow Design Open Questions]] #7 | PRD §4, §5, §12; backlog 2.1; architecture README; drawio; feature map §3 |
 | `artifacts.path` | `TEXT NOT NULL` | *"absolute path on disk"*, inside the worktree | PRD §5 |
 | `runs.sandbox` | — | *"records the tier that actually ran"* | PRD §11.1, backlog 1.1, drawio *SQLite* card (*"runs (… sandbox)"*) |
 | `step_defs.sandbox_profile` | — | *"an optional `step_defs.sandbox_profile` override"* | backlog 1.1 (**NEW**) |
