@@ -5,6 +5,9 @@ module: Capability Library
 
 # Bundle Packs
 
+> [!check] Deferred: not in v1
+> v1 has no bundle packs ([[Capability Library Decisions|D3]]). Seeds ship from FlowBoard's own repo instead of a Delivery pack. The nearest v1 equivalent is a **plugin** ([[Capability Library Decisions|D4]]): one git repo installed as one unit, whose skills are all installed, updated and removed together. This note describes the designed bundle for later.
+
 A **bundle pack** (kind `pack`) is skills, agents and flows bundled and shareable as one installable unit. The drawio names the function *"Bundle capability pack — skills + agents + flows as one unit"*.
 
 > [!note] Not a provider pack
@@ -42,6 +45,7 @@ The feature map extends bundle packs into **role starter packs**: one per functi
 
 ## Related
 
+- [[Capability Library Decisions]]
 - [[Capability Kinds]]
 - [[Seeded Capabilities]]
 - [[Capability Library Roadmap]]

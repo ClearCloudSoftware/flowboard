@@ -10,25 +10,29 @@ The Capability Library is the FlowBoard module that holds the reusable building 
 > [!important] The one idea to get right first
 > A **capability** is the logical thing a step asks for (`code-review`). A **provider pack** is one packaging of that capability for one agent CLI (a Claude plugin directory, a Codex config). Almost everything unusual about the library follows from that split. See [[Capability Versus Provider Pack]].
 
+> [!check] v1 is decided
+> The v1 design was settled on 2026-10-15: Claude-only, the **plugin** as the unit of install, a per-project store, and tasks that pin capability versions. Read [[Capability Library Decisions]] before the rest — the notes below mark where v1 departs from the sources.
+
 ## Start here
 
 - [[Capability Library Overview]] — what the module is for and where it sits in FlowBoard
 - [[Capability Versus Provider Pack]] — the core concept
 - [[Capability Library Glossary]] — terms, including the two meanings of "pack"
+- [[Capability Library Decisions]] — the v1 design, D1–D24
 
 ## The three kinds
 
 - [[Capability Kinds]] — skill vs agent vs bundle, side by side
 - [[Skill Capabilities]] — packaged instructions invoked like slash commands
 - [[Agent Capabilities]] — named roles with a prompt, model, effort and tools
-- [[Bundle Packs]] — skills, agents and flows installed as one unit
+- [[Bundle Packs]] — skills, agents and flows installed as one unit (deferred)
 
 ## Behaviour and rules
 
-- [[Provider Coverage And Portability]] — Claude vs Codex packs, and why a step can refuse a capability
+- [[Provider Coverage And Portability]] — Claude vs Codex packs, and why a step can refuse a capability (deferred)
 - [[Capability Tools And Egress]] — declared tools, network-capable tools, and the sandbox allowlist
 - [[Installing A Capability From GitHub]] — clone, parse, check, confirm
-- [[Updating And Removing Capabilities]] — version pinning asymmetry and blocked removal
+- [[Updating And Removing Capabilities]] — task pins, update preview and blocked removal
 - [[Capabilities In Flows]] — how steps reference capabilities and how validation uses them
 
 ## The screen
@@ -47,5 +51,5 @@ The Capability Library is the FlowBoard module that holds the reusable building 
 
 - [[Seeded Capabilities]] — the starter set that ships with FlowBoard
 - [[Capability Library Roadmap]] — v1 scope, later ideas, and what is out of scope
-- [[Capability Library Open Questions]] — places where the sources disagree
+- [[Capability Library Open Questions]] — places where the sources disagree, each with its outcome
 - [[Capability Library Sources]] — where every fact in these notes comes from

@@ -5,6 +5,9 @@ module: Capability Library
 
 # Provider Coverage And Portability
 
+> [!check] Deferred: not in v1
+> v1 is Claude-only ([[Capability Library Decisions|D1]]). The coverage counter, provider filter, per-provider packs block and provider-match check below are not built until a second provider arrives. This note describes the designed behaviour for that point.
+
 ## The rule
 
 **A pack's provider has to match the step's provider.** A capability with no Claude pack cannot run on a Claude step, and vice versa. Steps name their provider individually, so one flow can mix providers.
@@ -16,7 +19,7 @@ The architecture states the same rule as validation: *"the flow editor reference
 **In the flow editor, at design time — not at run time.** You find out while designing, not when a task is halfway through.
 
 > [!warning] Blocking in the mockup, a warning in the ports doc
-> The capability-library mockup and guide say a step set to run on Codex CLI can't use a capability with no Codex pack, and the flow editor refuses to save that combination. `01-ports.md` calls a capability-contract violation a design-time **warning**; only the artifact contract rejects the save (`02-core-and-engine.md`). `05` gives the provider-match check no severity, and the flow-designer mockup does not implement it. Undecided — see [[Capability Library Open Questions]] #13.
+> The capability-library mockup and guide say a step set to run on Codex CLI can't use a capability with no Codex pack, and the flow editor refuses to save that combination. `01-ports.md` calls a capability-contract violation a design-time **warning**; only the artifact contract rejects the save (`02-core-and-engine.md`). `05` gives the provider-match check no severity, and the flow-designer mockup does not implement it. Moot in v1; decide when the second provider arrives (OQ13).
 
 ## How the library shows it
 
@@ -50,6 +53,7 @@ None of these is a workaround — they are the three honest options.
 
 ## Related
 
+- [[Capability Library Decisions]]
 - [[Capability Versus Provider Pack]]
 - [[Capabilities In Flows]]
 - [[Capability Runtime Mounting]]

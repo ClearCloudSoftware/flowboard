@@ -17,7 +17,10 @@ The Claude pack of a skill is a **plugin directory**:
   skills/<slug>/SKILL.md
 ```
 
-It is mounted with `--plugin-dir <dir>` and invoked as `/<slug>`. The rebuild backlog records a hard lesson here: **`--add-dir` does not register skills; `--plugin-dir` does** (backlog Story 0.1, a FIX item; the backlog intro lists the same lesson under "Environment leaks"). Install adds `.claude-plugin/plugin.json` when a repository lacks one.
+It is mounted with `--plugin-dir <dir>` and invoked as `/<slug>`.
+
+> [!check] v1: the plugin is the unit, skills are qualified
+> A skill belongs to a **plugin** — the repository it was installed from — and is installed, updated and removed with it ([[Capability Library Decisions|D4]]). A plugin may ship several skills under `skills/`. Skills are invoked fully qualified, `/<plugin>:<slug>`, which is how Claude Code namespaces plugin skills, so two plugins may ship the same slug (D16). Hooks, agents, commands and `.mcp.json` in the plugin are mounted as-is (D8). The rebuild backlog records a hard lesson here: **`--add-dir` does not register skills; `--plugin-dir` does** (backlog Story 0.1, a FIX item; the backlog intro lists the same lesson under "Environment leaks"). Install adds `.claude-plugin/plugin.json` when a repository lacks one.
 
 ## The SKILL.md manifest
 
@@ -48,12 +51,12 @@ allowed-tools: Read, Bash, WebFetch
 
 ## How a step uses a skill
 
-In the run's prompt, slot 4 of the prompt builder is the slash invocation (`/grill-me`). The step's `prompt_template` follows in slot 5. See [[Capability Runtime Mounting]].
+In the run's prompt, slot 4 of the prompt builder is the slash invocation (`/grill-me:grill-me` in v1; the PRD writes `/grill-me`). The step's `prompt_template` follows in slot 5. See [[Capability Runtime Mounting]].
 
 ## Detail pane
 
 - **SKILL.md** — the manifest, syntax-highlighted; network tools in amber
-- **invoked as** — `/code-review`
+- **invoked as** — `/code-review` (v1: `/<plugin>:code-review`)
 - **format** — `Claude plugin dir — .claude-plugin/plugin.json + skills/<slug>/SKILL.md`
 - **tools it may use**, **source** (repository + commit), **used by**
 
@@ -71,6 +74,7 @@ In the run's prompt, slot 4 of the prompt builder is the slash invocation (`/gri
 
 ## Related
 
+- [[Capability Library Decisions]]
 - [[Capability Kinds]]
 - [[Installing A Capability From GitHub]]
 - [[Seeded Capabilities]]

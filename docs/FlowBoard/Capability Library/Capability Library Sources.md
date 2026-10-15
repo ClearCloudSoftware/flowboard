@@ -10,6 +10,10 @@ Every fact in these notes comes from the files below (paths relative to the repo
 > [!note] Working tree, not HEAD
 > When these notes were checked (2026-10-15), the PRD, backlog, feature map, several architecture docs and the drawio had uncommitted edits — the whole *Harness architecture* drawio page among them. The notes follow the working tree.
 
+## Decisions
+
+[[Capability Library Decisions]] records the v1 design settled in a grilling session on 2026-10-15. It is not grounded in a file; where it overrides a source below, the notes say so and cite the decision number (D1–D24).
+
 ## Primary
 
 | File | What it contributes |

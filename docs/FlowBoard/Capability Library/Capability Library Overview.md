@@ -30,25 +30,27 @@ In the logical-components diagram it appears as *Skills & agents — install, ed
 
 | Function | Summary | Note |
 |---|---|---|
-| Install a skill from GitHub | Clone, parse `SKILL.md`, review, confirm | [[Installing A Capability From GitHub]] |
+| Install a plugin from git | Clone any git URL, parse its skills, review, confirm | [[Installing A Capability From GitHub]] |
 | Define an agent | Prompt, default model, default effort, allowed tools | [[Agent Capabilities]] |
-| Bundle a capability pack | Skills + agents + flows as one installable unit | [[Bundle Packs]] |
-| Show provider coverage | Which agent CLIs each capability is packaged for | [[Provider Coverage And Portability]] |
-| Flag network-capable tools | Mark tools that interact with egress | [[Capability Tools And Egress]] |
-| Update | Move to a newer upstream commit | [[Updating And Removing Capabilities]] |
+| Bundle a capability pack | Skills + agents + flows as one installable unit — *deferred (D3)* | [[Bundle Packs]] |
+| Show provider coverage | Which agent CLIs each capability is packaged for — *deferred (D1)* | [[Provider Coverage And Portability]] |
+| Flag network-capable tools | Mark tools, MCP servers and hooks that interact with egress | [[Capability Tools And Egress]] |
+| Update | Check on demand, preview added and removed skills, move to a newer commit | [[Updating And Removing Capabilities]] |
 | Remove | Delete, blocked while any step uses it | [[Updating And Removing Capabilities]] |
 | Show usage | "Used by" — which flows and steps draw on it | [[Capabilities In Flows]] |
 
 ## Design principles
 
-- **Local-first.** Installing clones into a capability store on your machine. Nothing is fetched at run time.
+- **Local-first.** Installing clones into the project's capability store (`<project>/.flowboard/skills/`). Nothing is fetched at run time.
+- **A task never sees a capability change.** It pins the plugin commits and agent rows it started with (D10).
 - **Provider-agnostic core, provider-specific packaging.** The step names a logical capability; an adapter mounts the provider's packaging of it.
 - **Preview before write.** Install shows the parsed manifest and requested tools before anything is written.
 - **Additive by default.** Install, update and define are additive or reversible (re-install from the same commit). Remove is the only destructive action, and the only one the screen refuses outright.
-- **Installing grants nothing.** A capability *declares* the tools it wants; the step's sandbox still decides what it gets.
+- **Installing grants nothing.** A capability *declares* the tools it wants; the step's sandbox still decides what it gets. Plugin contents are mounted as-is (D8), which is why git-sourced plugins never run outside the sandbox (D15).
 
 ## Related
 
+- [[Capability Library Decisions]]
 - [[Capability Library Index]]
 - [[Capability Versus Provider Pack]]
 - [[Capability Library Screen]]

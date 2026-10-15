@@ -9,6 +9,30 @@ FlowBoard ships with a starter set so the sample recipes work out of the box (fe
 
 The sources give **two different starter sets**. The PRD/backlog set is what v1 was specified to seed; the mockup set is the newer design's catalogue.
 
+## v1 seed set (decided)
+
+[[Capability Library Decisions|D22]]: **mockup names, PRD contracts.** The roles take the mockup's names; the skills that encode engine contracts stay, because they double as test fixtures for the question loop (M4) and the flow engine (M5).
+
+| Kind | Seed | Why it is in the set |
+|---|---|---|
+| agent | `scout`, `architect`, `developer`, `tester`, `reviewer`, `scribe` | Mockup roles |
+| skill | `grill-me` | Contract: uses `ask_user_batch`, honours `no_answer_yet` |
+| skill | `code-review` | Contract: must call `set_outcome` |
+| skill | `ask-three` | M4 smoke test |
+| skill | `ponytail` | The seed flow's `implement` step stays this skill, not the `developer` agent — a step is `skill` or `agent`, never both |
+| skill | `plan-implementation` | Mockup |
+
+How seeds are delivered:
+
+- They live in FlowBoard's own repo as plugin dirs (backlog Story 1.2 layout) and seeded agents as files, and are **copied into each project's store** under FlowBoard's commit (D6).
+- A FlowBoard upgrade stages new seed commits as *update available*; nothing changes until you click (D12).
+- Seeds are invoked fully qualified like any plugin skill, e.g. `/grill-me:grill-me` (D16).
+- Seeds run on the host tier; git-installed plugins do not (D15).
+- Seeded agents are read-only, with **Duplicate to edit** (D21).
+
+> [!question] Not settled by D22
+> `explain-simply` (the seed flow's approval step), the builtin `backlog-importer`, and the research agents of the second flow template (`web-researcher`, `research-summarizer`, `fact-checker`) were not discussed. Decide them when writing the seed flows.
+
 ## v1 seed (PRD §15, backlog Story 1.2)
 
 **Skills** — real local skill directories under `./skills/` with a `SKILL.md` each (PRD §15); backlog Story 1.2 makes them plugin dirs (`.claude-plugin/plugin.json` + `skills/<slug>/SKILL.md`). Local, so the question loop (M4) and flow engine (M5) are testable without GitHub:
@@ -43,6 +67,8 @@ The sources give **two different starter sets**. The PRD/backlog set is what v1 
 
 ## Mockup catalogue (Delivery pack)
 
+Bundle packs are deferred (D3), so v1 seeds these from FlowBoard's repo rather than as a pack.
+
 Seeded via the **Delivery pack** (claude 1.0, codex 0.5, from `github.com/flowboard/capabilities` @ `a91c4f2`):
 
 - **Skills:** `code-review`, `grill-me`, `plan-implementation`
@@ -64,10 +90,11 @@ Non-seeded examples: Security pack (@team-sec), Marketing pack (@growth), `domai
 | `grill-me` | `grill-me` |
 | `explain-simply`, `ask-three`, `backlog-importer`, `web-researcher`, `research-summarizer`, `fact-checker` | — |
 
-This mapping is an interpretation by role, not stated in the sources. See [[Capability Library Open Questions]].
+This mapping is an interpretation by role, not stated in the sources. D22 adopts the mockup names except `ponytail`, which stays a skill.
 
 ## Related
 
+- [[Capability Library Decisions]]
 - [[Skill Capabilities]]
 - [[Agent Capabilities]]
 - [[Bundle Packs]]

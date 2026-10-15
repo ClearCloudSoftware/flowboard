@@ -17,11 +17,23 @@ From the feature map (§16 *The library*), the PRD milestone **M7 — Library an
 - [ ] Show stored frontmatter or stop storing it (backlog GAP)
 - [ ] One error-handling style for agent create and update (backlog BUG)
 
+Settled on 2026-10-15 ([[Capability Library Decisions]]), v1 also takes on:
+
+- [ ] **Plugins as the unit of install**, from any git URL, into `<project>/.flowboard/skills/<plugin>/<commit>/` (D4, D5, D7)
+- [ ] **Task capability pins** and commit-dir garbage collection (D10, D11)
+- [ ] **Check for updates**, update preview with added/removed skills, refusal when an in-use skill is dropped (D13, D19)
+- [ ] Mount only the step's plugins, read-only; fail closed on the host tier for git plugins (D14, D15)
+- [ ] Fully qualified invocation `/<plugin>:<slug>` — verify in backlog Story 0.1 (D16)
+- [ ] Amber for `.mcp.json` / `hooks/` (D9)
+- [ ] **Duplicate to edit** for seeded agents (D21)
+
 M7 and Epic 7 also cover markdown backlog import (Story 7.3). That half is not a library feature and is left out here.
 
 Prerequisite already found the hard way: `--plugin-dir`, not `--add-dir`, registers `/slug` (backlog Story 0.1 *Probe the CLI*, FIX — verify before building).
 
 ## Designed in the mockup, beyond the PRD
+
+Of these, v1 builds the single screen, preview-before-install, amber marks, update detection (manual, D13), used-by and blocked removal. Provider packs and the coverage ratio (D1) and bundle packs (D3) are deferred.
 
 - Single library screen for skills, agents and packs
 - **Provider packs** per capability and the Codex coverage ratio
@@ -53,6 +65,7 @@ The harness diagram shows *Knowledge assets (later)* next to the capability libr
 
 ## Related
 
+- [[Capability Library Decisions]]
 - [[Capability Library Overview]]
 - [[Capability Library Open Questions]]
 - [[Seeded Capabilities]]

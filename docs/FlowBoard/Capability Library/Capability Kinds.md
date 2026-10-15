@@ -7,6 +7,9 @@ module: Capability Library
 
 The library holds three kinds of capability. The rail groups by kind, and the kind filter narrows to one.
 
+> [!check] v1 has two kinds
+> v1 ships `skill` and `agent` only; `pack` is deferred ([[Capability Library Decisions|D3]]). Skills arrive inside a **plugin**, the unit of install (D4): a plugin row carries the source and commit, and its skills hang off it. Agents are defined in the library or seeded from FlowBoard's repo.
+
 | Kind | Is | Carries | Reach for it when |
 |---|---|---|---|
 | `skill` | A packaged instruction, invoked like a slash command | A `SKILL.md` declaring what it does, what it produces, and the tools it may use | A step needs a repeatable **procedure** — review this diff, scan for secrets, write a plan |
@@ -31,7 +34,7 @@ In the detail header each kind has a chip:
 | Prompt | — | yes | — |
 | Contains (skills / agents / flows) | — | — | yes |
 | Tools it may use | yes | yes | — |
-| Source (repository, commit) | yes | — (the record has none; a pack it came in carries the source) | yes |
+| Source (repository, commit) | yes — the plugin's | — (the record has none; a pack it came in carries the source) | yes |
 | Used by | per step | per step | whole pack |
 
 ## Related
