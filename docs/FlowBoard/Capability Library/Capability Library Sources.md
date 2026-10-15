@@ -12,7 +12,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 
 ## Decisions
 
-[[Capability Library Decisions]] records the v1 design settled in a grilling session on 2026-10-15. It is not grounded in a file; where it overrides a source below, the notes say so and cite the decision number (D1–D24). The PRD, backlog, `.gitignore` and `08-sandboxing.md` were then updated to match, so notes that cite them describe the corrected text.
+[[Capability Library Decisions]] records the v1 design settled in a grilling session on 2026-10-15. It is not grounded in a file; where it overrides a source below, the notes say so and cite the decision number (D1–D31). The PRD, backlog, `.gitignore` and `08-sandboxing.md` were then updated to match, so notes that cite them describe the corrected text.
 
 ## Primary
 

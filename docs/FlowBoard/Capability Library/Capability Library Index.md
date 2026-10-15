@@ -18,7 +18,7 @@ The Capability Library is the FlowBoard module that holds the reusable building 
 - [[Capability Library Overview]] — what the module is for and where it sits in FlowBoard
 - [[Capability Versus Provider Pack]] — the core concept
 - [[Capability Library Glossary]] — terms, including the two meanings of "pack"
-- [[Capability Library Decisions]] — the v1 design, D1–D24
+- [[Capability Library Decisions]] — the v1 design, D1–D31
 
 ## The three kinds
 

@@ -84,7 +84,7 @@ Get these three distinctions right; everything else follows.
 
 **Flow** — a versioned DAG of step definitions belonging to a project. Editing a flow creates a new version rather than mutating the old one.
 
-**Step definition** — a node in the flow. "Code review, Sonnet, high effort, waits for my approval." Belongs to a flow version.
+**Step definition** — a node in the flow. "Code review, Sonnet, high effort, waits for my approval." Belongs to a flow version. An AI step names an **agent** (who does the work: a system prompt and defaults), a **skill** (how: a slash command), or both — "the `reviewer` running `/code-review`".
 
 **Step instance** — one task's occupancy of one step definition. Has state and artifacts.
 
@@ -128,7 +128,7 @@ CREATE TABLE step_defs (
   flow_id        TEXT NOT NULL REFERENCES flows(id) ON DELETE CASCADE,
   key            TEXT NOT NULL,          -- stable slug, e.g. "code_review"
   name           TEXT NOT NULL,          -- column header, e.g. "Code review"
-  kind           TEXT NOT NULL,          -- 'skill' | 'agent' | 'shell' | 'manual'
+  kind           TEXT NOT NULL,          -- 'ai' | 'shell' | 'manual'; an 'ai' step sets skill_id, agent_id or both
   command        TEXT,                   -- kind='shell' only; null = the project's check_command
   skill_id       TEXT REFERENCES skills(id),
   agent_id       TEXT REFERENCES agents(id),
@@ -356,12 +356,12 @@ claude -p "<prompt>"
   --strict-mcp-config
   --plugin-dir <dir of each plugin the step names: its skill's plugin + extra_plugin_ids>
   [--allowedTools ...]  [--max-turns N]  [--max-budget-usd N]
-  [--append-system-prompt <agent.system_prompt, for kind='agent'>]
+  [--append-system-prompt <agent.system_prompt, when the step names an agent>]
 ```
 
 Run with `cwd` set to the task's worktree path. `--strict-mcp-config` is important: it stops my personal MCP config leaking into runs and keeps them reproducible.
 
-Use `--plugin-dir`, not `--add-dir`: only `--plugin-dir` registers a plugin's skills; `--add-dir` merely grants file access. Mount only the plugins the step names, never every installed one: plugins are mounted as-is, hooks and MCP servers included, so they should run only where a step asked for them. Each plugin dir is the commit recorded in the task's `capability_pins`, not the currently installed one, so an update never reaches a running task; agent rows are pinned the same way. When `--allowedTools` is set, always append `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`. Snapshot the final args to `data/runs/<id>/args.json`.
+Use `--plugin-dir`, not `--add-dir`: only `--plugin-dir` registers a plugin's skills; `--add-dir` merely grants file access. Mount only the plugins the step names, never every installed one: plugins are mounted as-is, hooks and MCP servers included, so they should run only where a step asked for them. Each plugin dir is the commit recorded in the task's `capability_pins`, not the currently installed one, so an update never reaches a running task; agent rows are pinned the same way. **Allowed tools** are the intersection of the agent's list and the skill's `allowed-tools` (whichever the step names), narrowed further by the step's own `allowed_tools` when set; the flow editor warns at design time when the intersection drops a tool the skill declares, because the agent's restrictions ("reads only") are the role's guarantee. When `--allowedTools` is set, always append `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`. Snapshot the final args to `data/runs/<id>/args.json`.
 
 **In-agent gate (hooks).** The per-run `settings.json` registers Claude Code `PreToolUse` hooks. They are the second mechanical gate: the sandbox limits what *can* happen, and the hooks block what *shouldn't*. The hook denies:
 - writes outside the task's worktree;
@@ -374,7 +374,7 @@ A denial returns its reason to the agent, so it changes course instead of stalli
 1. A short preamble naming the task, its title and body, its acceptance criteria ("the task is done when…") and its non-goals ("do not touch…"). Omit a heading when its field is empty.
 2. A list of input artifacts with their absolute paths, one per `requires` entry, phrased as "read these first".
 3. The exact output path the step should write, one per `produces` entry.
-4. For `kind='skill'`: the slash invocation, fully qualified as `/<plugin>:<slug>`, e.g. `/grill-me:grill-me`. Claude Code namespaces plugin skills, so two plugins may ship the same slug.
+4. When the step names a skill: the slash invocation, fully qualified as `/<plugin>:<slug>`, e.g. `/grill-me:grill-me`. Claude Code namespaces plugin skills, so two plugins may ship the same slug.
 5. The step's `prompt_template` with `{{task_title}}`, `{{task_body}}`, `{{acceptance_criteria}}`, `{{non_goals}}`, `{{artifact:<type>}}` and `{{worktree}}` substituted.
 6. A closing instruction: this is a headless run, there is no terminal to ask into — use the `ask_user` MCP tool for any question.
 
@@ -584,7 +584,7 @@ Dark-first, dense, keyboard-friendly. Use shadcn defaults; do not build a design
 
 **`/runs/[id]` — live session viewer.** Streams the normalised event summaries as they arrive, with tool calls collapsible to show their full input and result. Sticky footer with elapsed time, turn count, running cost. A Stop button that kills the process.
 
-**`/p/[slug]/flow` — flow editor.** A node graph is nice but not required for v1. A vertical list of steps with an "add step" button and a connections panel is acceptable and much faster to build. When adding a step: choose Skill or Agent, pick from installed skills or defined agents, then set model, effort, advance mode, requires, produces, and limits. Show a live validation banner when the artifact contract is unsatisfied.
+**`/p/[slug]/flow` — flow editor.** A node graph is nice but not required for v1. A vertical list of steps with an "add step" button and a connections panel is acceptable and much faster to build. When adding a step: choose an AI, shell or manual step; for an AI step pick an agent, a skill or both (from defined agents and installed skills), then set model, effort, advance mode, requires, produces, and limits. Show a live validation banner when the artifact contract is unsatisfied.
 
 **`/p/[slug]/library` — skills and agents.** One screen per project. Plugins: install from any git URL (GitHub or `file://`), cloned into `<repo_path>/.flowboard/skills/<plugin>/<commit>/` (gitignored, one dir per commit) after a preview of what was found; a plugin is installed, updated and removed as one unit with all its skills. **Check for updates** is manual; an update first previews the skills it adds and removes and is refused if it drops one a step uses. Remove asks for confirmation and is disabled while any step uses the plugin (counting each flow's latest version and any version a running task pins). Mark plugins that ship `.mcp.json` or `hooks/`, and skills that ask for `Bash`, `WebFetch` or `WebSearch`, as network-capable. Agents: a form for name, description, system prompt, default model, default effort, allowed tools; seeded agents are read-only, with a Duplicate to edit action.
 
@@ -629,27 +629,29 @@ Commit after each milestone.
 
 ## 15. Seed data
 
-Seed one project and one flow that reproduces my actual workflow. Steps, in order, with edges:
+Seed one project and one flow, **Software delivery**, that reproduces my actual workflow. Steps, in order, with edges:
 
-| key | name | kind | model | effort | advance | requires | produces |
-|---|---|---|---|---|---|---|---|
-| `research` | Research | agent `researcher` | sonnet | medium | auto | — | `research_brief` |
-| `grill` | Grill me | skill `/grill-me` | sonnet | medium | auto | `research_brief` | `questions`, `answers` |
-| `plan` | Plan | agent `planner` | opus | high | auto | `research_brief`, `answers` | `plan` |
-| `explain` | Explain plan | skill `/explain-simply` | haiku | low | **approval** | `plan` | `explainer` |
-| `implement` | Implement | skill `/ponytail` | opus | high | auto | `plan` | `implementation_notes` |
-| `tests` | Write tests | agent `test-writer` | sonnet | high | auto | `plan` | `test_notes` |
-| `check` | Lint & test | shell (project `check_command`) | — | — | auto | — | `check_output` |
-| `review` | Code review | skill `/code-review` | opus | high | **approval** | `implementation_notes`, `test_notes`, `check_output` | `review` |
-| `summarize` | Summarize built | agent `summarizer` | sonnet | medium | auto | `review` | `summary` |
+| key | name | agent | skill | model | effort | advance | requires | produces |
+|---|---|---|---|---|---|---|---|---|
+| `research` | Research | `scout` | — | sonnet | medium | auto | — | `research_brief` |
+| `grill` | Grill me | — | `/grill-me` | sonnet | medium | auto | `research_brief` | `questions`, `answers` |
+| `plan` | Plan | `architect` | `/plan-implementation` | opus | high | auto | `research_brief`, `answers` | `plan` |
+| `explain` | Explain plan | — | `/explain-simply` | haiku | low | **approval** | `plan` | `explainer` |
+| `implement` | Implement | `developer` | `/ponytail` | opus | high | auto | `plan` | `implementation_notes` |
+| `tests` | Write tests | `tester` | — | sonnet | high | auto | `plan` | `test_notes` |
+| `check` | Lint & test | shell (project `check_command`) | — | — | — | auto | — | `check_output` |
+| `review` | Code review | `reviewer` | `/code-review` | opus | high | **approval** | `implementation_notes`, `test_notes`, `check_output` | `review` |
+| `summarize` | Summarize built | `scribe` | — | sonnet | medium | auto | `review` | `summary` |
+
+**The seeds are exactly what this flow uses** — six agents (`scout`, `architect`, `developer`, `tester`, `reviewer`, `scribe`, read-only in the editor) and five skills (`grill-me`, `plan-implementation`, `explain-simply`, `ponytail`, `code-review`) — so nothing ships unused. `scout` gets `Read, Grep` only: it researches the repo, so the first step of every task never fails closed on egress. `tester` writes tests for the acceptance criteria without touching the implementation; the `check` step runs them.
 
 Edges: `research → grill → plan → explain`. Then `explain → implement` and `explain → tests` (the fan-out). Then `implement → check` and `tests → check` (the join). Then `check → review` on `on_pass` and `check → implement` on `on_fail` (the mechanical loop: the model never gets reviewed on code that doesn't pass). Then `review → summarize` on `on_pass`, and `review → implement` on `on_fail` (the review loop). Seed the scratch project's `check_command` with something that exists in the scratch repo.
 
 The seeded `/code-review` skill reviews the diff against the task's acceptance criteria and non-goals and against the raw `check_output`, and must call `set_outcome`. It is told to look for failures, not to confirm the work.
 
-Also seed a builtin agent **`backlog-importer`** whose job is: given a markdown file path, produce a JSON array of `{ import_key, title, body, acceptance_criteria?, non_goals? }` (the last two from "Acceptance criteria" / "Non-goals" sub-sections when present). Derive `import_key` from front-matter `id` if present, otherwise a slug of the heading. The import endpoint upserts on `(project_id, import_key)` so re-importing an edited file updates existing tasks instead of duplicating them.
+The import endpoint also uses an internal **`backlog-importer`** agent — part of the import feature, not a seed, so it never appears in the library or the step picker. Its job: given a markdown file path, produce a JSON array of `{ import_key, title, body, acceptance_criteria?, non_goals? }` (the last two from "Acceptance criteria" / "Non-goals" sub-sections when present). Derive `import_key` from front-matter `id` if present, otherwise a slug of the heading. The import endpoint upserts on `(project_id, import_key)` so re-importing an edited file updates existing tasks instead of duplicating them.
 
-Write the seeded skills as real local plugin dirs under FlowBoard's `./skills/` with a `SKILL.md` each, so M4 and M5 are testable without any GitHub access. They can be short. Registering a project copies the seeds into its store under FlowBoard's commit; upgrading FlowBoard stages new seed commits as an available update rather than applying them.
+Write the seeded skills as real local plugin dirs under FlowBoard's `./skills/` with a `SKILL.md` each, so M5 is testable without any GitHub access. The M4 three-question skill (`ask-three`) is a test fixture loaded by the test setup, not a seed. They can be short. Registering a project copies the seeds into its store under FlowBoard's commit; upgrading FlowBoard stages new seed commits as an available update rather than applying them.
 
 ---
 

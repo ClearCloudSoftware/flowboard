@@ -112,7 +112,7 @@ The harness diagram mounts `ro skills/ → /skills`. `08-sandboxing.md` says *mo
 
 ## 18. Which seeds does D22 leave out?
 
-> [!question] **Open.** Raised by the 2026-10-15 session.
+> [!check] **Resolved — D25–D31.** The seeds are exactly what the seed flow uses. `explain-simply` stays as the `explain` approval step; `backlog-importer` is internal to import; the research template and its agents are out of v1; `ask-three` is a test fixture. Settling it also let a step name an agent and a skill together (D27). See [[Seeded Capabilities]].
 
 D22 settles the seed set as mockup names with the PRD's contract skills, but four PRD/backlog seeds were never discussed:
 

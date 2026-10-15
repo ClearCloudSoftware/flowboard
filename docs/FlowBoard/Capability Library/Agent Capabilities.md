@@ -5,7 +5,7 @@ module: Capability Library
 
 # Agent Capabilities
 
-An **agent** is a named role — a *who* rather than a *how*. In a step definition it is `kind='agent'` with an `agent_id`.
+An **agent** is a named role — a *who* rather than a *how*. In a step definition it is the `agent_id` of an `ai` step, alone or alongside a skill — *the `reviewer` running `/code-review`* ([[Capability Library Decisions|D27]]). With both, the step's tools are the agent's ∩ the skill's (D28).
 
 ## What an agent carries
 
@@ -31,7 +31,7 @@ The architecture wants agents provider-neutral. `05-environment-and-registry.md`
 
 The mockup still records provider packs for agents, but unevenly: `architect`, `developer`, `reviewer` and `scout` have Claude and Codex packs; `tester`, `sec-analyst` and `scribe` are Claude-only. Agent packs carry no version (an internal `'—'` sentinel that is never displayed), so the row reads *installed · 12 Sep*.
 
-At run time the Claude adapter passes the prompt with `--append-system-prompt` (PRD §7, for `kind='agent'`).
+At run time the Claude adapter passes the prompt with `--append-system-prompt` (PRD §7, whenever the step names an agent).
 
 **A task pins its agents.** At task start the agent row is copied into `tasks.capability_pins`, so editing `reviewer`'s prompt never changes a task already running (D10). Seeded agents ship as files in FlowBoard's repo and update through *update available*, like seed plugins (D12).
 

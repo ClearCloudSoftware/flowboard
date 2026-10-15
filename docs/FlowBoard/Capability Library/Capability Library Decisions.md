@@ -9,7 +9,7 @@ decided: 2026-10-15
 The v1 design, settled in a grilling session on 2026-10-15 that worked through [[Capability Library Open Questions]]. Where a decision overrides a source (PRD, backlog, architecture, mockup), the other notes say so and link here.
 
 > [!summary] v1 in one paragraph
-> Claude-only, with the provider seam kept in the port. The unit of install is a **plugin** cloned from any git URL into a per-project, gitignored store, one directory per commit. Steps reference skills (invoked `/<plugin>:<slug>`) or agents. A task pins the plugin commits and agent rows it starts with, so updates never reach a running task. No bundle packs, no provider coverage UI.
+> Claude-only, with the provider seam kept in the port. The unit of install is a **plugin** cloned from any git URL into a per-project, gitignored store, one directory per commit. Steps name an agent (who), a skill (how, invoked `/<plugin>:<slug>`) or both. A task pins the plugin commits and agent rows it starts with, so updates never reach a running task. No bundle packs, no provider coverage UI.
 
 ## Scope
 
@@ -43,7 +43,7 @@ The v1 design, settled in a grilling session on 2026-10-15 that worked through [
 
 | # | Decision | Resolves |
 |---|---|---|
-| D14 | **A run mounts only what the step names**: the plugin of the step's skill, plus the step's `extra_plugin_ids`. Agent steps mount only their extras. Mounts are read-only into the container. PRD §7 mounts every installed plugin into every run; this overrides it. | OQ15 |
+| D14 | **A run mounts only what the step names**: the plugin of the step's skill, plus the step's `extra_plugin_ids`. A step without a skill mounts only its extras. Mounts are read-only into the container. PRD §7 mounts every installed plugin into every run; this overrides it. | OQ15 |
 | D15 | **Host tier fails closed for git-sourced plugins.** Without Docker, a step whose plugins (skill or extras) came from a git URL does not run. Seeds still run on the host tier. | — |
 | D16 | **Skills are invoked fully qualified**: `/<plugin>:<slug>`, which is how Claude Code namespaces plugin skills. Two plugins may both ship `code-review`. Backlog Story 0.1 (probe the CLI) confirms the qualified form invokes reliably in headless `-p` mode — open question 19. | — |
 
@@ -61,7 +61,21 @@ The v1 design, settled in a grilling session on 2026-10-15 that worked through [
 |---|---|---|
 | D20 | **`default_model` stores Claude aliases** (`opus` / `sonnet` / `haiku`) and treats them as the logical ids; `resolveModel` passes them through for Claude. The mapping arrives with the second provider. | — |
 | D21 | **Define agent is a plain form** with the PRD fields: name, description, prompt, default model, default effort, allowed tools. Seeded agents are read-only, with **Duplicate to edit**. | OQ10 |
-| D22 | **Seed set: mockup names, PRD contracts.** Mockup roles (`scout`, `architect`, `developer`, `tester`, `reviewer`, `scribe`) with the PRD skills that encode engine contracts kept: `ask-three`, `grill-me` (`ask_user_batch`, `no_answer_yet`), `code-review` (must call `set_outcome`). The seed flow's `implement` step stays the skill `/ponytail`. | OQ11 |
+| D22 | **Seed set: mockup names, PRD contracts.** Mockup roles (`scout`, `architect`, `developer`, `tester`, `reviewer`, `scribe`) with the PRD skills that encode engine contracts kept: `ask-three`, `grill-me` (`ask_user_batch`, `no_answer_yet`), `code-review` (must call `set_outcome`). ~~The seed flow's `implement` step stays the skill `/ponytail`.~~ Superseded by D27: `implement` is `developer` + `/ponytail`. `ask-three` moved out of the seeds by D30. | OQ11 |
+
+## Seeds and steps
+
+Settled in a second grilling session on 2026-10-15, working through open question 18.
+
+| # | Decision | Resolves |
+|---|---|---|
+| D25 | **The seeds are exactly what the seed flow uses.** Nothing ships unused, so no seed starts with a hollow *used by nothing* dot telling a new user to remove it. | OQ18 |
+| D26 | **The seed flow is *Software delivery*:** the PRD's nine steps with the mockup's role names, keeping the `explain` approval gate (the cheap point to stop a bad plan before two opus-high steps run) and the PRD step keys. | OQ18 |
+| D27 | **A step can name an agent, a skill, or both.** `step_defs.kind` becomes `ai \| shell \| manual`; an `ai` step sets `agent_id`, `skill_id` or both. The agent supplies the system prompt (who), the skill the slash invocation (how). Pairs: `plan` = `architect` + `/plan-implementation`, `implement` = `developer` + `/ponytail`, `review` = `reviewer` + `/code-review`; `research` = `scout`, `tests` = `tester`, `summarize` = `scribe`; `grill` and `explain` are skill-only. A step naming both counts as a use of each. | OQ18 |
+| D28 | **Tools are agent ∩ skill**, narrowed further by the step's `allowed_tools` when set. The flow editor warns at design time when the intersection drops a tool the skill declares; `mcp__vibe__*` is always appended. `tester` writes tests for the acceptance criteria; `check` runs them. | — |
+| D29 | **`scout` gets `Read, Grep` only.** It researches the repo, so the first step of every task never fails closed on egress. | OQ18 |
+| D30 | **Not seeds:** `backlog-importer` is internal to markdown import and never appears in the library; `ask-three` is a test fixture. | OQ18 |
+| D31 | **The `researcher` flow template is out of v1**, with `web-researcher`, `research-summarizer` and `fact-checker`, until open-web research has an egress answer (for example a search-API host on the allowlist). | OQ18 |
 
 ## Schema
 
@@ -92,7 +106,7 @@ The source documents were brought in line with these decisions on 2026-10-15:
 
 Still open:
 
-- **Seed renames (D22)** are not applied to the PRD's seed flow (§15) or backlog Story 1.2, because `explain-simply`, `backlog-importer` and the research agents are still undecided — open question 18.
+- *(Resolved)* The seed decisions D25–D31 were applied to PRD §4, §5, §7, §13, §15 and backlog Stories 1.2 and 8.2 the same day.
 - Drift from OQ17 that the decisions do not touch: the drawio *Prompt builder* memory order, and `tool_hooks` missing from `agent-provider.ts`. The `--add-dir`, eight-step and git-remote drift was fixed in commits `198e7de` and `c4b01fd`.
 
 ## Related

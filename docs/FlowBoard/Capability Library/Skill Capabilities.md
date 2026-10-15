@@ -5,7 +5,7 @@ module: Capability Library
 
 # Skill Capabilities
 
-A **skill** is a packaged instruction that a step invokes like a slash command. In a step definition it is `kind='skill'` with a `skill_id`.
+A **skill** is a packaged instruction that a step invokes like a slash command. In a step definition it is the `skill_id` of an `ai` step, alone or alongside an agent that performs it ([[Capability Library Decisions|D27]]).
 
 ## Claude packaging
 

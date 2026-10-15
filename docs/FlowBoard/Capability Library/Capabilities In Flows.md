@@ -9,16 +9,19 @@ The library exists for one consumer: **flow design**. Its only edge in the funct
 
 ## How a step references a capability
 
-A step definition has a `kind`:
+A step definition has a `kind` ([[Capability Library Decisions|D27]]):
 
 | `kind` | References | Notes |
 |---|---|---|
-| `skill` | `skill_id` → skills | Invoked as `/<plugin>:<slug>` in the prompt (D16) |
-| `agent` | `agent_id` → agents | Prompt appended as system prompt |
+| `ai` | `agent_id` → agents, `skill_id` → skills — either or both | The agent is **who** (its prompt is appended as the system prompt); the skill is **how** (invoked as `/<plugin>:<slug>` in the prompt, D16). *The `reviewer` running `/code-review`.* |
 | `shell` | — | A check command (lint, tests); no AI, no capability |
 | `manual` | — | A human task |
 
-When adding a step in the flow editor: **choose Skill or Agent, pick from installed skills or defined agents**, then set model, effort, advance mode, requires, produces and limits (PRD; drawio *Add step form*). The editor's inspector carries `kind`, `skill/agent`, model, effort, advance mode, entry, requires, produces, limits, permission mode, allowed tools and prompt template (backlog).
+The PRD first had `kind = 'skill' | 'agent'`, one or the other. The mockup's used-by data already paired them — `plan` uses `architect` **and** `/plan-implementation`, `review` uses `reviewer` **and** `/code-review` — and the schema already had both columns, so D27 drops the exclusivity.
+
+**Allowed tools with both** (D28): the intersection of the agent's list and the skill's `allowed-tools`, narrowed further by the step's `allowed_tools` when set. The flow editor warns at design time when the intersection drops a tool the skill declares. An agent's restrictions (*reads only*, *never edits code*) are the role's guarantee, so a skill cannot widen them silently.
+
+When adding a step in the flow editor: **pick an agent, a skill or both**, then set model, effort, advance mode, requires, produces and limits (PRD; drawio *Add step form*). The editor's inspector carries `kind`, agent and/or skill, model, effort, advance mode, entry, requires, produces, limits, permission mode, allowed tools and prompt template (backlog).
 
 Installed capabilities appear in the **step editor's picker** straight away, listed as `plugin:slug` — which is also why orphans are clutter.
 
@@ -47,7 +50,7 @@ Each capability lists the flow versions and steps that draw on it — each flow'
 - `code-review` — Software delivery @core v4 (review), Code review @core v7 (review), Code review @team-sec v2 (review), Test and triage @core v4 (triage)
 - `scout` — used by five flows across @core, @alex and @growth
 
-The count drives the rail meta (`4 uses`), the rail dot, and the removal block.
+A step that names both an agent and a skill counts as a use of each. The count drives the rail meta (`4 uses`), the rail dot, and the removal block.
 
 ## Cost and memory per capability
 

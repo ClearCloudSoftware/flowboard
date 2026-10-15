@@ -54,9 +54,9 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 - [ ] Either use `questions.state='expired'` or remove it. Today it is never set. **BUG**
 
 ### Story 1.2 Seed (PRD §15)
-- [ ] Flow templates as JSON: `software-development` (the 9‑step table, exact models/efforts/gates/edges) and `researcher` (scope → web research → summarize → grounding ✋, `on_fail` loop). **PRD/NEW**
-- [ ] Agents: researcher, planner, test‑writer, summarizer, backlog‑importer (builtin), web‑researcher, research‑summarizer, fact‑checker. **PRD/NEW**
-- [ ] Skills as local plugin dirs `skills/<slug>/.claude-plugin/plugin.json` + `skills/<slug>/skills/<slug>/SKILL.md`: grill‑me (uses `ask_user_batch` and honours `no_answer_yet`), code‑review (calls `set_outcome`), explain‑simply, ponytail, ask‑three (M4 smoke). **PRD**
+- [ ] Flow template as JSON: *Software delivery* (the 9‑step table, exact agent/skill pairs, models/efforts/gates/edges). The `researcher` web-research template is out of v1 until open-web egress has an answer. **PRD/NEW**
+- [ ] Agents (seeded, read-only): scout (`Read, Grep` only), architect, developer, tester (writes tests), reviewer, scribe — exactly the agents the seed flow uses. `backlog-importer` is internal to import (Story 7.3), not a seed. **PRD/NEW**
+- [ ] Skills as local plugin dirs `skills/<slug>/.claude-plugin/plugin.json` + `skills/<slug>/skills/<slug>/SKILL.md`: grill‑me (uses `ask_user_batch` and honours `no_answer_yet`), plan‑implementation, explain‑simply, ponytail, code‑review (calls `set_outcome`). `ask-three` (M4 smoke) is a test fixture, not a seed. **PRD**
 - [ ] Seed project pointing at an auto‑`git init`ed scratch repo. **PRD**
 
 ### Story 1.3 Projects list `/` (PRD §13)
@@ -241,7 +241,7 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 
 ### Story 8.2 Flow editor `/p/[slug]/flow`
 - [ ] React Flow canvas: nodes = steps, drag‑to‑connect, edge label cycles `always → on_pass → on_fail`, Backspace deletes, dagre auto‑layout, backwards edges routed under the row. **NEW**
-- [ ] Inspector: kind, skill/agent, model, effort, advance mode, entry, requires, produces, limits, permission mode, allowed tools, prompt template. **PRD**
+- [ ] Inspector: kind (`ai`/`shell`/`manual`), agent and/or skill, model, effort, advance mode, entry, requires, produces, limits, permission mode, allowed tools, prompt template. **PRD**
 - [ ] Live validation banner (debounced). **PRD**
 - [ ] Reuse… picker (steps or whole flow from other projects, key uniquified). **NEW**
 - [ ] Start from flow type. **NEW**

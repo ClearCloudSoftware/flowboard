@@ -20,7 +20,7 @@ flowchart LR
 
 1. The worker picks the step's capability from the pinned flow version.
 2. It resolves the version from the task's **`capability_pins`** — the plugin commits and agent rows recorded at task start ([[Capability Library Decisions|D10]]).
-3. It selects the **pack whose provider matches the step's provider** and places it in `RunSpec.capabilities`. In v1 that is the Claude plugin dir at the pinned commit: the plugin of the step's skill, plus the step's `extra_plugin_ids`. Agent steps mount only their extras (D14).
+3. It selects the **pack whose provider matches the step's provider** and places it in `RunSpec.capabilities`. In v1 that is the Claude plugin dir at the pinned commit: the plugin of the step's skill, plus the step's `extra_plugin_ids`. A step without a skill mounts only its extras (D14).
 4. The adapter interprets `mount` in its own terms. *"The registry stores the pack; the adapter knows how to mount it."*
 
 ## Claude Code specifics
@@ -28,8 +28,8 @@ flowchart LR
 From PRD §7 and the backlog:
 
 - **Skills** — one `--plugin-dir <commit dir>` per plugin **the step names** (D14). Earlier drafts of the PRD and backlog Story 3.2 passed one per *installed* skill to every run; v1 does not, because plugin hooks and MCP servers are mounted as-is (D8) and should only run where a step asked for them. `--add-dir` **does not register skills**; backlog Story 0.1 found this, and the PRD was corrected to match.
-- **Agents** — `--append-system-prompt <agent.system_prompt>` for `kind='agent'`.
-- **Tools** — `--allowedTools …`, always with `mcp__vibe__*` appended so a restrictive list cannot lock out `ask_user` (PRD §7, backlog Story 3.2).
+- **Agents** — `--append-system-prompt <agent.system_prompt>` whenever the step names an agent; a step with both an agent and a skill gets this *and* the slash invocation (D27).
+- **Tools** — `--allowedTools <agent ∩ skill, narrowed by the step>` (D28), always with `mcp__vibe__*` appended so a restrictive list cannot lock out `ask_user` (PRD §7, backlog Story 3.2).
 - **Hooks** — `--settings <generated per-run settings.json with PreToolUse hooks>` (PRD §7): an in-agent gate that blocks writes outside the worktree, non-goal paths and destructive commands. Needs the `tool_hooks` capability flag.
 - **Reproducibility** — `--strict-mcp-config` keeps personal MCP config out of runs (PRD §7); the args are snapshotted to `data/runs/<id>/args.json` (PRD §7, backlog Story 3.2).
 
@@ -40,7 +40,7 @@ The prompt builder assembles, in order:
 1. Task, acceptance criteria, non-goals
 2. Input artifacts — "read these first"
 3. Output paths
-4. **For `kind='skill'`: the slash invocation, fully qualified — e.g. `/grill-me:grill-me`** (D16; earlier PRD drafts wrote bare `/grill-me`)
+4. **When the step names a skill: the slash invocation, fully qualified — e.g. `/grill-me:grill-me`** (D16; earlier PRD drafts wrote bare `/grill-me`)
 5. The step's `prompt_template`, with placeholders substituted
 6. Headless instruction: use the `ask_user` MCP tool for questions
 

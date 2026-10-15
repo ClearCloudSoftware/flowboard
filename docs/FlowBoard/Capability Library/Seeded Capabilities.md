@@ -11,16 +11,36 @@ The sources give **two different starter sets**. The PRD/backlog set is what v1 
 
 ## v1 seed set (decided)
 
-[[Capability Library Decisions|D22]]: **mockup names, PRD contracts.** The roles take the mockup's names; the skills that encode engine contracts stay, because they double as test fixtures for the question loop (M4) and the flow engine (M5).
+[[Capability Library Decisions|D22, D25–D31]]: **the seeds are exactly what the seed flow uses** — nothing ships unused, so no seed starts life with a hollow *used by nothing* dot (D25).
 
-| Kind | Seed | Why it is in the set |
+The seed flow is **Software delivery**: the PRD's nine steps with the mockup's role names and the `explain` approval gate kept (D26). A step can name an agent, a skill or both (D27):
+
+| key | Agent | Skill | Advance | Change from the PRD |
+|---|---|---|---|---|
+| `research` | `scout` | — | auto | `researcher` → `scout` |
+| `grill` | — | `/grill-me` | auto | — |
+| `plan` | `architect` | `/plan-implementation` | auto | `planner` → `architect`, plus the skill |
+| `explain` | — | `/explain-simply` | **approval** | — |
+| `implement` | `developer` | `/ponytail` | auto | adds `developer` |
+| `tests` | `tester` | — | auto | `test-writer` → `tester` |
+| `check` | shell | — | auto | — |
+| `review` | `reviewer` | `/code-review` | **approval** | adds `reviewer` |
+| `summarize` | `scribe` | — | auto | `summarizer` → `scribe` |
+
+Models, efforts, `requires` and `produces` stay as in the PRD table below; an agent's defaults only prefill the step editor.
+
+| Kind | Seeds | Notes |
 |---|---|---|
-| agent | `scout`, `architect`, `developer`, `tester`, `reviewer`, `scribe` | Mockup roles |
+| agent | `scout`, `architect`, `developer`, `tester`, `reviewer`, `scribe` | `scout` gets `Read, Grep` only — it researches the repo, so step one never fails closed on egress (D29). `tester` **writes** tests for the acceptance criteria; the `check` step runs them (D28) |
 | skill | `grill-me` | Contract: uses `ask_user_batch`, honours `no_answer_yet` |
+| skill | `plan-implementation`, `explain-simply`, `ponytail` | The how of `plan`, `explain` and `implement` |
 | skill | `code-review` | Contract: must call `set_outcome` |
-| skill | `ask-three` | M4 smoke test |
-| skill | `ponytail` | The seed flow's `implement` step stays this skill, not the `developer` agent — a step is `skill` or `agent`, never both |
-| skill | `plan-implementation` | Mockup |
+
+Not seeds:
+
+- **`backlog-importer`** — internal to markdown import (Story 7.3); never shown in the library or the step picker, so it cannot be removed out from under import (D30).
+- **`ask-three`** — the M4 smoke test; a test fixture loaded by the test setup (D30).
+- **The `researcher` flow template** and its agents (`web-researcher`, `research-summarizer`, `fact-checker`) — out of v1 until open-web research has an egress answer, such as a search-API host on the allowlist (D31).
 
 How seeds are delivered:
 
@@ -30,10 +50,9 @@ How seeds are delivered:
 - Seeds run on the host tier; git-installed plugins do not (D15).
 - Seeded agents are read-only, with **Duplicate to edit** (D21).
 
-> [!question] Not settled by D22
-> `explain-simply` (the seed flow's approval step), the builtin `backlog-importer`, and the research agents of the second flow template (`web-researcher`, `research-summarizer`, `fact-checker`) were not discussed. Decide them when writing the seed flows — tracked as [[Capability Library Open Questions#18. Which seeds does D22 leave out?|open question 18]].
+## Original v1 seed (PRD §15, backlog Story 1.2)
 
-## v1 seed (PRD §15, backlog Story 1.2)
+As the PRD and backlog first specified it; both now carry the decided set above.
 
 **Skills** — real local skill directories under `./skills/` with a `SKILL.md` each (PRD §15); backlog Story 1.2 makes them plugin dirs (`.claude-plugin/plugin.json` + `skills/<slug>/SKILL.md`). Local, so the question loop (M4) and flow engine (M5) are testable without GitHub:
 
@@ -90,7 +109,7 @@ Non-seeded examples: Security pack (@team-sec), Marketing pack (@growth), `domai
 | `grill-me` | `grill-me` |
 | `explain-simply`, `ask-three`, `backlog-importer`, `web-researcher`, `research-summarizer`, `fact-checker` | — |
 
-This mapping is an interpretation by role, not stated in the sources. D22 adopts the mockup names except `ponytail`, which stays a skill.
+This mapping is an interpretation by role, not stated in the sources. D22 adopted the mockup names; D27 then let `developer` and `reviewer` join `/ponytail` and `/code-review` on the same steps, as the mockup's used-by data already showed.
 
 ## Related
 
