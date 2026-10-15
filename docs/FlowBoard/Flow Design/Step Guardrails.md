@@ -30,7 +30,7 @@ Whether a provider enforces them depends on capability flags: `budget_cap` — *
 ## Tools
 
 - *"When `--allowedTools` is set, always append `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`."* (PRD §7)
-- Agents carry their own allowed tools (`agents.allowed_tools`). Network-capable tools need hosts on the egress allowlist — see [[Capability Tools And Egress]].
+- Agents carry their own allowed tools (`agents.allowed_tools`), and skills declare theirs in `SKILL.md`. A step's effective tools are the agent's ∩ the skill's, narrowed by the step's `allowed_tools` when set; the flow editor warns at design time when that drops a tool the skill declares ([[Capability Library Decisions|D28]]). Network-capable tools need hosts on the egress allowlist — see [[Capability Tools And Egress]].
 
 ## The sandbox rule
 

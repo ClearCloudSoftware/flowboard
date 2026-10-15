@@ -30,7 +30,7 @@ From M8 and backlog **Story 8.2 Flow editor**:
 
 From elsewhere:
 
-- [ ] Flow templates as JSON: `software-development`, `researcher` (Story 1.2)
+- [ ] Flow template as JSON: *Software delivery* (`software-development`) (Story 1.2). `researcher` is out of v1 (D31).
 - [ ] New-project dialog with a flow-type select, *"Empty"* allowed (Story 1.3)
 - [ ] Pin `tasks.flow_id` (Story 2.1)
 - [ ] Draft mode toggle (Story 8.3)

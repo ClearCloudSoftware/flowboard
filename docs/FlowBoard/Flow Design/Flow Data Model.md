@@ -25,7 +25,7 @@ CREATE TABLE step_defs (
   flow_id        TEXT NOT NULL REFERENCES flows(id) ON DELETE CASCADE,
   key            TEXT NOT NULL,          -- stable slug, e.g. "code_review"
   name           TEXT NOT NULL,          -- column header, e.g. "Code review"
-  kind           TEXT NOT NULL,          -- 'skill' | 'agent' | 'shell' | 'manual'
+  kind           TEXT NOT NULL,          -- 'ai' | 'shell' | 'manual'; an 'ai' step sets skill_id, agent_id or both
   command        TEXT,                   -- kind='shell' only; null = the project's check_command
   skill_id       TEXT REFERENCES skills(id),
   agent_id       TEXT REFERENCES agents(id),

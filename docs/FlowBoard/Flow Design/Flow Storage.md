@@ -18,7 +18,7 @@ Deleting a project cascades to its flows, and deleting a flow cascades to its st
 | File | Contents | Source |
 |---|---|---|
 | `seed/flows/default.json` | The default flow | PRD §3 repo layout |
-| Flow templates as JSON | `software-development` and `researcher` | backlog Story 1.2 |
+| Flow templates as JSON | *Software delivery* (`software-development`); `researcher` is out of v1 ([[Capability Library Decisions\|D31]]) | backlog Story 1.2 |
 
 Backlog Story 1.3 creates *"flow v1"* from a chosen flow type when a project is made. See [[Seeded Flows]].
 

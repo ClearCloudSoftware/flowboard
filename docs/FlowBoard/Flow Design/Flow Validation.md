@@ -17,7 +17,9 @@ The flow-designer guide's lede: *"the screen refuses to save a recipe that can't
 | **Exactly one entry** | *"exactly one entry"* | Blocks save | backlog Story 5.1 | — (entry inferred) |
 | **Known types** | *"known types"* | Blocks save | `02` §2; backlog 5.1 | — |
 | **Capability contract** | *"every knob a step uses is supported by its target provider"* | *"a design-time warning"* (`01-ports.md`) | `02` §2; `01-ports.md` | — |
-| **Provider match** | *"validation checks the pack's provider matches the step's provider"* | None given (`05`); *"the recipe will not save"* (capability-library guide) | `05` §13 | — |
+| **Provider match** | *"validation checks the pack's provider matches the step's provider"* | None given (`05`); *"the recipe will not save"* (capability-library guide). **Moot in v1**, which is Claude-only ([[Capability Library Decisions\|D1]]) | `05` §13 | — |
+| **Tool intersection** | The agent ∩ skill tool set drops a tool the skill declares | Warning ([[Capability Library Decisions\|D28]]) | — | — |
+| **Agent or skill** | An `ai` step names at least one of `agent_id` / `skill_id` | Blocks save (D27) | — | — |
 | **Hooks missing** | *"a provider without them relies on the sandbox alone, and the flow editor says so"* | Notice | PRD §7 (`tool_hooks`) | — |
 | **Unattended and unsandboxed** | No gate and sandbox `none` | Flag only | flow-designer mockup | ✓ (inspector only) |
 

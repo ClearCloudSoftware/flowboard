@@ -17,8 +17,8 @@ Each source lists a different subset of fields. ✓ = present.
 |---|---|---|---|---|---|
 | Key (stable slug) | `key` | — | — | `id` (shown in pane header) | Unique per flow |
 | Name (column header) | `name` | — | — | label on the node | |
-| Kind | `kind` | kind | Skill or Agent | — | [[Step Kinds]] |
-| Skill / agent | `skill_id`, `agent_id` | skill/agent | ✓ | **Agent** (free text) | [[Capabilities In Flows]] |
+| Kind | `kind` (`ai`/`shell`/`manual`) | kind | Skill or Agent | — | [[Step Kinds]] |
+| Agent and/or skill | `agent_id`, `skill_id` — either or both (D27) | agent and/or skill | ✓ | **Agent** (free text) | [[Capabilities In Flows]] |
 | Command | `command` (shell only) | — | — | — | [[Check Steps]] |
 | Prompt template | `prompt_template` | prompt template | — | — | Supports `{{placeholders}}` |
 | Model | `model` default `sonnet` | model | ✓ | **Model** | [[Models And Effort]] |
@@ -49,11 +49,11 @@ Bold = control label in the flow-designer mockup. *limits\** = the generic word 
 | `model` | `--model <step.model>` |
 | `effort` | `--effort <step.effort>` |
 | `permission_mode` | `--permission-mode` |
-| `allowed_tools` | `--allowedTools` (always plus `mcp__vibe__*`) |
+| `allowed_tools` | `--allowedTools`: agent ∩ skill, narrowed by the step's list (D28), always plus `mcp__vibe__*` |
 | `max_turns` | `--max-turns N` |
 | `max_budget_usd` | `--max-budget-usd N` |
-| agent's system prompt | `--append-system-prompt` for `kind='agent'` |
-| skill slug | `/slug` invocation, prompt part 4 |
+| agent's system prompt | `--append-system-prompt`, whenever the step names an agent |
+| skill slug | `/<plugin>:<slug>` invocation, prompt part 4, whenever the step names a skill |
 | `requires` | prompt part 2, *"read these first"* paths |
 | `produces` | prompt part 3, exact output paths |
 

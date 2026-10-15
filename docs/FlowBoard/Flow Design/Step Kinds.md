@@ -5,12 +5,11 @@ module: Flow Design
 
 # Step Kinds
 
-`step_defs.kind` decides what executes a step: `'skill' | 'agent' | 'shell' | 'manual'` (PRD §5).
+`step_defs.kind` decides what executes a step: `'ai' | 'shell' | 'manual'` (PRD §5). An `ai` step names an agent, a skill, or both ([[Capability Library Decisions|D27]], decided 2026-10-15). The PRD first had `'skill' | 'agent' | 'shell' | 'manual'`, one capability per step.
 
 | Kind | What runs | References | Verdict comes from | Source |
 |---|---|---|---|---|
-| `skill` | A headless agent session that invokes a packaged instruction as `/slug` | `skill_id` | The run's outcome (`set_outcome` or `{"outcome":…}` in a produced JSON) | PRD §5, §7; outcome rule §8 |
-| `agent` | A headless agent session with the agent's system prompt appended | `agent_id` | Same as skill | PRD §5, §7; outcome rule §8 |
+| `ai` | A headless agent session. With an agent, its system prompt is appended (*who*); with a skill, the prompt invokes `/<plugin>:<slug>` (*how*); with both, both | `agent_id`, `skill_id` — at least one | The run's outcome (`set_outcome` or `{"outcome":…}` in a produced JSON) | PRD §5, §7; outcome rule §8 |
 | `shell` | A plain command, no model | `command`, or the project's `check_command` | **The exit code** | PRD §7 *Shell steps*; see [[Check Steps]] |
 | `manual` | A human task | — | Not specified | PRD §5 only |
 
@@ -18,10 +17,10 @@ The feature map's wording: *"A step can run a saved **skill** (a packaged instru
 
 ## Skill and agent steps
 
-When adding a step: *"choose Skill or Agent, pick from installed skills or defined agents, then set model, effort, advance mode, requires, produces, and limits"* (PRD §13; drawio card *Add step form*). The pickers list what the [[Capability Library Index|Capability Library]] has installed, and a new install *"becomes selectable in the step editor straight away"* (capability-library mockup). Details of how a step references a capability: [[Capabilities In Flows]].
+When adding a step: *"choose an AI, shell or manual step; for an AI step pick an agent, a skill or both (from defined agents and installed skills), then set model, effort, advance mode, requires, produces, and limits"* (PRD §13). The drawio card *Add step form* still reads *"Skill or Agent"*. The pickers list what the [[Capability Library Index|Capability Library]] has installed, and a new install *"becomes selectable in the step editor straight away"* (capability-library mockup). Details of how a step references a capability: [[Capabilities In Flows]].
 
-> [!warning] The mockups don't fit one kind per step
-> The flow-designer inspector shows only a free-text **Agent** field. The capability-library mockup has steps that use a skill **and** an agent at once (`plan`: skill `plan-implementation` + agent `architect`). See [[Flow Design Open Questions]] #10.
+> [!check] One step, agent and skill (D27)
+> The capability-library mockup already had steps that use a skill **and** an agent at once (`plan`: `architect` + `/plan-implementation`; `review`: `reviewer` + `/code-review`), and the schema already had both columns, so the `kind` exclusivity was dropped. With both, the step's tools are the agent's ∩ the skill's, narrowed by the step's own `allowed_tools`; the editor warns when that drops a tool the skill declares (D28). The flow-designer inspector still shows only a free-text **Agent** field and needs agent and skill pickers — [[Flow Design Open Questions]] #10.
 
 ## `manual`
 

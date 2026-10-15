@@ -7,23 +7,25 @@ module: Flow Design
 
 > **Ready-made recipes** — Ships with a couple of complete ones (a full software-development pipeline and a research pipeline) so you're not starting from a blank page. — feature map §2
 
-The sources describe three different starter sets (sections 1–3); section 4 is the mockup's sample library, not a seed set. They are not reconciled — [[Flow Design Open Questions]] #29.
+The sources described three different starter sets (sections 1–3); section 4 is the mockup's sample library, not a seed set. [[Capability Library Decisions|D26]] reconciles them: v1 seeds **one** flow, *Software delivery* — section 1's nine steps with section 3's role names. The `researcher` template (section 2) is out of v1 (D31).
 
 ## 1. The PRD default flow
 
-*"Seed one project and one flow that reproduces my actual workflow."* (PRD §15)
+*"Seed one project and one flow, **Software delivery**, that reproduces my actual workflow."* (PRD §15, as updated by D26 and D27)
 
-| key | name | kind | model | effort | advance | requires | produces |
-|---|---|---|---|---|---|---|---|
-| `research` | Research | agent `researcher` | sonnet | medium | auto | — | `research_brief` |
-| `grill` | Grill me | skill `/grill-me` | sonnet | medium | auto | `research_brief` | `questions`, `answers` |
-| `plan` | Plan | agent `planner` | opus | high | auto | `research_brief`, `answers` | `plan` |
-| `explain` | Explain plan | skill `/explain-simply` | haiku | low | **approval** | `plan` | `explainer` |
-| `implement` | Implement | skill `/ponytail` | opus | high | auto | `plan` | `implementation_notes` |
-| `tests` | Write tests | agent `test-writer` | sonnet | high | auto | `plan` | `test_notes` |
-| `check` | Lint & test | shell (project `check_command`) | — | — | auto | — | `check_output` |
-| `review` | Code review | skill `/code-review` | opus | high | **approval** | `implementation_notes`, `test_notes`, `check_output` | `review` |
-| `summarize` | Summarize built | agent `summarizer` | sonnet | medium | auto | `review` | `summary` |
+| key | name | agent | skill | model | effort | advance | requires | produces |
+|---|---|---|---|---|---|---|---|---|
+| `research` | Research | `scout` | — | sonnet | medium | auto | — | `research_brief` |
+| `grill` | Grill me | — | `/grill-me` | sonnet | medium | auto | `research_brief` | `questions`, `answers` |
+| `plan` | Plan | `architect` | `/plan-implementation` | opus | high | auto | `research_brief`, `answers` | `plan` |
+| `explain` | Explain plan | — | `/explain-simply` | haiku | low | **approval** | `plan` | `explainer` |
+| `implement` | Implement | `developer` | `/ponytail` | opus | high | auto | `plan` | `implementation_notes` |
+| `tests` | Write tests | `tester` | — | sonnet | high | auto | `plan` | `test_notes` |
+| `check` | Lint & test | shell (project `check_command`) | — | — | — | auto | — | `check_output` |
+| `review` | Code review | `reviewer` | `/code-review` | opus | high | **approval** | `implementation_notes`, `test_notes`, `check_output` | `review` |
+| `summarize` | Summarize built | `scribe` | — | sonnet | medium | auto | `review` | `summary` |
+
+The PRD first named the agents `researcher`, `planner`, `test-writer` and `summarizer`, with `implement` and `review` skill-only. `scout` researches the repo only (`Read, Grep`), and `tester` writes the tests that `check` runs. The seeds are exactly what this flow uses — see [[Seeded Capabilities]].
 
 ```mermaid
 flowchart LR
@@ -46,6 +48,9 @@ The milestone proof for M5: *"a deliberately failing test in the scratch repo se
 > `check` requires nothing but runs after `implement` and `tests`. It reads the worktree, not an artifact. A contract-only validator cannot see that dependency ([[Flow Design Open Questions]] #33).
 
 ## 2. Backlog flow templates
+
+> [!check] Out of v1 (D31)
+> The `researcher` template and its agents are not seeded until open-web research has an egress answer. `backlog-importer` is internal to import, not a seed (D30).
 
 Backlog Story 1.2: *"Flow templates as JSON: `software-development` (the 9‑step table, exact models/efforts/gates/edges) and `researcher` (scope → web research → summarize → grounding ✋, `on_fail` loop)."* The same story seeds eight agents in one list (*"researcher, planner, test‑writer, summarizer, backlog‑importer (builtin), web‑researcher, research‑summarizer, fact‑checker"*); it does not say which steps of `researcher` use which agent ([[Flow Design Open Questions]] #32). Extra artifact types: `sources`, `grounding_report` (Story 1.1). The ✋ marks `grounding` as a gate.
 

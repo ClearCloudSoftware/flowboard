@@ -5,7 +5,7 @@ module: Flow Design
 
 # Flow Design Open Questions
 
-Places where the sources disagree or leave a gap. Each needs a decision before building. Anything another note labels a **proposal** is listed here too.
+Places where the sources disagree or leave a gap. Each needs a decision before building. Questions settled by the [[Capability Library Decisions]] (2026-10-15) carry their outcome. Anything another note labels a **proposal** is listed here too.
 
 ## Where flows live and who owns them
 
@@ -53,9 +53,13 @@ The mockup opens with the chip reading *adopted 12 Sep* (nothing edited), yet th
 
 ### 9. Does a step name its provider?
 
+> [!check] **Moot in v1 — D1.** v1 is Claude-only, so no step needs a provider field. Returns with the second provider.
+
 The capability-library guide: *"Steps name their provider individually — one flow can mix them."* `01-ports.md` and `05` §13 assume a step has a *target provider*. Neither the PRD `step_defs` table, backlog Story 8.2's inspector list, nor the flow-designer mockup has a provider field.
 
 ### 10. Step kind and capability in the designer
+
+> [!check] **Model resolved — D27.** `kind` is `ai | shell | manual`; an `ai` step names an agent, a skill or both. Still open: the flow-designer inspector needs agent and skill pickers and the shell and manual kinds.
 
 The PRD and the backlog give a step a `kind` (`skill | agent | shell | manual`) and one `skill_id` or `agent_id`. The flow-designer inspector has only a free-text **Agent** field. It has no kind, no skill picker, no check step and no manual step. The capability-library mockup's *used by* data has steps that use **both** a skill and an agent: `plan` uses skill `plan-implementation` and agent `architect`, and `review` uses skill `code-review` and agent `reviewer`. One `kind` cannot express that. See [[Step Kinds]].
 
@@ -131,6 +135,8 @@ PRD §6 seeds ten: `research_brief`, `questions`, `answers`, `plan`, `explainer`
 
 ### 26. Provider-match severity
 
+> [!check] **Moot in v1 — D1.** No provider-match check while there is one provider.
+
 The capability-library mockup and guide say the flow editor refuses to save a step whose provider has no pack for its capability. `01-ports.md` calls a capability-contract violation a design-time **warning**. The flow-designer mockup has no provider check at all. Same question as [[Capability Library Open Questions]] #13. See [[Flow Validation]].
 
 ## Screen, content and API
@@ -145,6 +151,8 @@ PRD §13 and feature map §19 make draft mode a global setting. The mockup puts 
 
 ### 29. The seeded flow
 
+> [!check] **Resolved — D26.** *Software delivery*: the PRD's nine steps (check step and both gates kept) with the mockup's role names and agent + skill pairs. See [[Seeded Flows]].
+
 PRD §15 seeds nine steps (research, grill, plan, explain, implement, tests, check, review, summarize), with gates on `explain` and `review`. Backlog Story 1.2 agrees: *"`software-development` (the 9‑step table…)"*. The old design handoff shows `standard-flow · 8 steps` and *"Plan needs approval"*. The mockups use *Software delivery @core v4*: six steps (research, plan, build, tests, review, summarize), only `review` gated, and no check step. That is the library row and the monitor. The flow-designer canvas opens it with seven, adding the borrowed `threat-model` step. See [[Seeded Flows]].
 
 ### 30. API for the library
@@ -158,6 +166,8 @@ The PRD has three flow endpoints. The mockup also needs to list the library with
 The schema uses `always | on_pass | on_fail`. The mockup's data uses `always | pass | fail` and labels routes *passed* and *failed ↺*; the guide says *on passed* and *on failed*. **Proposal:** `pass` → `on_pass`, `fail` → `on_fail`, and keep *passed* / *failed ↺* as display labels. See [[Connections And Routes]].
 
 ### 32. The `researcher` template
+
+> [!check] **Out of v1 — D31.** Web research conflicts with default-deny egress; the template returns when open-web research has an egress answer.
 
 Backlog Story 1.2 gives only *"scope → web research → summarize → grounding ✋, `on_fail` loop"*. The loop's target, each step's kind, model, `requires` and `produces` are not stated. [[Seeded Flows]] draws the loop back to `summarize` as a guess.
 
