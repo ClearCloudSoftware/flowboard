@@ -62,7 +62,7 @@ The monitor mockup's pipeline view draws the loop as a dashed edge labelled *"�
 
 ## Task completion
 
-A branch shape ends on more than one leaf. The backlog BUG in Story 5.2: *"Task‑done condition: 'nothing active and no edge fired' strands a task in `running` when a conditional edge never fires. Use 'no active instances and no reachable pending targets'."*
+A branch shape ends on more than one leaf. The backlog BUG in Story 5.2: *"Task‑done condition: "nothing active and no edge fired" strands a task in `running` when a conditional edge never fires. Use "no active instances and no reachable pending targets"."*
 
 ## Related
 
