@@ -26,10 +26,13 @@ export interface AgentRun {
 | Member | Used by | Source |
 |---|---|---|
 | `sessionId` | Park and resume (`--resume <claude_session_id>`); stored on the run | PRD §5, §9 |
-| `pid` | Restart recovery: *"re-attach by pid before failing"*; Stop: *"SIGTERM by pid from the route"* | `03` §7, §8 |
+| `pid` | Restart recovery: *"re-attach by pid before failing"*; Stop: *"SIGTERM by pid from the route"* | `03` §7, §8; backlog 3.3, 3.4 |
 | `events` | The runner writes each to `run_events` and the SSE tail | `03` §6, §8 |
 | `result` | The engine's advancement rules; the cost ledger | `02` §3; `06` §12 |
-| `stop()` | The run viewer's Stop button, graceful shutdown | PRD §13; backlog Story 3.3 |
+| `stop()` | No caller is named. Graceful worker shutdown (*"SIGTERM children, mark runs `cancelled`"*) runs in the worker that holds the handle, so it could use `stop()` (inference). The viewer's Stop button (*"A Stop button that kills the process"*) goes through a route, which holds no `AgentRun`: it SIGTERMs by pid | `03` §7, §8; backlog 3.3 (**GAP**), 3.4; PRD §13 |
+
+> [!warning] Two ways to stop a run
+> `AgentRun.stop()` (*"SIGTERM the child"*) and `ChildHandle.kill()` (`exec-host.ts`) live in the worker; the Stop route signals a pid from `apps/web`. Where Stop should run is [[Monitor Open Questions]] #36; who finalises the stopped run is [[Execution Open Questions]] #56.
 
 ## `RunResult`
 
@@ -56,8 +59,10 @@ The port only reports `exitCode`. Classification belongs to the runner (`03` §6
 | Exit | Meaning | Who decides |
 |---|---|---|
 | `0` | `succeeded`; scan artifacts, apply §8 | runner |
-| non-zero, transient (*"rate limited, overloaded, network error, process killed by a signal or lost on restart"*) | same attempt re-run, max 3, backoff 30 s / 2 min / 8 min, `wasted = 1` | runner |
-| non-zero, anything else | task `blocked` | runner |
+| non-zero, transient (*"rate limited, overloaded, network error, process killed by a signal or lost on restart"*) | same attempt re-run, max 3, backoff 30 s / 2 min / 8 min, `wasted = 1`, not counted toward `max_attempts` | runner |
+| non-zero, anything else, *"or a 4th transient failure (budget or turn cap hit, auth error, bad config, unknown)"* | task `blocked` | runner |
+
+Backlog Story 3.2 adds a second failure signal: *"non‑zero or `is_error` → failed"*. Claude reports `is_error` on its `result` line, so a run can exit 0 and still have failed. `RunResult` carries only `exitCode` and `error`, and no source says how the adapter reports `is_error`: [[Agent Providers Open Questions]] #33. A cap hit is a provider-side stop too (`--max-turns`, `--max-budget-usd`); PRD §7 classes it as non-transient.
 
 *"A non-zero exit from an agent run is an **infrastructure failure**, never a verdict on the work, because work verdicts arrive as outcomes."* (PRD §7). See [[Infra Retries]].
 
@@ -65,7 +70,7 @@ The [[Replay Provider]] settles a stopped run as `{ exitCode: 130, error: 'stopp
 
 ## Where `outcome` comes from
 
-`RunResult.outcome` is documented as *"read from the produced JSON or set_outcome"*, both of which the runner sees, not the CLI. Yet the `result` event also carries `outcome?`, which the adapter emits. Which side sets it is not stated: [[Agent Providers Open Questions]] #10.
+`RunResult.outcome` is documented as *"read from the produced JSON or set_outcome"*, both of which the runner sees, not the CLI. Yet the `result` event also carries `outcome?`, which the adapter emits. Which side sets it is not stated: [[Agent Providers Open Questions]] #10. Which artifact carries the outcome is [[Execution Open Questions]] #7.
 
 ## Related
 

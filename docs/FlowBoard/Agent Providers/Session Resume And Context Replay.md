@@ -36,7 +36,7 @@ sequenceDiagram
 ```
 
 > [!important] The resume prompt repeats the paths
-> *"Resume prompt must repeat the requires/produces paths, not only the answers."* (backlog Story 3.2, **BUG**; `03` §6). This is also what makes context-replay *"what the spec already does anyway"*.
+> *"Resume prompt must repeat the requires/produces paths, not only the answers."* (backlog Story 3.2, **BUG**; `03` §6). This is also why `01-ports.md` can say context-replay is something *"which the spec already does anyway"*.
 
 PRD §9 on why parking beats waiting: *"This is more robust than trying to hold a session alive for hours."*
 
@@ -46,6 +46,7 @@ PRD §9 on why parking beats waiting: *"This is more robust than trying to hold 
 - PRD §7 passes `--session-id <generated uuid, stored as runs.claude_session_id>`: the runner chooses the id up front. The two descriptions disagree on who creates it: [[Agent Providers Open Questions]] #5.
 - `02` §1 renames the column: *"Rename `runs.claude_session_id → agent_session_id`; add `runs.provider`."* PRD §5 keeps `claude_session_id`: [[Agent Providers Open Questions]] #16.
 - `sessions` capability: *"a stable session id is reported"*.
+- A fork starts a new CLI process with its own `result` and `total_cost_usd`. Whether the resumed run's cost adds to the parked one or already includes it is [[Cost And Control Open Questions]] #16.
 
 ## The resume race
 

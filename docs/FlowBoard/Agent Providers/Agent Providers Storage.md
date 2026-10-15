@@ -14,7 +14,7 @@ module: Agent Providers
 | `packages/adapters/agent/` | *"claude-cli, codex-cli (later), replay"* | PRD §3 |
 | `packages/adapters/exec/` | *"host, docker"* | PRD §3 |
 | `adapters/agent/claude/ codex/ replay/` | the architecture's layout | architecture README |
-| `docs/old/reference/core/ports/agent-provider.ts`, `events.ts`, `exec-host.ts` | reference port types | `reference/README.md` |
+| `docs/old/reference/core/ports/agent-provider.ts`, `events.ts`, `exec-host.ts` | reference port types | the reference tree; `reference/README.md`'s file map lists the first two but omits `exec-host.ts` |
 | `docs/old/reference/adapters/agent/replay/replay-provider.ts` | runnable reference adapter | `reference/README.md` |
 
 Reference files use *"relative imports … so they run with zero config"* and *"`import type` only, so at runtime these depend on nothing but Node builtins"*; *"Avoid TS features that need a transform (e.g. parameter properties, enums) so strip-only runtimes keep working."* (`reference/README.md`)
@@ -30,7 +30,7 @@ Reference files use *"relative imports … so they run with zero config"* and *"
 | per-run `settings.json` | `PreToolUse` hooks | PRD §7 |
 | `data/sock/<run_id>.sock` | the broker socket the shim forwards to | PRD §9 |
 
-`.gitignore` covers `data/runs` (backlog Story 0.3).
+`.gitignore` covers `data/runs` (backlog Story 0.3). Whether a run keeps `args.json` or `spec.json` is [[Execution Open Questions]] #38; where `mcp.json` and `settings.json` are written is not stated ([[Execution Open Questions]] #39). The drawio *Logical components* page also keeps *"session logs"* on *Disk*, without a path.
 
 ## In the database
 

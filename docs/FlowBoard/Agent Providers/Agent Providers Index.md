@@ -11,7 +11,7 @@ Agent Providers is the FlowBoard platform component that lets the system drive d
 > An adapter does **exactly two mappings**: `RunSpec` to the provider's native flags, and the provider's native stream to `NormalizedEvent`. *"Everything else — the flow engine, board projection, cost ledger, HITL protocol, live viewer — consumes only the normalized outputs and never learns which provider ran."* (`agent-provider.ts`). See [[AgentProvider Port]].
 
 > [!check] v1 is Claude-only
-> The Capability Library decisions of 2026-10-15 settled v1 as *"Claude-only, with the provider seam kept in the port"* ([[Capability Library Decisions]] D1). The port, the Claude Code adapter and the ReplayProvider are v1; Codex is designed but deferred. See [[Agent Providers Roadmap]].
+> The Capability Library decisions of 2026-10-15 summarise v1 as *"Claude-only, with the provider seam kept in the port"* ([[Capability Library Decisions]], *v1 in one paragraph*); D1 reads *"**v1 is Claude-only.**"* The port, the Claude Code adapter and the replay adapter are v1 (PRD §3 lists `adapters/agent/` as *"claude-cli, codex-cli (later), replay"*); Codex is designed but deferred. See [[Agent Providers Roadmap]].
 
 There is no mockup for this component. It is documented as architecture reference.
 

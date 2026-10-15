@@ -5,7 +5,7 @@ module: Agent Providers
 
 # Claude Code Adapter
 
-The v1 adapter, and the only real one. PRD §1: each step is *"a headless Claude Code session with its own model and effort setting"*. PRD §17: *"Every model call goes through the `claude` CLI."* The drawio *Logical components* page: *"Claude Code CLI / headless, stream-json"*. PRD §3 names its folder `adapters/agent/claude-cli`.
+The v1 adapter, and the only real one. PRD §1: each step is *"a headless Claude Code session with its own model and effort setting"*. PRD §17: *"Every model call goes through the `claude` CLI."* The drawio *Logical components* page: *"Claude Code CLI / headless, stream-json"*. PRD §3 lists it under `adapters/agent/` as `claude-cli`; the architecture README's layout calls the folder `adapters/agent/claude/`.
 
 ## The command
 
@@ -30,6 +30,8 @@ claude -p "<prompt>"
 
 Resume adds `--resume <claude_session_id> --fork-session` (PRD §9). *"Run with `cwd` set to the task's worktree path."*
 
+The drawio *Harness architecture* draws the sandboxed form: *"claude -p … --output-format stream-json / cwd /work · --mcp-config (shim) · --settings (hooks) · --strict-mcp-config · --max-turns · --max-budget-usd · ANTHROPIC_BASE_URL → proxy, dummy key"*.
+
 ## `RunSpec` → flags
 
 | `RunSpec` field | Flag | Note |
@@ -37,7 +39,8 @@ Resume adds `--resume <claude_session_id> --fork-session` (PRD §9). *"Run with 
 | `prompt` | `-p "<prompt>"` | Rendered in canonical order |
 | `model` | `--model` | via `resolveModel` (identity in v1, [[Capability Library Decisions]] D20) |
 | `effort` | `--effort` | |
-| `toolPolicy.allow` | `--allowedTools` | always appended with `mcp__vibe__*` |
+| `toolPolicy.allow` | `--allowedTools` | appended with `mcp__vibe__*` whenever it is set |
+| `toolPolicy.deny` | none in PRD §7 | backlog 0.1 also lists a `--tools` flag to verify, with no stated use |
 | `tools` | `--mcp-config <per-run mcp.json>` + `--strict-mcp-config` | |
 | `capabilities` (`plugin_dir`) | `--plugin-dir` per plugin | at the pinned commit |
 | `resume` | `--resume … --fork-session` | |
@@ -46,11 +49,11 @@ Resume adds `--resume <claude_session_id> --fork-session` (PRD §9). *"Run with 
 | `exec` | spawned through `exec.spawn` | |
 | *(none)* | `--permission-mode`, `--settings`, `--append-system-prompt`, `--session-id` | No `RunSpec` field: [[Agent Providers Open Questions]] #4 |
 
-This mapping is assembled from PRD §7 and `agent-provider.ts`; no source tabulates it.
+**Inferred.** This mapping is assembled from PRD §7 and `agent-provider.ts`; no source tabulates it. The fixed flags (`--output-format stream-json`, `--verbose`, `--include-partial-messages`) have no `RunSpec` field because the adapter always passes them. [[Agent Providers Open Questions]] #31.
 
 ## Rules the adapter owns
 
-`03` §5: *"every Claude-specific fix the backlog lists moves **into the Claude adapter**, out of the runner — this is the whole payoff"*:
+`03` §5: *"every Claude-specific fix the backlog lists moves **into the Claude adapter**, out of the runner — this is the whole payoff"*. The rows cited to `03` §5 are its list; the PRD-only rows are PRD §7 runner rules that this note places in the adapter by the same logic (inference):
 
 | Rule | Source |
 |---|---|
@@ -72,7 +75,7 @@ This mapping is assembled from PRD §7 and `agent-provider.ts`; no source tabula
 
 PRD §0 makes three things probes, not assumptions: the `stream-json` shape, `claude --version` on PATH, and that the CLI works through a credential-injecting proxy. *"If any part of this spec turns out to be impossible or wrong given the actual CLI behaviour, stop and say so rather than silently substituting something else."*
 
-Backlog Story 0.1 adds: verify the flags exist (*"`--effort`, `--session-id`, `--strict-mcp-config`, `--plugin-dir`, `--allowedTools`, `--tools`, `--max-turns`, `--max-budget-usd`, `--append-system-prompt`, `--resume`, `--fork-session`"*), confirm `/<plugin>:<slug>` in `-p` mode (**DEC**), and *"Decide how to isolate headless runs from `~/.claude` hooks/settings (e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`)"* (**DEC**). Decision D5's default: *"Empty `--settings` file per run"*. [[Agent Providers Open Questions]] #24.
+Backlog Story 0.1 adds: verify the flags exist (*"`--effort`, `--session-id`, `--strict-mcp-config`, `--plugin-dir`, `--allowedTools`, `--tools`, `--max-turns`, `--max-budget-usd`, `--append-system-prompt`, `--resume`, `--fork-session`"*), confirm `/<plugin>:<slug>` in `-p` mode (**DEC**), and *"Decide how to isolate headless runs from `~/.claude` hooks/settings (e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`)"* (**DEC**). Decision D5's default: *"Empty `--settings` file per run"*. [[Agent Providers Open Questions]] #24; also [[Execution Open Questions]] #52 and [[Sandboxing Open Questions]] #24.
 
 ## Milestone
 

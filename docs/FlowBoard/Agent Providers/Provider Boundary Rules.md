@@ -38,13 +38,19 @@ The architecture README: *"Today the spec bleeds adapters into the core: the run
 | Pricing tokens for providers without `native_cost` | `PricingService` | `06` §12 |
 | Pack format | registry stores; adapter mounts | `05` §13 |
 | Where the process runs | `ExecHost` | `exec-host.ts` |
+| Writing the per-run `mcp.json` and hook `settings.json` (Claude-format files) | runner | `03` §6; PRD §9; drawio *Runner* |
+
+> [!warning] Two placements the port does not match
+> - The runner writes Claude-format `mcp.json` and `settings.json`, though `03` §5 wants Claude specifics in the adapter. [[Agent Providers Open Questions]] #4.
+> - The drawio puts stream parsing in the core's *Run orchestrator* (*Logical components*) and in a separate worker *Stream parser* node (*Harness architecture*), not in the adapter. [[Agent Providers Open Questions]] #34; see [[Stream Parsing And Normalization]].
 
 ## Tests of the abstraction
 
 - *"Components 6–8 contain **zero provider strings** once 5 is extracted"* (`03` intro).
 - *"If a route ever needs to know whether it's Claude or Codex, something leaked upward."* (`06` §15).
 - The worker *"is a **generic executor host** — nothing about it knows the provider."* (`03` §7).
-- The five-step checklist in [[Adding A Provider]].
+- The four-step checklist in [[Adding A Provider]].
+- No source applies these tests to agent calls outside a step. The backlog's import agent (Story 7.3: *"haiku, `--tools ""`"*) is a second Claude invocation; whether it goes through the port is [[Intake And Import Open Questions]] #12.
 
 ## Related
 

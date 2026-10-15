@@ -36,12 +36,12 @@ flowchart LR
 | The CLI in the sandbox image (*"claude CLI · codex CLI"*) | drawio *Harness architecture* |
 | Before any of it: check whether ACP covers it | `01-ports.md`; [[Agent Client Protocol Option]] |
 
-Items 4–5 are not on `06`'s list. Nothing says how a flow or step chooses the new provider: [[Agent Providers Open Questions]] #14.
+None of these items is on `06`'s four-step list; each comes from the source in its row. Nothing says how a flow or step chooses the new provider: [[Agent Providers Open Questions]] #14.
 
 ## Other providers named
 
 - Codex is the planned second real provider ([[Codex Adapter]]).
-- *"Gemini CLI"* appears once, in the architecture README's five-ports table (*"Unlocks: Codex, Gemini CLI, `ReplayProvider` (tests)"*). No other source mentions it.
+- *"Gemini CLI"* appears once, in the architecture README's five-ports table, whose *Unlocks* cell reads *"Codex, Gemini CLI, `ReplayProvider` (tests)"*. No other design source mentions it.
 
 ## Related
 

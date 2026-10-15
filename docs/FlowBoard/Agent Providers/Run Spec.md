@@ -37,7 +37,7 @@ module: Agent Providers
 
 `ArtifactRef` is `{ type, path }`: *"Declared artifact type key, e.g. 'research_brief'"* and *"Absolute path in the task's workspace."*
 
-The full assembly rules, including the optional memory part 7 that `PromptParts` has no slot for, are in [[Prompt Assembly]].
+The full assembly rules, including the optional memory part 7 that `PromptParts` has no slot for, are in [[Prompt Assembly]] ([[Execution Open Questions]] #51). `09-memory.md` names this as memory's only change to *"the prompt contract on AgentProvider"*.
 
 ## `ToolServer`
 
@@ -65,7 +65,7 @@ export interface CapabilityPack {
 ## What `RunSpec` does not carry
 
 > [!warning] The PRD command needs more than `RunSpec` holds
-> PRD §7's `claude` command uses `--permission-mode`, `--settings` (the per-run hook file), `--append-system-prompt` (the agent's system prompt) and `--session-id` (a runner-generated uuid). None has a `RunSpec` field. The sandbox tier travels only implicitly, through `exec.id` / `exec.profile.tier`. See [[Agent Providers Open Questions]] #4 and #5.
+> PRD §7's `claude` command uses `--permission-mode`, `--settings` (the per-run hook file), `--append-system-prompt` (the agent's system prompt) and `--session-id` (a runner-generated uuid). None has a `RunSpec` field. The sandbox tier travels only implicitly, through `exec.id` / `exec.profile.tier` (backlog 1.1 adds an optional `step_defs.sandbox_profile` override). And the runner, not the adapter, *"writes a per-run `settings.json` with `PreToolUse` hooks"* and the `mcp.json` (`03` §6; PRD §9; the drawio *Runner* card), both Claude-format files. See [[Agent Providers Open Questions]] #4 and #5.
 
 ## Transforms before launch
 
@@ -77,6 +77,8 @@ const draftMode: SpecTransform = s => ({ ...s, model: 'fast-cheap', effort: 'low
 ```
 
 *"Provider-neutral, composable with any future override (force-local-model, cap-budget-globally, pin-a-model for an incident), and it records the *resolved* model/effort on the run so cost stays honest"* (`06` §15). See [[Draft Mode And Spec Transforms]].
+
+Backlog Story 3.5 adds a second transform: *"draft mode and the sandbox profile compose as `RunSpec` transformers."* No source fixes the order of the chain ([[Settings And Plumbing Open Questions]] #10).
 
 ## Related
 

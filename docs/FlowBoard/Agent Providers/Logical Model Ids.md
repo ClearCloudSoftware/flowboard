@@ -23,14 +23,17 @@ resolveModel(logical: string): string;
 | `07`, `replay-provider.ts` self-check | `default` |
 | PRD §5 `step_defs.model` | `'sonnet'` default, *"passed to --model"* |
 | PRD §5 `agents.default_model` | `'sonnet'`, *"a Claude alias, used as the logical model id"* |
-| PRD §13, §15, §16, drawio, mockups | `haiku`, `sonnet`, `opus` |
+| PRD §15 seed flow, the flow-designer, task-detail and capability-library mockups | `haiku`, `sonnet`, `opus` |
+| PRD §13, §16, drawio (draft mode) | `haiku` |
 
 `05` §13: agents *"are already provider-neutral except default model ids (use logical ids"*. The capability-library guide: *"Provider-neutral apart from the model id, which is logical and mapped by the adapter."*
 
 > [!check] v1 decision
 > [[Capability Library Decisions]] D20: *"`default_model` stores Claude aliases (`opus` / `sonnet` / `haiku`) and treats them as the logical ids; `resolveModel` passes them through for Claude. The mapping arrives with the second provider."*
 
-So in v1 the logical id *is* the Claude alias, and the Claude adapter's `resolveModel` is the identity. The abstract names (`reasoning-high` …) belong to the multi-provider design. [[Agent Providers Open Questions]] #11.
+So in v1 the logical id *is* the Claude alias, and the Claude adapter's `resolveModel` is the identity. The abstract names (`reasoning-high` …) belong to the multi-provider design. [[Agent Providers Open Questions]] #11; the same split is [[Flow Design Open Questions]] #15.
+
+The alias is not the native id either: the stream sample's CLI reports `claude-fable-5-1` for its default model. PRD §5 calls `sonnet` *"a Claude alias"*, so `haiku` / `sonnet` / `opus` are aliases the CLI resolves, not native ids.
 
 ## The resolution table
 

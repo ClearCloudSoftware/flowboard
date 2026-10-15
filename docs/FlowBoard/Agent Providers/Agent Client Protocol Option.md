@@ -19,7 +19,7 @@ Before the port hardens, the sources ask whether it should be a standard protoco
 | MCP passthrough | `mcp_tools`, `RunSpec.tools` |
 | Cost | `native_cost`, `Usage.costUsd` |
 
-(The five needs are `01-ports.md`'s; the right column maps them onto the port.)
+(The five needs are `01-ports.md`'s; the right column is this note's mapping onto the port, not a source table: [[Agent Providers Open Questions]] #35.)
 
 ## Where it appears
 

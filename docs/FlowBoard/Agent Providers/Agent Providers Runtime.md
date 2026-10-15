@@ -34,6 +34,8 @@ for await (const ev of run.events) {                     // normalized — provi
 const result = await run.result;
 ```
 
+`07` labels it *"illustrative"*. The sketch passes only `prompt`, `model`, `effort`, `cwd` and `resume`: no `exec`, `tools`, `capabilities`, `toolPolicy` or `limits`, which `03` §6 and PRD §7 require. It also updates live cost only on the `result` event.
+
 ```mermaid
 sequenceDiagram
   participant W as Worker (job loop)
@@ -58,7 +60,7 @@ sequenceDiagram
   R->>R: scan artifacts · classify exit · engine advances
 ```
 
-Built from `03` §6, `07`, PRD §7 and the drawio *Life of one step* (letters C, E, F, G, I). The drawio letters:
+Built from `03` §6, `07`, PRD §7 and the drawio *Life of one step* (letters C, E, F, G, I); the sequence is this note's synthesis. The diagram follows the port and puts parsing in the adapter; the drawio draws the *Stream parser* as a separate worker node ([[Agent Providers Open Questions]] #34). The drawio letters:
 
 - **C** *"The worker leases the job. The engine picks the step; the runner builds the RunSpec and the prompt"*
 - **E** *"The permission gate checks the tier; the runner writes mcp.json and the hook settings; the ExecHost starts a sandbox with the worktree at /work."*
@@ -74,8 +76,8 @@ When memory is on, *"the runner brackets `launch()` with the MemoryStore port"* 
 
 ## Restart and stop
 
-- *"Restart recovery: re-attach by pid before failing. A `starting`/`running` row whose pid is alive → keep tailing"* (`03` §7). The port has no re-attach method: a restarted worker has no `AgentRun`, only a pid. How it re-reads the live process's stream is not said ([[Agent Providers Open Questions]] #30).
-- *"Stop = SIGTERM by pid from the route (same machine), finalize as `cancelled`."* (`03` §8). `AgentRun.stop()` is *"SIGTERM the child"*.
+- *"Restart recovery: re-attach by pid before failing. A `starting`/`running` row whose pid is alive → keep tailing"* (`03` §7). The port has no re-attach method: a restarted worker has no `AgentRun`, only a pid. How it re-reads the live process's stream is not said ([[Agent Providers Open Questions]] #30, same as [[Execution Open Questions]] #31).
+- *"Stop = SIGTERM by pid from the route (same machine), finalize as `cancelled`."* (`03` §8). `AgentRun.stop()` is *"SIGTERM the child"*. The route holds no `AgentRun`, so the two paths differ ([[Monitor Open Questions]] #36).
 
 ## Related
 

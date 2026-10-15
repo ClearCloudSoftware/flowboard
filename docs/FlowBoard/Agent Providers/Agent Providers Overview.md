@@ -29,6 +29,8 @@ It is architecture component **#5, *AgentProvider abstraction ⭐*** (architectu
 
 (architecture README)
 
+The README states the goal up front: the general version is *"the one where **Claude Code and Codex are interchangeable adapters**, not the substrate"*. It counts the normalized events as something the spec already got right (*"`run_events.type` normalizes to 7 event kinds → *already the provider seam*"*) and makes the flow graph provider-agnostic: *"the graph references *logical* models and capabilities, so the same agentic graph runs on Claude Code, Codex, or a replay adapter unchanged."* The drawio *FlowBoard ideation* page labels its architecture group *"Claude Code and Codex as interchangeable adapters."*
+
 ```mermaid
 flowchart LR
   Q[Job queue] -->|claim| R[Runner / run orchestrator]
@@ -53,14 +55,14 @@ Consumers of the port's outputs (`03` §5, *Composes with*): *"the runner (6) is
 4. **Degrade, don't fail.** Capability negotiation is *"The key trick that makes graceful degradation cheap"* (`01-ports.md`). See [[Capability Negotiation]].
 5. **Logical, not native, models.** *"A flow authored for Claude runs on Codex unchanged; only the resolution table differs."* (`01-ports.md`). See [[Logical Model Ids]].
 6. **One envelope, versioned.** *"This is the most-read contract in the system, so it carries a schema version"* (`01-ports.md`). See [[Normalized Event Envelope]].
-7. **Sandboxing is orthogonal.** *"any provider × any tier, for free (2×N, not N×M)"* (`exec-host.ts`). See [[Providers And Sandboxing]].
+7. **Sandboxing is orthogonal.** *"any provider × any tier, for free (2×N, not N×M)"* (`01-ports.md`; `exec-host.ts` says *"any provider × any isolation tier"*). See [[Providers And Sandboxing]].
 8. **Prove it with a second implementation.** *"The interface is only as good as its second implementation."* (`01-ports.md`). See [[Codex Adapter]] and [[Replay Provider]].
 9. **The CLI, never the API.** *"Do not build … anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI."* (PRD §17).
 
 > [!quote] Why it matters to the pitch
 > *"It is also **provider-agnostic by design** (Claude *and* Codex behind one seam), so we are not betting the workflow on one vendor."* (`pitch.md`, objection 3)
 >
-> The competitive analysis puts FlowBoard's provider story at *"One seam, Claude Code first, Codex intended"* against Multica's *"26 agent CLIs today"* (`competitor-multica.md`).
+> The competitive analysis puts FlowBoard's provider story at *"One seam, Claude Code first, Codex intended"* against Multica's *"26 agent CLIs today"* (`competitor-multica.md`), and lists *"provider-agnosticism"* among what *"Multica already ships"*, so the seam is table stakes rather than a differentiator.
 
 ## Related
 

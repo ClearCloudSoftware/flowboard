@@ -30,7 +30,7 @@ module: Agent Providers
 | `runs.provider`, `runs.agent_session_id` | `02` §1 |
 | PricingService rate rows for token-only providers | `06` §12 |
 | Snapshot `spec.json` and replay any run through ReplayProvider | `03` §6 |
-| A plain OTel exporter to Langfuse | `01-ports.md`; drawio *Langfuse (later)* |
+| A plain OTel exporter to Langfuse (PRD §7 names it too, as *"later"*) | `01-ports.md`; PRD §7; drawio *Langfuse (later)* |
 | `StepExecutor` interface, where `agent`/`skill` delegate to a provider | `02` §3 (optional) |
 
 ## Ideas

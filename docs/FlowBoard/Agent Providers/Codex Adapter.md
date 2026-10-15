@@ -35,7 +35,7 @@ The architecture README's open decision 2: *"**ACP + Codex spike before the port
 - Stream: *"Codex's own event format"* parsed into the seven kinds (`01-ports.md`).
 - Cost: *"Codex leaves it absent for PricingService."* (`03` §5); *"Codex reports tokens only, so the same service prices it from a `(provider, model) → rates` table."* (`06` §12).
 - Packs: *"Codex-format `CapabilityPack`s for any skills used by flows targeting it"* (`06`).
-- Sandbox: Codex has its own OS sandbox, network off by default (`08`). See [[Providers And Sandboxing]].
+- Sandbox: Codex has its own OS sandbox, network off by default (`08`). Its credential injection is not described ([[Sandboxing Open Questions]] #28). See [[Providers And Sandboxing]].
 - Models: `'reasoning-high' -> … 'o3'` (`agent-provider.ts`).
 
 ## In the mockups
@@ -44,7 +44,7 @@ The architecture README's open decision 2: *"**ACP + Codex spike before the port
 - The monitor and inbox mockups carry a sample task, `provider-codex` *"Codex CLI behind the AgentProvider seam"*, whose research step asks: *"The Codex CLI reports no per-call cost. Estimate spend from token counts, or record it as unknown and leave the totals honest?"* See [[Agent Providers Defaults And Sample Content]].
 
 > [!warning] Is Codex in v1?
-> The drawio *Logical components* legend says *"dashed = not in v1"*, and the *Codex CLI* adapter box is drawn solid, like Claude Code. Every other source says later. [[Agent Providers Open Questions]] #17.
+> The drawio *Logical components* legend says *"dashed = not in v1"*, and the *Codex CLI* adapter box is drawn solid, like Claude Code. The capability-library mockup also treats Codex as live (Codex packs, a provider filter, the coverage counter). PRD §3, the drawio *Harness architecture* and D1 say later. [[Agent Providers Open Questions]] #17.
 
 ## Related
 

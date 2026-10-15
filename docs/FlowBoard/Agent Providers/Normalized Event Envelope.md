@@ -23,6 +23,10 @@ export type NormalizedEvent =
 
 (`docs/old/reference/core/ports/events.ts`; identical in `01-ports.md`)
 
+`events.ts` opens: *"Normalized run telemetry — shared by the AgentProvider port, the runner, the live viewer, and the cost ledger. Every provider adapter parses its native stream into these types; nothing downstream sees provider-specific JSON."* The architecture README counts it among what the spec already got right: *"`run_events.type` normalizes to 7 event kinds → *already the provider seam*"*.
+
+The *Consumed by* column below is inferred from those four consumers and the fields each kind carries; no source assigns kinds to readers ([[Agent Providers Open Questions]] #35).
+
 | Kind | Carries | Consumed by |
 |---|---|---|
 | `assistant_text` | `text` | Live viewer |
@@ -58,7 +62,7 @@ export interface Usage {
 PRD §7 repeats it: *"each event carries `v`, starting at 1. A reader handles the versions it knows and falls back to the raw line for the rest."* The drawio *Harness architecture* names the parser output *"NormalizedEvent v1 (versioned, OTel GenAI names)"* and a later *"Langfuse (later) / self-hosted traces via a plain OTel exporter from NormalizedEvent"*.
 
 > [!warning] `events.ts` has no `v`
-> The reference type carries no version field; only the comment in `01-ports.md` (*"every event also carries `v: 1`"*) and the `run_events.v` column do. [[Agent Providers Open Questions]] #6.
+> The reference type carries no version field; only the comment in `01-ports.md` (*"every event also carries `v: 1`"*) and the `run_events.v` column do. [[Agent Providers Open Questions]] #6; also [[Monitor Open Questions]] #39 and [[Execution Open Questions]] #62.
 
 ## Keep the raw line
 
@@ -66,7 +70,7 @@ PRD §7 repeats it: *"each event carries `v`, starting at 1. A reader handles th
 
 ## Gaps in the envelope
 
-- **No live usage kind.** `Usage` travels only on `result`, but the runner must *"Accumulate per-message token usage as you stream so the live view shows a running number"* (PRD §7) and the `partial_stream` capability *"emits incremental deltas (live token counts) mid-turn"*. No normalized kind carries those deltas. [[Agent Providers Open Questions]] #9.
+- **No live usage kind.** `Usage` travels only on `result`, but the runner must *"Accumulate per-message token usage as you stream so the live view shows a running number"* (PRD §7) and the `partial_stream` capability *"emits incremental deltas (live token counts) mid-turn"*. No normalized kind carries those deltas, and `07`'s runner sketch updates live cost only `if (ev.type === 'result')`. [[Agent Providers Open Questions]] #9.
 - **Where `summary` lives.** Only `tool_use` has a `summary`; PRD §7 gives every `run_events` row a `summary`. [[Agent Providers Open Questions]] #8.
 - **Native events with no kind.** See [[Stream Parsing And Normalization]].
 

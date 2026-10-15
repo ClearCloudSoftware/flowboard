@@ -51,7 +51,9 @@ What the sources say, flag by flag. Blank means the sources don't say.
 | `budget_cap` | `--max-budget-usd` | | — |
 | `tool_hooks` | `PreToolUse` hooks via `--settings` (PRD §7) | | — |
 
-Only the ReplayProvider's set is written down as code: `new Set(['sessions', 'partial_stream', 'native_cost'])` (`replay-provider.ts`). No source writes out the Claude adapter's set; the Claude column is inferred from the flags PRD §7 passes. [[Agent Providers Open Questions]] #21 asks whether the replay set should be configurable.
+Only the ReplayProvider's set is written down as code: `new Set(['sessions', 'partial_stream', 'native_cost'])` (`replay-provider.ts`). No source writes out the Claude adapter's set; the Claude column is **inferred** from the flags PRD §7 and `03` §5 pass ([[Agent Providers Open Questions]] #31). [[Agent Providers Open Questions]] #21 asks whether the replay set should be configurable.
+
+The Claude CLI's own `system/init` line also carries a `capabilities` array (`interrupt_receipt_v1`, `interrupt_cancel_queued_v1`, `msg_lifecycle_v1` in the stream sample). Those are the CLI's protocol features, not FlowBoard's `Capability` flags.
 
 > [!note] No flag for `maxTurns`
 > `limits.maxTurns` has no capability, while `maxBudgetUsd` has `budget_cap`. [[Agent Providers Open Questions]] #25.

@@ -61,7 +61,7 @@ classDiagram
 
 ## Database columns the port feeds
 
-From PRD §5 unless noted.
+Columns from PRD §5 unless noted. The *Filled from* column is inferred from the type and column names; no source maps port fields to columns ([[Agent Providers Open Questions]] #35).
 
 | Table.column | Filled from | Note |
 |---|---|---|
@@ -72,11 +72,13 @@ From PRD §5 unless noted.
 | `runs.cost_usd` | `Usage.costUsd` (or PricingService) | |
 | `runs.input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_write_tokens`, `num_turns` | `Usage` | |
 | `runs.provider` | — | proposed by `02` §1; not in PRD §5 |
-| `runs.model`, `runs.effort` | the resolved model and effort | backlog Story 1.1 (*"the three columns that proved necessary"*); `02` §1; not in PRD §5's SQL |
-| `runs.sandbox` | `exec.id` | PRD §11.1 prose; drawio *SQLite* node; not in PRD §5's SQL |
+| `runs.model`, `runs.effort` | the resolved model and effort | backlog Story 1.1 (*"the three columns that proved necessary"*); `02` §1; PRD §11.1 and `08` prose; not in PRD §5's SQL |
+| `runs.sandbox` | `exec.id` | PRD §11.1 prose (*"records the tier that actually ran"*); `08`; backlog 1.1, 3.5; drawio *SQLite* node; not in PRD §5's SQL |
 | `run_events.seq`, `type`, `v`, `raw`, `summary` | each `NormalizedEvent` | `v` defaults to 1 |
 
 ## Columns the runner reads to build `RunSpec`
+
+Inferred from PRD §5's columns, PRD §7's command and the `RunSpec` fields; no source tabulates it.
 
 | Column | `RunSpec` field |
 |---|---|
@@ -88,10 +90,11 @@ From PRD §5 unless noted.
 | `agents.system_prompt` | none (`--append-system-prompt`) |
 | `tasks.capability_pins`, `step_defs.extra_plugin_ids` | `capabilities` |
 | `tasks.worktree_path` | `cwd` |
+| `settings` `sandbox_profile`, `step_defs.sandbox_profile` (PRD §11.1; backlog 1.1) | `exec` (via `workspace.execHost(task)`) |
 | `settings` draft mode | applied as a `SpecTransform` |
 
 > [!note] No provider column anywhere
-> No table stores which provider a step, flow, project or run uses. PRD §5 is Claude-only by construction; [[Capability Library Decisions]] D1/D23 keep it so in v1. [[Agent Providers Open Questions]] #14 and #16.
+> No table stores which provider a step, flow, project or run uses. PRD §5 is Claude-only by construction; [[Capability Library Decisions]] D1/D23 keep it so in v1. [[Agent Providers Open Questions]] #14 and #16; the missing run columns are also [[Cost And Control Open Questions]] #14 and [[Settings And Plumbing Open Questions]] #22.
 
 ## Related
 

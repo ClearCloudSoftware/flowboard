@@ -58,10 +58,11 @@ export interface ReplayScript {
 ## Limits
 
 > [!warning] Three harness shapes
-> The sources describe three different test doubles: a `NormalizedEvent` script (`replay-provider.ts`), a raw `stream-sample.jsonl` replay (`01-ports.md`), and a fake `claude` binary (backlog 0.2). Only the last exercises the Claude parser. [[Agent Providers Open Questions]] #20.
+> The sources describe three different test doubles: a `NormalizedEvent` script (`replay-provider.ts`), a raw `stream-sample.jsonl` replay (`01-ports.md`; the drawio's *"Replays recorded stream-json in tests"*), and a fake `claude` binary (backlog 0.2). The script bypasses parsing entirely. The fake binary drives the whole Claude adapter (flags, spawn, parser). A raw-capture replay would need a stream-json parser inside the replay adapter, which no source describes. [[Agent Providers Open Questions]] #20.
 
-- It has no `mcp_tools` or `resume_fork`, so park/resume tests run the fallback paths, not the Claude ones. [[Agent Providers Open Questions]] #21.
+- It has no `mcp_tools` or `resume_fork`, so park/resume tests run the fallback paths, not the Claude ones (inference from its fixed set). [[Agent Providers Open Questions]] #21.
 - `stop()` takes effect only between events; exit code 130 vs the transient-signal rule: [[Agent Providers Open Questions]] #22.
+- From the code: `result` settles only while something iterates `events` (the generator calls `settle`), so a caller that awaits `result` without draining `events` waits forever; and a `stop()` after the last event is yielded has no effect, so the run settles with `exitCode: 0`.
 
 ## Related
 

@@ -9,7 +9,7 @@ module: Agent Providers
 
 ## Run-time: degrade, don't fail
 
-The five rules in `01-ports.md`, plus one from PRD §7:
+The five rules in `01-ports.md`, plus one from PRD §7. The *Who degrades* column is sourced only for `effort` (*"adapter … editor"*), `mcp_tools` (`04` §9: *"the engine watches the `produces:questions` path"*) and `tool_hooks` (*"the flow editor"*); the rest is inferred ([[Agent Providers Open Questions]] #35).
 
 | Missing | Degradation | Who degrades |
 |---|---|---|
@@ -22,12 +22,15 @@ The five rules in `01-ports.md`, plus one from PRD §7:
 
 ```mermaid
 flowchart TD
-  K[Step uses a knob] --> Q{provider.capabilities has it?}
+  K[Step uses a knob] --> S[Flow save: check against the<br/>target provider's capability set]
+  S -- unsupported --> W[Design-time warning; editor greys the knob]
+  K --> L[Launch]
+  L --> Q{provider.capabilities has it?}
   Q -- yes --> N[Pass it to the adapter natively]
-  Q -- no --> D{Fallback defined?}
-  D -- yes --> F[Degrade: drop, replay context,<br/>file protocol, price from tokens, advisory]
-  D -- no --> W[Design-time warning<br/>in the flow editor]
+  Q -- no --> F[Degrade: drop, context-replay,<br/>file protocol, price from tokens, advisory]
 ```
+
+Both checks apply to the same knob: `effort` has a run-time fallback (drop it) *and* is a design-time warning (*"step uses effort but its provider lacks it"*, `01-ports.md`). The diagram is a reading of `01-ports.md` and `02` §2, not a source drawing.
 
 ### HITL, the biggest fallback
 

@@ -6,8 +6,8 @@ module: Agent Providers
 # Agent Providers Glossary
 
 > [!warning] Overloaded words
-> - **Capability** means three different things. (1) A **provider capability**: a flag such as `effort` or `native_cost` that says what a CLI can do ([[Provider Capabilities]]). (2) A **library capability**: the logical thing a step asks for, such as `code-review` ([[Capability Versus Provider Pack]]). (3) The `CapabilityPack` on `RunSpec.capabilities`, one packaging of a library capability. In container hardening, *"Drop capabilities: `--cap-drop ALL`"* (`08-sandboxing.md`) is a fourth, Linux kernel meaning. These notes always qualify the word.
-> - **Replay** means four things. The **ReplayProvider** adapter ([[Replay Provider]]); **context-replay**, the park/resume fallback that re-injects requires, produces and answers into a fresh prompt ([[Session Resume And Context Replay]]); SSE **replay** from `Last-Event-ID` ([[Event Stream And SSE]]); and Slack's *"300s replay window"* (`04` §10), which has nothing to do with providers.
+> - **Capability** means three different things. (1) A **provider capability**: a flag such as `effort` or `native_cost` that says what a CLI can do ([[Provider Capabilities]]). (2) A **library capability**: the logical thing a step asks for, such as `code-review` ([[Capability Versus Provider Pack]]). (3) The `CapabilityPack` on `RunSpec.capabilities`, one packaging of a library capability. In container hardening, *"Drop capabilities: `--cap-drop ALL`"* (`08-sandboxing.md`) is a fourth, Linux kernel meaning, and the `capabilities` array on Claude's `system/init` line (`interrupt_receipt_v1` …, `stream-sample.jsonl`) a fifth. These notes always qualify the word.
+> - **Replay** means four things. The **ReplayProvider** adapter ([[Replay Provider]]), which the feature map's *"Replay any past run"* idea would reuse; **context-replay**, the park/resume fallback that re-injects requires, produces and answers into a fresh prompt (the README's and drawio's *"prompt replay"*; [[Session Resume And Context Replay]]); SSE **replay** from `Last-Event-ID` ([[Event Stream And SSE]]); and Slack's *"300s replay window"* (`04` §10), which has nothing to do with providers.
 > - **Session** is both the provider's own conversation id (`sessionId`, `runs.claude_session_id`) and, in the UI, the *live session viewer* at `/runs/[id]`.
 > - **Model** is either a **logical id** (`reasoning-high`, or a Claude alias in v1) or a **native id** (`opus`, `o3`, the `claude-fable-5-1` reported in the stream sample). See [[Logical Model Ids]].
 > - **Provider** in the drawio *Harness architecture* also appears in *"Egress proxy … injects the real API key"*, where the "provider" is the model vendor's API, not the adapter.
@@ -27,7 +27,7 @@ module: Agent Providers
 | **Capability contract** | The design-time check that *"every knob a step uses is supported by its target provider"* | `02` §2 |
 | **Logical model id** | A provider-neutral model name a step references, resolved per provider | `01-ports.md` |
 | **resolveModel** | *"Map a logical model id to this provider's native id, e.g. 'reasoning-high' -> 'opus' \| 'o3'."* | `agent-provider.ts` |
-| **Effort** | `'low' \| 'medium' \| 'high' \| 'xhigh' \| 'max'`, *"dropped if unsupported"* | `agent-provider.ts`; `01-ports.md` |
+| **Effort** | `'low' \| 'medium' \| 'high' \| 'xhigh' \| 'max'`; *"Dropped by the adapter when `effort` is unsupported"* (`agent-provider.ts`), *"dropped if unsupported"* (`01-ports.md`) | `agent-provider.ts`; `01-ports.md` |
 | **ToolServer** | *"An MCP tool server to inject (e.g. the ask-user server). Used only when `mcp_tools` is present."* | `agent-provider.ts` |
 | **CapabilityPack** | *"A mountable capability (a "skill"/plugin, generalized)"*; `mount` is `plugin_dir`, `system_prompt` or `native` | `agent-provider.ts` |
 | **ExecHost** | *"WHERE a process runs, decoupled from WHICH agent runs it."* | `exec-host.ts` |
