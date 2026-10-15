@@ -30,9 +30,12 @@ flowchart LR
   Q -- "answers → resume" --> ENGINE["Flow engine"]
 ```
 
-Drawn from the drawio *Logical components* page: *Question service → Notifier* (*"escalate at 5 min"*), *Notifier → Slack* (*"Block Kit + signature check"*), *Question service → Flow engine* (*"answers → resume"*). On the *Functional components* page the only edge into Escalation is *Human in the loop → Escalation*, labelled *"unanswered too long"*.
+Drawn from the drawio *Logical components* page: *Question service → Notifier* (*"escalate at 5 min"*), *Notifier → Slack* (unlabelled; the Slack box itself reads *"Slack / Block Kit + signature check"*), *Question service → Flow engine* (*"answers → resume"*). On the *Functional components* page the only edge into Escalation is *Human in the loop → Escalation*, labelled *"unanswered too long"*.
 
-Escalation does not own questions. [[Human In The Loop Index|Human In The Loop]] owns the question schema, the inbox and park/resume. Escalation *"subscribes to (9)'s question lifecycle; writes answers back through the *same* idempotent path as the web inbox, so web and channel can't diverge."* (`04` §10).
+Escalation does not own questions. [[Human In The Loop Index|Human In The Loop]] owns the question schema, the inbox and park/resume. Escalation "subscribes to (9)'s question lifecycle; writes answers back through the *same* idempotent path as the web inbox, so web and channel can't diverge." (`04` §10).
+
+> [!note] Possibly not a component of its own
+> The [[Component Documentation Tracker]] lists a possible merge: *"fold Escalation And Notifications into Human In The Loop (the inbox guide already covers Slack resolution)."* The inbox side already lives in [[Escalation To Chat]]. The merge is not decided; what this set adds is the port, the channels and the Slack transport.
 
 ## Design principles
 

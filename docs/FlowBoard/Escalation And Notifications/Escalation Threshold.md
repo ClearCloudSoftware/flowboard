@@ -17,7 +17,7 @@ How long a question waits before it is posted to chat. The feature map calls it 
 | backlog Story 6.1 | *"`settings.escalation_threshold_ms` (default 5 min)"* (**PRD/NEW**) |
 | backlog Story 8.3 | *"escalation threshold in minutes"* (**PRD/NEW**) |
 | old design handoff | *"Escalation threshold is a setting (default 5 minutes); the prototype exposes it as a tweak."* |
-| old design prototype | `escalationMinutes ?? 5` |
+| old design prototype | `escalationMinutes ?? 5`; the tweak is an int in minutes, *"default":5,"min":1,"max":30* (`Vibe Kanban.dc.html`) |
 
 ## The default
 
@@ -29,7 +29,7 @@ How long a question waits before it is posted to chat. The feature map calls it 
 > Since the value is a setting, this is only the default. See [[Escalation And Notifications Open Questions]] #1.
 
 > [!warning] Milliseconds or minutes?
-> `04` §10 and backlog 6.1 name the key `escalation_threshold_ms`. `06` §15 and backlog 8.3 describe the setting in minutes. Probably minutes in the UI and milliseconds in storage, but no source says so. Open Questions #2.
+> `04` §10 and backlog 6.1 name the key `escalation_threshold_ms`. `06` §15 and backlog 8.3 describe the setting in minutes, and the old prototype's `escalationMinutes` is in minutes, from 1 to 30. That range is the only bound any source gives. Probably minutes in the UI and milliseconds in storage, but no source says so. Open Questions #2.
 
 ## Changing it
 

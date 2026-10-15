@@ -22,11 +22,11 @@ module: Escalation And Notifications
 The tokens are host-side only. The sandbox mounts list *"never : ~/.ssh, cloud credentials, flowboard.db, docker.sock"* (drawio *Harness architecture*), and the agent never talks to Slack: the worker posts, and the web app receives interactions (PRD §3, §12).
 
 > [!note] Settings vs env
-> The threshold lives in `settings`, editable at runtime. The channel and tokens live in `.env.local`, read at start. No source puts channel choice in `settings`.
+> The threshold lives in `settings`, editable at runtime. The channel and tokens live in `.env.local` (PRD §10); no source says when they are read. No source puts channel choice in `settings`.
 
 ## What leaves the machine
 
-Only the message: task title, step name, question text, options, a link ([[Notification Content Limits]]).
+Only the message. The rule allows task title and question text; the interface also carries the step name and a link, and select questions need their options ([[Notification Content Limits]]).
 
 ## Related
 

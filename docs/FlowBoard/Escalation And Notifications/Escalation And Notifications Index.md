@@ -8,7 +8,7 @@ module: Escalation And Notifications
 Escalation And Notifications is how FlowBoard reaches you when a decision has waited too long. A question still pending after the threshold is posted to chat (Slack in v1) with controls to answer it there. Answers come back signed, the first answer wins wherever it was given, and the other place repaints to show it is handled. Behind it sits the **Notifier port**, so Discord, email or a webhook cost an adapter, not a rewrite.
 
 > [!important] The one idea to get right first
-> Escalation adds a second place to answer. It never moves the question. An escalated question is still `pending` in the inbox, with a posted ref beside it, and both places write through *"the *same* idempotent path"* (`04` §10). So everything here is about keeping two copies of one question honest: [[First Write Wins]] decides the answer, [[Resolve Everywhere]] closes the other copy.
+> Escalation adds a second place to answer. It never moves the question. An escalated question is still `pending` in the inbox, with a posted ref beside it, and both places write through "the *same* idempotent path" (`04` §10). So everything here is about keeping two copies of one question honest: [[First Write Wins]] decides the answer, [[Resolve Everywhere]] closes the other copy.
 
 There is no mockup for this component. This set is built from the PRD, the backlog, the architecture notes, the reference port, the drawio, and the places the inbox, monitor and task-detail mockups show escalation. The inbox side is in [[Escalation To Chat]], in the Human In The Loop set.
 

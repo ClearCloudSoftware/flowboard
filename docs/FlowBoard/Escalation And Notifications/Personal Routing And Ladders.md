@@ -25,7 +25,7 @@ Both ideas need to know who a question is for. The sources have pieces of that:
 |---|---|
 | Inbox mockup: `who: 'you'` or `who: 'dana'` on each item; a *"waiting on dana"* label; a *mine / all* filter | `inbox.html` |
 | *"A "my inbox" filter — each teammate sees only what is waiting on them."* | feature map §12 💡 |
-| *"Teams & collaboration — … identities for the people involved, light roles and permissions … and a *who* stamped on every human approve/reject/answer in the record."* | feature map *Across everything* |
+| "Teams & collaboration — … identities for the people involved, light roles and permissions … and a *who* stamped on every human approve/reject/answer in the record." | feature map *Across everything* |
 | *"Local-collab first — named people, assignees, and per-person routing need no accounts server"* | feature map *Across everything* 💡 |
 
 And one hard limit: *"No auth, no multi-tenancy, no user table. Do not add them "for later""* (PRD §2), and *"Do not build: authentication, user accounts, roles"* (PRD §17).

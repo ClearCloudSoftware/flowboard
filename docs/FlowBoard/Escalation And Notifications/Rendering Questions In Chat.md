@@ -9,7 +9,7 @@ How an escalated question looks in the channel.
 
 ## One schema, three renderers
 
-*"the `questions` artifact *is* the schema. One JSON shape — `{ id, prompt, help?, kind, options?, required? }` per question, five `kind`s (`yes_no|single_select|multi_select|text|number`) — drives three renderers with zero divergence: the MCP tool return, the `/inbox` controls, and the Slack/Discord blocks (10). Define it once in `core/hitl`."* (`04` §9)
+"the `questions` artifact *is* the schema. One JSON shape — `{ id, prompt, help?, kind, options?, required? }` per question, five `kind`s (`yes_no|single_select|multi_select|text|number`) — drives three renderers with zero divergence: the MCP tool return, the `/inbox` controls, and the Slack/Discord blocks (10). Define it once in `core/hitl`." (`04` §9)
 
 `question.ts` says the same: *"one shape that drives three renderers: the ask_user MCP tool return, the /inbox controls, and the Notifier's channel blocks (Slack, Discord, …). Defined once so they cannot diverge."* See [[Question Shapes]].
 
@@ -35,7 +35,7 @@ Backlog 6.2 summarises: *"Per‑kind blocks (buttons / `multi_static_select` + s
 | Task title | `QuestionContext.taskTitle`; PRD §10 |
 | Step name | `QuestionContext.stepName` |
 | Question text (`prompt`) | PRD §10 |
-| Controls for the kind | PRD §10 (for `inline_answer` channels) |
+| Controls for the kind | PRD §10; only for `inline_answer` channels (`notifier.ts`, `01-ports.md`) |
 | Deep link to the live session or inbox row | `QuestionContext.sessionUrl?`; *"a deep link to `/inbox`"* for `link_only` |
 
 Not stated: whether `help` text, the project, the wait so far, or the asking agent are included.
@@ -49,7 +49,7 @@ The repainted message shows *"it is resolved and by whom"* (PRD §10). The inbox
 ## Batches
 
 > [!question] One message per question, or one per batch?
-> `escalate_question` is enqueued *"When a question is inserted"* (PRD §10), so a five-question batch posts five messages. The mockup escalates the batch card as one (`csv-export`, *"5 questions from one step"*, `escalated · waited 12m`). The inbox guide explains why a batch is one card: *"Answering one at a time would mean the agent wakes, finds it still can't proceed, and parks again"*. The same argument applies in chat. See [[Escalation And Notifications Open Questions]] #4 and [[Question Batches]].
+> `escalate_question` is enqueued *"When a question is inserted"* (PRD §10), so a five-question batch posts five messages. The mockup escalates the batch card as one (`csv-export`, *"5 questions from one step — answer them together"*, `escalated · waited 12m 30s` at load). The inbox guide explains why a batch is one card: *"Answering one at a time would mean the agent wakes, finds it still can't proceed, and parks again"*. The same argument applies in chat. See [[Escalation And Notifications Open Questions]] #4 and [[Question Batches]].
 
 ## Related
 

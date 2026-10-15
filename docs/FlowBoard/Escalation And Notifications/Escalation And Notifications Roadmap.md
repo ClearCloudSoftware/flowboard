@@ -16,7 +16,7 @@ module: Escalation And Notifications
 | Block Kit per kind, modal for text and number | PRD §10, backlog 6.2 |
 | `POST /api/slack/interactions` with signature verification | PRD §10, backlog 6.2 |
 | First write wins; loser told *"already answered by <channel>"* | PRD §10, backlog 6.2 |
-| `chat.update` on web answer, Slack answer, undo | PRD §10, backlog 6.2 |
+| `chat.update` on web answer (PRD §10), Slack answer and undo (backlog 6.2, `04` §10) | PRD §10, backlog 6.2, `04` §10 |
 | SSE snapshot so Slack answers repaint the inbox | PRD §10, backlog 4.3 |
 | Escalation threshold as a setting | backlog 6.1, 8.3 (**PRD/NEW**) |
 | Cancel a failed run's pending questions so they stop escalating | `04` §9, backlog 3.2 (**PRD/BUG**) |
@@ -49,7 +49,7 @@ Acceptance (PRD §16): *"Leaving a question for 5 minutes posts it to Slack; ans
 |---|---|
 | **Nudge the right person** — the assignee's own DM | feature map §13 💡 |
 | **An escalation ladder** — backup or lead after a second wait | feature map §13 💡 |
-| **More channels** — Discord, email, webhook, desktop | feature map §13, architecture README, drawio |
+| **More channels** — *"chat, email, or other channels"* (feature map §13); Discord, email, webhook, desktop (architecture README, drawio) | feature map §13, architecture README, drawio |
 | A *"my inbox"* filter and a shared pool to claim from | feature map §12 💡 |
 | A trends dashboard including *"how fast questions get answered"* | feature map parking lot |
 

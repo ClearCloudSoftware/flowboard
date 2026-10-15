@@ -15,12 +15,15 @@ stateDiagram-v2
   OnlyHere --> Soon: within 3 min of the threshold (mockup)
   Soon --> InBoth: threshold passes, still pending<br/>postQuestion, store ref
   OnlyHere --> LogOnly: threshold passes, no token<br/>log and carry on
+  Soon --> LogOnly: threshold passes, no token
   OnlyHere --> Closed: answered on the web
   Soon --> Closed: answered on the web
   InBoth --> Closed: answered (web or chat)<br/>first write wins, chat.update
   InBoth --> InBoth: undo → chat.update (backlog 4.4)
   OnlyHere --> Cancelled: run failed / task cancelled
+  Soon --> Cancelled: run failed / task cancelled
   InBoth --> Cancelled: run failed / task cancelled
+  LogOnly --> Cancelled: run failed / task cancelled
   LogOnly --> Closed: answered on the web
   Closed --> [*]
   Cancelled --> [*]
@@ -28,12 +31,12 @@ stateDiagram-v2
 
 | State | Stored | Inbox shows | Source |
 |---|---|---|---|
-| Only here | `questions.state = 'pending'`, no `slack_ts` | `waited 7m 12s` | PRD §5, inbox mockup |
+| Only here | `questions.state = 'pending'`, no `slack_ts` | `waited 5m 00s`, no chip | PRD §5, inbox mockup |
 | Soon | same | `escalates in 2m 14s` — *"still only here"* | inbox guide |
 | In both | `escalated_at`, `slack_channel`, `slack_ts` set | `escalated` — *"also in chat now"* | PRD §10, backlog 6.2, inbox guide |
 | Log only | same as only here; a log line | not specified | PRD §10 |
 | Closed | `state = 'answered'`, `answer`, `answered_at`, `answered_via` | card leaves the queue, joins *recently answered* with a `web` or `slack` tag | PRD §5, inbox guide |
-| Cancelled | `state = 'cancelled'` | card leaves the queue | `04` §9, backlog 2.1 |
+| Cancelled | `state = 'cancelled'` | not shown in any source (see [[Question Lifecycle]]) | `04` §9, backlog 2.1 |
 
 "Soon" is a display state of the mockup only (`soon = !escd && w > ESCALATE - 3 * MIN`).
 

@@ -5,7 +5,7 @@ module: Escalation And Notifications
 
 # Notification Content Limits
 
-A chat message leaves the machine. FlowBoard is local-first (*"Single user, runs on my machine"*, PRD §1), so the message is the one place task content goes to a third party on purpose.
+A chat message leaves the machine. FlowBoard is local-first (*"Single user, runs on my machine"*, PRD §1), but task content already goes to the model provider on every run (the sandbox egress allowlist holds *"the model endpoint"*, PRD §11.1). The chat message is a second third party, and the only one a human reads.
 
 ## The rule
 
@@ -17,15 +17,14 @@ A chat message leaves the machine. FlowBoard is local-first (*"Single user, runs
 
 ## Allowed and not allowed
 
-| Allowed | Not allowed |
-|---|---|
-| Task title | Artifact bodies (`plan.md`, `review.md`, `research_brief`…) |
-| Question text | File contents from the worktree |
-| Options of a select question (needed to render the buttons) | — |
-| Step name (`QuestionContext.stepName`) | — |
-| A deep link (`sessionUrl`) | — |
+| Named by the rule | Outside the rule, but the interface carries it | Not allowed |
+|---|---|---|
+| Task title | Options of a select question (needed to render the buttons) | Artifact bodies (`plan.md`, `review.md`, `research_brief`…) |
+| Question text | Step name (`QuestionContext.stepName`) | File contents from the worktree |
+| — | A deep link (`QuestionContext.sessionUrl`) | — |
 
-The rule names only title and question text. `QuestionContext` also carries the step name and a link, which the sources treat as within the rule.
+> [!warning] The rule and its own interface disagree
+> All three wordings allow *"title + question text only"*. The `QuestionContext` that carries that comment also has `stepName` and `sessionUrl`, and `07`'s `ConsoleNotifier` prints the step name. No source says whether these count as within the rule. Options have to go out for the buttons to work, but no source says so either. See [[Escalation And Notifications Open Questions]] #14.
 
 > [!note] The question text is written by the agent
 > An agent writes the `prompt`. Nothing stops it from pasting code or file content into a question, which would then go to chat. No source sets a length limit or a redaction pass. See [[Escalation And Notifications Open Questions]] #14.

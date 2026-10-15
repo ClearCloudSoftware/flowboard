@@ -29,7 +29,7 @@ UPDATE questions
  WHERE id = ? AND state = 'pending';
 ```
 
-Zero rows changed means someone else won. Because both sides call *"the *same* idempotent path"* (`04` §10), there is one place where the race is decided.
+Zero rows changed means someone else won. Because both sides call "the *same* idempotent path" (`04` §10), there is one place where the race is decided.
 
 ## What the loser sees
 

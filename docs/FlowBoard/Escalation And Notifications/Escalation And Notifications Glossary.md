@@ -9,9 +9,9 @@ module: Escalation And Notifications
 |---|---|---|
 | **Escalation** | Posting a still-pending question to a chat channel after the threshold passes. The question stays `pending` and stays in the inbox. | PRD §10, `04` §10 |
 | **Escalated** | A waiting item past the threshold, now *"also in chat"*. Shown as an `escalated` chip. | inbox guide |
-| **Escalation threshold** | How long a question waits before escalating. `settings.escalation_threshold_ms`, default 5 minutes. Also called the *escalation window*. | `04` §10, backlog 6.1, task-detail guide |
+| **Escalation threshold** | How long a question waits before escalating. `settings.escalation_threshold_ms`, default 5 minutes (10 in the mockups; see [[Escalation Threshold]], Open Questions #1). Also called the *escalation window*. | `04` §10, backlog 6.1, task-detail guide |
 | **Nudge timing** | The feature map's name for the threshold setting: *"How long a question waits before it escalates to chat."* | feature map §19 |
-| **`escalate_question`** | The job kind that runs the timer. Enqueued on question insert with `run_after = now + threshold`. | PRD §5, §10 |
+| **`escalate_question`** | The job kind that runs the timer. Enqueued on question insert with `run_after = now + threshold` (PRD §10 fixes it at *"now + 5 minutes"*). | PRD §5, §10; `04` §10, backlog 6.1 |
 | **Notifier** | The port that hides the chat tool. Two methods: `postQuestion` and `updateResolved`. | `notifier.ts`, `01-ports.md` |
 | **Channel** | One Notifier adapter: Slack, Discord, email, webhook, desktop, console. | `01-ports.md`, architecture README, `07` |
 | **`inline_answer`** | A channel capability: *"renders native controls"* such as Slack blocks or Discord components. | `notifier.ts`, `01-ports.md` |
@@ -48,7 +48,7 @@ module: Escalation And Notifications
 > The PRD and backlog say *Slack*. The feature map and the mockups say *chat* or *your chat tool*. They mean the same thing today, because Slack is the only adapter.
 
 > [!note] "Notification" is narrower than it sounds
-> In the sources, a notification is only an escalated question. Nothing notifies on run finished, run failed or task done. See [[Escalation Scope]].
+> In the PRD and the architecture notes, a notification is only an escalated question. The drawio and the mockups widen it to every stop waiting on you: gates, failures and spent or stuck loops (see above). Nothing notifies on run finished or task done. See [[Escalation Scope]].
 
 ## Related
 

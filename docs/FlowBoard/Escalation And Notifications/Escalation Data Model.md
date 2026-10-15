@@ -34,6 +34,7 @@ CREATE TABLE jobs (
   leased_at  INTEGER,
   created_at INTEGER NOT NULL
 );
+CREATE INDEX jobs_ready ON jobs(state, run_after);
 
 CREATE TABLE settings (
   key   TEXT PRIMARY KEY,
@@ -45,11 +46,11 @@ CREATE TABLE settings (
 |---|---|---|
 | `questions.state` | The job posts only while `pending`; first write wins on `pending → answered` | PRD §10 |
 | `questions.escalated_at` | When it was posted. Backlog 6.2: *"store `slack_channel`, `slack_ts`, `escalated_at`"* | PRD §5, backlog 6.2 |
-| `questions.slack_channel`, `slack_ts` | The posted ref, for `chat.update`. *"already posted"* means these are set | PRD §10 |
+| `questions.slack_channel`, `slack_ts` | The posted ref, for `chat.update` (PRD §10: *"Store `slack_channel` and `slack_ts`"*). *"already posted"* (`04` §10, backlog 6.1) means these are set | PRD §10; `04` §10, backlog 6.1 |
 | `questions.answered_via` | Which side answered: `'web' \| 'slack'` | PRD §5 |
 | `questions.answered_at` − `created_at` | Wait time; the source of *median reply* (proposal in [[Human In The Loop Open Questions]] #32) | PRD §5 |
 | `jobs.kind = 'escalate_question'` | The timer | PRD §5 |
-| `jobs.run_after` | `now + threshold` | PRD §10 |
+| `jobs.run_after` | `now + threshold`; PRD §10 fixes it at *"now + 5 minutes"*. Indexed by `jobs_ready` | `04` §10, backlog 6.1; PRD §5, §10 |
 | `jobs.payload` | Not specified for this kind. It has to identify the question. | — |
 | `settings` | `escalation_threshold_ms` | `04` §10, backlog 6.1 |
 
@@ -91,7 +92,7 @@ erDiagram
 
 | Change | Why | OQ |
 |---|---|---|
-| Rename `slack_channel` / `slack_ts` to `notify_channel` / `notify_ref`, and widen `answered_via` beyond `'web' \| 'slack'` | The port's `PostedRef { channel, ref }` is channel-neutral; Discord and email would otherwise need new columns. Same proposal as [[Human In The Loop Data Model]]. | #8 |
+| Rename `slack_channel` / `slack_ts` to `notify_channel` / `notify_ref`, and widen `answered_via` beyond `'web' \| 'slack'` | The port's `PostedRef { channel, ref }` is channel-neutral; Discord and email would otherwise need new columns. The rename is the [[Human In The Loop Data Model]] proposal; widening `answered_via` is new here. | #8 |
 | `questions.answered_by TEXT` | PRD §10's *"by whom"* and the mockup's *"dana answered"* have nowhere to live | #10 |
 | `step_instances.escalated_at`, `notify_channel`, `notify_ref` | Only if gates and failures escalate. Same proposal as [[Human In The Loop Data Model]]. | #3 |
 

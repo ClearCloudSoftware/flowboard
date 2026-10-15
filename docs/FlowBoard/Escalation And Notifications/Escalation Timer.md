@@ -16,11 +16,11 @@ module: Escalation And Notifications
 | *"skip if already answered or posted. No token configured → log and continue (channel is optional)."* | `04` §10 |
 | *"No token → log and continue."* | backlog Story 6.1 |
 | *"On any run failure, **cancel that step's pending questions** so they stop escalating."* | `04` §9 |
-| *"cancel that step's pending questions** (today they keep escalating)"* (**PRD/BUG**) | backlog Story 3.2 |
+| *"cancel that step's pending questions (today they keep escalating)"* (**PRD/BUG**) | backlog Story 3.2 |
 
 ## It is a job, not a timer in memory
 
-The timer is a row in `jobs`: `kind = 'escalate_question'`, `run_after = now + threshold` (PRD §5). The worker leases it like any other job: *"`UPDATE ... SET state='leased' WHERE id = (SELECT ...)` inside a transaction, with a stale-lease reclaim after 10 minutes"* (PRD §7). The worker's role in PRD §3 lists it by name: *"job loop, runner, ask_user broker, escalation timer"*.
+The timer is a row in `jobs` (PRD §5): `kind = 'escalate_question'`, `run_after = now + threshold` (`04` §10, backlog 6.1; PRD §10 fixes it at 5 minutes). The worker leases it like any other job: *"`UPDATE ... SET state='leased' WHERE id = (SELECT ...)` inside a transaction, with a stale-lease reclaim after 10 minutes"* (PRD §7). The worker's role in PRD §3 lists it by name: *"job loop, runner, ask_user broker, escalation timer"*.
 
 So a worker restart does not lose a pending escalation: the row is still there.
 

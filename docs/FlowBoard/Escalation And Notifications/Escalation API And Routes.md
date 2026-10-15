@@ -34,7 +34,7 @@ The PRD names only `chat.postMessage` and `chat.update`. Opening a modal needs o
 
 | Endpoint | Why | OQ |
 |---|---|---|
-| `GET /api/settings`, `PATCH /api/settings` with `{ escalation_threshold_ms }` | Nudge timing is a setting (feature map §19, backlog 8.3) but PRD §12 has no settings route. Same endpoint [[Cost API And Routes]] proposes for draft mode. | #17 |
+| `GET /api/settings`, `PATCH /api/settings` with the threshold | Nudge timing is a setting (feature map §19, backlog 8.3) but PRD §12 has no settings route. Same endpoint [[Cost API And Routes]] proposes for draft mode. Field name and unit wait on #2 (`escalation_threshold_ms` in `04` §10 and backlog 6.1; minutes in backlog 8.3 and `06` §15). | #17, #2 |
 | No new route for Socket Mode | If Slack moves to Socket Mode, `POST /api/slack/interactions` goes away and the worker holds the socket | #6 |
 
 ## Related

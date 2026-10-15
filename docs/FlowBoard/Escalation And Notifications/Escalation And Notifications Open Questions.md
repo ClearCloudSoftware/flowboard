@@ -48,7 +48,7 @@ PRD §10, §12 and backlog 6.2: an inbound endpoint with HMAC verification. Draw
 
 ### 8. Slack-named columns
 
-`slack_channel`, `slack_ts`, and `answered_via` values `'web' | 'slack'` (PRD §5) tie the schema to one adapter. The old handoff used `answeredVia: 'ui' | 'slack'`. **Proposal** (shared with HITL #22): `notify_channel`, `notify_ref`, and `answered_via` holding the Notifier `id`. See [[Escalation Data Model]].
+`slack_channel`, `slack_ts`, and `answered_via` values `'web' | 'slack'` (PRD §5) tie the schema to one adapter. The old handoff used `answeredVia: 'ui' | 'slack'`. **Proposal:** `notify_channel`, `notify_ref` (the rename is shared with HITL #22), and `answered_via` holding the Notifier `id` (new here). See [[Escalation Data Model]].
 
 ### 9. One channel or several?
 
@@ -56,11 +56,11 @@ One `SLACK_CHANNEL_ID` in the PRD; one injected `notifier` in `07`; a port built
 
 ### 10. Who answered, and who may answer?
 
-PRD §10 wants the repaint to show *"by whom"*; `updateResolved(ref, by)` carries a name; the mockups say *"dana answered"* and *"handled by you"*. But the schema stores only `answered_via`, and PRD §2 has *"no user table"*. Anyone in the Slack channel can answer, and the signature only proves the request came from Slack. **Proposal:** `questions.answered_by` holding the Slack display name or `you` for the web. Related: HITL #4, [[Personal Routing And Ladders]].
+PRD §10 wants the repaint to show *"by whom"*; `updateResolved(ref, by)` carries a name; the mockups say *"dana answered"* and *"handled by you"*. But the schema stores only `answered_via`, and PRD §2 has *"no user table"*. No source restricts who may answer in Slack, and the signature only proves the request came from Slack. **Proposal:** `questions.answered_by` holding the Slack display name or `you` for the web. Related: HITL #4, [[Personal Routing And Ladders]].
 
 ### 11. Repainting a cancelled or expired question
 
-`updateResolved` is the only repaint. When a run fails or a task is cancelled, pending questions are cancelled *"so they stop escalating"* (`04` §9), but a message already in Slack keeps its live buttons. `expired` is never set (backlog 1.1, **BUG**). **Proposal:** call `updateResolved(ref, 'cancelled')`, or add an `updateCancelled(ref, reason)` method. See [[Escalation Lifecycle]].
+`updateResolved` is the only repaint. When a run fails, pending questions are cancelled *"so they stop escalating"* (`04` §9); when a task is cancelled, too (backlog 2.1). But a message already in Slack keeps its live buttons. `expired` is never set (backlog 1.1, **BUG**). **Proposal:** call `updateResolved(ref, 'cancelled')`, or add an `updateCancelled(ref, reason)` method. See [[Escalation Lifecycle]].
 
 ### 12. What does the loser of a race see?
 
@@ -72,7 +72,7 @@ No retry rule for a failed `chat.postMessage`, though `jobs` has `attempts` and 
 
 ### 14. Can question text leak content?
 
-The rule bans *"artifact bodies or file contents"* (PRD §10), but the agent writes the question text. No length limit or redaction is specified. See [[Notification Content Limits]].
+The rule bans *"artifact bodies or file contents"* (PRD §10), but the agent writes the question text. No length limit or redaction is specified. The rule also allows only *"title + question text"*, while `QuestionContext` carries `stepName` and `sessionUrl` and select questions need their options; no source says whether those are within the rule. See [[Notification Content Limits]].
 
 ### 15. Toast or no toast?
 
@@ -96,7 +96,7 @@ Each question's `escalate_question` job gets a fixed `run_after` at insert (PRD 
 
 ### 20. How waiting time shows
 
-The old handoff ramps colour, collapses escalated batches by default (*"asserted, not user-tested"*) and shows `→ Slack in 0m 48s` on every batch. The mockup shows a countdown only in the last 3 minutes. Same as HITL #23.
+The old handoff ramps colour, collapses escalated batches by default (*"asserted, not user-tested"*) and shows `→ Slack in 0m 48s` in the open batch's header. The mockup shows a countdown only in the last 3 minutes. Same as HITL #23.
 
 ### 21. Does the run park before or after escalation?
 

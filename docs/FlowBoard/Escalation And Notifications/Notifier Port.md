@@ -15,7 +15,7 @@ The Notifier is one of *"the five ports that carry the whole program"* (architec
 
 ## The interface
 
-The reference file `docs/old/reference/core/ports/notifier.ts`:
+The reference file `docs/old/reference/core/ports/notifier.ts`, without its `import` line and the `Notifier` doc comment (quoted below):
 
 ```ts
 /** Context the channel shows alongside the question (PRD §10: title + question text only, never artifact bodies). */
@@ -48,8 +48,9 @@ The file's own comment sets the boundary: *"Reconciliation (first-write-wins, re
 
 | Concern | Lives in | Source |
 |---|---|---|
-| The timer, skip rules, first-write-wins, repaint triggers | `core/hitl` | `notifier.ts`, `04` §10 |
-| The `Notifier` interface | `core/ports` | PRD §3, `01-ports.md` |
+| Reconciliation: first-write-wins, repaint on answer and undo | `core/hitl` | `notifier.ts` |
+| The escalation timer | `apps/worker` | PRD §3 |
+| The `Notifier` interface | `core/ports` | PRD §3, architecture README |
 | Block Kit rendering, `chat.postMessage`, `chat.update` | the Slack adapter, `adapters/notify/slack` | PRD §3, architecture README |
 | Signature verification | the adapter | *"Security stays in the adapter"* (`04` §10) |
 | The `Question` shape the adapter renders | `core/hitl/question.ts` | reference file |
