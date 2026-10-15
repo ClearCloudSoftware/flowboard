@@ -20,11 +20,11 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 | **Entry step** | A step definition with `is_entry = 1` | PRD §5 |
 | **Outcome** | `pass`, `fail` or null on a step instance; *"drives conditional edges"* | PRD §5 |
 | **`RunSpec`** | *"Everything needed to launch one attempt of one step, provider-agnostically"* | `agent-provider.ts` |
-| **`RunResult`** | `{ usage, exitCode, outcome?, error? }`, what the engine consumes | `01-ports.md` |
-| **`NormalizedEvent`** | The seven event kinds every provider's stream is parsed into | `01-ports.md`, `events.ts` |
-| **ExecHost** | *"WHERE a process runs, decoupled from WHICH agent runs it"* | `exec-host.ts` |
+| **`RunResult`** | `{ usage, exitCode, outcome?, error? }`, what the engine consumes. See [[Agent Run Handle And Result]]. | `01-ports.md`, `agent-provider.ts` |
+| **`NormalizedEvent`** | The seven event kinds every provider's stream is parsed into. See [[Normalized Event Envelope]]. | `01-ports.md`, `events.ts` |
+| **ExecHost** | *"WHERE a process runs, decoupled from WHICH agent runs it"*. See [[ExecHost Port]]. | `exec-host.ts` |
 | **Fingerprint** | A hash of a failing shell step's normalised output tail, on `runs.fingerprint` | PRD §8 |
-| **Run record** | `data/runs/<id>/`: the args or spec snapshot plus the raw stream | PRD §7, `03` §6, drawio |
+| **Run record** | `data/runs/<id>/`: `args.json` (PRD §7) or `spec.json` (`03` §6), plus *"raw stream"* (drawio *Run records*) | PRD §7, `03` §6, drawio |
 
 ## Actors
 
@@ -59,7 +59,7 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 > - **Step instance `attempts`**: total runs of the step that count, first included. *"`max_attempts` counts total runs of the step, first try included (infra retries excluded)."* (PRD §8)
 > - **`runs.attempt`**: the attempt number a run belongs to. An infra retry is *"a new run with the same `attempt` number"* (PRD §7), so two runs can share an attempt.
 > - **`jobs.attempts`**: how many times the queue tried a job (PRD §5). Unrelated to the other two.
-> - **The mockups' attempt**: *"Attempt 3 of 3 failed — egress denied"* (inbox), which counts a failure the PRD would not count. See [[Execution Open Questions]].
+> - **The mockups' attempt**: *"Attempt 3 of 3 failed — egress denied"* (inbox), which counts a failure the PRD would not count. See [[Execution Open Questions]] #22.
 
 > [!warning] Retry
 > - **Infra retry**: the runner re-runs a transient failure on its own, *"up to 3 times"* (PRD §7). Not counted.
@@ -70,7 +70,7 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 
 > [!warning] Blocked
 > - **Task status `blocked`**: set for an infra failure that is not transient (PRD §7), a spent or stuck loop (PRD §8), and a parked run (backlog 4.2).
-> - **"blocked on you"**: the task-detail header when a gate or question waits.
+> - **"blocked on you"**: the task-detail status bar while a gate waits (`task-detail.html`); the header pill on the same screen says *"waiting on you"*. Not a task status.
 > - Not the same as **queued**: the monitor's *"ready, no free worker"*.
 
 > [!warning] Job, run and step
@@ -86,3 +86,7 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 - [[Execution State Machines]]
 - [[Task Detail Glossary]]
 - [[Flow Design Glossary]]
+- [[Agent Providers Glossary]]
+- [[Sandboxing Glossary]]
+- [[Workspaces Glossary]]
+- [[Memory Glossary]]

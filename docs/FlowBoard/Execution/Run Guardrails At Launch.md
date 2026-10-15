@@ -5,7 +5,7 @@ module: Execution
 
 # Run Guardrails At Launch
 
-The checks the runner applies **before and while** it launches a run. The step's own guardrail fields are designed in [[Step Guardrails]]; the sandbox itself belongs to the Sandboxing platform component (not yet documented). This note covers what the runner enforces.
+The checks the runner applies **before and while** it launches a run. The step's own guardrail fields are designed in [[Step Guardrails]]; the sandbox itself is documented in [[Sandboxing Index]] (see [[Permission Gate]], [[In-Agent Hooks]] and [[Resource Limits]]). This note covers what the runner enforces.
 
 ## Two gates
 
@@ -18,7 +18,9 @@ The checks the runner applies **before and while** it launches a run. The step's
 | No bypass on the host | *"It **refuses `bypassPermissions` unless the tier is a sandbox** (container/microVM), downgrading to an approval/auto mode on the `host` tier"* (`03` §6) |
 | Why | *"**Egress restriction is the load-bearing control:** it holds even though `bypassPermissions` is on, because it is enforced below the agent's reasoning."* (PRD §11.1) |
 | Default mode | `step_defs.permission_mode` defaults to `'bypassPermissions'` (PRD §5) |
-| No Docker | *"Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`."* (PRD §11.1) |
+| Non-root | `nonRoot?: boolean; // default true; bypassPermissions requires it` (`01-ports.md`, `SandboxProfile`) |
+| Default tier | *"**Default tier = `container`** whenever a step's `permission_mode` is `bypassPermissions`"* (`08`, *Recommendation*; a recommendation, not a PRD rule) |
+| No Docker | *"Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`."* (PRD §11.1). `08`'s recommendation adds *"(or warn)"*. |
 | Git plugins on the host | *"On the host tier, a step that mounts a git-installed plugin does not run: that plugin's hooks and MCP servers would execute as me, with no egress wall. Seed plugins still run there."* (PRD §11.1) |
 | Recorded | *"`runs.sandbox` records the tier that actually ran"* (PRD §11.1) |
 
@@ -34,7 +36,9 @@ The drawio *Permission gate* card: *"bypassPermissions only when the tier is con
 > | Downgrade | `03` §6 (*"downgrading to an approval/auto mode on the `host` tier"*); drawio (*"host tier → approval mode"*) |
 > | Downgrade, or fail the step | `08` (*"or fails the step with a readable reason. A correctness rule, not a suggestion."*); backlog 3.5 (*"downgrade to an approval/auto mode or fail with a readable reason"*, tagged **NEW/DEC**) |
 >
-> See [[Execution Open Questions]] #53.*
+> Which tiers count also differs: `03` §6 names only *"(container/microVM)"*; `01-ports.md`, `08` and the drawio include gVisor.
+>
+> See [[Execution Open Questions]] #53, [[Sandboxing Open Questions]] #1 and #2.
 
 ### The hooks (inside)
 
@@ -44,7 +48,7 @@ The per-run `settings.json` registers `PreToolUse` hooks that deny (PRD §7):
 - *"any path matching a line of the task's `non_goals` that is written as a path or glob;"*
 - *"destructive commands: `rm -rf` outside the worktree, any `git push`, `git reset --hard` or `git checkout` of the base branch, and piping a download into a shell."*
 
-*"A denial returns its reason to the agent, so it changes course instead of stalling."* (PRD §7)
+*"A denial returns its reason to the agent, so it changes course instead of stalling. The prompt states the same rules; the hook enforces them. Hooks are a provider capability (`tool_hooks`): a provider without them relies on the sandbox alone, and the flow editor says so."* (PRD §7) More in [[In-Agent Hooks]].
 
 ## Tools
 
@@ -60,18 +64,18 @@ The per-run `settings.json` registers `PreToolUse` hooks that deny (PRD §7):
 |---|---|
 | `max_turns` → `--max-turns`; `max_budget_usd` → `--max-budget-usd` | `--memory`, `--cpus`, `--pids-limit`, wall-clock |
 
-*"maps the logical `max_turns` / `max_budget_usd` caps to the sandbox's physical `--memory` / `--cpus` / `--pids-limit` / wall-clock backstops"* (`03` §6). Backlog 3.5: *"a limit/timeout hit marks the run failed with reason."* PRD §7 classes *"budget or turn cap hit"* as non-transient: the task goes to `blocked`. See [[Infra Retries]].
+PRD §11.1: resource limits *"physically backstop the logical `max_turns`/`max_budget_usd` caps"*. `03` §6: the runner *"maps the logical `max_turns` / `max_budget_usd` caps to the sandbox's physical `--memory` / `--cpus` / `--pids-limit` / wall-clock backstops"* (`03` §6). Backlog 3.5: *"a limit/timeout hit marks the run failed with reason."* PRD §7 classes *"budget or turn cap hit"* as non-transient: the task goes to `blocked`. No source gives the limit values or the mapping, or says how a physical limit hit is classified ([[Sandboxing Open Questions]] #12, #15). See [[Infra Retries]] and [[Resource Limits]].
 
 ## Isolation from the operator's own config
 
-Backlog D5: *"Hook isolation for headless runs"*, default *"Empty `--settings` file per run"*. The intro lists the leak that prompted it: *"global `~/.claude` hooks apply to headless runs"*. `--strict-mcp-config` does the same for MCP (PRD §7).
+Backlog D5: *"Hook isolation for headless runs"*, default *"Empty `--settings` file per run"*. The intro lists the leak that prompted it: *"global `~/.claude` hooks apply to headless runs"*. Backlog 0.1 leaves the method open (**DEC**): *"Decide how to isolate headless runs from `~/.claude` hooks/settings (e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`)."* The probe shows the leak: `docs/old/stream-sample.jsonl` opens with five personal `SessionStart` hooks firing before `system/init`. `--strict-mcp-config` does the same job for MCP (PRD §7).
 
 > [!warning] Empty, or holding the hooks?
-> D5's *"Empty `--settings` file per run"* (also the drawio card *"D5 · Hook isolation / Empty --settings file per headless run"*) cannot be squared with PRD §7's *"`--settings <generated per-run settings.json with PreToolUse hooks>`"* and the drawio *Runner* card's *"writes per-run mcp.json + settings.json (hooks)"*. D5's aim, keeping the operator's global `~/.claude` hooks out, still holds; its "empty" predates the hooks gate. See [[Execution Open Questions]] #52.
+> D5's *"Empty `--settings` file per run"* (also the drawio card *"D5 · Hook isolation / Empty --settings file per headless run"*) cannot be squared with PRD §7's *"`--settings <generated per-run settings.json with PreToolUse hooks>`"* and the drawio *Runner* card's *"writes per-run mcp.json + settings.json (hooks)"*. D5's aim, keeping the operator's global `~/.claude` hooks out, still holds; its "empty" predates the hooks gate. See [[Execution Open Questions]] #52, [[Agent Providers Open Questions]] #24 and [[Sandboxing Open Questions]] #24.
 
 ## No real credential
 
-*"No real credential is passed in: the CLI's `ANTHROPIC_BASE_URL` points at the egress proxy, which injects it."* (`03` §6)
+*"No real credential is passed in: the CLI's `ANTHROPIC_BASE_URL` points at the egress proxy, which injects it."* (`03` §6) PRD §11.1 adds the dummy key: *"The CLI gets `ANTHROPIC_BASE_URL` pointing at the egress proxy and a dummy key."* See [[Credential Injecting Proxy]].
 
 ## Related
 
@@ -80,3 +84,5 @@ Backlog D5: *"Hook isolation for headless runs"*, default *"Empty `--settings` f
 - [[Runner Pipeline]]
 - [[Step Guardrails]]
 - [[Capability Tools And Egress]]
+- [[Permission Gate]]
+- [[In-Agent Hooks]]

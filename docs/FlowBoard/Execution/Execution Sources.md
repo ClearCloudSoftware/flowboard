@@ -8,7 +8,7 @@ module: Execution
 Every fact in these notes comes from the files below (paths relative to the repo root).
 
 > [!note] Source revision
-> These notes follow the sources as of commit `1787d20` (2026-10-15), on `dev`. They were corrected after an independent grounding pass on the same date.
+> These notes follow the sources as of commit `1787d20` (2026-10-15), on `dev`. They were corrected after an independent grounding pass on the same date, and again after a second grounding pass (2026-10-15) that also aligned them with the Agent Providers, Sandboxing, Workspaces, Memory, Intake And Import, Projects and Settings And Plumbing sets.
 
 > [!info] No mockup of its own
 > Execution has no screen. The tracker lists its mockup as *"partial (via task detail)"*. Its visible behaviour was gathered from the mockups and guides listed below.
@@ -17,8 +17,8 @@ Every fact in these notes comes from the files below (paths relative to the repo
 
 | File | What it contributes |
 |---|---|
-| `docs/old/PRD.MD` | §0 CLI probe; §1 what FlowBoard is; §2 separate worker, routes never spawn; §3 repo layout, `packages/core` rule, only web and worker open SQLite; **§4** flow, step definition, step instance, run, loops guarded; **§5** `step_defs`, `step_edges`, `tasks`, `step_instances`, `runs`, `run_events`, `jobs`, `settings`; §6 artifact scan, `declare_artifact`; **§7** leasing, the `claude` command, `--plugin-dir`, allowed tools, hooks, prompt parts 1–7, events, cost, shell steps, completion, infra failure classes, sandboxed runs; **§8** advancement, `advance_task`, missing outcome, fan-out, join, rework, `max_attempts`, escalation, fingerprint; §9 broker, shim, `set_outcome`, park and resume; §10 `escalate_question` timer; §11 worktrees, shared worktree constraint; §11.1 permission gate, git plugins on the host, Docker probe; §11.2 recall and commit; §12 endpoints; §13 board, task detail, run viewer Stop, draft mode; §14 M2–M5, M8–M9; §15 seed flow, steps and edges, `/code-review` must call `set_outcome`; §16 acceptance; §17 out of scope |
-| `docs/old/architecture/02-core-and-engine.md` | §1 `runs.model/effort/provider`, `step_instances.reason`, append-only journal; §2 `board_order` ignores `on_fail`; **§3** the engine: role, seam, task-done rule, guards, approve/reject, rework, no outcome, `max_attempts` escalation, stuck detection, `StepExecutor`; §4 incremental `num_turns`, materialised board |
+| `docs/old/PRD.MD` | §0 CLI probe; §1 what FlowBoard is; §2 separate worker, routes never spawn; §3 repo layout, `packages/core` rule, only web and worker open SQLite; **§4** flow, step definition, step instance, run, loops guarded; **§5** `step_defs`, `step_edges`, `tasks`, `step_instances`, `runs`, `run_events`, `jobs`, `settings`; §6 artifact scan, `declare_artifact`; **§7** leasing, the `claude` command, `--plugin-dir`, allowed tools, hooks, prompt parts 1–7, events, cost, shell steps, completion, infra failure classes, sandboxed runs; **§8** advancement, `advance_task`, missing outcome, fan-out, join, rework, `max_attempts`, escalation, fingerprint; §9 broker, shim, `set_outcome`, park and resume; §10 `escalate_question` timer; §11 worktrees, shared worktree constraint; §11.1 permission gate, git plugins on the host, Docker probe; §11.2 recall and commit; §12 endpoints; §13 board, task detail, run viewer Stop, draft mode; §14 M2–M7, M9; §15 seed flow, steps and edges, `/code-review` must call `set_outcome`; §16 acceptance (including the three memory checks); §17 out of scope |
+| `docs/old/architecture/02-core-and-engine.md` | §1 `runs.model/effort/provider`, `step_instances.reason`, append-only journal; §2 `board_order` ignores `on_fail`, *"exactly one producer"*; **§3** the engine: role, seam, task-done rule, guards, approve/reject, rework, no outcome, `max_attempts` escalation, stuck detection, `StepExecutor`; §4 incremental `num_turns`, materialised board |
 | `docs/old/architecture/03-execution-substrate.md` | §5 Claude adapter fixes; **§6** the runner: prompt parts, artifact scan, no default outcome, shell steps as sensors, resume prompt, draft mode, sandbox gate, two gates, memory bracket, infra retries, spec snapshot idea; **§7** queue, leasing, generic executor host, spawn bug, restart re-attach, graceful shutdown; §8 SSE tail, Stop = SIGTERM, `cancelled` |
 | `docs/old/REBUILD-BACKLOG.md` | Intro items 3–6 (no Start button, restart kills runs, hooks leak, port 3111); 0.2 test harness; 0.3 `.gitignore`; 1.1 `jobs.kind` `resume_step`, `step_instances.reason`, `runs.sandbox`; **2.1** promote, demote, Start, cancel; 2.2 drag, `a` shortcut, `num_turns`; 2.3 Reject asks for a reason, sheet actions; **3.1** job queue, spawn bug; **3.2** runner, resume prompt, completion, draft mode; **3.3** restart recovery, graceful shutdown; 3.4 Stop; 3.5 sandbox gate, limits, transformers; 4.2 park race; 4.1 `VIBE_ASK_TIMEOUT_MS`; 5.1 validation (*"exactly one entry"*); **5.2** advancement, join, rework, `max_attempts`, downstream attempts, task-done bug, guards, approve/reject; 5.3 engine tests; 6.1 `escalation_threshold_ms`, skip rule; 7.3 `import_backlog` with `cleanup`; 8.3 settings toggle; 10.1 acceptance; 10.2 *"approve overrides outcome"* as a deviation; decisions D1, D3, D5 |
 | `docs/feature-map.md` | **§4 The engine**: decide next, pass/fail paths, *"Silence isn't success"*, parallel and wait, retry loops, three tries, stops early when stuck, hiccups don't count, *"Your call wins"*; ideas (route to a teammate, two sign-offs). **§7 The runner**: instructions, streaming, cost, wrap up, draft mode. **§8 The work queue**: hand off, cap, survive a restart. §2 check steps, branching, joining, loops; §3 start a task (*"locks in the recipe"*), *"Pause, send back, or cancel"*, the auto-start question; §9 Stop; *Across everything* (testing); parking lot |
@@ -32,7 +32,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 | `docs/old/architecture/01-ports.md` | `RunSpec`, `AgentRun`, `RunResult`, `AgentProvider`, `Capability` (with `tool_hooks`), `NormalizedEvent`, `Usage`, capability negotiation, logical model ids, ReplayProvider, ExecHost, the bypass gate |
 | `docs/old/architecture/04-hitl-and-notify.md` | §9 park/resume primitive, the completion race, cancel questions on run failure |
 | `docs/old/architecture/06-cost-and-platform.md` | §12 wasted spend, `runs.model/effort` keep rollups honest; §15 draft mode as a `SpecTransform`, thin routes; *Where a new provider touches the codebase* |
-| `docs/old/architecture/07-ports-in-practice.md` | The illustrative `runStep` composing three ports |
+| `docs/old/architecture/07-ports-in-practice.md` | The illustrative `runStep` composing three ports; the disk `ArtifactStore` adapter (scan by mtime) |
 | `docs/old/architecture/08-sandboxing.md` | One container per run, physical limits, the gate's *"or fails the step"* option, runner gets the ExecHost |
 | `docs/old/architecture/09-memory.md` | Runner brokers recall and commit host-side; `task` scope for rework warm starts |
 | `docs/old/reference/core/ports/agent-provider.ts` | `RunSpec` with `exec`, `PromptParts` comments (preamble, `kind='skill'`), `RunResult.outcome` *"Unset is NOT 'pass'"*, `Capability` without `tool_hooks` |
@@ -40,15 +40,17 @@ Every fact in these notes comes from the files below (paths relative to the repo
 | `docs/old/reference/core/ports/events.ts` | `Usage`, the seven `NormalizedEvent` kinds |
 | `docs/old/reference/core/ports/workspace.ts` | `Workspace.execHost(task)`, cleanup explicit only |
 | `docs/old/reference/adapters/agent/replay/replay-provider.ts` | The replay adapter and its self-check; `stop()` → exit 130 |
+| `docs/old/stream-sample.jsonl`, `docs/old/stream-sample.stderr` | The CLI probe capture PRD §0 asks for (the PRD's path is `docs/stream-sample.jsonl`); the fake `claude` of backlog 0.2 replays it |
+| `docs/pitch.md` | Parallel stages, *"worker restart-recovery"*, *"a replayable fake-agent for tests, a real browser E2E lane"*, *"eight build milestones"*, draft mode and per-step budgets as spend control |
 
 ## Mockups and guides
 
 | File | What it contributes |
 |---|---|
-| `docs/mockups/monitor-guide.html` | *The life of a single step* (states and transitions), the four human decisions, fan-out and loop-back beats, Send back, Allow host & retry, Retry as-is, stop (*"recorded as failed"*), worker slots, *"Retries are capped, then the task fails"* |
+| `docs/mockups/monitor-guide.html` | *The life of a single step* (states and transitions), the four human decisions, *"the task stops here and asks for you"*, *"Stop this run"*, fan-out and loop-back beats, Send back, Allow host & retry, Retry as-is, stop (*"recorded as failed"*), worker slots, *"Retries are capped, then the task fails"* |
 | `docs/mockups/monitor.html` | `CAP = 4`, `schedule()`, queued vs pending, workers strip |
 | `docs/mockups/task-detail-guide.html` | Pause (*"Stops after the current run"*), Send to backlog, Cancel task, Clean up, Approve, Send back, keys; egress denial counted as attempt 1; *"engine gives up and fails the task"*; queued vs pending |
-| `docs/mockups/task-detail.html` | `sendBack()` re-queues build, `retries` = Σ(attempts − 1) |
+| `docs/mockups/task-detail.html` | `sendBack()` re-queues build, `retries` = Σ(attempts − 1); status bar *"blocked on you"*, header pill *"waiting on you"*; `a`, `r`, `Escape` handler |
 | `docs/mockups/inbox-guide.html`, `docs/mockups/inbox.html` | Failure card *"Attempt 3 of 3 failed — egress denied"*, Allow host & retry, Retry as-is; Approve and Send back keys; `Enter` approves a gate or runs Allow host & retry; *"escalation after 10m"* |
 | `docs/mockups/flow-designer-guide.html`, `docs/mockups/flow-designer.html` | Fan-out takes a worker each; *Retries* field *"gives up and fails the task"*, default `retries = 2`; draft mode (*"Not an edit — makes no version"*, haiku, `$0.05` ceiling) |
 | `docs/mockups/capability-library-guide.html` | An execution rule for a skill that needs the network: *"add the advisory host to that step's egress allowlist, or the first run fails closed"* (used in [[Run Guardrails At Launch]]) |
@@ -57,6 +59,18 @@ Every fact in these notes comes from the files below (paths relative to the repo
 ## Sibling vault notes used for consistency
 
 Not sources of fact, but cross-checked so the vault agrees: [[Monitor Open Questions]], [[Monitor API And Routes]], [[Task Detail API And Routes]], [[Human In The Loop API And Routes]], [[Attempts And Send Back]], [[Worker Slots]], [[Flow Data Model]], [[Flow Design Open Questions]].
+
+The sets written since, overlapping execution:
+
+| Set | Where it overlaps |
+|---|---|
+| [[Agent Providers Index]] | the runner/provider boundary, [[Run Spec]], [[Normalized Event Envelope]], [[Session Resume And Context Replay]], [[Replay Provider]], [[Agent Providers Open Questions]] |
+| [[Sandboxing Index]] | [[ExecHost Port]], [[Permission Gate]], [[Egress Denials]], `runs.sandbox`, [[Sandboxing Open Questions]] |
+| [[Workspaces Index]] | where the worktree is created and cleaned up: [[Creating A Workspace]], [[Cleaning Up A Workspace]], [[Workspaces Open Questions]] |
+| [[Memory Index]] | where recall and commit sit around a run: [[Recalled Memory In The Prompt]], [[Memory Open Questions]] |
+| [[Intake And Import Index]] | tasks entering the board; the `import_backlog` job |
+| [[Settings And Plumbing Index]] | draft mode, settings keys, process topology, [[Settings And Plumbing Open Questions]] |
+| [[Projects Index]] | `repo_path`, `check_command` |
 
 ## Related
 

@@ -59,7 +59,7 @@ Assembled from PRD §8, with the done rule from `02` §3 (see [[Task Completion]
 
 ## Gates and human decisions
 
-- **Approve**: PRD §8 says *"approve means pass"* only for the no-outcome gate, and is silent on approving over an agent's `fail`. `02` §3 adds the override: *"Approve overrides the agent's `fail` outcome (human wins)"* (backlog 5.2, tagged **FIX**). Backlog 10.2 lists *"approve overrides outcome"* among the README's deviations from the PRD.
+- **Approve**: PRD §8 says *"approve means pass"* only for the no-outcome gate, and is silent on approving over an agent's `fail`. `02` §3 adds the override: *"Approve overrides the agent's `fail` outcome (human wins)"* (backlog 5.2, tagged **FIX**). The feature map and the drawio side with `02` §3: *"**Your call wins** — If you approve or reject a step, your decision overrides whatever the agent concluded"* (feature map §4); *"Your call overrides the agent's."* (drawio harness concept 8, *Human escalation*). Backlog 10.2 lists *"approve overrides outcome"* among the README's deviations from the PRD.
 - **Reject**: *"reject sets `fail` + reason; reject with no `on_fail` edge fails the task"* (`02` §3).
 - **Answers**: when the last required answer arrives, *"enqueue a new `start_run` that resumes"* (PRD §9). See [[Ask Park And Resume]].
 
@@ -67,14 +67,16 @@ The drawio *Flow engine* card in the worker: *"advance_task: always / on_pass / 
 
 ## The feature map's version
 
-§4 *The engine*: *"**Decide the next step** — When a step finishes, the engine reads the recipe and starts whatever comes next."*; *"**Follow pass/fail paths** — If a step reports success or failure, the engine takes the matching route (a passed review moves on; a failed one loops back)."* The monitor guide's *"four handoff rules"* restate this for the screen; see [[Hand-Off Rules]].
+§4 *The engine*: *"**Decide the next step** — When a step finishes, the engine reads the recipe and starts whatever comes next."*; *"**Follow pass/fail paths** — If a step reports success or failure, the engine takes the matching route (a passed review moves on; a failed one loops back)."*; *"**Silence isn't success** — If an agent finishes without saying whether it passed, the engine doesn't assume it did. The step stops and asks you."*
+
+The monitor guide's *"four handoff rules"* (Advance, Fan out, Join, Loop back) restate this for the screen: *"When a step finishes, the engine reads the flow and applies these. Nothing else moves work."* See [[Hand-Off Rules]].
 
 ## Gaps
 
-- **Approval and questions together.** A step with `advance_mode='approval'` that also has unanswered questions hits rule 1 first and never reaches rule 2. Whether that is intended is not stated.
+- **Approval and questions together.** A step with `advance_mode='approval'` that also has unanswered questions hits rule 1 first and never reaches rule 2. Whether that is intended is not stated ([[Execution Open Questions]] #5).
 - **Approval on a failed outcome.** On an approval step whose agent set `fail`, the run still "succeeds", so rule 1 parks it for approval. Under `02` §3 Approve then overrides to pass; the PRD does not say, and the backlog calls the override a deviation ([[Execution Open Questions]] #64). The screens should show the agent's verdict at the gate.
 - **A silent approval step.** Because rule 1 comes first, a run on an approval step that sets no outcome waits at an ordinary gate, never at *"no outcome reported"*. The `review` step in the seeded flow is such a step ([[Seeded Flow Execution]]).
-- **`manual` steps.** PRD §5 allows `kind = 'manual'`; no rule says what the engine does when it reaches one. See [[Execution Open Questions]].
+- **`manual` steps.** PRD §5 allows `kind = 'manual'`; no rule says what the engine does when it reaches one. See [[Execution Open Questions]] #6.
 
 ## Related
 

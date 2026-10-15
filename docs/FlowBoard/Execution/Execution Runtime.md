@@ -14,9 +14,10 @@ The drawio *Harness architecture* title: *"One laptop · two Node processes · o
 | Process | Role in execution | Source |
 |---|---|---|
 | `apps/web` (Next.js) | *"thin: validates, calls core, enqueues; never spawns agents"* | drawio |
-| `apps/worker` (Node) | job loop, runner, `ask_user` broker, escalation timer | PRD §3 |
-| `apps/mcp-shim` | *"tiny stdio MCP server; forwards to the broker over a unix socket"* | PRD §3 |
-| Sandbox container | one per run, *"destroyed on exit"* | drawio *Docker Desktop* box |
+| `apps/worker` (Node) | job loop, runner, `ask_user` broker, escalation timer (PRD §3); *"the harness proper; its rules come from packages/core"* (drawio) | PRD §3, drawio |
+| `apps/mcp-shim` | *"tiny stdio MCP server; forwards to the broker over a unix socket"*; *"the CLI launches"* it, one per run (PRD §9) | PRD §3, §9 |
+| Agent CLI | `claude -p …`, spawned through the ExecHost: a host child process, or inside the run's container | PRD §7, §11.1 |
+| Sandbox container | non-host tiers only: *"one container per run, destroyed on exit"* | drawio *Docker Desktop* box; PRD §11.1 (*"one per run, destroyed on completion"*) |
 | Egress proxy | the only way out of the sandbox network | PRD §11.1 |
 
 ```mermaid
@@ -74,7 +75,7 @@ export interface ExecHost {
 }
 ```
 
-(`exec-host.ts`) *"This keeps sandboxing orthogonal to the provider: **any provider × any tier, for free** (2×N, not N×M)."* (`01-ports.md`)
+(`exec-host.ts`; the trailing comments are shortened from its doc comments.) *"This keeps sandboxing orthogonal to the provider: **any provider × any tier, for free** (2×N, not N×M)."* (`01-ports.md`)
 
 ## The test of the abstraction
 
@@ -100,3 +101,8 @@ interface StepExecutor {
 - [[Runner Pipeline]]
 - [[Worker Lifecycle]]
 - [[Execution Storage]]
+- [[Process Topology]]
+- [[Code Layout And Dependency Rule]]
+- [[Agent Providers Runtime]]
+- [[Sandboxing Runtime]]
+- [[ExecHost Port]]

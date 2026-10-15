@@ -46,7 +46,7 @@ Illustrative, assembled from PRD §8, §9 and §15. No source walks the seeded f
 
 | Beat | Engine | State after |
 |---|---|---|
-| Start | `research` is the entry step; `start_run` | research running |
+| Start | `research` is the entry step (listed first in PRD §15, which marks no `is_entry`); `start_run` | research running |
 | research done | `always` → `grill` | grill running |
 | grill asks | `ask_user_batch`; may park after 20 min | `awaiting_answers` |
 | answers in | resume `start_run` | grill running → done |
@@ -80,6 +80,8 @@ After a rework: `implement` runs again with the failing artifact in its read-fir
 ## The sources' own proof
 
 PRD §14, M5: *"Proof it works: a deliberately failing test in the scratch repo sends the seeded flow from `check` back to `implement` with the raw log, and a run that sets no outcome stops at a gate instead of passing."*
+
+*Inference:* the seeded flow alone cannot show the second half as a distinct *"no outcome reported"* gate. `check` is a shell step, so it always has an outcome, and `review`, the only AI step with conditional edges, is an approval step whose own gate hides a missing outcome (see *Points to watch*). A run that sets no outcome does still stop at a gate, just not one labelled as such ([[Execution Open Questions]] #71).
 
 PRD §15: *"Seed the scratch project's `check_command` with something that exists in the scratch repo."* The seeded skills are *"real local plugin dirs under FlowBoard's `./skills/` … so M5 is testable without any GitHub access."*
 

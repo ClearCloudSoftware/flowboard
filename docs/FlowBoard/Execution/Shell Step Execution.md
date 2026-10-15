@@ -43,7 +43,7 @@ sequenceDiagram
   W->>W: cost_usd = 0 → advancement rules
 ```
 
-Assembled from PRD §7–§8. The drawio *Shell executor = the sensor* card: *"runs check_command in a fresh sandbox · exit 0 → pass, else fail · output tail → check_output · fingerprint → runs"*. Its *Check container* card: *"same image and mounts, no model, no API key: runs check_command and exits with its code"*.
+Assembled from PRD §7–§8. The drawio *Shell executor = the sensor* card: *"runs check_command in a fresh sandbox · exit 0 → pass, else fail · output tail → check_output · fingerprint → runs"*. Its *Check container* card: *"same image and mounts, no model, no API key: runs check_command and exits with its code"*. *Life of one step* I: *"A check step runs check_command in a fresh container and its exit code decides."*
 
 ## What it feeds
 
@@ -53,11 +53,11 @@ Assembled from PRD §7–§8. The drawio *Shell executor = the sensor* card: *"r
 
 ## Gaps
 
-- **Fresh container or the task's.** PRD §7 says *"through the same execution host"*; the drawio says *"in a fresh sandbox"* / *"Check container"*. The PRD is itself split: its *Sandboxed runs* paragraph launches commands *"*inside* the task's container"*, while §11.1 says *"Containers are ephemeral — one per run, destroyed on completion"* (and `08`: *"One container per run/attempt"*). See [[Execution Open Questions]] #61.
+- **Fresh container or the task's.** PRD §7 says *"through the same execution host"*; the drawio says *"in a fresh sandbox"* / *"Check container"*. The PRD is itself split: its *Sandboxed runs* paragraph launches commands *"*inside* the task's container"*, while §11.1 says *"Containers are ephemeral — one per run, destroyed on completion"* (and `08`: *"One container per run/attempt"*). See [[Execution Open Questions]] #40 and #61, and [[Sandboxing Open Questions]] #17. Whether a check container gets any egress (to install packages, say) is also open ([[Sandboxing Open Questions]] #20).
 - **Run state on a failing check.** Whether a non-zero check records `runs.state = 'failed'` (PRD §7 *Completion*) or `succeeded` (the shell paragraph: *"a result, not a run failure"*) is not stated ([[Execution Open Questions]] #57).
-- **Worker slot.** Whether a shell run counts against `VIBE_MAX_RUNS` is not stated (also [[Worker Slots]]).
+- **Worker slot.** Whether a shell run counts against `VIBE_MAX_RUNS` is not stated ([[Execution Open Questions]] #36; also [[Worker Slots]]).
 - **Timeouts.** A hanging `check_command` has no stated limit other than the sandbox wall clock (`08`).
-- **Non-zero for reasons other than test failure** (command not found, out of memory) is still a `fail` outcome under the rule above, so it loops rather than blocks.
+- **Non-zero for reasons other than test failure** (command not found, out of memory) is still a `fail` outcome under the rule above, so it loops rather than blocks ([[Execution Open Questions]] #41; [[Sandboxing Open Questions]] #15).
 
 ## Related
 
@@ -66,3 +66,4 @@ Assembled from PRD §7–§8. The drawio *Shell executor = the sensor* card: *"r
 - [[Run Outcomes]]
 - [[Stuck Detection And Fingerprints]]
 - [[Rework Loop]]
+- [[Sandboxed Run Lifecycle]]

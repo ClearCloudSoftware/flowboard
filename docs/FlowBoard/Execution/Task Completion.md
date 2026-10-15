@@ -26,7 +26,7 @@ flowchart TD
   C -->|no| D[task done]
 ```
 
-*Proposal* for "reachable": a `pending` instance whose join could still be satisfied by some active or pending upstream instance. No source defines it.
+*Proposal* for "reachable": a `pending` instance whose join could still be satisfied by some active or pending upstream instance. No source defines it ([[Execution Open Questions]] #10). Nor does any source define "active"; the diagram reads it as `running`, `awaiting_answers` or `awaiting_approval` (inference).
 
 ## Failed
 
@@ -50,8 +50,8 @@ The bug the done rule fixes: a conditional edge that never fires left the task i
 ## After done
 
 - **Summary.** In the seeded flow the last step is `summarize`, producing `summary`, which the task detail diffs against `plan` (PRD §13).
-- **Memory.** After a successful run, the runner `write()`s salient output (PRD §7, §11.2). Nothing extra happens at task done.
-- **Cleanup.** *"offer a "clean up worktree" action; never remove it automatically"* (PRD §11), for a task that reaches `done` or `cancelled`. Backlog 2.1 widens it: *"Cleanup worktree only via explicit action, only when done/cancelled/failed."* The task-detail guide says *"Only offered once the task is finished or cancelled."*
+- **Memory.** After a successful run, the runner `write()`s salient output (PRD §7, §11.2). No source adds a memory step at task done (see [[Memory Commit]]).
+- **Cleanup.** *"offer a "clean up worktree" action; never remove it automatically"* (PRD §11), for a task that reaches `done` or `cancelled`. Backlog 2.1 widens it: *"Cleanup worktree only via explicit action, only when done/cancelled/failed."* `05` §11 and `workspace.ts` also allow `failed`. The task-detail guide says *"Only offered once the task is finished or cancelled."* Feature map §14 agrees: *"only once the task is finished or cancelled"*. See [[Cleaning Up A Workspace]] and [[Execution Open Questions]] #60.
 
 ## Related
 

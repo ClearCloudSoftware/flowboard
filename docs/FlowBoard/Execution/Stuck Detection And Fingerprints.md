@@ -38,12 +38,13 @@ Fingerprinting lives in `packages/core` (*"The engine, loop guard, advancement r
 The output lines are invented for illustration. In this example the loop would also have escalated at run 3 on the cap (`max_attempts` 3 on `implement`); the fingerprint matters when `max_attempts` is higher, or when the same error repeats on attempt 2.
 
 > [!question] Does stripping digits defeat "fewer failing tests"?
-> The PRD strips digits and then claims fewer failing tests change the fingerprint. A summary line such as `3 failing` → `2 failing` does not change once digits go. Listed in [[Execution Open Questions]].
+> The PRD strips digits and then claims fewer failing tests change the fingerprint. A summary line such as `3 failing` → `2 failing` does not change once digits go. Listed in [[Execution Open Questions]] #19.
 
 ## Scope
 
 - **Shell steps only.** *"Review failures get no fingerprint"* (PRD §8).
 - **Previous failed run of the same step.** The comparison is with *"its previous failed run"*, not across steps. After a rework, `check` and every other step downstream of the target are re-created (*"downstream `done` → `skipped` so they re-instantiate"*, `02` §3). So the previous failed run sits on an *earlier instance* of the same step definition. No source says how the lookup crosses instances ([[Execution Open Questions]] #58).
+- **"Twice in a row" or "previous failed run".** The feature map stops on *"exactly the same error twice in a row"*; PRD §8 compares with *"its previous failed run"*, and `02` §3 with *"its previous failure"*. They differ when a passing check sits between two failures. For example, `check` fails, `implement` fixes it, `check` passes, `review` sends the work back, and `check` then fails with the first error again. The PRD wording escalates; "in a row" does not ([[Execution Open Questions]] #67).
 - **Infra retries.** These never produce a check verdict, so they never fingerprint.
 
 ## Related

@@ -5,11 +5,11 @@ module: Execution
 
 # Agent Launch Contract
 
-How the runner launches an agent without knowing which agent it is. The seam is the **AgentProvider** port, *"The centerpiece"* (`01-ports.md`). A full treatment of providers belongs to the Agent Providers component (not yet documented); this note covers what execution relies on.
+How the runner launches an agent without knowing which agent it is. The seam is the **AgentProvider** port, *"The centerpiece"* (`01-ports.md`). The full treatment of providers is in [[Agent Providers Index]] (see [[AgentProvider Port]], [[Run Spec]] and [[Claude Code Adapter]]); this note covers what execution relies on.
 
 ## The port
 
-From `docs/old/reference/core/ports/agent-provider.ts`:
+From `docs/old/reference/core/ports/agent-provider.ts`, abridged: the doc comments are shortened into trailing comments, and the `id` comment spells out the `ProviderId` type.
 
 ```ts
 export interface AgentProvider {
@@ -66,12 +66,14 @@ export interface RunResult {
 | `native_cost` | *"PricingService computes cost from tokens"* |
 | `allowed_tools` | *"tool policy becomes advisory / prompt-level"* |
 | `tool_hooks` | *"a provider without them relies on the sandbox alone, and the flow editor says so"* (PRD §7) |
-| `budget_cap` | *"honours maxBudgetUsd; else it is advisory"* (`agent-provider.ts`) |
-| `permission_modes` | *"supports a bypass/ask permission mode"* (`agent-provider.ts`); the permission gate needs it ([[Run Guardrails At Launch]]) |
+| `budget_cap` | *"else it is advisory"* (`agent-provider.ts`: *"honours maxBudgetUsd; else it is advisory"*) |
+| `permission_modes` | none stated. The flag means *"supports a bypass/ask permission mode"* (`agent-provider.ts`); the permission gate needs it ([[Run Guardrails At Launch]]) |
+
+The first five rows are `01-ports.md`'s list. `sessions`, `plugins` and `partial_stream` have no stated fallback either. Per-flag detail is in [[Provider Capabilities]] and [[Capability Negotiation]].
 
 ## The Claude adapter's command
 
-PRD §7 gives the command for a `start_run` job:
+PRD §7 gives the command for a `start_run` job (one flag per line there; reflowed here):
 
 ```
 claude -p "<prompt>"
@@ -87,23 +89,26 @@ claude -p "<prompt>"
   [--append-system-prompt <agent.system_prompt, when the step names an agent>]
 ```
 
+A resume adds `--resume <claude_session_id> --fork-session` (PRD §9; `03` §5 lists both flags). See [[Session Resume And Context Replay]].
+
 *"Run with `cwd` set to the task's worktree path. `--strict-mcp-config` is important: it stops my personal MCP config leaking into runs and keeps them reproducible."* (PRD §7)
 
 Fixes that move into the adapter (`03` §5): *"`message_delta.usage` is cumulative per message → reset per `message_start`, don't sum across deltas"*; *"Capture `session_id` once from `system/init`, not every line"*; *"`total_cost_usd` authoritative → maps to `Usage.costUsd`"*; *"Always append `mcp__vibe__*` to `--allowedTools`"*.
 
 ## The events
 
-Seven kinds (`01-ports.md`, `events.ts`). Each carries a schema version `v`, starting at 1 (`01-ports.md`; PRD §7; `run_events.v` in PRD §5), though `events.ts` has no `v` field. The kinds: `assistant_text`, `thinking`, `tool_use`, `tool_result`, `system`, `result`, `error`. The runner writes each to `run_events` *"with an incrementing `seq`"* and a one-line `summary` (PRD §7). The viewer side is in [[Event Stream And SSE]].
+Seven kinds (`01-ports.md`, `events.ts`). Each carries a schema version `v`, starting at 1 (`01-ports.md`; PRD §7; `run_events.v` in PRD §5), though `events.ts` has no `v` field. The kinds: `assistant_text`, `thinking`, `tool_use`, `tool_result`, `system`, `result`, `error`. The runner writes each to `run_events` *"with an incrementing `seq`"* and a one-line `summary` (PRD §7). The raw line is kept too: *"Persist the raw line alongside the normalized event (the schema already has `run_events.raw`)"* (`01-ports.md`), and field names follow the OpenTelemetry GenAI conventions (PRD §7; `01-ports.md`). The viewer side is in [[Event Stream And SSE]]; the parsing side in [[Normalized Event Envelope]] and [[Stream Parsing And Normalization]].
 
 ## Where the sources disagree
 
 > [!warning] Three versions of the contract
-> - `01-ports.md`'s `Capability` includes `tool_hooks`; `agent-provider.ts` does not.
-> - `01-ports.md`'s `RunSpec` sketch has no `exec`; the reference and `01-ports.md`'s own ExecHost section (*"passes it in `RunSpec.exec`"*) do. Through `exec`, the reference carries the sandbox tier (`ExecHost.id`, `SandboxProfile.tier`); the sketch carries none.
-> - Neither `RunSpec` carries the permission mode, the agent's system prompt or the per-run hook settings, all of which the PRD §7 command needs.
+> - `01-ports.md`'s `Capability` includes `tool_hooks`; `agent-provider.ts` does not ([[Agent Providers Open Questions]] #1).
+> - `01-ports.md`'s `RunSpec` sketch has no `exec`; the reference and `01-ports.md`'s own ExecHost section (*"passes it in `RunSpec.exec`"*) do. Through `exec`, the reference carries the sandbox tier (`ExecHost.id`, `SandboxProfile.tier`); the sketch carries none ([[Agent Providers Open Questions]] #3).
+> - Neither `RunSpec` carries the permission mode, the agent's system prompt or the per-run hook settings, all of which the PRD §7 command needs ([[Agent Providers Open Questions]] #4).
+> - Who makes the session id: PRD §7 has the runner generate a uuid and pass `--session-id`; `AgentRun.sessionId` *"Resolves once the provider emits its session id (from system/init)"* (`agent-provider.ts`). See [[Agent Providers Open Questions]] #5.
 > - `PromptParts` has six fields and no slot for the memory part 7 ([[Prompt Assembly]]).
-> - `events.ts`' `NormalizedEvent` has no `v`, which `01-ports.md` and PRD §7 require.
-> - `Usage` arrives only on the `result` event, yet PRD §7 wants a running cost from per-message tokens ([[Monitor Open Questions]] #38).
+> - `events.ts`' `NormalizedEvent` has no `v`, which `01-ports.md` and PRD §7 require ([[Agent Providers Open Questions]] #6).
+> - `Usage` arrives only on the `result` event, yet PRD §7 wants a running cost from per-message tokens ([[Monitor Open Questions]] #38; [[Agent Providers Open Questions]] #9).
 >
 > Listed in [[Execution Open Questions]] #42 and #62.
 
@@ -114,3 +119,5 @@ Seven kinds (`01-ports.md`, `events.ts`). Each carries a schema version `v`, sta
 - [[Prompt Assembly]]
 - [[Run Guardrails At Launch]]
 - [[Capability Runtime Mounting]]
+- [[Agent Providers Index]]
+- [[Run Spec]]
