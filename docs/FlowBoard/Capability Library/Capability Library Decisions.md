@@ -15,7 +15,7 @@ The v1 design, settled in a grilling session on 2026-10-15 that worked through [
 
 | # | Decision | Resolves |
 |---|---|---|
-| D1 | **v1 is Claude-only.** The `CapabilityPack` seam stays in the port and `provider` is stored on plugin rows, but there is no coverage counter, provider filter, provider-packs block or provider-match check. | OQ5, OQ6, OQ13 (moot in v1) |
+| D1 | **v1 is Claude-only.** The `CapabilityPack` seam stays in the port; the provider is implied (`claude`) rather than stored, so the schema has no `provider` column (D23). There is no coverage counter, provider filter, provider-packs block or provider-match check. | OQ5, OQ6, OQ13 (moot in v1) |
 | D2 | **`CapabilityPack` is data**: the `mount` union (`plugin_dir` / `system_prompt` / `native`) that the adapter interprets. A registry stores rows, not behaviour. | OQ14 |
 | D3 | **No bundle packs in v1.** Seeds ship from FlowBoard's own repo instead of a Delivery pack. | OQ7 (moot in v1) |
 
@@ -80,15 +80,20 @@ D24 — derived from the decisions above; see [[Capability Library API And Route
 
 ## Source docs to fix
 
-The decisions leave these source documents wrong or stale:
+The source documents were brought in line with these decisions on 2026-10-15:
 
-- PRD §7 (`--plugin-dir <each installed skill's install_path>`) and backlog Story 3.2 mount every installed plugin; D14 mounts only the step's.
-- PRD §5 `skills.slug UNIQUE` is global; D23 scopes skills by plugin and plugins by project.
-- PRD §13 / Story 7.1 install into `./skills/<slug>` from a GitHub URL; D5 moves installs to `<project>/.flowboard/skills/`, and D7 accepts any git URL. Drop the root `.gitignore` rule `skills/_installed/` (and backlog Story 0.3's mention of it).
-- PRD §7 prompt slot 4 writes bare `/slug`; D16 invokes `/<plugin>:<slug>`.
-- PRD §5 `agents.default_model DEFAULT 'sonnet'` is fine under D20, but `agents` needs `project_id`.
-- `08-sandboxing.md` lists no skills mount; D14 adds read-only plugin mounts.
-- Remaining drift from OQ17 (drawio memory order, `tool_hooks` missing from `agent-provider.ts`) is unchanged by these decisions. The `--add-dir`, eight-step and git-remote drift was fixed in commits `198e7de` and `c4b01fd`.
+- **PRD §5** — `skills` replaced by `plugins` + `skills` (scoped by plugin, no global slug, no `install_path` or `frontmatter`); `agents` gains `project_id` and `UNIQUE (project_id, slug)`; `step_defs.extra_plugin_ids`; `tasks.capability_pins` (D23).
+- **PRD §7** — `--plugin-dir` per plugin the step names, at the pinned commit (D10, D14); prompt slot 4 invokes `/<plugin>:<slug>` (D16).
+- **PRD §11.1** — plugin dirs mounted read-only; host tier refuses git-installed plugins (D14, D15).
+- **PRD §12, §13, §15** — the v1 API (D24), the per-project library screen (D4–D9, D13, D17–D21), seeds copied per project and updated by click (D6, D12).
+- **Backlog** — Story 0.1 probes qualified invocation (D16); Story 0.3 drops `skills/_installed`; Story 3.2 mounts per step; Stories 7.1 and 7.2 follow the library screen.
+- **`.gitignore`** — `skills/_installed/` removed.
+- **`08-sandboxing.md`** — read-only plugin mounts (D14).
+
+Still open:
+
+- **Seed renames (D22)** are not applied to the PRD's seed flow (§15) or backlog Story 1.2, because `explain-simply`, `backlog-importer` and the research agents are still undecided — see [[Seeded Capabilities]].
+- Drift from OQ17 that the decisions do not touch: the drawio *Prompt builder* memory order, and `tool_hooks` missing from `agent-provider.ts`. The `--add-dir`, eight-step and git-remote drift was fixed in commits `198e7de` and `c4b01fd`.
 
 ## Related
 

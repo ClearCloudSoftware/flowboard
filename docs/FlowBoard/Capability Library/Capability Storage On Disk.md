@@ -42,9 +42,9 @@ Installed plugins are files on the host. The DB records metadata; the plugin dir
 
 | Source | Location | Note |
 |---|---|---|
-| PRD §13 | `./skills/<slug>` | Clone or sparse-checkout target |
+| PRD §13 (earlier draft) | `./skills/<slug>` | Clone or sparse-checkout target; the PRD now uses the v1 layout |
 | PRD §15 | `./skills/` | Seeds as "real local skill directories under `./skills/` with a `SKILL.md` each" — still where seeds live in FlowBoard's repo |
-| Root `.gitignore` / backlog | `skills/_installed/` | Ignored. Never used; drop the rule |
+| Root `.gitignore` / backlog | `skills/_installed/` | Ignored, never used; the rule was removed on 2026-10-15 |
 | Backlog Story 1.2 | `skills/<slug>/.claude-plugin/plugin.json` + `skills/<slug>/skills/<slug>/SKILL.md` | Seeded skills as plugin dirs — the source the seeds are copied from |
 | Harness diagram | `skills/<slug>/SKILL.md` as plugin dirs · agent definitions | *Durable state · host filesystem* |
 | Mockup status bar | `~/.flowboard/capabilities` | The "capability store" |

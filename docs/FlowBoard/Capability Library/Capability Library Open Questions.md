@@ -105,7 +105,7 @@ The harness diagram mounts `ro skills/ → /skills`. `08-sandboxing.md` says *mo
 
 ## 17. Source documents drift from each other
 
-> [!check] **Open — doc fixes.** Listed in [[Capability Library Decisions#Source docs to fix]], with the drift the decisions add.
+> [!check] **Mostly resolved.** The source docs were fixed on 2026-10-15; two drift items remain. See [[Capability Library Decisions#Source docs to fix]].
 
 - The drawio *Prompt builder* puts recalled memory after the headless instruction; PRD §7 and `09-memory.md` put it before.
 - `01-ports.md` adds the `tool_hooks` flag; `agent-provider.ts` lacks it.

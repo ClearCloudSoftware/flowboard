@@ -52,6 +52,8 @@ CREATE TABLE skills (
 
 ## v1 PRD schema (SQLite)
 
+As the PRD first specified it. The PRD now carries the decided schema above.
+
 ```sql
 CREATE TABLE skills (
   id            TEXT PRIMARY KEY,

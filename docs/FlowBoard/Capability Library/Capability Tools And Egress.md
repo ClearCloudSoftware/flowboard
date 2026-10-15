@@ -44,7 +44,7 @@ From `old/architecture/08-sandboxing.md` and the harness-architecture diagram:
 
 - **Egress allowlist is load-bearing.** Default-deny outbound; allow only the model/CLI endpoint and the package registries the step needs. **Not the git remote** — the host does all git work.
 - Implemented as an egress proxy (Squid / tinyproxy) on an internal Docker network, which also injects the real API key on model requests.
-- **Installed skills are mounted read-only** into the sandbox (`ro: skills/ → /skills`) — harness diagram only; `08-sandboxing.md` says to mount only the worktree and the declared artifact dir. **v1 (D14):** only the step's pinned plugin dirs, read-only. The only writable mount is the task worktree.
+- **Installed skills are mounted read-only** into the sandbox (`ro: skills/ → /skills`) — harness diagram. **v1 (D14), now also in `08-sandboxing.md`:** only the step's pinned plugin dirs, read-only. The only writable mount is the task worktree.
 - **No sandbox, no git plugins.** On the host tier, a step whose plugins came from a git URL does not run (D15).
 - A default-deny allowlist holds even when tool approval is bypassed.
 

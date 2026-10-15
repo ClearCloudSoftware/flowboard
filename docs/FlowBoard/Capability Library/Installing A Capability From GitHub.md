@@ -80,9 +80,9 @@ Then it branches on the provider of the step you add it to:
 
 - PRD: clone **or sparse-checkout** into `./skills/<slug>`; parse `SKILL.md` frontmatter for name and description.
 - Backlog Story 7.1: install into `./skills/<slug>` *as a plugin dir* — add `.claude-plugin/plugin.json` when missing.
-- Architecture: installing "from a GitHub URL" becomes a **provider-tagged** operation. v1 tags every plugin `claude` (D1).
+- Architecture: installing "from a GitHub URL" becomes a **provider-tagged** operation. In v1 every plugin is implicitly `claude`; no provider is stored (D1).
 - The git remote is reached by `git clone` on the host (harness-architecture diagram), not from inside the sandbox.
-- v1 overrides the PRD and Story 7.1 target: installs go to `<project>/.flowboard/skills/<plugin>/<commit>/`, not `./skills/<slug>` (D5).
+- Installs go to `<project>/.flowboard/skills/<plugin>/<commit>/` (D5); earlier PRD and Story 7.1 drafts said `./skills/<slug>`.
 
 ## Related
 

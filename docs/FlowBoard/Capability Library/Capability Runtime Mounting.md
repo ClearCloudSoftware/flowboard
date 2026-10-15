@@ -27,7 +27,7 @@ flowchart LR
 
 From PRD §7 and the backlog:
 
-- **Skills** — one `--plugin-dir <commit dir>` per plugin **the step names** (D14). The PRD and backlog Story 3.2 pass one per *installed* skill to every run; v1 does not, because plugin hooks and MCP servers are mounted as-is (D8) and should only run where a step asked for them. `--add-dir` **does not register skills**; backlog Story 0.1 found this, and the PRD was corrected to match.
+- **Skills** — one `--plugin-dir <commit dir>` per plugin **the step names** (D14). Earlier drafts of the PRD and backlog Story 3.2 passed one per *installed* skill to every run; v1 does not, because plugin hooks and MCP servers are mounted as-is (D8) and should only run where a step asked for them. `--add-dir` **does not register skills**; backlog Story 0.1 found this, and the PRD was corrected to match.
 - **Agents** — `--append-system-prompt <agent.system_prompt>` for `kind='agent'`.
 - **Tools** — `--allowedTools …`, always with `mcp__vibe__*` appended so a restrictive list cannot lock out `ask_user` (PRD §7, backlog Story 3.2).
 - **Hooks** — `--settings <generated per-run settings.json with PreToolUse hooks>` (PRD §7): an in-agent gate that blocks writes outside the worktree, non-goal paths and destructive commands. Needs the `tool_hooks` capability flag.
@@ -40,7 +40,7 @@ The prompt builder assembles, in order:
 1. Task, acceptance criteria, non-goals
 2. Input artifacts — "read these first"
 3. Output paths
-4. **For `kind='skill'`: the slash invocation, fully qualified — e.g. `/grill-me:grill-me`** (D16; the PRD writes bare `/grill-me`)
+4. **For `kind='skill'`: the slash invocation, fully qualified — e.g. `/grill-me:grill-me`** (D16; earlier PRD drafts wrote bare `/grill-me`)
 5. The step's `prompt_template`, with placeholders substituted
 6. Headless instruction: use the `ask_user` MCP tool for questions
 
@@ -55,7 +55,7 @@ From the harness-architecture diagram:
 - **Never mounted:** `~/.ssh`, cloud credentials, `flowboard.db`, `docker.sock`
 - Skill installs happen on the host (`git clone` from GitHub); the sandbox only reads them.
 
-`08-sandboxing.md` says *mount only the worktree (and the declared artifact dir)* and lists no skills mount. **Resolved (D14):** `claude` runs inside the task's container (PRD §7 *Sandboxed runs*), so it needs the plugin dirs; `08-sandboxing.md` is the doc to fix.
+`08-sandboxing.md` says *mount only the worktree (and the declared artifact dir)* and lists no skills mount. **Resolved (D14):** `claude` runs inside the task's container (PRD §7 *Sandboxed runs*), so it needs the plugin dirs; `08-sandboxing.md` now lists the read-only plugin mounts.
 
 ## Host tier
 

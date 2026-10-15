@@ -51,7 +51,7 @@ allowed-tools: Read, Bash, WebFetch
 
 ## How a step uses a skill
 
-In the run's prompt, slot 4 of the prompt builder is the slash invocation (`/grill-me:grill-me` in v1; the PRD writes `/grill-me`). The step's `prompt_template` follows in slot 5. See [[Capability Runtime Mounting]].
+In the run's prompt, slot 4 of the prompt builder is the slash invocation (`/grill-me:grill-me` in v1; earlier PRD drafts wrote `/grill-me`). The step's `prompt_template` follows in slot 5. See [[Capability Runtime Mounting]].
 
 ## Detail pane
 
