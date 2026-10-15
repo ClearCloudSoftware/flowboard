@@ -23,7 +23,7 @@ Siblings of the Capability Library on the drawio *Functional components* page.
 | ✅ | [[Cost And Control Index\|Cost And Control]] | Live cost, rollups, wasted spend, draft mode | — | §18 Cost tracking | #12 Cost & usage ledger + PricingService |
 | ✅ | [[Escalation And Notifications Index\|Escalation And Notifications]] | Slack escalation, signed inbound, resolve everywhere | — | §13 Notifications | #10 Notifier port |
 | ⬜ | Intake And Import | Backlog import, create task, promote, seed project | — | §17 Importing work | #14 TaskSource port |
-| ⬜ | Memory | Recall, distil, four scopes, off by default | — | §21 Memory | #16 MemoryStore port (`09-memory.md`) |
+| ✅ | [[Memory Index\|Memory]] | Recall, distil, four scopes, off by default | — | §21 Memory | #16 MemoryStore port (`09-memory.md`) |
 
 ## Platform components
 
