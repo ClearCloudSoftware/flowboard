@@ -12,9 +12,9 @@ Things you do to the **task itself rather than to a step** (task-detail guide, r
 | Action | Shown when (mockup) | What it does (guide wording) | Money (guide) | API (PRD §12) |
 |---|---|---|---|---|
 | **Pause** | task not done | *"Stops after the current run rather than mid-flight. The workspace stays."* | *"Stops future spend only."* | none |
-| **Send to backlog** | task not done | *"Returns the task to the backlog, keeping its workspace and everything it produced."* | *"Same."* | none (backlog 2.1 *Demote* is todo → backlog only) |
+| **Send to backlog** | task not done | *"Returns the task to the backlog, keeping its workspace and everything it produced."* | *"Same."* (as Pause: *"Stops future spend only."*) | none (backlog 2.1 *Demote* is todo → backlog only) |
 | **Cancel task** | task not done (styled danger) | *"Stops any running agents and tidies up. The workspace survives until you clean it up."* | *"Anything in flight becomes wasted."* | `POST /api/tasks/:id/cancel` |
-| **Open workspace** | every step done | not in the guide | — | none |
+| **Open workspace** | every step done | not in the guide; what it opens is [[Workspaces Open Questions]] #17 | — | none |
 | **Clean up workspace** | every step done | *"Only offered once the task is finished or cancelled. Removes the branch and the folder."* | — | none |
 
 In the mockup none of the topbar buttons does anything.
@@ -27,13 +27,13 @@ The feature map (§3) heads its bullet *"Pause, send back, or cancel"*, but the 
 
 ## Send to backlog
 
-Feature map §3: *"Send a task back to the backlog (keeping its workspace)"*. The guide says the same for a task mid-flow. The PRD and backlog only define **demote** (todo → backlog), which *"keeps worktree; re‑promote reuses it"* (backlog Story 2.1). Open points: what happens to a live run, to the pinned flow version (`flow_id` is *"null while in backlog"*, PRD §5), and to `capability_pins` when a running task goes back to the backlog.
+Feature map §3: *"Send a task back to the backlog (keeping its workspace)"*. The guide says the same for a task mid-flow. The PRD and backlog only define **demote** (todo → backlog), which *"keeps worktree; re‑promote reuses it"* (backlog Story 2.1). Open points: what happens to a live run, to the pinned flow version (`flow_id` is *"null while in backlog"*, PRD §5), and to `capability_pins` when a running task goes back to the backlog. See [[Demote And Re-Promote]] and [[Task Detail Open Questions]] #9.
 
 ## Cancel
 
 > **Pause, send back, or cancel** — Send a task back to the backlog (keeping its workspace), or cancel it — which stops any running agents and tidies up. — feature map §3
 
-What "tidies up" means, from backlog Story 2.1 (**FIX**): *"Cancel: SIGTERM live runs, cancel pending questions, mark instances skipped."* A stopped run is finalised as `cancelled`, not `failed` (`03` §7–§8). The monitor guide says the opposite for its stop control: *"It is recorded as failed, with "stopped by you" as the reason"*. And PRD §7 retries *"process killed by a signal"* as a transient failure, so the runner has to know the kill was deliberate (see [[Task Detail Open Questions]] #31). Spend on a cancelled run moves to wasted (guide). The callout:
+What "tidies up" means, from backlog Story 2.1 (**FIX**): *"Cancel: SIGTERM live runs, cancel pending questions, mark instances skipped."* A stopped run is finalised as `cancelled` (`03` §8 and backlog Story 3.4 for Stop; `03` §7 and backlog Story 3.3 for a graceful worker shutdown, *"not `failed`"*). The monitor guide says the opposite for its stop control: *"It is recorded as failed, with "stopped by you" as the reason"*. And PRD §7 retries *"process killed by a signal"* as a transient failure, so the runner has to know the kill was deliberate (see [[Task Detail Open Questions]] #31). Spend on a cancelled run moves to wasted (guide). The callout:
 
 > [!warning] Stopping never refunds
 > *"Cancelling a task, or sending a step back, does not recover what has already been spent — it moves that spend into wasted and stops the future spend. The only free decision on this screen is approving."* — task-detail guide
@@ -44,11 +44,11 @@ The guide's pill table says that while running you can *"Watch, or stop the run 
 
 ## Retry and Fail task
 
-At an escalation gate, PRD §8: *"**Retry** grants one more attempt and carries my note into it, like a rejection reason. It does not reset the counter. **Fail task** ends it."* Endpoint: `POST /api/step-instances/:id/retry`. No `fail` endpoint is listed. The guide's lifecycle draws *you retry* from failed back to running. See [[Attempts And Send Back]].
+At an escalation gate, PRD §8: *"**Retry** grants one more attempt and carries my note into it, like a rejection reason. It does not reset the counter. **Fail task** ends it."* Endpoint: `POST /api/step-instances/:id/retry`. No `fail` endpoint is listed. The guide's lifecycle draws *you retry* from failed back to running, and backlog Story 2.3 lists *"Retry"* among the sheet's actions, but no source says what Retry does to a failed task ([[Task Detail Open Questions]] #35). See [[Attempts And Send Back]].
 
 ## Clean up workspace
 
-See [[Task Workspace]] for which terminal states allow it. No endpoint is listed in PRD §12. The `Workspace.destroy` port method backs it.
+See [[Task Workspace]] and [[Cleaning Up A Workspace]] for which terminal states allow it and what it removes. No endpoint is listed in PRD §12. The `Workspace.destroy` port method backs it.
 
 ## Related
 

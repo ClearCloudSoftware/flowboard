@@ -28,12 +28,12 @@ PRD §5 `step_instances.state`:
 
 | State | Meaning |
 |---|---|
-| `pending` | created, not yet started |
+| `pending` | not defined in the PRD; read here as created, not yet started |
 | `running` | a run is live |
 | `awaiting_answers` | *"has unanswered required questions"* (PRD §8) |
 | `awaiting_approval` | an approval gate, a missing outcome, or a spent/stuck loop (PRD §8) |
 | `done` | finished, outcome recorded |
-| `failed` | — |
+| `failed` | not defined in the PRD |
 | `skipped` | rework resets downstream `done` instances to `skipped` *"so they re-instantiate"* (backlog Story 5.2, `02` §3); Cancel also marks instances skipped (backlog Story 2.1) |
 
 Each instance also carries `attempts` and `outcome` (`pass` / `fail` / null). Backlog Story 1.1 and `02` §1 add `step_instances.reason`: *"rejection/failure text shown on the card"*.

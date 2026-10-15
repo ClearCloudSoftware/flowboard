@@ -25,6 +25,8 @@ The distinctive part of task detail. The design brief calls it *"The payoff of t
 
 The drawio *Harness architecture* page says only *"plan vs built diff"* and names no file.
 
+The guide's walkthrough (beat 3) names the two sides as files: *"This comparison is mechanical. **plan.md** and **changes.patch** are both real files, so the agent's own account of its work is never the evidence."* The mockup note says *"the plan and the patch"*, but its header says *"the working tree"*. `changes.patch` is itself written by the Build agent.
+
 The two answer different questions. The PRD's version compares what the plan said with what the **summary says** was built. The design brief says the same: *"what the planning step said would be built, next to what the summary step says was actually built."* The mockup compares the plan with what the **working tree contains**, and says outright that the agent's account is not the evidence. The PRD acceptance item *"The task detail sheet diffs `plan.md` against `summary.md`"* tests the first. See [[Task Detail Open Questions]].
 
 ## The four verdicts

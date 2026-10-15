@@ -18,7 +18,7 @@ What one task cost, and how much of that went nowhere. Feature map §18: *"Waste
 In the schema, wasted is `runs.wasted = 1`: *"1 if superseded by a rework loop or an infra retry"* (PRD §5). The `/costs` page's wasted figure is *"sum of `cost_usd` where `wasted = 1`, i.e. money burnt by rework loops"* (PRD §13). Kept has no column. It is the remainder.
 
 > [!note] Wasted counts more than rework
-> PRD §13 and the drawio card say wasted is *"money burnt by rework loops"*. But PRD §5 and §7 also mark infra-retried runs `wasted = 1`, and the drawio *Cost ledger* says *"wasted = rework + infra retries"*. The guide adds cancelled runs: *"Anything in flight becomes wasted."* The sample's $0.48 is an egress failure, not a rework.
+> PRD §13, `06` §12 and both drawio cards say wasted is *"money burnt by rework loops"*. But PRD §5 and §7 also mark infra-retried runs `wasted = 1`, and the drawio *Cost ledger* says *"wasted = rework + infra retries"*. The guide adds cancelled runs: *"Anything in flight becomes wasted."* The sample's $0.48 is an egress failure, not a rework.
 
 ## The four header numbers
 
@@ -47,7 +47,7 @@ The sample's per-step figures are in [[Sample Task Auth Refactor]].
 
 ## The recipe average
 
-`this recipe averages $2.14 across 182 tasks on v4` compares the task with its pinned flow version. The source is PRD §13's *"cost per completed task, trended by flow version"* and feature map §18's *"Cost per finished task — Tracked across recipe versions"*. The guide: *"Cost rarely decides a gate on its own — but a task well over its recipe's average usually means something went around in circles."* Both sources count only finished tasks (*"completed"*, *"finished"*), though neither says whether a failed or cancelled task counts. No source says bill or kept. The guide's *"Roughly on par with the recipe's average, plus a toll the sandbox charged once"* reads as kept ($2.13 against $2.14). The flow-designer mockup's library shows the same figures for `Software delivery @core v4`: $2.14 a task over 182 runs.
+`this recipe averages $2.14 across 182 tasks on v4` compares the task with its pinned flow version. The source is PRD §13's *"cost per completed task, trended by flow version"* and feature map §18's *"Cost per finished task — Tracked across recipe versions"*. The guide: *"Cost rarely decides a gate on its own — but a task well over its recipe's average usually means something went around in circles."* Both sources count only finished tasks (*"completed"*, *"finished"*), though neither says whether a failed or cancelled task counts. No source says bill or kept. The guide's *"Roughly on par with the recipe's average, plus a toll the sandbox charged once"* reads as kept ($2.13 against $2.14). The flow-designer mockup's library shows the same dollar figure for `Software delivery @core v4`, `~$2.14/task`, but over `182 runs`, where the Cost tab says *"182 tasks"*. See [[Task Detail Open Questions]] #18 and [[Cost And Control Open Questions]] #22.
 
 ## Rules from the ledger
 

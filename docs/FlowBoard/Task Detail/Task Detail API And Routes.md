@@ -35,7 +35,7 @@ From PRD §12, the ones task detail uses:
 | `GET` | `/api/runs/:id/stream` | SSE; *"replays existing `run_events` for the run, then streams new ones. Reconnect with `Last-Event-ID`."* | a live running row |
 | `GET` | `/api/costs?project=&from=&to=` | rollups | the recipe average |
 
-Backlog Story 2.1 adds `GET /api/tasks/:id` (and re-lists `POST /api/tasks`). The backlog intro records an unlisted `POST /api/tasks/:id/start` that the first build added.
+Backlog Story 2.1 adds `GET /api/tasks/:id`, tagged **PRD** though PRD §12 does not list it (and re-lists `POST /api/tasks`). The backlog intro records an unlisted `POST /api/tasks/:id/start` that the first build added (item 3), reached from an uncommitted *"sheet Start button"* (item 7).
 
 *"All handlers are thin: validate with zod, call a function in `packages/core`, return JSON."* (PRD §12). *"Every port is called from `src/lib/`, **never from a route**"* (`06` §15).
 
@@ -56,6 +56,8 @@ Backlog Story 2.1 adds `GET /api/tasks/:id` (and re-lists `POST /api/tasks`). Th
 | `GET` | `/api/tasks/:id/artifacts/:artifactId` | the formatted viewer |
 | `GET` | `/api/tasks/:id/diff` | the working-tree file list and hunks |
 | `POST` | `/api/runs/:id/stop` | stop a lost run from its story row (the viewer's Stop has no listed endpoint either) |
+
+The Workspaces set proposes the same cleanup and demote paths ([[Workspaces API And Routes]]). The Memory set proposes `GET /api/tasks/:id/memories` for the aside's *carried in from memory* block ([[Memory API And Routes]]). For **Fail task**, [[Human In The Loop API And Routes]] proposes `POST /api/step-instances/:id/fail-task` instead; the choice is [[Execution Open Questions]] #47.
 
 ## Related
 

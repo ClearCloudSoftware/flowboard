@@ -64,7 +64,7 @@ The mockup holds one `TASK` object with a `steps[]` array, plus `PLAN[]` and `ME
 | `running()` | the first step with state `running` |
 | `isDone()` | every step `done` |
 
-The status pill, topbar actions, gate banner, status bar and key hints all branch on `gateStep()`, `running()` and `isDone()`, in that priority. In *"the small bit of engine"*, approving sets Review done and starts Summarize, which ticks every 250 ms for 7 s of wall time, costing `ms/60000 × RATE[model] × 24` with `RATE = { haiku: 0.008, sonnet: 0.05, opus: 0.14 }` dollars per minute. A 1 s timer re-renders while a gate is open to keep the *waited* figure honest. It also redraws the reason box, which wipes typed edits (see [[Task Detail Controls]]).
+The status pill and the status bar's state branch on `gateStep()`, `running()` and `isDone()`, in that priority. The topbar actions branch on `isDone()` alone, and the gate banner, the *waiting on you* number and the `a` / `r` hints on `gateStep()`. In *"the small bit of engine"*, approving sets Review done and starts Summarize, which ticks every 250 ms for 7 s of wall time, costing `ms/60000 × RATE[model] × 24` with `RATE = { haiku: 0.008, sonnet: 0.05, opus: 0.14 }` dollars per minute. A 1 s timer re-renders while a gate is open to keep the *waited* figure honest. It also redraws the reason box, which wipes typed edits (see [[Task Detail Controls]]).
 
 > [!note] Single-gate assumption
 > `gateStep()` returns the first gated step. With parallel branches two steps can be gated at once (two sign-offs, or two approval steps on parallel branches). The banner, `a` and `r` handle one.

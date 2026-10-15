@@ -86,6 +86,8 @@ The guide's centrepiece, *"a decision rather than a tour"* (mockups README). Sev
 
 ## Reading order the guide teaches
 
+A summary of the walkthrough's beats, not a list in the guide:
+
 1. Is anything red?
 2. The spine: which step struggled (`↺`)?
 3. Plan vs built: the tally, then every **deviated** hunk.
