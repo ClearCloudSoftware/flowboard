@@ -18,6 +18,7 @@ From the PRD and the backlog items tagged **PRD**.
 | M2 | Promotion creates the worktree under `repo_path` | PRD §11, §14 |
 | M5 | Shell check steps fall back to `check_command`; the seed's check exists in the scratch repo | PRD §5, §14, §15 |
 | M7 | The per-project library `/p/[slug]/library` and its `/api/projects/:id/…` routes | PRD §12, §13, §14 |
+| Library | Per-project, gitignored capability store under `<repo_path>/.flowboard/skills/`; *"Registering a project copies the seeds into its store"* | PRD §13, §15 (brought in line with Capability Library D5, D6) |
 | M8 | Spend per project on `/costs` | PRD §13, §14 |
 | API | `GET` and `POST /api/projects`, `GET /api/projects/:id/board` | PRD §12 |
 
@@ -34,12 +35,12 @@ From the PRD and the backlog items tagged **PRD**.
 | New-project dialog with a flow-type select, *Empty* allowed, creating flow v1 | backlog Story 1.3 (**NEW**) |
 | Empty state and submit error handling | backlog Story 1.3 (**BUG**) |
 | `.git/info/exclude` hygiene for `.vibe-worktrees/` and `.flowboard/skills/` | backlog Stories 0.3 (**FIX**), 2.1 (**PRD/FIX**) |
-| Per-project, gitignored capability store; seeds copied on registration | Capability Library D5, D6 |
 | Saving a flow points the project at the new version; adopting a library flow | `flow-designer-guide.html` |
 | *"Reuse… picker (steps or whole flow from other projects, key uniquified)"* | backlog Story 8.2 (**NEW**) |
 | *"Start from flow type"* in the flow editor | backlog Story 8.2 (**NEW**) |
 | Project filter and real `from`/`to` on `/costs` | backlog Story 8.1 (**GAP**) |
-| Worktrees under `<repo>/.flowboard/worktrees/` on `fb/task-<id>` | drawio *Harness architecture* |
+| Worktrees under `<repo>/.flowboard/worktrees/` on `fb/task-<id>` (a competing scheme, not an addition) | drawio *Harness architecture* |
+| Host-side push and fetch to the project remote (dashed: *"optional or later"*) | drawio *Harness architecture* |
 
 ## Ideas
 
@@ -60,7 +61,7 @@ From the PRD and the backlog items tagged **PRD**.
 | Item | Source |
 |---|---|
 | Authentication, user accounts, roles, multi-machine support | PRD §17; drawio *Out of scope (v1)* |
-| *"No auth, no multi-tenancy, no user table. Do not add them 'for later'"* | PRD §2 |
+| *"No auth, no multi-tenancy, no user table. Do not add them "for later""* | PRD §2 |
 | Deploying FlowBoard in a container | PRD §17 |
 
 ## Related

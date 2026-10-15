@@ -28,10 +28,10 @@ The `/` route. There is no mockup; this note collects the prose.
 |---|---|---|
 | Project name | PRD §13 (implied by "cards") | — |
 | Task counts by status | PRD §13 | `tasks.status`: `backlog`, `todo`, `running`, `blocked`, `done`, `failed`, `cancelled` (PRD §5). Which of the seven appear is not stated. |
-| This week's spend | PRD §13 | Rolling 7 days or calendar week: undecided (backlog Story 1.3 **DEC**). See [[Cost And Control Open Questions]] and [[Spend Rollups]]. |
-| Link to the board | backlog Story 3.4 | *"Project link must use slug"* → `/p/[slug]` |
+| This week's spend | PRD §13 | Rolling 7 days or calendar week: undecided (backlog Story 1.3 **DEC**). See [[Cost And Control Open Questions]] #4 and [[Spend Rollups]]. |
+| Link to the board | **inferred** | No source says a card links anywhere. Pages key on slug (`/p/[slug]`, PRD §13), so a card link would use it. Backlog Story 3.4's *"Project link must use slug (today uses id → 404)"* is about the **run viewer's** link back to the project, not this page. |
 
-**Proposal** for the card layout, borrowed from the design handoff's board header (*"project name 14px/600 · `standard-flow · 8 steps` 11px mono · spacer · `14 tasks · $28.40 today`"*, handoff 1c): name, slug, default flow name and version, the status counts as a row of figures, and the week's spend. Not in any source as a card. Listed in [[Projects Open Questions]] #12.
+**Proposal** for the card layout, borrowed from the design handoff's board header (*"project name 14px/600 · `standard-flow · 8 steps` 11px mono · spacer · `14 tasks · $28.40 today`"*, handoff 1c): name, slug, default flow name and version, the status counts as a row of figures, the week's spend, and a link to `/p/[slug]`. Not in any source as a card. Listed in [[Projects Open Questions]] #12.
 
 ## Is `/` the home page?
 
@@ -49,7 +49,7 @@ See [[Projects Open Questions]] #13.
 
 | State | Source |
 |---|---|
-| Empty | backlog Story 1.3 names it. Never seen in practice if the seed project exists (see [[Seed Project]]). |
+| Empty | backlog Story 1.3 names it. Rarely seen if the seed project exists *(inferred)*; see [[Seeded Project]]. |
 | Submit error | backlog Story 1.3 BUG: non-JSON error bodies |
 | Loading, stale | not specified for this page; the design handoff's inbox pattern (1d: skeleton, a `stale` badge, the stale queue kept visible) is the nearest model |
 

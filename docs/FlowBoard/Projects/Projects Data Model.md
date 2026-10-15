@@ -19,7 +19,7 @@ Architecture component **#1 Domain model & migrations** (`02` §1): *"the 14 tab
 | `check_command` | TEXT | nullable | *"e.g. 'pnpm lint && pnpm test'; what a shell check step runs"* |
 | `created_at` | INTEGER | NOT NULL | |
 
-No source adds a column to `projects`. The architecture's genericization list (`02` §1) touches `runs`, `step_instances` and `skills`, not projects. The drawio *SQLite* card lists only *"projects (check_command)"*.
+No source adds a column to `projects`. The architecture's genericization list (`02` §1) touches `runs`, `step_instances` and `skills`, not projects. The drawio *SQLite* card lists only *"projects (check_command)"*. The columns these notes propose (`base_branch`, `sandbox_profile`, OQ #14, #16) and Flow Design's mapping of the mockup's *adopted* date to *"`projects.default_flow_id` plus a timestamp"* ([[Flow Data Model]]) are proposals, not sources.
 
 ## Tables that point at a project
 
@@ -78,7 +78,7 @@ Each is implied by a source but has no constraint. **Proposals**, listed in [[Pr
 
 ## Table count
 
-`02` §1 and backlog Story 1.1 both say *"14 tables"*. PRD §5 as it stands defines 15: `projects`, `flows`, `step_defs`, `step_edges`, `tasks`, `step_instances`, `runs`, `run_events`, `artifacts`, `questions`, `plugins`, `skills`, `agents`, `jobs`, `settings`. The split of `skills` into `plugins` + `skills` (Capability Library decisions) is the likely reason. See [[Projects Open Questions]] #20.
+`02` §1 (*"the 14 tables"*) and backlog Story 1.1 (*"All 14 tables exactly as §5"*) say 14. PRD §5 as it stands defines 15: `projects`, `flows`, `step_defs`, `step_edges`, `tasks`, `step_instances`, `runs`, `run_events`, `artifacts`, `questions`, `plugins`, `skills`, `agents`, `jobs`, `settings`. The difference is `plugins`: [[Capability Library Decisions]] records that PRD §5's `skills` was *"replaced by `plugins` + `skills`"* on 2026-10-15. The optional memory layer adds `memories` and `run_memories` (PRD §11.2). See [[Projects Open Questions]] #20 and [[Settings And Plumbing Open Questions]] #21.
 
 ## Related
 

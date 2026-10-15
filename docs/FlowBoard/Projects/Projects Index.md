@@ -47,7 +47,7 @@ This is a platform component. There is no projects mockup, so this set is archit
 
 ## Content and direction
 
-- [[Seed Project]]: the one project FlowBoard ships with, on a scratch repo
+- [[Seeded Project]]: the one project FlowBoard ships with, on a scratch repo (the whole seed is Intake And Import's [[Seed Data]])
 - [[Projects Roadmap]]: v1 scope, designed beyond the PRD, ideas, out of scope
 - [[Projects Open Questions]]: where the sources disagree or leave a gap
 - [[Projects Sources]]: where every fact in these notes comes from
@@ -59,4 +59,8 @@ This is a platform component. There is no projects mockup, so this set is archit
 - [[Task Detail Index]]: a task's repo, branch and workspace
 - [[Cost And Control Index]]: spend per project
 - [[Settings And Plumbing Index]]: global settings, the API surface, the database and migrations
+- [[Intake And Import Index]]: the seed project, import into a project, promote
+- [[Workspaces Index]]: the worktrees cut from the project's repo
+- [[Memory Index]]: the `project` memory scope
+- [[Sandboxing Index]]: the isolation tier a repo's trust picks
 - [[Component Documentation Tracker]]

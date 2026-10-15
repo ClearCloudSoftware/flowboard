@@ -20,14 +20,16 @@ Terms used across the Projects notes. ⚠ marks a word that means different thin
 | **Flow type** | What the new-project dialog offers: *"flow‑type select ("Empty" allowed); choosing one creates flow v1"*. | backlog Story 1.3 |
 | **Check command** ⚠ | `projects.check_command`, *"e.g. 'pnpm lint && pnpm test'; what a shell check step runs"*. **Overloaded:** *check step* (a `kind='shell'` step), *check container* (drawio: the sandbox that runs it), *Check for updates* (the library action), and `POST /api/projects/:id/plugins/check-updates`. See [[Project Check Command]]. | PRD §5, §12; drawio |
 | **Shell step / check step** | A `kind='shell'` step. Runs `step_defs.command`, or the project's `check_command` when that is null. See [[Check Steps]]. | PRD §5, §7 |
-| **Scratch repo** | The throwaway git repo the seed project points at, *"auto‑`git init`ed"*. See [[Seed Project]]. | PRD §14; backlog Story 1.2 |
+| **Seed project** | The one project FlowBoard creates on first run. Its fields: [[Seeded Project]]; the whole seed: [[Seed Data]] (Intake And Import). | PRD §14, §15 |
+| **Scratch repo** | The throwaway git repo the seed project points at, *"auto‑`git init`ed"*. See [[Seeded Project]]. | PRD §14; backlog Story 1.2 |
+| **Base branch** | The branch the hook protects: it denies *"`git checkout` of the base branch"*. Never defined or stored; see [[Projects Open Questions]] #14. | PRD §7 |
 | **Registering a project** | PRD wording for adding one: *"Registering a project copies the seeds into its store under FlowBoard's commit."* Not otherwise defined; read here as *creating* a project. | PRD §15 |
 | **Capability store / project store** | `<repo_path>/.flowboard/skills/<plugin>/<commit>/`, gitignored, per project. See [[Capability Storage On Disk]]. | PRD §5, §13; Capability Library D5 |
 | **Worktree / workspace** | A task's private checkout, `<repo_path>/.vibe-worktrees/task-<id>` on `vibe/task-<id>` (PRD). Belongs to a task, lives inside the project's repo. See [[Task Workspace]]. | PRD §11 |
 | **Project scope** ⚠ | In memory: `{ kind: 'project'; projectId }`, *"build quirks, naming conventions, where things live"*. **Overloaded:** *project-scoped* also describes API routes under `/api/projects/:id/…` and the per-project library. | `09`; Capability Library API notes |
 | **Projects list** | The `/` page: *"Cards with task counts by status and this week's spend."* The design handoff's nav has no such page; its nearest pill is **Boards**. See [[Projects List Page]]. | PRD §13; `docs/old/design/Vibe Kanban.dc.html` |
 | **Visibility** | Feature-map idea: who can see a project and its repo. Not in v1. See [[Project Visibility]]. | feature map §1 |
-| **Trusted repo** | A repo whose content you trust enough for a weaker isolation tier. *"host only for non-bypass steps or an explicit trusted-repo opt-out."* See [[Repository Trust And Sandboxing]]. | `08` |
+| **Trusted repo** | A repo whose content you trust enough for a weaker isolation tier: *"**`host`** only for non-bypass steps or an explicit trusted-repo opt-out."* See [[Repository Trust And Sandboxing]]. | `08`; backlog D7 |
 
 ## Related
 

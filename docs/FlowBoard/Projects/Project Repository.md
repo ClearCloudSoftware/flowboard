@@ -19,7 +19,7 @@ Each project names exactly one repository, by absolute path: `projects.repo_path
 | `<repo_path>/.git/info/exclude` | Gets `.vibe-worktrees/` and `.flowboard/skills/` appended *"so the parent repo stays clean"* | backlog Stories 0.3, 2.1; `05` §11 |
 
 > [!warning] Three worktree schemes
-> PRD and backlog: `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>`. Drawio *Harness architecture*: `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`. Task-detail mockup: `~/.flowboard/ws/auth-refactor` on `flowboard/auth-refactor`. See [[Task Workspace]] and [[Task Detail Open Questions]] #20.
+> PRD and backlog: `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>`. Drawio *Harness architecture*: `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`. Task-detail mockup: `~/.flowboard/ws/auth-refactor` on `flowboard/auth-refactor`. See [[Workspace Naming]], [[Task Workspace]], [[Workspaces Open Questions]] #6 and [[Task Detail Open Questions]] #20.
 
 FlowBoard's own `.gitignore` gets `.vibe-worktrees` too (backlog Story 0.3), but in a managed repo the sources use `.git/info/exclude`, which git reads and never commits.
 
@@ -30,9 +30,9 @@ FlowBoard's own `.gitignore` gets `.vibe-worktrees` too (backlog Story 0.3), but
 | The agent does not reach the remote | the egress allowlist covers *"the model endpoint and the package registries a build needs; **not** the project's git remote, because the host does all git work and the agent never needs to push or fetch"* (PRD §11.1) |
 | The agent may not push or move the base branch | the in-agent hook denies *"any `git push`, `git reset --hard` or `git checkout` of the base branch"* (PRD §7) |
 | Writes stay in the worktree | the hook denies *"writes outside the task's worktree"* (PRD §7) |
-| The host may push and fetch | drawio edge from **Project repo + git worktrees** to **GitHub**: *"host-side push / fetch"*; the GitHub card reads *"skill install (git clone) · project remote"* |
+| The host may push and fetch, later | drawio edge from **Project repo + git worktrees** to **GitHub**: *"host-side push / fetch"*, drawn **dashed**, which the page legend reads as *"optional or later"*; the GitHub card reads *"skill install (git clone) · project remote"* |
 
-No source says **when** the host pushes, to which remote or branch, or what the *base branch* is. The schema stores neither a remote nor a base branch. See [[Projects Open Questions]] #14 and #15.
+No source says **when** the host pushes, to which remote or branch, or what the *base branch* is. The schema stores neither a remote nor a base branch. See [[Projects Open Questions]] #14 and #15, and [[Git Inside A Workspace]].
 
 ## One repo or many?
 
@@ -51,3 +51,4 @@ Only the PRD comment (*"absolute path to the git repo"*) and the feature map (*"
 - [[Projects Storage]]
 - [[Task Workspace]]
 - [[Capability Storage On Disk]]
+- [[Parent Repo Hygiene]]

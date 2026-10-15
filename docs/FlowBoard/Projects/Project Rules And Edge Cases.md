@@ -25,14 +25,15 @@ Every rule the sources state about projects, in their words, then the edge cases
 | R12 | *"Every task gets its own worktree"*, created under `repo_path` on promotion; *"never remove it automatically"* | PRD §11 |
 | R13 | Memory writes stay in their project: *"a run writes to its own project/agent/task, not another project's"* | `09` |
 | R14 | Project links use the slug: *"Project link must use slug (today uses id → 404)."* | backlog Story 3.4 (**BUG**) |
-| R15 | *"No auth, no multi-tenancy, no user table. Do not add them 'for later'"* | PRD §2 |
+| R15 | *"No auth, no multi-tenancy, no user table. Do not add them "for later""* | PRD §2 |
 | R16 | Library usage counts per project: Remove *"is disabled while any step uses the plugin (counting each flow's latest version and any version a running task pins)"* | PRD §13 |
+| R17 | *"Pin `tasks.flow_id` at promotion; project flow edits never move in‑flight tasks."* (PRD §4 pins *"at task start"*; see OQ #7) | backlog Story 2.1 |
 
 ## Edge cases the sources leave open
 
 | Case | What the sources say | See |
 |---|---|---|
-| Two projects on the same repo | Nothing. `repo_path` is not `UNIQUE`. Both would write to the same `.vibe-worktrees/` and `.flowboard/skills/`. Task ids keep worktree paths apart; plugin dirs keyed by name and commit would be shared. | OQ #5 |
+| Two projects on the same repo | Nothing. `repo_path` is not `UNIQUE`. Both would write to the same `.vibe-worktrees/` and `.flowboard/skills/` *(inferred)*: task ids keep worktree paths apart; plugin dirs keyed by name and commit would be shared. | OQ #5 |
 | A path that is not a git repo | Only the seed is *"auto‑`git init`ed"* (backlog Story 1.2) | OQ #5 |
 | A relative path | The column comment says *"absolute"*; no normalisation rule | OQ #5 |
 | A repo that moves or disappears | Nothing | OQ #5 |

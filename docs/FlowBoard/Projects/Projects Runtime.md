@@ -20,7 +20,7 @@ flowchart LR
 
 ## 1. Promotion pins the flow and makes the worktree
 
-`POST /api/tasks/:id/promote -- backlog -> todo, pin flow, create worktree` (PRD §12). The worktree command uses the project's path twice:
+`POST /api/tasks/:id/promote -- backlog -> todo, pin flow, create worktree` (PRD §12). PRD §4 instead pins *"at task start"*; see [[Flow Design Open Questions]] #7. The worktree command uses the project's path twice:
 
 ```
 git -C <repo_path> worktree add <repo_path>/.vibe-worktrees/task-<id> -b vibe/task-<id>
@@ -32,7 +32,7 @@ The `Workspace` port's `TaskRef` is `{ id: string }` only (`reference/core/ports
 
 ## 2. The runner mounts the project's plugins
 
-`--plugin-dir <dir of each plugin the step names>`, and *"Each plugin dir is the commit recorded in the task's `capability_pins`"* (PRD §7). The dir is *"derived, not stored: `<repo_path>/.flowboard/skills/<name>/<commit_sha>/`"* (PRD §5). In a sandbox the drawio mounts it read-only: *"ro: skills/ → /skills"*. See [[Capability Runtime Mounting]].
+`--plugin-dir <dir of each plugin the step names: its skill's plugin + extra_plugin_ids>`, and *"Each plugin dir is the commit recorded in the task's `capability_pins`"* (PRD §7). The dir is *"derived, not stored: `<repo_path>/.flowboard/skills/<name>/<commit_sha>/`"* (PRD §5). In a sandbox the drawio mounts it read-only: *"ro: skills/ → /skills"*. See [[Capability Runtime Mounting]].
 
 ## 3. A shell step runs the project's check
 
@@ -40,7 +40,7 @@ The `Workspace` port's `TaskRef` is `{ id: string }` only (`reference/core/ports
 
 ## 4. Memory recalls the project scope
 
-*"Build the scope union for the run — `user` + the task's `project` + the step's `agent` + the `task`"* (`09`, lifecycle). The port comment: *"Union of scopes for a run: user + the task's project + the step's agent + the task."* (`reference/core/ports/memory-store.ts`). Recall and commit are host-side, *"so the sandboxed agent process never connects to the store"* (PRD §11.2). Only when memory is on; the default adapter is `none`. See [[Memory Carried Into A Task]].
+*"Build the scope union for the run — `user` + the task's `project` + the step's `agent` + the `task`"* (`09`, lifecycle). The port comment: *"Union of scopes for a run: user + the task's project + the step's agent + the task."* (`reference/core/ports/memory-store.ts`). Recall and commit are host-side, *"so the sandboxed agent process never connects to the store"* (PRD §11.2). Only when memory is on; the default adapter is `none`. `09` recommends *"`project`/`agent`/`task` per step"*, so the project scope may not be in every run's union; see [[Projects Open Questions]] #26. See [[Memory Carried Into A Task]].
 
 ## 5. Read models group by project
 
@@ -50,7 +50,9 @@ The `Workspace` port's `TaskRef` is `{ id: string }` only (`reference/core/ports
 
 ## Processes
 
-Only `apps/web` and `apps/worker` open `flowboard.db` (PRD §3). Creating a project is a web request (`POST /api/projects`). Sections 2–4 run in the worker's runner. The PRD forbids the web app long-lived children (*"Next.js route handlers must never spawn a long-lived child process; they enqueue jobs and the worker picks them up"*, PRD §2), and the drawio's life-of-a-step says that on **Start** Next.js *"writes the task and step rows plus a start_run job, then returns. It never spawns anything."* Neither says whether the short `git worktree add` at promotion, or the seed copy at project creation, runs in the web process or as a job. See [[Projects Open Questions]] #24.
+Only `apps/web` and `apps/worker` open the SQLite file (PRD §3). Creating a project is a web request (`POST /api/projects`). Sections 2–4 run in the worker's runner. The PRD forbids the web app long-lived children (*"Next.js route handlers must never spawn a long-lived child process; they enqueue jobs and the worker picks them up"*, PRD §2), and the drawio's life-of-a-step says that on **Start** Next.js *"writes the task and step rows plus a start_run job, then returns. It never spawns anything."*
+
+The sources disagree on where `git worktree add` runs. PRD §12 puts *"create worktree"* in the promote route, which lives in `apps/web`, and `jobs.kind` (PRD §5) has no worktree job. The drawio *Harness architecture* page draws the **Workspace manager** (*"git worktree add / remove per task"*) inside **Process 2 · apps/worker**. No source says where the seed copy at project creation runs. See [[Projects Open Questions]] #24, [[Workspaces Open Questions]] #2 and [[Intake And Import Open Questions]] #15.
 
 ## Related
 

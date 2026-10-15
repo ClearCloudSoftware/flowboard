@@ -35,7 +35,7 @@ Only *"absolute path to the git repo"* (PRD §5) and *"a folder on your machine 
 
 ### 7. Default, active and adopted flow
 
-PRD §5 `default_flow_id`; PRD §13 *"the project's active flow"*; the flow-designer guide *"adopted"* and *"points your project at it"*. Are they one column? Does `PUT /api/flows/:id` move it (the PRD does not say; the guide does)? What does *Empty* create? What does promoting do with a null default? Which columns does the board draw for tasks pinned to an older version or another named flow? `default_flow_id` has no foreign key, so it can name another project's flow. See [[Project Default Flow]], [[Flow Design Open Questions]] #7.
+PRD §5 `default_flow_id`; PRD §13 *"the project's active flow"*; the flow-designer guide *"adopted"* and *"points your project at it"*. Are they one column? Does `PUT /api/flows/:id` move it (the PRD does not say; the guide does)? What does *Empty* create? When is it read: at promotion (PRD §5, §12, backlog Story 2.1) or at start (PRD §4, drawio *Start task*)? That is [[Flow Design Open Questions]] #7. What does promoting do with a null default? Which columns does the board draw for tasks pinned to an older version or another named flow? `default_flow_id` has no foreign key, so it can name another project's flow. See [[Project Default Flow]].
 
 ### 8. What does registering copy in?
 
@@ -69,21 +69,21 @@ PRD §13 and feature map §1 say the projects list is the first screen. The desi
 
 ### 14. The base branch and the repo's state
 
-The hook denies *"`git checkout` of the base branch"* (PRD §7), but no column stores which branch that is. `git worktree add … -b vibe/task-<id>` (PRD §11) has no start point, so it branches from whatever the repo has checked out at promotion; that is git's default, not a stated design. A dirty working tree or a detached HEAD in the managed repo is not addressed. **Proposal:** `projects.base_branch`, defaulting to the current branch at registration, used as the worktree start point.
+The hook denies *"`git checkout` of the base branch"* (PRD §7), but no column stores which branch that is. `git worktree add … -b vibe/task-<id>` (PRD §11) has no start point, so it branches from whatever the repo has checked out at promotion; that is git's default, not a stated design. A dirty working tree or a detached HEAD in the managed repo is not addressed. **Proposal:** `projects.base_branch`, defaulting to the current branch at registration, used as the worktree start point. The start-point half is [[Workspaces Open Questions]] #5.
 
 ### 15. Who pushes, when, and where?
 
-Drawio: *"host-side push / fetch"* to the *"project remote"*. PRD §11.1: *"the host does all git work"*. No source says when FlowBoard pushes a task branch, opens a PR, or fetches, and no column stores the remote. Related: [[Task Detail Open Questions]] #21 (who commits).
+Drawio: *"host-side push / fetch"* to the *"project remote"*, on a dashed edge the legend reads as *"optional or later"*. PRD §11.1: *"the host does all git work"*. No source says when FlowBoard pushes a task branch, opens a PR, or fetches, and no column stores the remote. Related: [[Task Detail Open Questions]] #21 and [[Workspaces Open Questions]] #20 (who commits), [[Workspaces Open Questions]] #21 (how the work gets back).
 
 ## Security
 
 ### 16. Per-project trust
 
-`08` and backlog D8 choose stronger tiers *"per untrusted repo"* and allow *"an explicit trusted-repo opt-out"*. The sandbox profile is global in `settings` and per step (PRD §11.1, backlog Story 1.1); nothing is per project. **Proposal:** a nullable `projects.sandbox_profile` between the two. See [[Repository Trust And Sandboxing]].
+Only backlog D8 says *"per untrusted repo"*. `08` makes gVisor/microVM *"opt-in for untrusted repos"* and allows *"an explicit trusted-repo opt-out"*; D7 says *"a trusted opt-out"*; PRD §11.1 reserves gVisor/microVM *"for untrusted repos"*. The sandbox profile is global in `settings` and per step (PRD §11.1, backlog Story 1.1); nothing is per project. **Proposal:** a nullable `projects.sandbox_profile` between the two. See [[Repository Trust And Sandboxing]]; where the opt-out lives is [[Sandboxing Open Questions]] #5.
 
 ### 17. Where do worktrees go?
 
-Three schemes: PRD/backlog `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>`; drawio `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`; task-detail mockup `~/.flowboard/ws/<task>` on `flowboard/<task>`. Only the first two live inside the project's repo. Shared with [[Task Detail Open Questions]] #20.
+Three schemes: PRD/backlog `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>`; drawio `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`; task-detail mockup `~/.flowboard/ws/<task>` on `flowboard/<task>`. Only the first two live inside the project's repo. The main question is [[Workspaces Open Questions]] #6; also [[Task Detail Open Questions]] #20 and [[Execution Open Questions]] #3.
 
 ### 18. Visibility against a single-user tool
 
@@ -93,11 +93,11 @@ Feature map §1's idea needs identities that PRD §2 and §17 forbid. On one lap
 
 ### 19. The seed project
 
-Drawio seeds *"sample tasks"*; PRD §15 and backlog Story 1.2 seed none and M2 says *"Create tasks manually"*. The scratch repo's location, the project's name and slug, and the seeded `check_command` value are not given. See [[Seed Project]].
+Drawio seeds *"sample tasks"*; PRD §15 and backlog Story 1.2 seed none and M2 says *"Create tasks manually"*. The scratch repo's location, the project's name and slug, and the seeded `check_command` value are not given, nor whether the scratch repo gets a first commit for worktrees to branch from. See [[Seeded Project]]. Sample tasks and the scratch repo are [[Intake And Import Open Questions]] #19 and #20; the missing first commit is [[Workspaces Open Questions]] #4.
 
 ### 20. 14 tables or 15?
 
-`02` §1 and backlog Story 1.1 say 14; PRD §5 now defines 15 after `plugins` was split from `skills`. See [[Projects Data Model]].
+`02` §1 and backlog Story 1.1 say 14; PRD §5 now defines 15 after `plugins` was split from `skills`. Owned by [[Settings And Plumbing Open Questions]] #21. See [[Projects Data Model]].
 
 ## Scope boundaries
 
@@ -111,15 +111,19 @@ PRD `flows.project_id` against the flow-designer mockup's multi-author library t
 
 ### 23. Which settings are per project?
 
-The feature map calls projects *"the settings for how agents work on each one"* (§1), yet only `default_flow_id` and `check_command` live on the project. Draft mode, sandbox, escalation threshold and memory scopes are global (PRD §11.1, §11.2, §13). Should any of them be overridable per project (see #16)? Shared with the Settings And Plumbing notes.
+The feature map calls projects *"the settings for how agents work on each one"* (§1), yet only `default_flow_id` and `check_command` live on the project. Draft mode, sandbox and memory scopes are global settings (PRD §11.1, §11.2, §13). The escalation threshold is a global setting only in `04` §10, `06` §15 and backlog Stories 6.1 and 8.3; PRD §10 fixes it at 5 minutes. Should any of them be overridable per project (see #16)? Which settings exist at all is [[Settings And Plumbing Open Questions]] #1; see [[Settings Catalogue]].
 
 ### 24. Where project-bound work runs
 
-The reference `worktreeWorkspace(repoPath)` binds one repo per adapter instance (`07`), and `TaskRef` is `{ id }` only (`workspace.ts`), so something must look up the project per task. Not stated who. Nor is it stated whether `git worktree add` at promotion and the seed copy at registration run in the web process or as worker jobs; PRD §2 bans only *long-lived* children from route handlers. See [[Projects Runtime]].
+The reference `worktreeWorkspace(repoPath)` binds one repo per adapter instance (`07`), and `TaskRef` is `{ id }` only (`workspace.ts`), so something must look up the project per task. Not stated who. The sources disagree on where `git worktree add` runs: PRD §12 puts *"create worktree"* in the promote route (`apps/web`); the drawio *Harness architecture* draws the Workspace manager in `apps/worker`. PRD §2 bans only *long-lived* children from route handlers. Nothing says where the seed copy at registration runs. See [[Projects Runtime]], [[Workspaces Open Questions]] #2 and [[Intake And Import Open Questions]] #15.
 
 ### 25. Which project does an import go to?
 
-`POST /api/import/backlog` *"accepts `path` (server file) or `content` (browser)"* (backlog Story 7.3, `05` §14) and upserts on `(project_id, import_key)`, but no source puts a project in the request. The board's *Import .md* button (backlog Story 2.2) implies the current project. **Proposal:** `projectId` in the body.
+`POST /api/import/backlog` *"accepts `path` (server file) or `content` (browser)"* (backlog Story 7.3, `05` §14) and upserts on `(project_id, import_key)`, but no source puts a project in the request. The board's *Import .md* button (backlog Story 2.2) implies the current project. **Proposal:** `projectId` in the body, as [[Intake And Import Open Questions]] #8 also proposes; that question owns it.
+
+### 26. Is project memory on, and in which runs?
+
+Feature map §21: *"❓ Which memory to switch on first — just *your* preferences (the cheapest win), or project memory too?"* The adapter defaults to `none` (PRD §13); scopes are enabled globally (PRD §11.2); `09` recommends *"Recall the `user` scope into every run; `project`/`agent`/`task` per step"*, which no step field supports. Nothing says what happens to a project's memories if the project is deleted (see #9). Owned by [[Memory Open Questions]] #3, #4 and #18; see [[Project Memory Scope]].
 
 ## Related
 
@@ -129,4 +133,9 @@ The reference `worktreeWorkspace(repoPath)` binds one repo per adapter instance 
 - [[Flow Design Open Questions]]
 - [[Task Detail Open Questions]]
 - [[Monitor Open Questions]]
+- [[Workspaces Open Questions]]
+- [[Intake And Import Open Questions]]
+- [[Memory Open Questions]]
+- [[Sandboxing Open Questions]]
+- [[Settings And Plumbing Open Questions]]
 - [[Settings And Plumbing Index]]

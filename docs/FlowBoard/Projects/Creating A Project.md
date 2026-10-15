@@ -56,25 +56,25 @@ sequenceDiagram
   W-->>U: JSON
 ```
 
-`.vibe-worktrees/` is added to the exclude file on the first promotion in backlog Story 2.1, not at creation.
+`.vibe-worktrees/` is not added at creation: backlog Story 2.1 lists *"append `.vibe-worktrees/` to `<repo>/.git/info/exclude`"* among the **Promote** steps. It does not say *first* promotion; appending on every promote repeats the line *(inferred)*. See [[Workspaces Open Questions]] #7.
 
 ## Flow types
 
 The flow-type select's options are not listed. The sources ship these flows:
 
 - *Software delivery*, the seeded flow (PRD §15). See [[Seeded Flows]].
-- A *research pipeline*: *"Ships with a couple of complete ones (a full software-development pipeline and a research pipeline)"* (feature map §2). Backlog Story 1.2 puts *"The `researcher` web-research template"* out of v1.
+- A *research pipeline*: *"Ships with a couple of complete ones (a full software-development pipeline and a research pipeline)"* (feature map §2). Backlog Story 1.2: *"The `researcher` web-research template is out of v1 until open-web egress has an answer."* Capability Library D31 agrees.
 - Role starter flows (feature map appendix), an idea. See [[Role Starter Flows]].
 
 Backlog Story 8.2 also lists *"Start from flow type"* (**NEW**) in the flow editor.
 
 ## Agents
 
-`agents.project_id` is `NOT NULL`, so the seeded agents (`scout`, `architect`, `developer`, `tester`, `reviewer`, `scribe`, PRD §15) need a row per project. Capability Library D12: *"Seeded agents are files in FlowBoard's repo and take the same path"* as seed plugins. So creating a project presumably also inserts the seeded agent rows. No source says so directly. See [[Seeded Capabilities]] and [[Projects Open Questions]] #8.
+`agents.project_id` is `NOT NULL`, so the seeded agents (`scout`, `architect`, `developer`, `tester`, `reviewer`, `scribe`, PRD §15) need a row per project. Capability Library D12: *"Seeded agents are files in FlowBoard's repo and take the same path"* as seed plugins. So creating a project presumably also inserts the seeded agent rows *(inferred)*. No source says so directly. See [[Seeded Capabilities]] and [[Projects Open Questions]] #8.
 
 ## Errors
 
-Only one is named: the backlog BUG about *"non‑JSON error bodies"* on submit (Story 1.3). Duplicate slug (`UNIQUE`), a missing folder, a non-git folder and a path already used by another project are not addressed. See [[Project Rules And Edge Cases]].
+Only one is named: the backlog BUG about *"non‑JSON error bodies"* on submit (Story 1.3). Duplicate slug (`UNIQUE`), a missing folder, a non-git folder and a path already used by another project are not addressed. See [[Project Rules And Edge Cases]]; the general error shape is [[Settings And Plumbing Open Questions]] #18.
 
 ## Related
 

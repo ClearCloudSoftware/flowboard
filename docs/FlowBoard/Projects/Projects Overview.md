@@ -28,7 +28,7 @@ The PRD adds one more per-project setting the feature map does not list in §1: 
 | Architecture README | component **#1 Domain model & migrations** | `projects` is one of *"the 14 tables (PRD §5)"* (`02` §1). No component is dedicated to projects. |
 | Drawio *Harness architecture* | **SQLite** card | lists *"projects (check_command)"* first among the tables |
 | Drawio *Harness architecture* | **Project repo + git worktrees** card | *"<repo>/.flowboard/worktrees/task-<id> on branch fb/task-<id> / artifacts: .vibe/task-<id>/*.md \| *.json, committed alongside the code"* |
-| Drawio *Harness architecture* | **GitHub** card, edge from the repo | *"skill install (git clone) · project remote"*; edge labelled *"host-side push / fetch"* |
+| Drawio *Harness architecture* | **GitHub** card, edge from the repo | *"skill install (git clone) · project remote"*; a **dashed** edge (the legend's *"optional or later"*) labelled *"host-side push / fetch"* |
 | Drawio *FlowBoard ideation* | **Import & seed → Seed data** | *"One project, default flow, sample tasks, so the app is alive on first run."* |
 | Drawio *Functional components* | **Intake → Seed project** | *"default flow + sample tasks"*. There is no Projects box on this page. |
 | Drawio *Logical components* | **Inbox `/inbox`**, **Cost rollup** | *"open questions across projects"*; *"per project · step · model; wasted spend"* |
@@ -54,7 +54,7 @@ flowchart TB
 
 | Principle | Source wording |
 |---|---|
-| Single user, no accounts | *"Single user, runs on my machine, no auth."* (PRD §1); *"No auth, no multi-tenancy, no user table. Do not add them 'for later'"* (PRD §2) |
+| Single user, no accounts | *"Single user, runs on my machine, no auth."* (PRD §1); *"No auth, no multi-tenancy, no user table. Do not add them "for later""* (PRD §2) |
 | Local-first | *"your repos, your machine, no new service to run"* (`docs/pitch.md`) |
 | The host owns git | the egress allowlist excludes *"the project's git remote, because the host does all git work and the agent never needs to push or fetch"* (PRD §11.1) |
 | Keep the parent repo clean | *"append `.vibe-worktrees/` to `<repo>/.git/info/exclude` so the parent repo stays clean"* (backlog Story 2.1); installed plugins live in *"each managed project's `.flowboard/skills/`, which FlowBoard adds to that repo's `.git/info/exclude`"* (backlog Story 0.3) |
@@ -66,7 +66,7 @@ flowchart TB
 
 - Not a workspace. A workspace is a **task's** private worktree inside the project's repo. See [[Task Workspace]].
 - Not a tenant. There are no owners, members or permissions in v1. See [[Project Visibility]].
-- Not a settings bag. Global switches (draft mode, sandbox defaults, theme, escalation threshold, memory) live in `settings`, not on the project. See the Settings And Plumbing notes.
+- Not a settings bag. Global switches live in `settings`, not on the project: draft mode, sandbox defaults and memory (PRD §11.1, §11.2, §13), plus theme and escalation threshold (feature map §19, `04` §10, `06` §15, backlog Stories 6.1, 8.3; PRD §10 fixes the threshold at 5 minutes). See [[Settings Catalogue]].
 
 ## Related
 

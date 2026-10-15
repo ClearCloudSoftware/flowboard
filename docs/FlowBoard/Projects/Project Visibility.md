@@ -14,8 +14,8 @@ An idea, not a v1 feature. It is the tracker's *"visibility"* in this component'
 | Source | Wording |
 |---|---|
 | PRD §1 | *"Single user, runs on my machine, no auth."* |
-| PRD §2 | *"No auth, no multi-tenancy, no user table. Do not add them 'for later'"* |
-| PRD §17 | *"Do not build: authentication, user accounts, roles, deployment config, multi-machine support, a plugin marketplace"* |
+| PRD §2 | *"No auth, no multi-tenancy, no user table. Do not add them "for later""* |
+| PRD §17 | *"Do not build: authentication, user accounts, roles, deployment config, multi-machine support, a plugin marketplace, …"* |
 | Drawio *Out of scope (v1)* | *"Auth, accounts, roles, deployment, Docker, multi-machine, plugin marketplace."* |
 | Design brief | *"One user, no login, no onboarding, no marketing surface."* |
 

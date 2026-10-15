@@ -26,20 +26,28 @@ From `08`, *The isolation ladder*: *"Pick the weakest tier that covers the trust
 | `gvisor` | *"untrusted-ish content"* |
 | `microvm` | *"untrusted repos / running unreviewed generated code"* |
 
-Recommendation (`08`): the default tier is `container` *"whenever a step's `permission_mode` is `bypassPermissions`"*; `host` *"only for non-bypass steps or an explicit trusted-repo opt-out"*; and *"`gvisor`/`microvm` opt-in for untrusted repos"*. Backlog decision D8: *"Docker baseline; gVisor/Firecracker opt-in per untrusted repo"*.
+Recommendation (`08`): the default tier is `container` *"whenever a step's `permission_mode` is `bypassPermissions`"*; `host` *"only for non-bypass steps or an explicit trusted-repo opt-out"*; and *"`gvisor`/`microvm` opt-in for untrusted repos"*. Backlog decision D7: *"Container + egress allowlist; `host` only for non-bypass or a trusted opt-out"*. D8: *"Docker baseline; gVisor/Firecracker opt-in per untrusted repo"*.
+
+The other sources say the same in their own words:
+
+| Source | Wording |
+|---|---|
+| PRD §11.1 | *"Optionally run each step inside a **container** (or, for untrusted repos, a gVisor/microVM) instead of a host process."* |
+| Drawio *Tiers* | *"host (no box, approval mode only) · container (default when autonomous) · gVisor runsc (untrusted repos, Linux hosts) · microVM / docker sandbox"* |
+| Feature map §10 | *"From "no box" (fast, for work you trust) up to strong isolation for untrusted code. You pick based on how much you trust what the agent will read."* |
 
 > [!question] Where does "per repo" live?
-> The tier is configured as *"a `sandbox_profile` in `settings` (tier, image, egress allowlist, limits), overridable per step"* (PRD §11.1), with an optional `step_defs.sandbox_profile` (backlog Story 1.1). Nothing is per project, though `08` and D8 both say *"per untrusted repo"* and *"trusted-repo opt-out"*. **Proposal:** a nullable `projects.sandbox_profile` that overrides the global default and is overridden by the step. See [[Projects Open Questions]] #16.
+> The tier is configured as *"a `sandbox_profile` in `settings` (tier, image, egress allowlist, limits), overridable per step"* (PRD §11.1), with an optional `step_defs.sandbox_profile` (backlog Story 1.1). Nothing is per project, though only D8 says *"per untrusted repo"*; `08` says *"opt-in for untrusted repos"* and allows *"an explicit trusted-repo opt-out"*, D7 *"a trusted opt-out"*, and PRD §11.1 reserves gVisor/microVM *"for untrusted repos"*. **Proposal:** a nullable `projects.sandbox_profile` that overrides the global default and is overridden by the step. See [[Projects Open Questions]] #16 and [[Sandboxing Open Questions]] #5.
 
 ## The git boundary
 
 | Control | Source |
 |---|---|
-| Only the task worktree is writable in the box | *"the only writable bind-mount is the task worktree"* (`08`); drawio *Mounts*: *"rw: task worktree → /work"* |
+| Only the task worktree is writable in the box | *"the only writable bind-mount is the task worktree"* (`08`); drawio *Mounts*: *"rw: task worktree → /work"*; feature map §10: the agent *"only ever sees the one task's files — never your keys or your other projects"* |
 | No route to the project remote | egress excludes *"the project's git remote"* (PRD §11.1, backlog Story 3.5) |
 | No push, no base-branch moves | PreToolUse hook (PRD §7) |
 | Host secrets stay out | *"Never mount host secrets (`~/.ssh`, cloud credentials), the host DB, or the Docker socket."* (PRD §11.1) |
-| The host does git | drawio *"host-side push / fetch"* |
+| The host does git | PRD §11.1 *"the host does all git work"*; drawio *"host-side push / fetch"*, a dashed (*"optional or later"*) edge |
 
 ## Plugins in the project store
 
@@ -50,4 +58,6 @@ The project's capability store holds code from git URLs. On the host tier, *"a s
 - [[Project Repository]]
 - [[Capability Tools And Egress]]
 - [[Run Guardrails At Launch]]
+- [[Sandbox Configuration]]
+- [[Isolation Tiers]]
 - [[Projects Open Questions]]

@@ -24,7 +24,7 @@ module: Projects
 | Property | Source wording |
 |---|---|
 | Sandboxed like an agent | *"through the same `ExecHost`, so it is sandboxed like any agent"* (`03` §6) |
-| Its own container | drawio *Check container*: *"same image and mounts, no model, no API key: runs check_command and exits with its code"* |
+| Its own container | drawio *Check container*: *"same image and mounts, no model, no API key: runs check_command and exits with its code"*; drawio *Shell executor*: *"runs check_command in a fresh sandbox"*. PRD §7 runs it *"in the task's worktree through the same execution host"*; which box it uses is [[Execution Open Questions]] #40 |
 | A result, not a failure | *"A non-zero exit here is a result, not a run failure, so it follows the step's edges instead of blocking the task."* (PRD §7) |
 | Free | *"Shell runs cost nothing and record `cost_usd = 0`."* (PRD §7) |
 | Fingerprinted | `runs.fingerprint`: *"shell steps: normalized hash of a failing check_output (§8)"* (PRD §5); drawio: *"fingerprint → runs"* |
@@ -34,7 +34,7 @@ Execution detail lives in [[Shell Step Execution]] and [[Check Steps]].
 
 ## In the seeded flow
 
-The `check` step, *Lint & test*, is `shell (project check_command)` (PRD §15). It sits between the fan-out and review: *"`check → review` on `on_pass` and `check → implement` on `on_fail` (the mechanical loop: the model never gets reviewed on code that doesn't pass)."* And: *"Seed the scratch project's `check_command` with something that exists in the scratch repo."* (PRD §15). See [[Seed Project]].
+The `check` step, *Lint & test*, is `shell (project check_command)` (PRD §15). It is the join after the `implement`/`tests` fan-out, and runs before review: *"`check → review` on `on_pass` and `check → implement` on `on_fail` (the mechanical loop: the model never gets reviewed on code that doesn't pass)."* And: *"Seed the scratch project's `check_command` with something that exists in the scratch repo."* (PRD §15). See [[Seeded Project]].
 
 ## Where you set it
 
@@ -45,5 +45,5 @@ No source specifies a field for it. The feature map's create form is *"name it a
 - [[Check Steps]]
 - [[Shell Step Execution]]
 - [[Project Record]]
-- [[Seed Project]]
+- [[Seeded Project]]
 - [[Stuck Detection And Fingerprints]]

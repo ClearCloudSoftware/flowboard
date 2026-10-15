@@ -44,7 +44,7 @@ Pages key on **slug**, the API keys on **id**. The backlog records one bug from 
 | Edit a project | no `PATCH` |
 | Delete or archive a project | no `DELETE`; see [[Project Lifecycle And Deletion]] |
 | Look up by slug | pages need `slug → id`; no endpoint |
-| Import into which project | `POST /api/import/backlog` *"accepts `path` (server file) or `content` (browser)"* (backlog Story 7.3; `05` §14), no project named |
+| Import into which project | `POST /api/import/backlog` *"accepts `path` (server file) or `content` (browser)"* (backlog Story 7.3; `05` §14), no project named. See [[Intake And Import Open Questions]] #8 |
 
 ## Proposals
 
@@ -64,7 +64,7 @@ DELETE /api/projects/:id  -> 409 while any task is non-terminal     -- OQ #9
 POST   /api/import/backlog  { projectId, path | content }           -- OQ #25
 ```
 
-Errors return JSON, because backlog Story 1.3 logs a BUG for *"non‑JSON error bodies"*.
+**Proposal:** errors return JSON, because backlog Story 1.3 logs a BUG for *"non‑JSON error bodies"*. The error shape is open app-wide: [[Settings And Plumbing Open Questions]] #18.
 
 ## Related
 
@@ -72,4 +72,6 @@ Errors return JSON, because backlog Story 1.3 logs a BUG for *"non‑JSON error 
 - [[Creating A Project]]
 - [[Projects List Page]]
 - [[Capability Library API And Routes]]
+- [[Intake API And Routes]]
+- [[Settings And Plumbing API And Routes]]
 - [[Settings And Plumbing Index]]

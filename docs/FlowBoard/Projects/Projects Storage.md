@@ -37,7 +37,7 @@ The file is `data/flowboard.db`, SQLite in WAL mode, `busy_timeout = 5000` (PRD 
 | `.git/info/exclude` lines | permanent | nothing stated | backlog Stories 0.3, 2.1 |
 
 > [!warning] Other layouts in the sources
-> Drawio *Harness architecture*: worktrees at `<repo>/.flowboard/worktrees/task-<id>`. Task-detail mockup: `~/.flowboard/ws/<task>`, outside the repo. Capability-library mockup: `~/.flowboard/capabilities`. See [[Task Detail Open Questions]] #20 and [[Capability Storage On Disk]].
+> Drawio *Harness architecture*: worktrees at `<repo>/.flowboard/worktrees/task-<id>`. Task-detail mockup: `~/.flowboard/ws/<task>`, outside the repo. Capability-library mockup: store `~/.flowboard/capabilities`. Drawio *FlowBoard ideation* library card: *"Clone / sparse-checkout into ./skills/<slug>"*, FlowBoard's own folder. See [[Workspace Naming]], [[Task Detail Open Questions]] #20 and [[Capability Storage On Disk]].
 
 ## In FlowBoard's own repo
 
@@ -47,11 +47,11 @@ The file is `data/flowboard.db`, SQLite in WAL mode, `busy_timeout = 5000` (PRD 
 | `seed/flows/default.json` | the seeded flow | PRD §3 |
 | `.gitignore` | `data/*.db*`, `data/runs`, `.vibe-worktrees` | backlog Story 0.3 |
 
-Where the seed project's scratch repo lives is not stated. See [[Seed Project]].
+Where the seed project's scratch repo lives is not stated. See [[Seeded Project]].
 
 ## Knowledge assets (later)
 
-Beside the project repo, the drawio *Harness architecture* draws a dashed **Knowledge assets (later)** card: *"repomix pack · Serena index · graphify-out/, stamped with the build SHA, refreshed by scheduled shell-step flows"*. No source says whether they are per project or where they are stored. See [[Projects Roadmap]].
+Beside the project repo, the drawio *Harness architecture* draws a dashed **Knowledge assets (later)** card: *"repomix pack · Serena index · graphify-out/, stamped with the build SHA, refreshed by scheduled shell-step flows"*. Its harness concept 2 adds *"Knowledge assets (repomix, Serena) come later as maps of the repo."* No source says whether they are per project or where they are stored. See [[Projects Roadmap]] and [[Project Memory Scope]].
 
 ## Related
 

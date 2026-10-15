@@ -33,8 +33,8 @@ The project is the scoping key for most of FlowBoard. This note lists everything
 |---|---|---|
 | The inbox | *"Every pending question across all projects"* | PRD §10 |
 | `/costs` | rollups with a `project=` filter | PRD §12 |
-| `settings` | draft mode, sandbox profile, theme, escalation threshold, memory block | PRD §11.1, §11.2, §13; `06` §15 |
-| `jobs` | one queue for the worker | PRD §5 |
+| `settings` | draft mode, sandbox profile, theme, escalation threshold, memory block. Feature map §19 calls them *"The global switches"* | Draft mode, sandbox, memory: PRD §11.1, §11.2, §13. Theme and threshold: `04` §10, `06` §15, backlog Stories 6.1, 8.3, feature map §19 (PRD §10 fixes the threshold at 5 minutes). See [[Settings Catalogue]] |
+| `jobs` | no `project_id` column; one queue for the worker *(inferred from the schema)* | PRD §5 |
 | The `user` memory scope | *"A single-user tool has *one* `user` scope"* | `09` |
 | Seeded capabilities, at their source | *"real local plugin dirs under FlowBoard's `./skills/`"*, then copied into each project | PRD §15 |
 
@@ -44,7 +44,9 @@ The project is the scoping key for most of FlowBoard. This note lists everything
 |---|---|---|---|
 | `project` | *"build quirks, naming conventions, where things live"* | *"summaries, review notes, research briefs"* | *"every run on that project"* |
 
-From `09` (*The scopes*). Writes stay in their lane: *"every write is **scoped** (a run writes to its own project/agent/task, not another project's)"* (`09`, trust boundary). The task-detail mockup's sample project memory: *"Auth lives in src/auth; sessions are Redis-backed with a 14-day refresh window."* See [[Memory Carried Into A Task]].
+From `09` (*The scopes*). Feature map §21: *"about a *project* (its quirks and layout)"*. Writes stay in their lane: *"every write is **scoped** (a run writes to its own project/agent/task, not another project's)"* (`09`, trust boundary). The task-detail mockup's sample project memory: *"Auth lives in src/auth; sessions are Redis-backed with a 14-day refresh window."* See [[Project Memory Scope]] and [[Memory Carried Into A Task]].
+
+Project memory is not necessarily on. The adapter defaults to `none` (PRD §13), scopes are enabled globally (PRD §11.2), `09` recommends *"Recall the `user` scope into every run; `project`/`agent`/`task` per step"*, and feature map §21 leaves it open: *"❓ Which memory to switch on first — just *your* preferences (the cheapest win), or project memory too?"* See [[Projects Open Questions]] #26.
 
 ## Why capabilities are per project
 
@@ -52,10 +54,12 @@ The capability library chose a per-project store: *"Flows are already scoped by 
 
 ## Crossing the boundary
 
+Inside a run, the sandbox keeps other projects out: the agent *"only ever sees the one task's files — never your keys or your other projects"* (feature map §10), and *"the only writable bind-mount is the task worktree"* (`08`).
+
 The sources name three ways something moves between projects, all beyond the PRD:
 
 - **Reuse picker**: *"steps or whole flow from other projects, key uniquified"* (backlog Story 8.2, **NEW**).
-- **Flow registry**: *"make them **exportable across projects** (the backlog's 'reuse picker' generalized to a **flow registry**)"* (`02` §2, idea).
+- **Flow registry**: *"make them **exportable across projects** (the backlog's "reuse picker" generalized to a **flow registry**)"*, *"keys uniquified on import"* (`02` §2, idea).
 - **Shareable recipe library**: *"export a recipe and reuse it across projects, or share it with other people"* (feature map, parking lot).
 
 The flow-designer mockup goes further: a shared, multi-author library a project *adopts* from. See [[Flow Library]] and [[Flow Design Open Questions]] #1.
@@ -66,3 +70,4 @@ The flow-designer mockup goes further: a shared, multi-author library a project 
 - [[Projects Data Model]]
 - [[Project Lifecycle And Deletion]]
 - [[Capability Library Decisions]]
+- [[Project Memory Scope]]

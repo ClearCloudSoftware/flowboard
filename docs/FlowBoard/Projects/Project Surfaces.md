@@ -17,7 +17,7 @@ Every screen that shows a project or a repo, apart from the [[Projects List Page
 | Flow designer `/p/[slug]/flow` | Version chip *"adopted 12 Sep"*; guide: *"Your project has adopted Software delivery v4"* | `flow-designer.html`, `flow-designer-guide.html` | See [[Project Default Flow]]. |
 | Library `/p/[slug]/library` | *"One screen per project"* | PRD §13 | See [[Capability Library Screen]]. |
 | Costs `/costs` | *"spend per project over time (bar chart, Recharts)"*; backlog GAP *"Add project filter and real `from`/`to` (API supports both, UI sends neither)"* | PRD §13; backlog Story 8.1 | See [[Costs Page]]. |
-| Run viewer `/runs/[id]` | A link back to the project | backlog Story 3.4 BUG: *"Project link must use slug (today uses id → 404)."* | See [[Live Run Viewer]]. |
+| Run viewer `/runs/[id]` | A link back to the project | backlog Story 3.4 BUG: *"Project link must use slug (today uses id → 404)."*; the backlog intro lists *"404 project link on run pages"* among the bugs that survived; `03` §8 repeats it | See [[Live Run Viewer]]. |
 | App chrome | Nav pills *Inbox · Boards · Runs · Costs* | `Vibe Kanban.dc.html` | No project switcher is drawn. |
 
 ## How each surface names a project

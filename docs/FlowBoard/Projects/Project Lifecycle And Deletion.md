@@ -52,13 +52,13 @@ Three consequences follow from the sources, none of them stated by any of them:
 > [!warning] Running work
 > No source says what happens to a task that is running, parked or waiting on a question when its project goes. Cancel's rules (*"SIGTERM live runs, cancel pending questions, mark instances skipped"*, backlog Story 2.1) are the nearest model.
 
-Memory is outside the cascade too: the `local` adapter's `memories` table stores `scope, scope_id` (PRD §11.2) with no foreign key, and Mem0 holds its memories outside SQLite.
+Memory is outside the cascade too: the `local` adapter's `memories` table stores `scope, scope_id` (PRD §11.2) with no foreign key, and Mem0 holds its memories outside SQLite. See [[Memory Open Questions]] #18.
 
 **Proposal**, not in any source: v1 offers no delete; a later delete refuses while any task is non-terminal, and archives rather than erases so the cost journal survives. Listed in [[Projects Open Questions]] #9 and #10.
 
 ## Moving a repo
 
-If the folder at `repo_path` moves, every worktree path stored on tasks (`tasks.worktree_path`) and every plugin dir derived from `repo_path` breaks. No source covers this. See [[Projects Open Questions]] #5.
+If the folder at `repo_path` moves, every worktree path stored on tasks (`tasks.worktree_path`), every artifact path (`artifacts.path`, *"absolute path on disk"*, PRD §5) and every plugin dir derived from `repo_path` breaks *(inferred)*. No source covers this. See [[Projects Open Questions]] #5.
 
 ## Related
 
