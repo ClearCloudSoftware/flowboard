@@ -111,7 +111,7 @@ PRD `flows.project_id` against the flow-designer mockup's multi-author library t
 
 ### 23. Which settings are per project?
 
-The feature map calls projects *"the settings for how agents work on each one"* (§1), yet only `default_flow_id` and `check_command` live on the project. Draft mode, sandbox and memory scopes are global settings (PRD §11.1, §11.2, §13). The escalation threshold is a global setting only in `04` §10, `06` §15 and backlog Stories 6.1 and 8.3; PRD §10 fixes it at 5 minutes. Should any of them be overridable per project (see #16)? Which settings exist at all is [[Settings And Plumbing Open Questions]] #1; see [[Settings Catalogue]].
+The feature map calls projects *"the settings for how agents work on each one"* (§1), yet only `default_flow_id` and `check_command` live on the project. Draft mode, sandbox and memory scopes are global settings (PRD §11.1, §11.2, §13). The escalation threshold is a global setting in feature map §19 (*Nudge timing*), `04` §10, `06` §15, backlog Stories 6.1 and 8.3, and the old design handoff (*"Escalation threshold is a setting (default 5 minutes)"*, `docs/old/design/README.md`); PRD §10 fixes it at 5 minutes. Should any of them be overridable per project (see #16)? Which settings exist at all is [[Settings And Plumbing Open Questions]] #1; see [[Settings Catalogue]].
 
 ### 24. Where project-bound work runs
 
