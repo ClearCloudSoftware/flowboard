@@ -57,7 +57,7 @@ erDiagram
 | Change | Why | Source | In PRD §5? |
 |---|---|---|---|
 | `runs.claude_session_id` → `agent_session_id` | one of *"the only leaks"* of the provider into the schema | `02` §1 | **no** — still `claude_session_id`. See [[Agent Providers Data Model]] |
-| add `runs.provider` | `02` §1 gives no reason; `06` §12's `PricingService.price(provider, …)` is the obvious reader (inference) | `02` §1, `06` §12 | **no**. See [[Agent Providers Data Model]] |
+| add `runs.provider` | No source gives a reason. **Inference:** `PricingService.price(provider, …)` (`06` §12) would read it | `02` §1 (the column only) | **no**. See [[Agent Providers Data Model]] |
 | add `runs.model`, `runs.effort` | *"so draft mode can't corrupt cost views"* | `02` §1, backlog 1.1 | **no** |
 | add `runs.sandbox` | the tier that ran, for audit | PRD §11.1, backlog 1.1 | **no** (only §11.1's prose). See [[Sandboxing Data Model]] |
 | add `step_instances.reason` | rejection or failure text on the card | `02` §1, backlog 1.1 | **no** |
