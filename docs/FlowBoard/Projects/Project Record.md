@@ -27,7 +27,7 @@ CREATE TABLE projects (
 | `name` | yes | Display name | Project cards (PRD §13), board header *"project name 14px/600"* (design handoff 1c) | The handoff sample is `billing-svc` |
 | `slug` | yes, unique | URL key | Pages `/p/[slug]`, `/p/[slug]/flow`, `/p/[slug]/library` (PRD §13); the inbox batch header shows *"project slug 11px mono"* (handoff 1a) | Derivation not stated. See [[Projects Open Questions]] #4 |
 | `repo_path` | yes | *"absolute path to the git repo"* | Worktree creation (PRD §11), plugin dir (PRD §5 comment), shell steps run in a worktree under it | No `UNIQUE`; validation not stated. See [[Project Repository]] |
-| `default_flow_id` | no | The flow version new tasks start on | Task promotion pins a flow (PRD §12 `promote`); board columns come from *"the project's active flow"* (PRD §13) | No `REFERENCES` clause. See [[Project Default Flow]] |
+| `default_flow_id` | no | The flow version new tasks start on *(inferred: PRD §5 gives the column no comment; read from feature map §1's default recipe)* | Task promotion pins a flow (PRD §12 `promote`); board columns come from *"the project's active flow"* (PRD §13) | No `REFERENCES` clause. See [[Project Default Flow]] |
 | `check_command` | no | *"what a shell check step runs"* | A `kind='shell'` step whose `command` is null (PRD §5, §7) | No UI to set it is specified. See [[Project Check Command]] |
 | `created_at` | yes | Unix time | — | No `updated_at`, unlike `tasks` and `agents` |
 

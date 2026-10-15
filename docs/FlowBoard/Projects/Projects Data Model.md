@@ -19,7 +19,7 @@ Architecture component **#1 Domain model & migrations** (`02` §1): *"the 14 tab
 | `check_command` | TEXT | nullable | *"e.g. 'pnpm lint && pnpm test'; what a shell check step runs"* |
 | `created_at` | INTEGER | NOT NULL | |
 
-No source adds a column to `projects`. The architecture's genericization list (`02` §1) touches `runs`, `step_instances` and `skills`, not projects. The drawio *SQLite* card lists only *"projects (check_command)"*. The columns these notes propose (`base_branch`, `sandbox_profile`, OQ #14, #16) and Flow Design's mapping of the mockup's *adopted* date to *"`projects.default_flow_id` plus a timestamp"* ([[Flow Data Model]]) are proposals, not sources.
+No source adds a column to `projects`. The architecture's genericization list (`02` §1) touches `runs`, `step_instances` and `skills`, not projects. The drawio *SQLite* card lists only *"projects (check_command)"*. The columns these notes propose (`base_branch`, `sandbox_profile`, OQ #14, #16) and Flow Design's proposed adoption-date column (*"a **new** adoption timestamp column, e.g. `projects.default_flow_adopted_at`"*, [[Flow Data Model]]; [[Flow Design Open Questions]] #36) are proposals, not sources.
 
 ## Tables that point at a project
 

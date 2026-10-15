@@ -5,7 +5,7 @@ module: Projects
 
 # Projects Index
 
-A **project** is FlowBoard's handle on one codebase: a name, a URL slug, the absolute path of a local git repository, the flow new tasks start on, and the command a check step runs. Almost everything else hangs off it: flows, tasks, installed plugins, agents, the board, the per-project library, a memory scope and a line in every cost rollup.
+A **project** is FlowBoard's handle on one codebase: a name, a URL slug, the absolute path of a local git repository, a default flow (read as the flow new tasks start on, an inference; see [[Project Default Flow]]), and the command a check step runs. Almost everything else hangs off it: flows, tasks, installed plugins, agents, the board, the per-project library, a memory scope and a line in every cost rollup.
 
 > [!important] The one idea to get right first
 > A project is a **thin record that scopes everything else**. The PRD gives it five working columns (`name`, `slug`, `repo_path`, `default_flow_id`, `check_command`) and no behaviour of its own. Its weight comes from what points at it: four tables carry `project_id … ON DELETE CASCADE`, and the repo it names is where worktrees and the capability store live. See [[Project Record]] and [[What Belongs To A Project]].
