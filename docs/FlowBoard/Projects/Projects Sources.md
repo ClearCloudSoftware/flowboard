@@ -15,6 +15,7 @@ Where every fact in the Projects notes comes from. Paths are relative to the rep
 | `docs/old/architecture/README.md` | component index, open decisions | #1 Domain model & migrations; the system in one paragraph |
 | `docs/old/architecture/02-core-and-engine.md` | §1, §2 | *"the 14 tables … plus the invariants"*; append-only `runs` journal; flows exportable across projects |
 | `docs/old/architecture/03-execution-substrate.md` | §6, §8 | Shell steps run the project's `check_command` through the `ExecHost`; the run viewer's project link must use the slug |
+| `docs/old/architecture/04-hitl-and-notify.md` | §10 | The escalation threshold as a setting: *"`escalate_question` at `now + settings.escalation_threshold_ms` (default 5 min)"*; one of the global switches a project does not carry |
 | `docs/old/architecture/05-environment-and-registry.md` | §11, §14 | Worktree hygiene; import idempotent on `(project_id, import_key)`, request shape (§13, the registry, says nothing per project) |
 | `docs/old/architecture/06-cost-and-platform.md` | §12, §15 | Spend per project; thin API handlers; global settings |
 | `docs/old/architecture/07-ports-in-practice.md` | *Workspace — git worktree adapter*; *TaskSource* | `worktreeWorkspace(repoPath)`; upsert on `projectId, importKey`; *"the project's `@/` path alias"* (the overloaded word) |
