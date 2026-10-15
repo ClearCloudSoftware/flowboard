@@ -13,7 +13,7 @@ The values a fresh install starts with, and the platform constants beside them. 
 |---|---|---|---|
 | Draft mode | off | none | **Inferred.** A toggle *"for when I am iterating on the flow itself"* (PRD §13) implies off |
 | Theme | light, dark, or system | PRD §13 dark-first; backlog 9.1 light; mockups light only | **Conflict** ([[Appearance And Theme]]) |
-| Escalation threshold | 5 minutes | PRD §10, `04` §10, backlog 6.1, drawio | Mockups use 10 ([[Escalation Threshold]]) |
+| Escalation threshold | 5 minutes | `04` §10, backlog 6.1, old handoff | Default as a setting. PRD §10 and the drawio fix 5 minutes with no setting; the mockups use 10 ([[Escalation Threshold]]) |
 | Sandbox tier | `container` whenever the step bypasses permissions. `host` is allowed *"only for non-bypass steps or an explicit trusted-repo opt-out"*; no source names a default for those cases | `08` recommendation 1, backlog D7; drawio *Tiers* card: *"container (default when autonomous)"* | Recommendation, not a spec. **Conflict on whether the sandbox is on at all:** `docs/pitch.md` says on (*"FlowBoard makes the safe path the default: each step runs in a **sandbox**"*); `08` (*"Optional, off by default for trusted local repos"*) and PRD §11.1 (*"optional, recommended for headless runs"*) say optional. Every step defaults to `bypassPermissions` (PRD §5). [[Sandboxing Open Questions]] #3 |
 | Sandbox image | `flowboard-runner` | drawio *Harness architecture* | Name only |
 | Egress allowlist | model endpoint (via the proxy) + npm/pnpm; no git remote | `08` recommendation 2; drawio adds PyPI and *"api.openai.com (later)"* | Recommendation |

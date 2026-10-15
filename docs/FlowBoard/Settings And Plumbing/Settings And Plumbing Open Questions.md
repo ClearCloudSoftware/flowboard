@@ -25,7 +25,7 @@ Where the toggle lives, `haiku` or a logical id, effort, budget, scope, shell st
 `settings` is `(key TEXT, value TEXT)`. No source lists keys or says how values are encoded. `settings.memory.max_recall_chars` implies a nested block. No source gives draft mode's default. **Proposal:** one row per top-level setting, `value` as JSON, one zod `Settings` schema with defaults in code; draft mode off by default. → [[Settings Data Model]], [[Settings Defaults]]
 
 ### 6. Escalation threshold: default and unit
-5 minutes (PRD, drawio, backlog) or 10 (mockups); stored as `escalation_threshold_ms` (`04` §10, backlog 6.1) but described in minutes (`06` §15, backlog 8.3). See [[Escalation And Notifications Open Questions]] #1, #2. → [[Nudge Timing Setting]]
+5 minutes as a default (`04` §10, backlog 6.1, old handoff; PRD §10 and the drawio fix it at 5 with no setting) or 10 (mockups); stored as `escalation_threshold_ms` (`04` §10, backlog 6.1) but described in minutes (`06` §15, backlog 8.3). See [[Escalation And Notifications Open Questions]] #1, #2. → [[Nudge Timing Setting]]
 
 ### 7. Theme: which default, and is there a dark theme?
 PRD §13 dark-first; old handoff dark with a light variant; backlog 9.1 light default; mockups light only; feature map §19 and backlog 8.3 a light/dark/system switch. Also: a theme stored in SQLite needs a server read to set the class *"before first paint"* (backlog 8.3). Same as [[Flow Design Open Questions]] #34, [[Human In The Loop Open Questions]] #34, [[Monitor Open Questions]] #27. → [[Appearance And Theme]]

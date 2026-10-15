@@ -12,8 +12,8 @@ Escalation And Notifications documents it in full in [[Escalation Threshold]]. T
 | Aspect | What the sources say |
 |---|---|
 | Key | `settings.escalation_threshold_ms` (`04` §10, backlog 6.1) |
-| Unit in the UI | minutes (`06` §15, backlog 8.3) |
-| Default | 5 minutes in PRD §10, `04` §10, backlog, drawio and the old handoff; 10 minutes in the inbox and monitor mockups, the inbox guide and the mockups README ([[Escalation And Notifications Open Questions]] #1) |
+| Unit | milliseconds in the key (`04` §10, backlog 6.1); minutes in `06` §15's list of the `settings` table and in backlog 8.3's settings story. No source says which unit the UI shows |
+| Default | 5 minutes, stated as a default only in `04` §10, backlog 6.1 and the old handoff. PRD §10 (also §14 M6, §16) and the drawio fix the value at 5 minutes with no setting at all. The inbox and monitor mockups, the inbox guide and the mockups README use 10 minutes ([[Escalation And Notifications Open Questions]] #1) |
 | Range | 1–30 minutes, only in the old design prototype (`escalationMinutes`, `min:1, max:30`) |
 | Read by | the `escalate_question` job, scheduled at *"`now + settings.escalation_threshold_ms`"* (`04` §10) |
 | Before it was a setting | PRD §10 fixes it: *"enqueue an `escalate_question` job with `run_after = now + 5 minutes`"* |
