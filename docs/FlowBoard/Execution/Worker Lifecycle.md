@@ -10,8 +10,11 @@ The worker is the second Node process, `apps/worker`: *"job loop, runner, ask_us
 ## Starting
 
 - `pnpm dev` starts both processes: *"`concurrently` to run `next dev` and the worker together under `npm run dev`"* (PRD §2). Acceptance: *"`pnpm dev` starts Next.js and the worker together"* (PRD §16).
-- It opens the same SQLite file as the web process: *"WAL + `busy_timeout=5000` + `foreign_keys=ON`, opened via `VIBE_DB_PATH` so worker and MCP (foreign cwd) hit the same file."* (`02` §1)
+- It opens the same SQLite file as the web process: *"WAL + `busy_timeout=5000` + `foreign_keys=ON`, opened via `VIBE_DB_PATH` so worker and MCP (foreign cwd) hit the same file."* (`02` §1; backlog 1.1 says the same)
 - *"Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`."* (PRD §11.1)
+
+> [!warning] Does the MCP process open the database?
+> `02` §1 and backlog 1.1 have the MCP server open the same SQLite file. The PRD says it never does: *"Only `apps/web` and `apps/worker` open the SQLite file; the MCP shim never does"* (PRD §3), and the shim *"never opens the database and needs no network"* (PRD §9). The drawio *SQLite* card agrees with the PRD. Under the PRD's broker-and-shim design no MCP process opens the database. See [[Execution Open Questions]] #54.
 
 ## What it owns
 
@@ -56,7 +59,7 @@ flowchart TD
 ## Other fixes recorded against the worker
 
 - *"Session‑id capture: parse once from the `system/init` event, not every line."* (backlog 3.3, **BUG (perf)**)
-- *"Per‑run `mcp.json` pointing at `mcp/ask-user.ts` via `tsx --tsconfig <root>/tsconfig.json` (path aliases break when spawned from the worktree cwd)."* (backlog 3.2, **FIX**). The PRD's later layout replaces this with `apps/mcp-shim`.
+- *"Per‑run `mcp.json` pointing at `mcp/ask-user.ts` via `tsx --tsconfig <root>/tsconfig.json` (path aliases break when spawned from the worktree cwd)."* (backlog 3.2, **FIX**). The PRD's layout has `apps/mcp-shim` instead, a stdio server that forwards to the worker's broker and never opens the database (PRD §3, §9).
 - Backlog intro, item 6: *"agents killed port 3000 (moved to 3111)."*
 
 ## Related

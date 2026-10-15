@@ -22,7 +22,19 @@ The checks the runner applies **before and while** it launches a run. The step's
 | Git plugins on the host | *"On the host tier, a step that mounts a git-installed plugin does not run: that plugin's hooks and MCP servers would execute as me, with no egress wall. Seed plugins still run there."* (PRD §11.1) |
 | Recorded | *"`runs.sandbox` records the tier that actually ran"* (PRD §11.1) |
 
-The drawio *Permission gate* card: *"bypassPermissions only when the tier is container / gVisor / microVM; host tier → approval mode · budget caps map to --memory / --cpus / --pids-limit"*. `08` adds a second option: *"On `host` tier it downgrades to an approval/auto mode, or fails the step with a readable reason. A correctness rule, not a suggestion."*
+The drawio *Permission gate* card: *"bypassPermissions only when the tier is container / gVisor / microVM; host tier → approval mode · budget caps map to --memory / --cpus / --pids-limit"*.
+
+> [!warning] Refuse, downgrade or fail?
+> The sources split on what happens to a bypass step on the host tier:
+>
+> | Response | Source |
+> |---|---|
+> | Refuse / reject | PRD §7 (*"`bypassPermissions` is rejected unless the tier is a sandbox"*); `01-ports.md` (*"the runner refuses"*) |
+> | Refuse, or downgrade | PRD §11.1 (*"refuse it (or downgrade to an approval mode)"*) |
+> | Downgrade | `03` §6 (*"downgrading to an approval/auto mode on the `host` tier"*); drawio (*"host tier → approval mode"*) |
+> | Downgrade, or fail the step | `08` (*"or fails the step with a readable reason. A correctness rule, not a suggestion."*); backlog 3.5 (*"downgrade to an approval/auto mode or fail with a readable reason"*, tagged **NEW/DEC**) |
+>
+> See [[Execution Open Questions]] #53.*
 
 ### The hooks (inside)
 
@@ -40,20 +52,22 @@ The per-run `settings.json` registers `PreToolUse` hooks that deny (PRD §7):
 
 ## Plugins
 
-*"Use `--plugin-dir`, not `--add-dir`: only `--plugin-dir` registers a plugin's skills"*. *"Mount only the plugins the step names, never every installed one"*. *"Each plugin dir is the commit recorded in the task's `capability_pins`"* (PRD §7). Details in [[Capability Runtime Mounting]].
+*"Use `--plugin-dir`, not `--add-dir`: only `--plugin-dir` registers a plugin's skills"*. *"Mount only the plugins the step names, never every installed one"*. *"Each plugin dir is the commit recorded in the task's `capability_pins`"* (PRD §7). Details in [[Capability Runtime Mounting]]. A skill that needs the network also needs its host on the step's egress allowlist; the capability library guide warns the library *"cannot do it for you: add the advisory host to that step's egress allowlist, or the first run fails closed."*
 
 ## Limits
 
-| Limit | Logical | Physical backstop |
-|---|---|---|
-| Turns | `max_turns` → `--max-turns` | wall-clock |
-| Spend | `max_budget_usd` → `--max-budget-usd` | `--memory`, `--cpus`, `--pids-limit` |
+| Logical caps (the CLI) | Physical backstop (the sandbox), for both caps together |
+|---|---|
+| `max_turns` → `--max-turns`; `max_budget_usd` → `--max-budget-usd` | `--memory`, `--cpus`, `--pids-limit`, wall-clock |
 
 *"maps the logical `max_turns` / `max_budget_usd` caps to the sandbox's physical `--memory` / `--cpus` / `--pids-limit` / wall-clock backstops"* (`03` §6). Backlog 3.5: *"a limit/timeout hit marks the run failed with reason."* PRD §7 classes *"budget or turn cap hit"* as non-transient: the task goes to `blocked`. See [[Infra Retries]].
 
 ## Isolation from the operator's own config
 
 Backlog D5: *"Hook isolation for headless runs"*, default *"Empty `--settings` file per run"*. The intro lists the leak that prompted it: *"global `~/.claude` hooks apply to headless runs"*. `--strict-mcp-config` does the same for MCP (PRD §7).
+
+> [!warning] Empty, or holding the hooks?
+> D5's *"Empty `--settings` file per run"* (also the drawio card *"D5 · Hook isolation / Empty --settings file per headless run"*) cannot be squared with PRD §7's *"`--settings <generated per-run settings.json with PreToolUse hooks>`"* and the drawio *Runner* card's *"writes per-run mcp.json + settings.json (hooks)"*. D5's aim, keeping the operator's global `~/.claude` hooks out, still holds; its "empty" predates the hooks gate. See [[Execution Open Questions]] #52.
 
 ## No real credential
 

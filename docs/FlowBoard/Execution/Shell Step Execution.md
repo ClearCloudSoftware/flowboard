@@ -53,7 +53,8 @@ Assembled from PRD §7–§8. The drawio *Shell executor = the sensor* card: *"r
 
 ## Gaps
 
-- **Fresh container or the task's host.** PRD §7 says *"through the same execution host"*; the drawio says *"in a fresh sandbox"* / *"Check container"*. With one container per run (`08`), these may be the same thing.
+- **Fresh container or the task's.** PRD §7 says *"through the same execution host"*; the drawio says *"in a fresh sandbox"* / *"Check container"*. The PRD is itself split: its *Sandboxed runs* paragraph launches commands *"*inside* the task's container"*, while §11.1 says *"Containers are ephemeral — one per run, destroyed on completion"* (and `08`: *"One container per run/attempt"*). See [[Execution Open Questions]] #61.
+- **Run state on a failing check.** Whether a non-zero check records `runs.state = 'failed'` (PRD §7 *Completion*) or `succeeded` (the shell paragraph: *"a result, not a run failure"*) is not stated ([[Execution Open Questions]] #57).
 - **Worker slot.** Whether a shell run counts against `VIBE_MAX_RUNS` is not stated (also [[Worker Slots]]).
 - **Timeouts.** A hanging `check_command` has no stated limit other than the sandbox wall clock (`08`).
 - **Non-zero for reasons other than test failure** (command not found, out of memory) is still a `fail` outcome under the rule above, so it loops rather than blocks.

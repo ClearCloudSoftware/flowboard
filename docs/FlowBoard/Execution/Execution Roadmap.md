@@ -15,8 +15,11 @@ What is in v1, what the designs add beyond the PRD, ideas, and what is out of sc
 | **M3** | Worker, job queue, one hardcoded step, stream-json → `run_events`, SSE viewer, cost | *"**This is the milestone that proves the whole idea.** Do not proceed until you can watch a real session stream in the browser and see its cost land in the database."* |
 | M4 | Park and resume | *"MCP server with `ask_user_batch`, blocking with the 20-minute sentinel … park-and-resume."* |
 | **M5** | The engine | *"Step defs, edges, fan-out, joins, conditional edges, approval gates, rework loops with `max_attempts` escalation, shell check steps, artifact contract validation."* |
-| M8 | Draft mode toggle | *"Cost views and flow editor UI."* (draft mode in PRD §13) |
+| M6 | The `escalate_question` job | *"Slack escalation. 5-minute timer, Block Kit rendering, interaction handler, idempotency and reconciliation both directions."* |
+| M7 | The `import_backlog` job | *"Library and import. Skills install from GitHub, agent CRUD, markdown backlog import."* |
 | M9 | Memory recall and commit around a run | *"Memory (optional, additive)."* |
+
+Draft mode (PRD §13) is assigned to no milestone. The backlog implements the override in the runner (3.2) and the toggle in settings (8.3).
 
 Sandboxed execution (PRD §11.1) is *"in scope but optional"* (PRD §17).
 
@@ -26,7 +29,7 @@ Sandboxed execution (PRD §11.1) is *"in scope but optional"* (PRD §17).
 |---|---|---|
 | Explicit **Start** button | backlog 2.1, D1, drawio | decision default, not in PRD §12 |
 | **Demote** keeping the worktree | backlog 2.1 (**NEW**) | no endpoint |
-| **Pause** a task | task-detail mockup | no status, no endpoint |
+| **Pause** a task | feature map §3 (named), task-detail guide (rule) | no status, no endpoint |
 | **Retry as-is**, **Allow host & retry** | monitor and inbox mockups | not in PRD |
 | `queued` as a visible step state | monitor and task-detail mockups | not a PRD state |
 | Worker slots strip with per-slot Stop | monitor mockup | cap from `VIBE_MAX_RUNS` |

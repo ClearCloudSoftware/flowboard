@@ -14,7 +14,7 @@ module: Execution
 | `POST` | `/api/tasks/:id/promote` | *"backlog -> todo, pin flow, create worktree"* |
 | `POST` | `/api/tasks/:id/cancel` | stop runs, cancel questions, skip instances (backlog 2.1) |
 | `POST` | `/api/step-instances/:id/approve` | outcome pass; enqueue `advance_task` |
-| `POST` | `/api/step-instances/:id/reject` | outcome fail + reason (backlog 2.3) |
+| `POST` | `/api/step-instances/:id/reject` | outcome fail + reason; *"reject with no `on_fail` edge fails the task"* (`02` §3, backlog 5.2). Backlog 2.3: the UI must send the reason. |
 | `POST` | `/api/step-instances/:id/retry` | one more attempt with a note (PRD §8) |
 | `POST` | `/api/questions/:id/answer` | may enqueue a resume `start_run` (PRD §9) |
 | `GET` | `/api/runs/:id` | one run |
@@ -33,18 +33,23 @@ module: Execution
 ## Proposed
 
 > [!note] Proposals
-> Not in any source. They match the paths proposed in [[Task Detail API And Routes]] so the vault stays consistent. Each is listed in [[Execution Open Questions]].
+> Not in any source. The task-level paths match [[Task Detail API And Routes]]; the retry body follows [[Monitor API And Routes]]. Each is listed in [[Execution Open Questions]].
 
 | Method | Path | For |
 |---|---|---|
 | `POST` | `/api/tasks/:id/start` | Start, if D1 keeps it separate from promote |
 | `POST` | `/api/tasks/:id/demote` | Send to backlog |
-| `POST` | `/api/tasks/:id/pause` | Pause (mockup only) |
+| `POST` | `/api/tasks/:id/pause` | Pause (named in feature map §3, defined in the task-detail guide) |
 | `POST` | `/api/tasks/:id/fail` | **Fail task** at an escalation gate |
 | `POST` | `/api/runs/:id/stop` | Stop a run |
-| `POST` | `/api/step-instances/:id/retry` with `{ mode: 'as_is' \| 'allow_host', host? }` | the mockups' **Retry as-is** and **Allow host & retry** |
+| `POST` | `/api/step-instances/:id/retry` with `{ note?, allowHost? }` | PRD §8's Retry *"carries my note"*; the mockups' **Retry as-is** (no host) and **Allow host & retry** |
 
-[[Human In The Loop API And Routes]] proposes `POST /api/step-instances/:id/fail-task` and `POST /api/step-instances/:id/allow-host` for the same two actions. The two proposals disagree on shape; pick one.
+Three sibling sets propose different shapes for the same actions; pick one ([[Execution Open Questions]] #47):
+
+| Action | [[Task Detail API And Routes]] | [[Monitor API And Routes]] | [[Human In The Loop API And Routes]] |
+|---|---|---|---|
+| Fail task | `POST /api/tasks/:id/fail` | — | `POST /api/step-instances/:id/fail-task` (or `reject` with `{ failTask: true }`) |
+| Allow host & retry | — | `retry` with `{ note?, allowHost? }` | `POST /api/step-instances/:id/allow-host` `{ host }` |
 
 ## What a route does, step by step
 
@@ -66,7 +71,7 @@ sequenceDiagram
 
 ## Rules for every execution route
 
-- *"Every port is called from `src/lib/`, **never from a route**"* (`06` §15).
+- *"Every port is called from `src/lib/`, **never from a route**"* (`06` §15). `06` uses the first build's layout (`src/app/api/`, `src/lib/`); in the PRD's layout that is `apps/web/app/api/` calling `packages/core` (PRD §3, §12).
 - *"If a route ever needs to know whether it's Claude or Codex, something leaked upward."* (`06` §15)
 - Stop is the one route that touches a process (by pid).
 

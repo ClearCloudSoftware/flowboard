@@ -38,13 +38,13 @@ CREATE INDEX jobs_ready ON jobs(state, run_after);
 |---|---|---|---|
 | `start_run` | Start, `advance_task`, rework, resume, infra retry | builds the command and launches one run | PRD §7, §9 |
 | `advance_task` | a step marked `done` | *"resolves outgoing edges from the completed step definition"* | PRD §8 |
-| `escalate_question` | question insert, `run_after = now + 5 minutes` | posts to Slack if still pending | PRD §10 |
-| `import_backlog` | `POST /api/import/backlog` | backlog import | backlog 7.3 |
+| `escalate_question` | question insert, `run_after = now + 5 minutes` | posts to Slack if still pending | PRD §10. Backlog 6.1 makes the delay a setting, *"`settings.escalation_threshold_ms` (default 5 min)"*, and adds *"skip if answered or already posted"*. The inbox mockup escalates after 10 minutes ([[Execution Open Questions]] #59). |
+| `import_backlog` | `POST /api/import/backlog` | backlog import; pasted `content` *"goes to a temp file, enqueues `import_backlog` with `cleanup`, returns `{queued}`; worker deletes the temp file"* | backlog 7.3 |
 | `resume_step`? | — | *"`jobs.kind` includes `resume_step` (or drop it, see 4.4)."* (**DEC**) | backlog 1.1 |
 
 The drawio *Job loop* card lists the four PRD kinds. The drawio also draws a later *Schedule trigger*: *"cron-style rows in jobs → maintenance flows: knowledge-asset refresh, nightly gates"* (dashed).
 
-The `payload` shapes are not specified. *Proposal:* `start_run` `{ stepInstanceId, attempt, resume?: { sessionId, answers } }`; `advance_task` `{ taskId, stepInstanceId }`. Listed in [[Execution Open Questions]].
+The `payload` shapes are not specified, beyond backlog 7.3's `cleanup` flag on `import_backlog`. *Proposal:* `start_run` `{ stepInstanceId, attempt, resume?: { sessionId, answers } }`; `advance_task` `{ taskId, stepInstanceId }`. Listed in [[Execution Open Questions]].
 
 ## Leasing
 

@@ -61,6 +61,8 @@ export async function runStep(deps, step, task, produces) {
 
 *"On exit code 0, set the run to `succeeded`, scan for artifacts, then apply the advancement rules in §8. On non-zero exit, set `failed` and record stderr in `runs.error`."* (PRD §7) Non-zero → [[Infra Retries]].
 
+Backlog 3.2 (**PRD/BUG**) adds two things: a run also fails on the result event's error flag (*"non‑zero or `is_error` → failed"*), and *"**cancel that step's pending questions** (today they keep escalating)"*. `04` §9: *"On any run failure, **cancel that step's pending questions** so they stop escalating."*
+
 **Artifact scan.** *"After a run completes, the runner scans `<worktree>/.vibe/task-<id>/` for files created or modified during the run and registers any that match the step's declared `produces` types. The agent may also register one explicitly via the `declare_artifact` MCP tool. Do both — scanning catches the case where the agent forgets to call the tool."* (PRD §6) *"Artifact scan = mtime ≥ run start, matched to `produces`"* (`03` §6). See [[Task Artifacts]].
 
 **The race.** *"an answer that arrives while the process is still exiting must not be lost — completion re-checks "answers arrived after last poll" and resumes instead of marking the step done."* (`04` §9; backlog 4.2 **BUG**)

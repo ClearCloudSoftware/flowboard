@@ -61,7 +61,9 @@ Feature map §4: *"After a set number, it stops and hands the task to you with t
 > | Monitor guide | *"Retries are capped, then the task fails."* |
 > | Task-detail guide | *"After the limit the engine gives up and fails the task rather than looping on your money forever."* |
 >
-> The drawio card also says *"Fail on the 4th"*, which reads as three attempts *plus* one, against PRD §8's *"total runs … first try included"*. See [[Execution Open Questions]].
+> On the count, the drawio card agrees with PRD §8: *"max_attempts = attempts allowed / Fail on the 4th (default 3)"* allows three runs and refuses a fourth, as PRD §8 escalates *"when a rework edge would start a run past `max_attempts`"*. The conflict is only fail versus escalate. See [[Execution Open Questions]] #14.
+>
+> The flow designer's *Retries* field is not `max_attempts` one-to-one: the mockup defaults it to 2 against the PRD's 3. See [[Execution Open Questions]] #15.
 
 ## Retry semantics
 

@@ -41,11 +41,11 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 
 | Term | Meaning | Source |
 |---|---|---|
-| **Promote** | Backlog → Todo: pin the flow, create the worktree | PRD §11, §12 |
+| **Promote** | Backlog → Todo: pin the flow, create the worktree. Some sources put both on *start* instead ([[Starting A Task]]). | PRD §11, §12 |
 | **Start** | Todo → running. Whether it is separate from promote is open (D1). | backlog 2.1 |
 | **Advance** | Apply the outgoing edges of a finished step (`advance_task`) | PRD §8 |
 | **Fan-out** | *"If more than one edge fires, create all the target step instances and start them concurrently."* | PRD §8 |
-| **Join** | *"A step definition with multiple incoming edges"*, which waits for its upstream instances | PRD §8 |
+| **Join** | *"A step definition with multiple incoming edges"*, which waits for its upstream instances. Backlog 5.2 narrows it: *"join waits for every non‑`on_fail` upstream instance"*. See [[Execution Open Questions]] #4. | PRD §8, backlog 5.2 |
 | **Rework** | An `on_fail` edge to an earlier step: same instance, `attempts++`, a new run | PRD §8, `02` §3 |
 | **Escalate** ⚠ | (1) Engine: a spent or stuck loop parks the target at `awaiting_approval`, task `blocked` (PRD §8). (2) Notifier: post a pending question to Slack after a timer (PRD §10). | [[Loop Guard And Escalation]] |
 | **Park** | Exit the agent process with state saved; the run becomes `parked` | PRD §9 |
@@ -63,7 +63,7 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 
 > [!warning] Retry
 > - **Infra retry**: the runner re-runs a transient failure on its own, *"up to 3 times"* (PRD §7). Not counted.
-> - **Rework**: an `on_fail` loop. Counted. The flow designer's *Retries* field is this budget.
+> - **Rework**: an `on_fail` loop. Counted. The flow designer's *Retries* field sets this budget, but not one-to-one: the mockup defaults it to 2 against `max_attempts`' 3, and [[Flow Data Model]] maps it as `max_attempts − 1`, a proposal ([[Flow Design Open Questions]] #11).
 > - **Retry at an escalation gate**: *"**Retry** grants one more attempt and carries my note into it"* (PRD §8).
 > - **Retry as-is** and **Allow host & retry**: mockup buttons on a failure card (monitor, inbox).
 > - **`POST /api/step-instances/:id/retry`**: the one PRD endpoint (PRD §12).

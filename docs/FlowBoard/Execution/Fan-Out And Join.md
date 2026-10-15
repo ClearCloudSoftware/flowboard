@@ -16,8 +16,10 @@ How the engine runs branches in parallel and waits for them. Designing these sha
 | Join (backlog) | *"Fan‑out creates and starts all targets; join waits for every non‑`on_fail` upstream instance."* (backlog 5.2) |
 | Feature map | *"**Run branches in parallel and wait for them** — It starts several branches at once when the recipe fans out, and holds a later step until every branch it depends on is done."* (§4) |
 
-> [!warning] The PRD's join rule deadlocks the seeded flow
-> In the seed flow, `implement` has three incoming edges: `explain → implement` (always), `check → implement` (on_fail) and `review → implement` (on_fail). Read literally, PRD §8 makes `implement` a join that waits for `check` and `review`, which come after it. The backlog's version (*"every non‑`on_fail` upstream instance"*) excludes the loop-back edges and fixes it. `02` §2 already ignores `on_fail` edges for board layout. See [[Execution Open Questions]].
+> [!warning] The PRD's join wording is ambiguous
+> In the seed flow, `implement` has three incoming edges: `explain → implement` (always), `check → implement` (on_fail) and `review → implement` (on_fail). By PRD §8's definition (*"multiple incoming edges"*) it is a join. In practice the literal rule still works, because it waits on upstream step **instances**, and instances exist only once an edge fires (*"create all the target step instances"*). When `explain` first reaches `implement`, no `check` or `review` instance exists to wait for. Rework then reuses the same `implement` instance (*"increments that step instance's `attempts` and creates a new run"*, PRD §8) rather than going back through the join.
+>
+> PRD §15 names only `check` as *"the join"*. Backlog 5.2's wording (*"every non‑`on_fail` upstream instance"*) states the intent outright; `02` §2 likewise ignores `on_fail` edges for board layout. See [[Execution Open Questions]] #4.
 
 ## In the seeded flow
 

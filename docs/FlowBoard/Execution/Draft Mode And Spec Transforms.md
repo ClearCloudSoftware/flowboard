@@ -40,9 +40,9 @@ The canvas bar shows *"est. $… ceiling per task"* and, with draft on, *"draft 
 
 ## Gaps
 
-- **`haiku` or `fast-cheap`.** The PRD names a Claude alias; `06` uses a logical id. With [[Models And Effort|logical model ids]] the transform is provider-neutral; with `haiku` it is not.
+- **`haiku` or `fast-cheap`.** The PRD names a Claude alias; `06` uses a logical id. PRD §5 treats Claude aliases as the logical ids (`agents.default_model`: *"a Claude alias, used as the logical model id"*); `01-ports.md` uses names like `fast-cheap` that each provider resolves. Under the PRD's reading `haiku` is already logical; under `01-ports.md`'s it ties draft mode to Claude. See [[Models And Effort]].
 - **Shell steps.** Draft mode has nothing to override on a shell step; no source says so explicitly.
-- **Budget caps.** Whether draft mode also lowers `max_budget_usd` is not stated.
+- **Budget caps.** Answered: no. `06` §15's `draftMode` changes only `model` and `effort`, and lists *"cap-budget-globally"* as a separate future override.
 - **When it applies.** Whether a run already in flight keeps its model when the toggle flips is not stated. Applying it at `RunSpec` build time implies the next run picks it up.
 
 ## Related

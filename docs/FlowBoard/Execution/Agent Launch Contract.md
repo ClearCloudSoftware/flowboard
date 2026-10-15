@@ -66,6 +66,8 @@ export interface RunResult {
 | `native_cost` | *"PricingService computes cost from tokens"* |
 | `allowed_tools` | *"tool policy becomes advisory / prompt-level"* |
 | `tool_hooks` | *"a provider without them relies on the sandbox alone, and the flow editor says so"* (PRD §7) |
+| `budget_cap` | *"honours maxBudgetUsd; else it is advisory"* (`agent-provider.ts`) |
+| `permission_modes` | *"supports a bypass/ask permission mode"* (`agent-provider.ts`); the permission gate needs it ([[Run Guardrails At Launch]]) |
 
 ## The Claude adapter's command
 
@@ -80,7 +82,7 @@ claude -p "<prompt>"
   --mcp-config <generated per-run mcp.json>
   --settings <generated per-run settings.json with PreToolUse hooks>
   --strict-mcp-config
-  --plugin-dir <dir of each plugin the step names>
+  --plugin-dir <dir of each plugin the step names: its skill's plugin + extra_plugin_ids>
   [--allowedTools ...]  [--max-turns N]  [--max-budget-usd N]
   [--append-system-prompt <agent.system_prompt, when the step names an agent>]
 ```
@@ -91,16 +93,19 @@ Fixes that move into the adapter (`03` §5): *"`message_delta.usage` is cumulati
 
 ## The events
 
-Seven kinds, each carrying `v: 1` (`01-ports.md`, `events.ts`): `assistant_text`, `thinking`, `tool_use`, `tool_result`, `system`, `result`, `error`. The runner writes each to `run_events` *"with an incrementing `seq`"* and a one-line `summary` (PRD §7). The viewer side is in [[Event Stream And SSE]].
+Seven kinds (`01-ports.md`, `events.ts`). Each carries a schema version `v`, starting at 1 (`01-ports.md`; PRD §7; `run_events.v` in PRD §5), though `events.ts` has no `v` field. The kinds: `assistant_text`, `thinking`, `tool_use`, `tool_result`, `system`, `result`, `error`. The runner writes each to `run_events` *"with an incrementing `seq`"* and a one-line `summary` (PRD §7). The viewer side is in [[Event Stream And SSE]].
 
 ## Where the sources disagree
 
 > [!warning] Three versions of the contract
 > - `01-ports.md`'s `Capability` includes `tool_hooks`; `agent-provider.ts` does not.
-> - `01-ports.md`'s `RunSpec` sketch has no `exec`; the reference and `01-ports.md`'s own ExecHost section (*"passes it in `RunSpec.exec`"*) do.
-> - Neither `RunSpec` carries the permission mode, the agent's system prompt, the per-run hook settings or a sandbox tier, all of which the PRD §7 command needs.
+> - `01-ports.md`'s `RunSpec` sketch has no `exec`; the reference and `01-ports.md`'s own ExecHost section (*"passes it in `RunSpec.exec`"*) do. Through `exec`, the reference carries the sandbox tier (`ExecHost.id`, `SandboxProfile.tier`); the sketch carries none.
+> - Neither `RunSpec` carries the permission mode, the agent's system prompt or the per-run hook settings, all of which the PRD §7 command needs.
+> - `PromptParts` has six fields and no slot for the memory part 7 ([[Prompt Assembly]]).
+> - `events.ts`' `NormalizedEvent` has no `v`, which `01-ports.md` and PRD §7 require.
+> - `Usage` arrives only on the `result` event, yet PRD §7 wants a running cost from per-message tokens ([[Monitor Open Questions]] #38).
 >
-> Listed in [[Execution Open Questions]].
+> Listed in [[Execution Open Questions]] #42 and #62.
 
 ## Related
 

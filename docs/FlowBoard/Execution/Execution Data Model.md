@@ -14,7 +14,11 @@ The tables and columns execution reads and writes. Schema is PRD §5 (*"Write th
 | `step_defs` | `kind` (*"'ai' \| 'shell' \| 'manual'"*), `command`, `skill_id`, `agent_id`, `extra_plugin_ids`, `prompt_template`, `model`, `effort`, `permission_mode`, `allowed_tools`, `max_turns`, `max_budget_usd`, `max_attempts` (default 3), `advance_mode` (`auto` \| `approval`), `requires`, `produces`, `is_entry` |
 | `step_edges` | `from_step`, `to_step`, `condition` (`always` \| `on_pass` \| `on_fail`) |
 | `projects` | `repo_path`, `check_command` |
-| `settings` | draft mode, `sandbox_profile`, `memory` block (PRD §11.1, §11.2) |
+| `tasks` | `title`, `body`, `acceptance_criteria`, `non_goals` (prompt preamble, template placeholders, and the non-goal path hooks, PRD §7); `worktree_path` (`cwd`); `capability_pins` (*"Each plugin dir is the commit recorded in the task's `capability_pins`"*, PRD §7) |
+| `agents` | `system_prompt` (`--append-system-prompt`), `allowed_tools` (the tool intersection), pinned per task (PRD §7) |
+| `skills` | `slug` (the `/<plugin>:<slug>` invocation), `allowed_tools` (PRD §7) |
+| `plugins` | `name`, `commit_sha` (the plugin dir), `source` (a git-installed plugin does not run on the host tier, PRD §11.1) |
+| `settings` | draft mode (PRD §13), escalation threshold (`06` §15; backlog 6.1 `settings.escalation_threshold_ms`, default 5 min; sets the `escalate_question` `run_after`), `sandbox_profile` (PRD §11.1), `memory` block (PRD §11.2) |
 
 Backlog 1.1 (**NEW**) adds an optional `step_defs.sandbox_profile` override.
 
@@ -30,6 +34,10 @@ Backlog 1.1 (**NEW**) adds an optional `step_defs.sandbox_profile` override.
 | | `attempts` | counted runs; the rework budget |
 | | `outcome` | `pass`, `fail`, null |
 | | `reason` | *"rejection/failure text shown on the card"* (backlog 1.1, `02` §1; not in PRD §5) |
+
+## Written: questions
+
+The worker's broker is *"the only writer of the `questions` table"* (PRD §9); see [[Human In The Loop Data Model]]. Execution touches it in one place: on a run failure, *"cancel that step's pending questions"* (backlog 3.2, `04` §9).
 
 ## Written: runs and events
 

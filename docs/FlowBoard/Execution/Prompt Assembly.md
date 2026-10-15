@@ -50,7 +50,14 @@ The drawio harness concept 2, **Map, not encyclopedia**: *"The prompt lists path
 > [!warning] Placeholders and the preamble
 > - Backlog 3.2 lists placeholders `{{task_title}} {{task_body}} {{artifact:<type>}} {{worktree}}` only; PRD §7 and `03` §6 add `{{acceptance_criteria}}` and `{{non_goals}}`.
 > - `agent-provider.ts` documents the preamble as *"Preamble: task title + body"*; PRD §7 includes acceptance criteria and non-goals.
-> - `agent-provider.ts` documents part 4 as *"Slash invocation for kind='skill', e.g. "/grill-me""*; PRD §5 has no `skill` kind (*"'ai' | 'shell' | 'manual'"*) and PRD §7 uses the qualified `/grill-me:grill-me`.
+> - Step kinds: PRD §5 has *"'ai' | 'shell' | 'manual'"*, where an AI step names a skill, an agent or both. `02` §3 (*"`skill|agent|shell|manual`"*) and `agent-provider.ts` (*"Slash invocation for kind='skill', e.g. "/grill-me""*) use a separate `skill` kind. PRD §7 also qualifies the invocation as `/grill-me:grill-me`.
+
+> [!warning] Where part 7 goes
+> - *Before the closing instruction*: PRD §7 (*"inserted just before the closing instruction"*) and `09-memory.md` (*"just before the closing headless instruction"*).
+> - *At the end*: PRD §11.2 (*"append them to the prompt as a final part"*), `03` §6 (*"append the hits as a **7th prompt part**"*) and the drawio *Prompt builder* card (*"+7 recalled memory"*, after part 6).
+> - The port has no room for it either way: `PromptParts` (`agent-provider.ts`) has six fields, and *"adapters must not reorder"*.
+>
+> See [[Execution Open Questions]] #51.
 
 ## Related
 

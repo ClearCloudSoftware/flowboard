@@ -46,17 +46,20 @@ flowchart TD
   O -->|yes| NO[awaiting_approval: no outcome reported]
   O -->|no| F[fire matching edges]
   F --> T{each target}
-  T -->|earlier step, on_fail| RW[rework: attempts++]
+  T -->|earlier step, on_fail| CAP{would pass max_attempts, or same fingerprint?}
+  CAP -->|yes| ESC[escalate: target awaiting_approval, task blocked]
+  CAP -->|no| RW[rework: attempts++, new run]
   T -->|join not satisfied| W[wait]
   T -->|ready| ST[create instance + start_run]
-  F -->|nothing fires, nothing active| DONE[task done?]
+  F --> TC{no active instances and no reachable pending targets?}
+  TC -->|yes| DONE[task done]
 ```
 
-Assembled from PRD §8. The order of the "no outcome" check relative to `done` is not stated; the PRD places it inside `advance_task`.
+Assembled from PRD §8, with the done rule from `02` §3 (see [[Task Completion]]) and the escalation check from PRD §8 (see [[Loop Guard And Escalation]]). The PRD places the "no outcome" check inside `advance_task`, after the instance is marked `done`.
 
 ## Gates and human decisions
 
-- **Approve**: *"approve means pass"* (PRD §8). *"Approve overrides the agent's `fail` outcome (human wins)"* (`02` §3).
+- **Approve**: PRD §8 says *"approve means pass"* only for the no-outcome gate, and is silent on approving over an agent's `fail`. `02` §3 adds the override: *"Approve overrides the agent's `fail` outcome (human wins)"* (backlog 5.2, tagged **FIX**). Backlog 10.2 lists *"approve overrides outcome"* among the README's deviations from the PRD.
 - **Reject**: *"reject sets `fail` + reason; reject with no `on_fail` edge fails the task"* (`02` §3).
 - **Answers**: when the last required answer arrives, *"enqueue a new `start_run` that resumes"* (PRD §9). See [[Ask Park And Resume]].
 
@@ -69,7 +72,8 @@ The drawio *Flow engine* card in the worker: *"advance_task: always / on_pass / 
 ## Gaps
 
 - **Approval and questions together.** A step with `advance_mode='approval'` that also has unanswered questions hits rule 1 first and never reaches rule 2. Whether that is intended is not stated.
-- **Approval on a failed outcome.** On an approval step whose agent set `fail`, the run still "succeeds", so rule 1 parks it for approval. Approve then overrides to pass. The sources agree; the screens should show the agent's verdict at the gate.
+- **Approval on a failed outcome.** On an approval step whose agent set `fail`, the run still "succeeds", so rule 1 parks it for approval. Under `02` §3 Approve then overrides to pass; the PRD does not say, and the backlog calls the override a deviation ([[Execution Open Questions]] #64). The screens should show the agent's verdict at the gate.
+- **A silent approval step.** Because rule 1 comes first, a run on an approval step that sets no outcome waits at an ordinary gate, never at *"no outcome reported"*. The `review` step in the seeded flow is such a step ([[Seeded Flow Execution]]).
 - **`manual` steps.** PRD §5 allows `kind = 'manual'`; no rule says what the engine does when it reaches one. See [[Execution Open Questions]].
 
 ## Related

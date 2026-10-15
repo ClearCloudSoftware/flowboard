@@ -59,7 +59,7 @@ Both draw on `implement`'s budget (PRD §8).
 ## Gaps
 
 > [!question] Which runs are superseded?
-> PRD §8 says *"the superseded runs"*; `02` §3 and backlog 5.2 say *"downstream runs"*. Neither says whether the target's own previous run (the build that was sent back) or the failing step's run (the failed check or the rejected review) is wasted. The monitor and task-detail mockups move the **target's** previous spend to wasted. See [[Attempts And Send Back]] for the figures and [[Execution Open Questions]].
+> PRD §8 and `02` §3 say *"superseded runs"*; only backlog 5.2 says *"downstream runs `wasted=1`"*. None says whether the target's own previous run (the build that was sent back) or the failing step's run (the failed check or the rejected review) is wasted. The monitor and task-detail mockups move the **target's** previous spend to wasted. See [[Attempts And Send Back]] for the figures and [[Execution Open Questions]].
 
 > [!question] Downstream attempts
 > Backlog 5.2 (**DEC**): *"Downstream steps reset `attempts` on every loop; only the loop target is capped. Decide if downstream should also count."*

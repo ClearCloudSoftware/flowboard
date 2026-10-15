@@ -23,6 +23,12 @@ The route sends the signal directly, not through the queue. That bends PRD §2's
 > [!warning] Cancelled or failed?
 > The monitor guide: *"Ends that run now. It is recorded as failed, with "stopped by you" as the reason, and the slot is handed to whatever is next in the queue."* `03` §8 and backlog 3.4 say `cancelled`. See [[Monitor Open Questions]] #14 and [[Execution Open Questions]].
 
+> [!question] Would a Stop be retried automatically?
+> PRD §7 lists *"process killed by a signal"* as transient, retried automatically up to 3 times. Stop is a SIGTERM, and the replay adapter's `stop()` settles with `exitCode: 130`. Read literally, a stopped run would be retried. The same applies to runs SIGTERMed by a graceful shutdown. See [[Monitor Open Questions]] #35 and [[Execution Open Questions]] #55.
+
+> [!question] Who finalises a stopped run?
+> `03` §7 makes the worker *"the only writer of run lifecycle state"*. `03` §8 and backlog 3.4 have the route signal the process and *"finalise as cancelled"*. See [[Monitor Open Questions]] #36 and [[Execution Open Questions]] #56.
+
 What the engine does next after a Stop is not stated. A stopped run is neither a work verdict nor an infra failure. *Proposal:* the step instance waits at `awaiting_approval` with reason "stopped", so you choose Retry or Fail task, and nothing is retried automatically ([[Monitor Open Questions]] #35).
 
 **Money.** Monitor guide: *"Everything it had spent moves to wasted — stopping saves the future spend, not the past."*
@@ -31,15 +37,15 @@ What the engine does next after a Stop is not stated. A stopped run is neither a
 
 Backlog 2.1 (**FIX**): *"Cancel: SIGTERM live runs, cancel pending questions, mark instances skipped."* PRD §12: `POST /api/tasks/:id/cancel`. Feature map §3: *"cancel it — which stops any running agents and tidies up."*
 
-Task-detail guide: *"Stops any running agents and tidies up. The workspace survives until you clean it up."* and *"Anything in flight becomes wasted."* The worktree is not removed: *"When a task reaches `done` or `cancelled`, offer a "clean up worktree" action; never remove it automatically."* (PRD §11)
+Task-detail guide: *"Stops any running agents and tidies up. The workspace survives until you clean it up."* and *"Anything in flight becomes wasted."* The worktree is not removed: *"When a task reaches `done` or `cancelled`, offer a "clean up worktree" action; never remove it automatically."* (PRD §11). Backlog 2.1 also allows it after failure: *"only when done/cancelled/failed"* ([[Execution Open Questions]] #60).
 
 ## Pause a task
 
-Only in the task-detail mockup: *"Stops after the current run rather than mid-flight. The workspace stays."* Cost: *"Stops future spend only."* No status, endpoint or rule backs it. *Proposal:* a flag the engine checks before enqueuing the next `start_run`. See [[Execution Roadmap]].
+Feature map §3 names it in a heading (*"**Pause, send back, or cancel**"*) without defining it. The task-detail guide gives the rule: *"Stops after the current run rather than mid-flight. The workspace stays."* Cost: *"Stops future spend only."* Its lifecycle note adds *"Pausing and sending back to the backlog both keep the workspace"*. No status, column, endpoint or engine rule backs it. *Proposal:* a flag the engine checks before enqueuing the next `start_run`. See [[Execution Roadmap]].
 
 ## Worker shutdown
 
-`03` §7 and backlog 3.3 (**GAP**): *"Graceful shutdown: SIGTERM children, mark runs `cancelled`, not `failed`."* A crash is different: on restart, the worker re-attaches or fails the run (see [[Worker Lifecycle]]).
+`03` §7 and backlog 3.3 (**GAP**): *"Graceful shutdown: SIGTERM children, mark runs `cancelled`, not `failed`."* A crash is different. On restart, `03` §7 re-attaches to a live pid or fails a dead one *"with a Retry hint"*; PRD §7 instead treats *"lost on restart"* as transient and retries it ([[Worker Lifecycle]], [[Execution Open Questions]] #30).
 
 > [!question] Shutdown versus "lost on restart"
 > PRD §7 lists *"lost on restart"* as **transient**, retried automatically. A graceful shutdown marks runs `cancelled`. Whether those cancelled runs are re-queued when the worker comes back is not stated.

@@ -73,9 +73,15 @@ After a rework: `implement` runs again with the failing artifact in its read-fir
 ## Points to watch
 
 - **`grill` produces `questions` and `answers`**, so a run that parks and resumes still has to write both files. The resume prompt must repeat them (backlog 3.2).
-- **`review` needs no fingerprint** but must call `set_outcome` (PRD §15). If it does not, it parks with *"no outcome reported"*. Because `review` is also an approval step, that gate and the no-outcome gate look the same.
-- **`check` has no `requires`**, so its prompt-part-2 list is empty. It joins on `implement` and `tests` through edges only.
-- **The join at `implement`.** Read literally, PRD §8's join rule makes `implement` wait for `check` and `review`; see [[Fan-Out And Join]].
+- **`review` needs no fingerprint** but must call `set_outcome` (PRD §15). Under PRD §8's ordering, a review that sets no outcome is hidden by its own approval gate. The approval rule runs first (*"set the step instance to `awaiting_approval` and stop"*); the no-outcome check sits inside `advance_task`, which runs only after Approve, and *"approve means pass"*. So a silent review shows as an ordinary gate, never as *"no outcome reported"*. See [[Advancement Rules]].
+- **`check` runs no prompt at all.** *"A `kind='shell'` step runs no model"* (PRD §7). It depends on `implement` and `tests` through edges only.
+- **`implement` is a join by definition** (three incoming edges), though its loop-back edges never block it in practice; see [[Fan-Out And Join]].
+
+## The sources' own proof
+
+PRD §14, M5: *"Proof it works: a deliberately failing test in the scratch repo sends the seeded flow from `check` back to `implement` with the raw log, and a run that sets no outcome stops at a gate instead of passing."*
+
+PRD §15: *"Seed the scratch project's `check_command` with something that exists in the scratch repo."* The seeded skills are *"real local plugin dirs under FlowBoard's `./skills/` … so M5 is testable without any GitHub access."*
 
 ## In the mockups
 

@@ -22,14 +22,14 @@ Where execution's state and by-products live on disk.
 
 *"Only `apps/web` and `apps/worker` open the SQLite file; the MCP shim never does"* (PRD §3). The drawio *SQLite* card: *"the only shared state: opened by apps/web and apps/worker only, never from a sandbox"*. `02` §1: *"keep it the *only* shared-state coupling."*
 
-Because the worker is a separate process, live events go through the database, not memory: the SSE endpoint *"cannot share an in-memory emitter: it tails `run_events` by `seq`"* (PRD §7). `03` §8 calls this a *"deviation from PRD's in-memory emitter — keep it"*.
+Because the worker is a separate process, live events go through the database, not memory: the SSE endpoint *"cannot share an in-memory emitter: it tails `run_events` by `seq`"* (PRD §7). `03` §8 calls this a *"deviation from PRD's in-memory emitter — keep it"*. The label is stale: the current PRD §7 already tails `run_events` ([[Monitor Open Questions]] #40).
 
 ## Per-run files
 
 The runner writes, per run:
 
 - `mcp.json`: points the CLI at the `ask_user` shim, with `RUN_ID` and the socket path as env (PRD §9).
-- `settings.json`: the `PreToolUse` hooks (PRD §7).
+- `settings.json`: the `PreToolUse` hooks (PRD §7). Backlog D5 wants an *empty* `--settings` file per run instead; see [[Run Guardrails At Launch]] and [[Execution Open Questions]] #52.
 - `args.json`: the final command line (PRD §7).
 
 Where `mcp.json` and `settings.json` are written is not stated. *Proposal:* `data/runs/<id>/` beside `args.json`.
@@ -42,8 +42,8 @@ Where `mcp.json` and `settings.json` are written is not stated. *Proposal:* `dat
 
 | Item | Removed |
 |---|---|
-| Run container | *"one per run, destroyed on completion"* (PRD §11.1) |
-| Worktree | *"never remove it automatically"*; a clean-up action once `done` or `cancelled` (PRD §11) |
+| Run container | *"one per run, destroyed on completion"* (PRD §11.1). PRD §7's *Sandboxed runs* paragraph says *"the task's container"* ([[Execution Open Questions]] #61). |
+| Worktree | *"never remove it automatically"*; a clean-up action once `done` or `cancelled` (PRD §11). Backlog 2.1: *"only when done/cancelled/failed"*. Task-detail guide: *"Only offered once the task is finished or cancelled"* ([[Execution Open Questions]] #60). |
 | Run records, events | not stated |
 | Jobs | not stated |
 

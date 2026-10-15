@@ -22,7 +22,7 @@ No mockup draws a Start or Promote button ([[Monitor Open Questions]] #24).
 
 | Control | Where | Key | Engine effect | Money (guides) |
 |---|---|---|---|---|
-| Approve | Monitor needs-you, task detail, inbox | `a` | outcome pass, *"The next step queues immediately"* | *"Free — nothing is re-run, nothing is wasted."* |
+| Approve | Monitor needs-you, task detail, inbox | `a`; in the inbox also `↵` on a gate card | outcome pass, *"The next step queues immediately"* | *"Free — nothing is re-run, nothing is wasted."* |
 | Send back | same | `r` | reject with reason → `on_fail` rework | *"The build's kept spend moves to wasted."* |
 | `esc` | reason box | `esc` | cancels the reason box | — |
 
@@ -44,7 +44,7 @@ Monitor guide: *"Records your answer and hands it to the paused run, which finis
 | Retry (with a note) | escalation gate | *"grants one more attempt … does not reset the counter"* | PRD §8; `POST /api/step-instances/:id/retry` (PRD §12) |
 | Fail task | escalation gate | ends the task | PRD §8; no endpoint |
 | Retry as-is | monitor, inbox failure card | *"Re-queues the run unchanged."* | monitor guide |
-| Allow host & retry | monitor, inbox failure card | *"Adds the blocked host to this step's egress allowlist, then re-queues the run as the next attempt."* | monitor guide |
+| Allow host & retry | monitor, inbox failure card (inbox: `↵`) | *"Adds the blocked host to this step's egress allowlist, then re-queues the run as the next attempt."* | monitor guide; inbox guide draws *"↵ Allow host & retry"*, and the inbox's `Enter` handler runs it on a failure card |
 | Open the log | monitor, inbox failure card | none | monitor, inbox |
 
 The two retry buttons are mockup-only; the PRD's Retry and Fail task are not drawn on any mockup. See [[Failures And Escalated Loops]].
@@ -65,7 +65,7 @@ The two retry buttons are mockup-only; the PRD's Retry and Fail task are not dra
 | Control | Where | Effect on execution |
 |---|---|---|
 | Draft mode | Flow designer topbar, settings | every next run on haiku / low ([[Draft Mode And Spec Transforms]]) |
-| Retries (`max_attempts`) | Flow designer inspector | the loop budget: *"How many attempts before the step gives up and fails the task."* |
+| Retries | Flow designer inspector | the loop budget, mapped as `max_attempts − 1` (a proposal, [[Flow Design Open Questions]] #11); mockup default 2 against the PRD's `max_attempts` default 3. Guide: *"How many attempts before the step gives up and fails the task."* The "fails the task" part conflicts with PRD §8's escalation ([[Execution Open Questions]] #14, #15). |
 | Approval | Flow designer inspector | `advance_mode` |
 | Budget | Flow designer inspector | `max_budget_usd`: *"The most this step may spend on one attempt."* |
 | Expand workers | Monitor | `w`: shows slots; no effect |
@@ -78,10 +78,10 @@ The two retry buttons are mockup-only; the PRD's Retry and Fail task are not dra
 | `r` | Send back (reason box) | monitor, task detail, inbox |
 | `esc` | Cancel the reason box | task detail, inbox |
 | `1`–`9` | Pick an option | inbox, monitor |
-| `↵` | Submit | inbox |
+| `↵` | Submit; on a gate card Approve; on a failure card Allow host & retry | inbox |
 | `w` | Expand worker slots | monitor |
 
-No key is assigned to Start, Stop, Retry, Fail task or Cancel in any source.
+No key is assigned to Start, Stop, the PRD's Retry or Fail task, Retry as-is or Cancel in any source.
 
 ## Related
 

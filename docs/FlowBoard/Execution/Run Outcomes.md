@@ -28,7 +28,7 @@ The runner reads the JSON form during the artifact scan: *"outcome read from the
 
 | Rule | Source wording |
 |---|---|
-| Human wins | *"Approve overrides the agent's `fail` outcome (human wins); reject sets `fail` + reason; reject with no `on_fail` edge fails the task."* (`02` §3; backlog 5.2, tagged **FIX**) |
+| Human wins | *"Approve overrides the agent's `fail` outcome (human wins); reject sets `fail` + reason; reject with no `on_fail` edge fails the task."* (`02` §3; backlog 5.2, tagged **FIX**). The PRD is silent on approving over a `fail`; backlog 10.2 lists *"approve overrides outcome"* as a deviation. |
 | A failing check is a result | *"A non-zero exit here is a result, not a run failure, so it follows the step's edges instead of blocking the task."* (PRD §7) |
 | A failing agent process is not a verdict | *"A non-zero exit from an agent run is an **infrastructure failure**, never a verdict on the work, because work verdicts arrive as outcomes."* (PRD §7) |
 | The review must decide | *"The seeded `/code-review` skill … must call `set_outcome`. It is told to look for failures, not to confirm the work."* (PRD §15) |
@@ -51,7 +51,7 @@ flowchart TD
   FL --> E
 ```
 
-Assembled from PRD §7 and §8. The run's own `state` (`succeeded` / `failed`) tracks the process; the outcome tracks the work.
+Assembled from PRD §7 and §8. The run's own `state` (`succeeded` / `failed`) tracks the process; the outcome tracks the work. For a shell step that exits non-zero, which run state is recorded is not stated: PRD §7's completion rule says `failed`, its shell paragraph says the exit *"is a result, not a run failure"* ([[Execution Open Questions]] #57).
 
 ## Gaps
 

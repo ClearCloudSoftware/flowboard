@@ -50,6 +50,11 @@ From PRD §16 and backlog 10.1:
 - [ ] `implement` and `tests` start at the same time and `review` waits for both
 - [ ] Rejecting a review sends the task back to `implement` as attempt 2, and three failed attempts fail the task *(conflicts with PRD §8; see [[Loop Guard And Escalation]])*
 - [ ] Draft mode forces every step to haiku/low
+- [ ] A question left for 20 minutes parks the run; answering resumes it with the answers in context
+- [ ] With memory disabled (`none`), every flow behaves exactly as in M1–M8 — memory is additive, never a precondition
+- [ ] Recall and commit happen host-side; a sandboxed run needs no egress-allowlist entry for the memory store
+
+The park test does not need to wait 20 minutes: *"timeout overridable by `VIBE_ASK_TIMEOUT_MS` for tests"* (backlog 4.1). The M4 proof uses a test fixture: *"The M4 three-question skill (`ask-three`) is a test fixture loaded by the test setup, not a seed."* (PRD §15)
 
 ## Related
 

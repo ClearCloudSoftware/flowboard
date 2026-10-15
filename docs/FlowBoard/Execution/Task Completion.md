@@ -42,14 +42,16 @@ A spent loop does **not** fail the task under PRD §8; see [[Loop Guard And Esca
 
 The bug the done rule fixes: a conditional edge that never fires left the task in `running` forever. Backlog 5.3 asks for a test: *"conditional edge never fires"*.
 
-> [!example] How a task strands
-> `review` passes, but its only outgoing edge is `on_fail`. Under "no edge fired → done?", nothing fires and nothing marks the task done. Under the fixed rule, there are no active instances and no reachable pending targets, so the task is done.
+> [!example] How a task strands (illustrative)
+> A step fans out to branches A and B, which meet again at join C. A finishes with `pass`, but its only route onward is `on_fail`, so nothing fires from A. B is still running, so the task cannot be done at that moment. B then finishes and its edge to C fires. Now nothing is active, but an edge *did* fire, so the old rule (*"nothing active and no edge fired"*) says "not done". If C waits for A's route as well, C never starts, and the task sits in `running` for ever.
+>
+> Under the fixed rule, C is not a *reachable* pending target, so the task resolves. Whether it should end `done` or `failed` is not stated. The example depends on a join that waits per incoming route, which PRD §8's instance-based wording does not clearly require ([[Execution Open Questions]] #4, #10).
 
 ## After done
 
 - **Summary.** In the seeded flow the last step is `summarize`, producing `summary`, which the task detail diffs against `plan` (PRD §13).
 - **Memory.** After a successful run, the runner `write()`s salient output (PRD §7, §11.2). Nothing extra happens at task done.
-- **Cleanup.** *"offer a "clean up worktree" action; never remove it automatically"* (PRD §11).
+- **Cleanup.** *"offer a "clean up worktree" action; never remove it automatically"* (PRD §11), for a task that reaches `done` or `cancelled`. Backlog 2.1 widens it: *"Cleanup worktree only via explicit action, only when done/cancelled/failed."* The task-detail guide says *"Only offered once the task is finished or cancelled."*
 
 ## Related
 

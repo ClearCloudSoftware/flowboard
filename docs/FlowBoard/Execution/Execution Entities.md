@@ -5,7 +5,7 @@ module: Execution
 
 # Execution Entities
 
-The PRD's warning: *"Get these three distinctions right; everything else follows."* (PRD §4) Execution adds a fourth, the job.
+PRD §4 defines four concepts (flow, step definition, step instance, run) and warns: *"Get these three distinctions right; everything else follows."* The flow is covered in [[Flow Design Index]]. Execution works with the other three, and adds the job.
 
 ```mermaid
 flowchart LR
@@ -39,7 +39,7 @@ Quotes from PRD §4; columns from PRD §5. The drawio *FlowBoard ideation* card 
 
 ## Pins
 
-A task pins two things when it starts:
+A task pins two things, at moments the sources do not agree on ([[Starting A Task]], [[Execution Open Questions]] #2):
 
 - `tasks.flow_id`: *"null while in backlog, pinned on promotion"* (PRD §5). See [[Version Pinning]].
 - `tasks.capability_pins`: *"JSON {plugins:{id:commit_sha}, agents:{id:<agent row>}}, set when the task starts"* (PRD §5). *"Each plugin dir is the commit recorded in the task's `capability_pins`, not the currently installed one, so an update never reaches a running task"* (PRD §7).

@@ -32,6 +32,18 @@ From PRD §11 and backlog 2.1:
 
 `tasks.capability_pins` is *"set when the task starts"* (PRD §5). Whether that is promote or Start is not stated.
 
+> [!warning] Pinned at promotion, or at start?
+> The sources split on when the flow is pinned and the workspace made:
+>
+> | At promotion | At start |
+> |---|---|
+> | PRD §5 `tasks.flow_id`: *"null while in backlog, pinned on promotion"* | PRD §4: *"Flows are version-pinned at task start."* |
+> | PRD §12: *"backlog -> todo, pin flow, create worktree"* | drawio *FlowBoard ideation*: *"Tasks pin flow_id at start"* |
+> | PRD §11: worktree *"On promotion from Backlog to Todo"* | drawio *Functional components*: *"Start task / pin flow version"* |
+> | backlog 2.1: *"Pin `tasks.flow_id` at promotion"* | feature map §3: *"Kicking off a task gives it a clean, private copy of the code to work in and locks in the recipe it will follow."* |
+>
+> While promote and Start were one move, the two readings were the same. Once D1 separates them, "task start" is ambiguous. See [[Execution Open Questions]] #2.
+
 The drawio *Harness architecture* page draws a different worktree path: *"<repo>/.flowboard/worktrees/task-<id> on branch fb/task-<id>"*. See [[Execution Open Questions]] and [[Task Workspace]].
 
 ## What Start does
@@ -46,7 +58,7 @@ No source spells out the steps. From the drawio *Life of one step*:
 2. Create a `pending` step instance for every step definition with `is_entry = 1`.
 3. Enqueue one `start_run` job per entry instance.
 
-How many entry steps a flow may have is a flow-design question; the seeded flow has one (`research`). See [[Step Definitions]].
+How many entry steps a flow may have is not settled. Backlog 5.1's validation lists *"exactly one entry"*, but `02` §2 states the same rule as *"exactly one producer"*, so "entry" there most likely means each `requires` entry, not the flow's entry step ([[Execution Open Questions]] #65). The seeded flow starts at `research`. See [[Step Definitions]].
 
 ## Going back
 
