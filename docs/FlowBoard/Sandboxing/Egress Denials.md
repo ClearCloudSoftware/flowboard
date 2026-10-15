@@ -12,7 +12,8 @@ What happens when a step reaches for a host that is not on its allowlist. The ar
 | Mockup | Task · step | Host | Cost | Wording |
 |---|---|---|---|---|
 | `task-detail.html` | `auth-refactor` · Build | `registry.npmjs.org` | `$0.48` wasted | *"attempt 1 — egress denied: registry.npmjs.org was not in the step allowlist"* |
-| `inbox.html`, `monitor.html` | `billing-webhook` · build | `api.stripe.com` | `$1.44` wasted | *"Attempt 3 of 3 failed — egress denied to api.stripe.com"*; *"The sandbox refused the call: **api.stripe.com** was not on this step's allowlist. Three attempts, $1.44 spent and thrown away."* |
+| `inbox.html` | `billing-webhook` · build | `api.stripe.com` | `$1.44` wasted | *"Attempt 3 of 3 failed — egress denied to api.stripe.com"*; *"The sandbox refused the call: **api.stripe.com** was not on this step's allowlist. Three attempts, $1.44 spent and thrown away."* |
+| `monitor.html` (*Needs you* card, rendered from a template) | `billing-webhook` · build | `api.stripe.com` | `$1.44` wasted | *"Attempt 3 of 3 failed — egress denied — api.stripe.com not in the step allowlist. $1.44 spent on the attempts so far."* |
 
 Task-detail guide: *"**Wasted** — spend on attempts that were thrown away. Here, $0.48 on a build the sandbox killed for reaching registry.npmjs.org, which wasn't on that step's allowlist."* And: *"The host is on the allowlist now, so the next task down this flow will not pay it again."*
 
