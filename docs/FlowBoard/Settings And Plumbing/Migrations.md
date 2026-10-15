@@ -14,7 +14,7 @@ module: Settings And Plumbing
 | *"Migrations via drizzle‑kit; migrator runs on first open."* — **PRD** | backlog 1.1 |
 | M1 is *"Next.js + Tailwind + shadcn + Drizzle + schema + migrations"* | PRD §14 |
 | *"later milestones depend on earlier schema being correct"* | PRD §0 |
-| Drawio code layout: *"packages/db : Drizzle schema + migrations"* | drawio *Harness architecture* |
+| Drawio code layout: *"packages/db: Drizzle schema + migrations"* | drawio *Harness architecture* |
 
 That is everything the sources say about migrations. There is no migration policy, naming scheme or rollback rule.
 

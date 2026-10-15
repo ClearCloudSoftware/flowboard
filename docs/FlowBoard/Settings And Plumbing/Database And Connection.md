@@ -35,7 +35,7 @@ export const db = (g.__fbdb ??= open(process.env.VIBE_DB_PATH!)); // WAL, busy_t
 
 ## Who may open it
 
-PRD §3: *"Only `apps/web` and `apps/worker` open the SQLite file; the MCP shim never does."* Sandboxed agents never see it: *"Never mount host secrets (`~/.ssh`, cloud credentials), the host DB, or the Docker socket."* (PRD §11.1). The drawio mount list: *"never : ~/.ssh, cloud credentials, flowboard.db, docker.sock"*.
+PRD §3: *"Only `apps/web` and `apps/worker` open the SQLite file; the MCP shim never does."* Sandboxed agents never see it: *"Never mount host secrets (`~/.ssh`, cloud credentials), the host DB, or the Docker socket."* (PRD §11.1). The drawio mount list: *"never: ~/.ssh, cloud credentials, flowboard.db, docker.sock"*.
 
 ## The database as a queue and a bus
 
