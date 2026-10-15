@@ -69,7 +69,7 @@ Only successes commit (PRD §7, §11.2). The mockup's task memory *"Attempt 1 di
 
 ### 14. Shell and manual steps
 
-A shell step's run has no answers and one artifact, `check_output`; a non-zero exit is still a successful run with outcome `fail` (PRD §7). Does it commit? Manual steps have no run. Not stated.
+A shell step's run has no answers and one artifact, `check_output`. PRD §7 reads two ways on a non-zero exit. Its *Completion* rule says *"On non-zero exit, set `failed`"*, which would rule out a commit. Its *Shell steps* paragraph says *"A non-zero exit here is a result, not a run failure"*, with outcome `fail`, which would allow one. Which run state a failing check records is [[Execution Open Questions]] #57. Either way, no source says whether a shell run commits at all. Manual steps have no run. Not stated.
 
 ### 15. Commit before or after advancement?
 
