@@ -62,8 +62,8 @@ Partial lists elsewhere: `03` §6 names only *"(container/microVM)"* as sandbox 
 
 *"Managed sandbox platforms — E2B and Daytona (Firecracker / container microVMs, ~90–150ms cold start), Modal (gVisor): the cloud version of this, if FlowBoard ever grows a `remote` tier."* (`08`). The drawio's *Container workspace* adapter reads *"devcontainer · Docker sandbox · remote host"*, dashed (not in v1).
 
-> [!note] Same title in Workspaces
-> The Workspaces set has its own note called *Isolation Tiers* (`Workspaces/Isolation Tiers.md`), on the tier as a property of the workspace. [[ExecHost Seam]] links to it.
+> [!note] The workspace view
+> The Workspaces set covers the tier as a property of the workspace in [[Workspace Isolation Tiers]], and links back here for the tiers themselves.
 
 ## Related
 
