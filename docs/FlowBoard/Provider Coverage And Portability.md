@@ -1,0 +1,55 @@
+---
+tags: [flowboard, capability-library, providers]
+module: Capability Library
+---
+
+# Provider Coverage And Portability
+
+## The rule
+
+**A pack's provider has to match the step's provider.** A capability with no Claude pack cannot run on a Claude step, and vice versa. Steps name their provider individually, so one flow can mix providers.
+
+The architecture states the same rule as validation: *"the flow editor references them by id; validation checks the pack's provider matches the step's provider"* (`05-environment-and-registry.md` §13).
+
+## Where it is enforced
+
+**In the flow editor, at design time — not at run time.** You find out while designing, not when a task is halfway through.
+
+> [!danger] Not a soft warning
+> A step set to run on Codex CLI can't use a capability with no Codex pack. The flow editor refuses to save that combination. It is the same kind of block as a step needing a file nothing writes (the artifact contract).
+
+## How the library shows it
+
+- **Detail pane, packs block** — one row per provider:
+  - `Claude Code — installed v1.3 · 2 Sep` with a solid teal `claude` mark
+  - `Codex CLI — not packaged for this provider` with a dashed `codex` mark
+- **Callout** — either *"No Codex CLI pack. A step set to run on Codex CLI can't use this…"* (amber) or *"Packaged for both providers. Any step can use it, whichever agent CLI it runs on."* (teal)
+- **Rail row meta** — the providers it is packaged for, e.g. `claude · codex`
+- **Provider filter** — `Any` / `Claude Code` / `Codex CLI`, each with a count
+- **Status bar** — `codex packs for 7 of 17`
+
+## The portability budget
+
+`codex packs for N of M` is how much of the library survives switching a flow to another agent CLI. Most capabilities start life packaged for one provider, so **every one-provider install spends that budget** — installing `dependency-audit` (Claude only) turns *7 of 17* into *7 of 18*.
+
+## Three ways out when a step refuses
+
+1. **Switch the step to Claude.** Steps name their provider individually.
+2. **Package it for Codex.** Same logical capability, a second pack in that provider's format.
+3. **Use something else.** Filter the rail to `Codex CLI` and see what the portable capabilities can do instead.
+
+None of these is a workaround — they are the three honest options.
+
+## Supporting machinery
+
+- **Capability negotiation.** Providers advertise a set of capability flags. `plugins` means *can mount CapabilityPacks as plugin dirs*; without it a pack must use the `system_prompt` or `native` mount kind. The Codex adapter may lack `plugins` (`06-cost-and-platform.md`).
+- **Capability contract.** Flow validation's second check: every knob a step uses is supported by its target provider (`02-core-and-engine.md`). Provider-match of packs is the library-facing half of that.
+- **Adding Codex** requires, among four items, *"Codex-format `CapabilityPack`s for any skills used by flows targeting it"*, and zero changes to engine, board, HITL, notifier, costs, viewer and API.
+- **Seeded skills as reference implementation** — the seeded plugin dirs double as the reference for a second provider's pack format.
+
+## Related
+
+- [[Capability Versus Provider Pack]]
+- [[Capabilities In Flows]]
+- [[Capability Runtime Mounting]]
+- [[Installing A Capability From GitHub]]
