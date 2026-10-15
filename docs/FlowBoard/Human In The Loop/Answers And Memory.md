@@ -26,13 +26,13 @@ flowchart LR
   P --> Q[Agent doesn't ask again]
 ```
 
-| Scope | Written from (`09`) |
-|---|---|
-| `user` | *"answered questions (§9), rejections"* |
-| `agent` | *"questions `/grill-me` has settled"* |
-| `task` | *"why attempt 1 failed"* |
+| Scope (`09`) | Holds | Written from |
+|---|---|---|
+| `user` | *"recurring answers"* | *"answered questions (§9), rejections"* |
+| `agent` | *"questions `/grill-me` has settled"* | *"that agent's own run outputs"* |
+| `task` | *"why attempt 1 failed"* | *"each run in the task"* |
 
-Commit happens *"after a run succeeds"* and reads *"from **declared artifacts and answers only**, never raw agent output"* (PRD §11.2). The drawio *Functional components* edge: *Human in the loop → Memory · answers → memory*. Its card: *"Remembers your answers / A preference answered once stops surfacing in the inbox on the next task."*
+Commit happens *"after a run succeeds"* and reads *"from **declared artifacts and answers only**, never raw agent output"* (PRD §11.2). The drawio *Functional components* edge: *Human in the loop → Memory · answers → memory*. The *FlowBoard ideation* page's memory card: *"Remembers your answers / A preference answered once stops surfacing in the inbox on the next task."*
 
 ## Recalled answers are context
 
@@ -45,7 +45,7 @@ Recall becomes the prompt's seventh part: *"context you've learned before (backg
 - Idea: *"a shared team memory … so a question answered once helps everyone instead of just the person who answered it."* (feature map §21)
 
 > [!note] Undo and memory
-> If the undo window is kept ([[Answering Rules]]), an answer could be undone after the resumed run has read it or after memory has committed it. No source covers this. See [[Human In The Loop Open Questions]] #16.
+> If the undo window is kept ([[Answering Rules]]), an answer could be undone after memory has committed it. Backlog D2 recommends web-side undo *"only while no agent is waiting"*, which keeps an undo away from a run that already has the answer. No source covers undo after a memory commit. See [[Human In The Loop Open Questions]] #16.
 
 ## Related
 

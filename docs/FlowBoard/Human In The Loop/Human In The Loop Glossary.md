@@ -9,7 +9,7 @@ module: Human In The Loop
 |---|---|
 | **Question** | One thing an agent asks you, stored as a `questions` row: `prompt`, optional `help`, a `kind`, `options` for the select kinds, `required` (PRD §5). See [[Questions]]. |
 | **Kind / shape** | The question's form: `yes_no`, `single_select`, `multi_select`, `text`, `number` (PRD §5, `question.ts`). The inbox guide calls them *shapes* and labels them *yes / no, pick one, pick many, a number, free text*. See [[Question Shapes]]. |
-| **Batch** | Questions asked together by one step, sharing a `batch_id` (PRD §5). Asked with `ask_user_batch`, answered and submitted as one. See [[Question Batches]]. |
+| **Batch** | Questions asked together by one step, sharing a `batch_id` (PRD §5). Asked with `ask_user_batch`. The mockup submits a batch as one; the PRD answers one question per call (Open Questions #15). See [[Question Batches]]. |
 | **Card** | One item in the inbox queue. Four kinds: question, batch, gate, failure (inbox guide). See [[Inbox Card Kinds]]. |
 | **Gate** | A step instance in `awaiting_approval`, waiting for Approve or Send back. It is set by `advance_mode='approval'`, a missing outcome, or a spent or stuck loop (PRD §8). |
 | **Approve** | Clear a gate: the step counts as passed and the next step queues. *"approve means pass"* (PRD §8). |
@@ -24,7 +24,7 @@ module: Human In The Loop
 | **Escalation threshold** | How long a question waits before escalation: `settings.escalation_threshold_ms`, default 5 minutes (`04` §10). The inbox mockup uses 10. See [[Human In The Loop Open Questions]] #18. |
 | **First write wins** | Of two answers to the same question, the first stored one counts. The second submitter sees *"already answered by <channel>"* (PRD §10). |
 | **Reconciliation** | Keeping web and chat in step: a chat answer repaints the inbox, a web answer repaints the chat message (`chat.update`) (PRD §10). |
-| **Notifier** | The port behind escalation. Slack is the v1 adapter; Discord, email and webhook are later ones (`01-ports.md`). |
+| **Notifier** | The port behind escalation. Slack is the adapter the PRD builds; Discord, email and webhook are others (`notifier.ts`). The drawio orders them: *"Slack today → Discord, email, webhook, desktop tomorrow"*. |
 | **`inline_answer` / `link_only`** | Notifier capabilities. An `inline_answer` channel renders native controls; a `link_only` channel sends *"a deep link to `/inbox`"* (`01-ports.md`). |
 | **`answered_via`** | The channel an answer came through, `'web' \| 'slack'` (PRD §5). The mockup shows it as a `web` / `slack` tag. |
 | **Waiting on me / Everyone** | The inbox topbar filter (mockup). The schema has no notion of *who*: see Open Questions #4. |

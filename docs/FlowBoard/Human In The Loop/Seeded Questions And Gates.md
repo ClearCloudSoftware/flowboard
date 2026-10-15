@@ -14,7 +14,7 @@ What ships so the question loop and the gates work on first run, and the mockups
 | Step | HITL role | Source |
 |---|---|---|
 | `grill` (*Grill me*, skill `/grill-me`, sonnet medium) | The asker. Requires `research_brief`, produces `questions`, `answers` | PRD §15 |
-| `explain` (*Explain plan*, `/explain-simply`, haiku low) | **approval** gate, *"the cheap point to stop a bad plan before two opus-high steps run"* (**D26**) | PRD §15 |
+| `explain` (*Explain plan*, `/explain-simply`, haiku low) | **approval** gate, *"the cheap point to stop a bad plan before two opus-high steps run"* (Capability Library **D26**) | PRD §15 |
 | `review` (*Code review*, `reviewer` + `/code-review`, opus high) | **approval** gate; *"must call `set_outcome`"*; `on_fail` → `implement` | PRD §15 |
 | `check` (shell) → `implement` on `on_fail` | Spent or stuck loops escalate to a gate | PRD §8, §15 |
 
@@ -26,7 +26,7 @@ Acceptance: *"`explain` and `review` stop and wait for my approval; the rest adv
 |---|---|---|
 | `grill-me` | *"uses `ask_user_batch` and honours `no_answer_yet`"* | backlog Story 1.2; `05` §13 |
 | `code-review` | *"calls `set_outcome`"*; *"told to look for failures, not to confirm the work"* | backlog Story 1.2, PRD §15 |
-| `ask-three` | The M4 smoke test: *"a trivial skill that asks three questions of different kinds"*. **A test fixture, not a seed** (**D30**) | PRD §14, §15 |
+| `ask-three` | The M4 smoke test: *"a trivial skill that asks three questions of different kinds"*. **A test fixture, not a seed** (Capability Library **D30**) | PRD §14, §15 |
 
 ## Seeded artifact types
 

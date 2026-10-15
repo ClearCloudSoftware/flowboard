@@ -32,7 +32,8 @@ The monitor's *needs you first* sort *"ranks failed above waiting above running"
 |---|---|
 | PRD §10 | *"Group by task."* |
 | Feature map §12 | *"Grouped by task, each with the right control for its question type."* |
-| `04` §9, backlog Story 4.3 | *"one card per `batch_id`"* |
+| `04` §9 | *"one card per `batch_id`"* |
+| Backlog Story 4.3 | *"One card per batch"* |
 | Old design handoff | Batches grouped by `(taskId, stepRunId)`; *"a batch renders as one card"* |
 | Inbox mockup | One card per batch, per lone question, per gate and per failure. Two items from one task would be two cards |
 
@@ -40,7 +41,7 @@ See Open Questions #3.
 
 ## One open card
 
-The rule the keyboard rests on: *"there is only ever one open card, so a key never has to ask 'which one?'"* (inbox guide). The first visible card opens on load. Answering closes it and opens the next at the same position (mockup `resolve()`): *"You never chose what to work on next."*
+The rule the keyboard rests on: *"there is only ever one open card, so a key never has to ask 'which one?'"* (inbox guide). The first visible card opens on load. Answering closes it and opens the next at the same position (mockup `resolve()`). The guide's walkthrough: *"You never chose what to work on next."*
 
 ## The filter
 

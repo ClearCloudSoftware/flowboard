@@ -14,8 +14,8 @@ The full Notifier component has its own tracker row (*Escalation And Notificatio
 | Rule | Source |
 |---|---|
 | *"When a question is inserted, enqueue an `escalate_question` job with `run_after = now + 5 minutes`. If the question is still `pending` when the job runs, post to Slack via `chat.postMessage` using Block Kit"* | PRD §10 |
-| *"`escalate_question` at `now + settings.escalation_threshold_ms` (default 5 min); skip if answered or already posted."* | backlog Story 6.1, `04` §10 |
-| *"No token configured → log and continue (channel is optional)."* | `04` §10, PRD §10 |
+| *"`escalate_question` at `now + settings.escalation_threshold_ms` (default 5 min); skip if answered or already posted."* | backlog Story 6.1 (`04` §10: *"skip if already answered or posted"*) |
+| *"No token configured → log and continue (channel is optional)."* | `04` §10 (PRD §10: *"If the token is absent, log the escalation and carry on — Slack is optional."*) |
 | The threshold is a setting: *"escalation threshold (minutes)"*; feature map §19 *"Nudge timing"* | `06` §15, backlog Story 8.3 |
 
 > [!warning] 5 or 10 minutes?
@@ -64,14 +64,14 @@ sequenceDiagram
   end
 ```
 
-The guide's two endings: *"Answer here and the chat message updates to show it's handled. Answer in chat and the card closes here."* The walkthrough's chat message reads *"handled by you · just now"*. The toast reads *"dana answered pdf-import · plan in chat — it's closed here too"*.
+The guide's two endings: *"Answer here and the chat message updates to show it's handled. Answer in chat and the card closes here."* The walkthrough's chat message reads *"handled by you · just now"*. The mockup's toast reads *"dana answered pdf-import · plan in chat — it's closed here too"*; the guide's walkthrough uses `provider-codex · research`.
 
 ## Security
 
 *"Handle interactions at `POST /api/slack/interactions` (verify the signing secret)."* (PRD §10). Backlog Story 6.2: *"v0 HMAC on the raw body, 300 s replay window, `timingSafeEqual`."* `04` §10: *"Security stays in the adapter."* Config: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_CHANNEL_ID` in `.env.local` (PRD §10).
 
 > [!warning] HTTP or Socket Mode?
-> The drawio *Harness architecture* has *"Slack Socket Mode + Block Kit, so no public URL"* and *"Socket Mode WebSocket, outbound only"*. That conflicts with the PRD's inbound HTTP endpoint. See Open Questions #21.
+> The drawio *Harness architecture* has *"Slack Socket Mode + Block Kit, so no public URL"* and *"Socket Mode WebSocket, outbound only"*. That conflicts with the PRD's inbound HTTP endpoint. The drawio's other pages keep an HTTP-style check (*"Signature check on Slack interactions"*, *"Verify inbound / signature check on interactions"*), so the drawio disagrees with itself. See Open Questions #21.
 
 ## The Notifier port
 

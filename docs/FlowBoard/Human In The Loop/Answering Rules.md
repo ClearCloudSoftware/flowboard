@@ -48,8 +48,8 @@ In the mockup, picks live in a client-side `answers` map until **Send answer** o
 > [!warning] Undecided
 > - Feature map §11: *"❓ Keep a short 'undo' window after you answer, or make answers final."*
 > - Backlog Story 4.4: *"**Decide:** keep the 10 s undo (costs 10 s per batch for the agent and delays resumes) or drop it and make Slack/web answers final. If kept: hold only in the web path, not inside the MCP tool."* Plus `POST /api/questions/:id/unanswer` and `chat.update` on undo.
-> - Decision **D2**: *"Drop from the MCP path; keep web-side undo only while no agent is waiting."* The drawio card *D2 · Keep the 10 s undo window?* gives the same default.
-> - The old handoff has an `undo` link on answered rows, matching *"the 10s collapse"*. `04` §10 and `01-ports.md` repaint *"on web answer, channel answer, and undo"*.
+> - Backlog decision D2, a default recommendation: *"Drop from the MCP path; keep web-side undo only while no agent is waiting."* The drawio card *D2 · Keep the 10 s undo window?* gives the same default.
+> - The old handoff has an `undo` link on answered rows, matching *"the 10s collapse"*. `04` §10 repaints *"on web answer, channel answer, and undo"*, and `01-ports.md` says *"repaint on answer/undo"*.
 > - The inbox mockup has no undo.
 >
 > See [[Human In The Loop Open Questions]] #16.

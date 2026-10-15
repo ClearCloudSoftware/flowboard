@@ -9,7 +9,7 @@ module: Human In The Loop
 
 ## What a question is
 
-A question is one thing a running agent needs you to decide. The agent asks through the `ask_user` or `ask_user_batch` MCP tool. Without MCP, it asks by writing a `questions` artifact and exiting (`04` §9). Either way each question becomes a row in `questions`, and the broker is the only process that writes those rows (PRD §9).
+A question is one thing a running agent needs you to decide. The agent asks through the `ask_user` or `ask_user_batch` MCP tool. On that path each question becomes a row in `questions`, and the broker is the only process that writes those rows (PRD §9). Without MCP, the agent writes a `questions` artifact and exits, and *"that **is** the batch"* (`04` §9). No source says whether fallback questions also become rows ([[Human In The Loop Open Questions]] #8).
 
 ## The one schema
 
@@ -42,7 +42,7 @@ export interface Question {
 | `help` | Optional help text, shown under the question. The mockup's `note` (e.g. *"Streaming is cheaper but holds a connection open for the whole export."*) | PRD §5, old design README 1a |
 | `kind` | One of five shapes | PRD §5. See [[Question Shapes]] |
 | `options` | *"JSON array of {value,label} for select kinds"* | PRD §5 |
-| `required` | Default 1. *"a run parks only while a required question is unanswered"* | PRD §5, `question.ts` |
+| `required` | Default 1 (PRD §5). *"a run parks only while a required question is unanswered"* (`question.ts`) | PRD §5, `question.ts` |
 | `batch_id` | *"groups questions asked together"* | PRD §5. See [[Question Batches]] |
 | `task_id`, `step_instance_id`, `run_id` | Where the question came from | PRD §5 |
 | `state` | `pending \| answered \| expired \| cancelled` | PRD §5. See [[Question Lifecycle]] |

@@ -51,12 +51,12 @@ Backlog Story 4.1 adds the environment: *"env `TASK_ID`, `STEP_INSTANCE_ID`, `RU
 
 Without the `mcp_tools` capability, *"HITL uses the artifact-file fallback (agent writes questions.json, exits)"* (`agent-provider.ts`). `04` §9: *"the engine watches the `produces:questions` path; when the agent writes it and exits, that **is** the batch. … So HITL genericizes to 'MCP where available, file protocol universal.'"*
 
-Under **D1** (v1 is Claude-only) every v1 run has MCP. The fallback matters for a second provider: `01-ports.md` says that if Codex can't take an injected `ask_user`, *"the artifact-file HITL fallback is mandatory, not optional."*
+Under Capability Library **D1** (v1 is Claude-only) every v1 run has MCP. The fallback matters for a second provider: `01-ports.md` says that if Codex can't take an injected `ask_user`, *"the artifact-file HITL fallback is mandatory, not optional."*
 
 ## Old build lessons
 
 > [!bug] Backlog *What went wrong the first time*, item 5
-> *"Undo window (10 s) was bolted onto the MCP tool: every answered batch now delays the agent 10 s, and parked resumes are delayed the same way. Not in the PRD."* Decision **D2**: *"Drop from the MCP path; keep web-side undo only while no agent is waiting."* See [[Answering Rules]].
+> *"Undo window (10 s) was bolted onto the MCP tool: every answered batch now delays the agent 10 s, and parked resumes are delayed the same way. Not in the PRD."* Backlog decision D2's default recommendation (still open; Story 4.4 is tagged **DEC**): *"Drop from the MCP path; keep web-side undo only while no agent is waiting."* See [[Answering Rules]].
 
 ## Related
 

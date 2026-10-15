@@ -18,7 +18,7 @@ stateDiagram-v2
   pending --> answered: first answer (web or slack)
   pending --> cancelled: run fails / task cancelled
   pending --> expired: never set today
-  answered --> pending: undo? (backlog 4.4, undecided)
+  answered --> pending: undo? (target state inferred)
   answered --> [*]
   cancelled --> [*]
 ```
@@ -30,7 +30,7 @@ stateDiagram-v2
 | → `answered` | *"First write wins via a conditional UPDATE"*; set `answer`, `answered_at`, `answered_via` | backlog Story 6.2, PRD §10 |
 | → `cancelled` | *"On any run failure, cancel that step's pending questions so they stop escalating."* Task cancel: *"SIGTERM live runs, cancel pending questions, mark instances skipped."* | `04` §9, backlog Story 2.1 |
 | → `expired` | *"Either use `questions.state='expired'` or remove it. Today it is never set."* (**BUG**) | backlog Story 1.1 |
-| `answered` → `pending` | `POST /api/questions/:id/unanswer` + `chat.update` on undo (**NEW**), if the undo window is kept | backlog Story 4.4 |
+| `answered` → `pending` | `POST /api/questions/:id/unanswer` + `chat.update` on undo (**NEW**), if the undo window is kept. The backlog names only the endpoint; `pending` as the target state is inferred | backlog Story 4.4 |
 
 ## The step instance and the run
 

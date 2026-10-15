@@ -20,7 +20,7 @@ PRD §16 acceptance items for HITL:
 - *"Leaving a question for 5 minutes posts it to Slack; answering in Slack updates the web UI live, and vice versa"*
 - *"A question left for 20 minutes parks the run; answering resumes it with the answers in context"*
 - *"`explain` and `review` stop and wait for my approval; the rest advance automatically"*
-- *"Rejecting a review sends the task back to `implement` as attempt 2, and three failed attempts fail the task"* (this conflicts with D3's *escalate, never auto-fail*: [[Flow Design Open Questions]] #11)
+- *"Rejecting a review sends the task back to `implement` as attempt 2, and three failed attempts fail the task"* (this conflicts with backlog D3's *escalate, never auto-fail*: [[Flow Design Open Questions]] #11)
 
 Backlog Epics 4 (question loop) and 6 (Slack escalation) carry these as stories, with the **BUG/FIX/GAP** items listed in [[Human In The Loop Runtime]].
 
@@ -64,7 +64,7 @@ Backlog Epics 4 (question loop) and 6 (Slack escalation) carry these as stories,
 - *"authentication, user accounts, roles"* (PRD §17), so there is no real *who* for a filter or a stamp.
 - *"No auth, no multi-tenancy, no user table. Do not add them 'for later'"* (PRD §2).
 - Channels beyond Slack (*"Slack is optional"*, PRD §10). The Notifier port allows them later.
-- The artifact-file fallback in practice: v1 is Claude-only (**D1**), so every run has MCP.
+- The artifact-file fallback in practice: v1 is Claude-only (Capability Library **D1**), so every run has MCP.
 - *"A shared team tier"* (feature map *Parking lot*).
 
 ## Related

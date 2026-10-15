@@ -20,7 +20,7 @@ module: Human In The Loop
 | Approve | `a` | *"Clears an approval gate. The next step queues immediately."* |
 | Send back | `r` | *"Opens a one-line reason box. The reason is handed to the next attempt."* |
 | Allow host & retry | — | *"On a failure: adds the blocked host to that step's allowlist, then re-queues the run."* |
-| Retry as-is | — | Re-queues the failed run unchanged (mockup; wording from the monitor guide) |
+| Retry as-is | — | Re-queues the run unchanged: *"For failures that aren't about the network — a flaky test, a rate limit, a transient error."* (monitor guide) |
 | Open the task / Open the log | — | Present in the mockup but not wired |
 | Send back · Cancel (reason form) | `↵` / `esc` | Submit or close the reason box |
 
@@ -57,8 +57,8 @@ Keys are ignored while focus is in an input or textarea, or with `⌘`/`Ctrl`/`A
 
 > [!warning] Three things to fix before building
 > - **`↵` approves a gate.** The guide lists `↵` as *"Submit the card"*, and the status bar lists approval under `a`. In the mockup, `↵` on an open gate approves it. See [[Human In The Loop Open Questions]] #29.
-> - **No keyboard submit from a field.** Typing in the number or text field sends keys to the field, and `↵` there does nothing. The PRD's text control submits with `Cmd+Enter`. See #30.
-> - **Accessibility is thin.** The mockup gives `aria-label`s to the number and text fields and the pips, `aria-expanded` to card headers and `aria-pressed` to the filter chips. Option buttons have no group role. Backlog Story 9.4 asks for *"labels for every control"*.
+> - **No submit from inside a field.** Typing in the number or text field sends keys to the field, and `↵` there does nothing; you have to `Tab` to the button first. The PRD's text control submits with `Cmd+Enter`. See #30.
+> - **Accessibility is thin.** The mockup gives `aria-label`s to the number and text fields and the pips, `aria-expanded` to card headers and `aria-pressed` to the filter chips. Option buttons have no group role. Backlog Story 9.4 asks for *"labels for every control"*. See #35.
 
 ## The key maps across sources
 

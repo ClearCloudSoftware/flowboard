@@ -26,6 +26,8 @@ The inbox at `flowboard/inbox` (route `/inbox`, PRD §10, §13). Sources: `docs/
 └──────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+The sketch follows the guide's anatomy schematic. The live mockup's status bar reads `5 open · 4 on you` until dana's chat answer, because *open* counts every card, including ones waiting on someone else.
+
 | # | Region | Guide wording |
 |---|---|---|
 | 1 | **Count** | *"Amber while anything waits, green when it doesn't. The filter switches between what's on you and what's on the team."* |
@@ -47,7 +49,7 @@ Closed: icon (`✕` failure, `‖` gate, `?` question or batch), `task · step`,
 
 | Block | Sample (mockup) |
 |---|---|
-| running now | `sandbox-egress` build opus; `mem0-adapter` build opus; `mem0-adapter` tests sonnet; `docs-pass` research haiku. A task with parallel branches gets two rows |
+| running now | `sandbox-egress` build opus; `mem0-adapter` build opus; `mem0-adapter` tests sonnet; `docs-pass` research haiku. `mem0-adapter` appears once per branch, as the old handoff specifies: *"Parallel branches appear as two rows with the same task title and different steps."* |
 | costing you | `$20.28 /hr` (the per-minute rates of running runs × 60); today `$19.46`; wasted `$2.55` |
 | next decision | *"In about 4 minutes, when sandbox-egress reaches its review gate."* |
 | answered today | questions `11`; median reply `3m 20s`; from chat `3 of 11` |
@@ -78,7 +80,7 @@ The old handoff's right rail (320 px) had *Running now* with live cost and `mode
 3. **The batch opens itself**: *"You never chose what to work on next."*
 4. **Five shapes, one keyboard.**
 5. **Submit all five**: *"One submission, one resume."*
-6. *Answer here*: **You answer the escalated one here**, then **The gate, and empty**. *Or in chat*: **A teammate answers it in chat** (*"your cursor did not move"*), then **The record says where it came from**.
+6. *Answer here*: **You answer the escalated one here**, followed by **Then the gate, and empty**. *Or in chat*: **A teammate answers it in chat** (*"your cursor did not move"*), then **The record says where it came from**.
 
 ## Look
 

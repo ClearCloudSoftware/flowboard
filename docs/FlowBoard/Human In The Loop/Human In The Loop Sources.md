@@ -8,14 +8,19 @@ module: Human In The Loop
 Every fact in these notes comes from the files below (paths relative to the repo root).
 
 > [!note] Source revision
-> These notes follow the sources as of commit `0a60ef0` (2026-10-15) on `dev`, and take the [[Capability Library Decisions]] (D1, D26–D30) as settled.
+> These notes follow the sources as of commit `0a60ef0` (2026-10-15) on `dev`, and take the [[Capability Library Decisions]] (D1, D26–D30) as settled. Bare **D**-numbers from the backlog's *Decisions to close* table are written "backlog D*n*", and those from the Capability Library as "Capability Library D*n*".
+>
+> A grounding pass on 2026-10-15 corrected three bugs in `docs/mockups/inbox.html`, so it now matches its own guide:
+> - An untouched number default now counts as an answer.
+> - *Retry as-is* no longer runs *Allow host & retry*.
+> - The queue really sorts oldest first, including under *Everyone*.
 
 ## Primary
 
 | File | What it contributes |
 |---|---|
 | `docs/mockups/inbox.html` | The screen: topbar count and filter, queue, context panel, status bar, toast. `ITEMS` (failure, batch, two questions, gate), `RUNNING`, `ANSWERED`. `control()` and `answered()` per shape. Card bodies for each kind, the reason form, `resolve()` (cursor rule, 200 ms fade), `submit()`, keyboard handler (`j`/`k`, arrows, `1`–`9`, `↵`, `a`, `r`, `esc`), `ESCALATE = 10 * MIN`, the 3-minute *escalates in* window, the simulated Slack answer at 9 s |
-| `docs/mockups/inbox-guide.html` | Anatomy (4 regions), *Oldest first, not most important*, the five shapes table, *Free text is the escape hatch*, the four card kinds table, *Why five questions are one card*, batch elements table, *a parked run is not billing you*, the state strip, the escalation timer, *Whoever answers first wins*, the cursor rule, the 9-beat walkthrough with two endings, every control, keyboard, *Number keys toggle in a pick-many* |
+| `docs/mockups/inbox-guide.html` | Anatomy (4 regions), *Oldest first, not most important*, the five shapes table, *Free text is the escape hatch*, the four card kinds table, *Why five questions are one card*, batch elements table, *a parked run is not billing you*, the state strip, the escalation timer, *Whoever answers first wins*, the cursor rule, the 7-beat walkthrough (5 common beats + 2 per ending), every control, keyboard, *Number keys toggle in a pick-many* |
 | `docs/feature-map.md` §11, §12, §13 | Ask in batches, pause and pick back up, one shared format, ❓ undo; inbox most-urgent first, grouped by task, keyboard, sync, context panel; escalate after a wait, answer from anywhere, more channels; ideas (my inbox, shared pool, nudge the right person, escalation ladder) |
 | `docs/feature-map.md` §2, §3, §4, §5, §10, §19, §20, §21, *Across everything*, parking lot, appendix | Assign a step to a person or role; owner, @mention, separation of duties; silence isn't success, retry limit, stuck, hiccups, *your call wins*, route to a teammate, two sign-offs; *waiting on Alice*; ❓ asking from a sealed box; nudge timing; live updates; remember your answers, shared team memory; teams foundation; trends dashboard; the handoff relay |
 | `docs/old/PRD.MD` | §1 *park and wait*; §2 SSE, no user table; §3 layout (`core`, `notify`, worker broker and escalation timer, `mcp-shim`); §4 loops guarded; §5 `questions`, `step_instances`, `runs`, `jobs`; §6 `questions`/`answers` types and disk layout; §7 closing instruction, `mcp__vibe__*`, infra-failure classes; §8 approval, `awaiting_answers`, no outcome, escalate-don't-fail, Retry / Fail task; §9 broker, shim, four tools, 2 s poll, 20-min sentinel, park, resume, prefer batching; §10 inbox, controls per kind, escalation, Block Kit, idempotency, reconciliation, Slack config, content rule; §11.1 socket mount; §11.2 memory; §12 endpoints; §13 board dots, sheet Approve/Reject, `/inbox`, *Dark-first*; §14 M4, M5, M6, M9; §15 seeded gates and `grill`; §16 acceptance; §17 out of scope |

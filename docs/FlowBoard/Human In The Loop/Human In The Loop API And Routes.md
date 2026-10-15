@@ -42,7 +42,7 @@ From the backlog:
 | Endpoint | Source |
 |---|---|
 | `POST /api/questions/:id/unanswer` | Story 4.4 (**NEW**), only if the undo window is kept |
-| `/api/inbox/summary` | Story 4.3 names it as one of *"three overlapping pollers"* in the old build, to be collapsed into one SSE stream |
+| `/api/inbox/summary` | Story 4.3: two of the old build's *"three overlapping pollers"* (`/api/inbox/summary` ×2 + `/api/questions?state=pending`), to be collapsed *"into one"*. `04` §9 makes that one the SSE snapshot stream |
 
 ## Live updates
 

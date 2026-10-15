@@ -247,7 +247,7 @@ const ANSWERED = [
 let filter = 'mine', focus = null, answers = {}, cursor = {}, rejecting = false, toast = null;
 let answeredToday = 11;
 
-const visible = () => ITEMS.filter(it => filter === 'all' || it.who === 'you');
+const visible = () => ITEMS.filter(it => filter === 'all' || it.who === 'you').sort((a, b) => a.since - b.since);
 const isEscalated = it => waited(it) >= ESCALATE;
 
 function ensureFocus(){
@@ -282,6 +282,7 @@ function answered(itKey, qi, q){
   const a = answers[itKey + ':' + qi];
   if (q.type === 'text') return true;                 // free text may be left blank
   if (q.type === 'many') return Array.isArray(a) && a.length > 0;
+  if (q.type === 'num') return String(a ?? q.def ?? '') !== '';  // leaving the default is an answer
   return a !== undefined && a !== '';
 }
 
@@ -336,7 +337,7 @@ function bodyHTML(it){
   return `<p class="bt-q">${it.detail}</p>
     <div class="bt-nav" style="border-top:0;padding-top:0;margin-top:11px">
       <button class="act primary" data-submit="${it.key}"><kbd>↵</kbd>Allow host &amp; retry</button>
-      <button class="act" data-submit="${it.key}">Retry as-is</button>
+      <button class="act" data-retry="${it.key}">Retry as-is</button>
       <button class="act">Open the log</button></div>
     <p class="hint">Allowing the host adds <b>api.stripe.com</b> to this step's egress allowlist, then
     re-queues the run. The failed attempt's spend stays wasted either way.</p>`;
@@ -475,6 +476,7 @@ document.addEventListener('click', e => {
     return render();
   }
   const s = e.target.closest('[data-submit]'); if (s) return submit(s.dataset.submit);
+  const rt = e.target.closest('[data-retry]'); if (rt) return resolve(rt.dataset.retry, 'retried as-is');
   const ap = e.target.closest('[data-approve]'); if (ap) return resolve(ap.dataset.approve, 'approved');
   const ro = e.target.closest('[data-rejectopen]');
   if (ro) { rejecting = ro.dataset.rejectopen; render(); $('#reasonInput')?.focus(); return; }

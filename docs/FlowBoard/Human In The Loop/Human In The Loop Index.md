@@ -51,7 +51,7 @@ Human In The Loop is the FlowBoard module for every point where a headless agent
 
 - [[Seeded Questions And Gates]] — `grill`, `explain`, `review`, `ask-three`, and the mockup's sample data
 - [[Human In The Loop Roadmap]] — v1 scope, designed beyond the PRD, ideas, out of scope
-- [[Human In The Loop Open Questions]] — 34 places where the sources disagree or leave a gap
+- [[Human In The Loop Open Questions]] — 35 places where the sources disagree or leave a gap
 - [[Human In The Loop Sources]] — where every fact in these notes comes from
 
 ## Related

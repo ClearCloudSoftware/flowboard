@@ -11,7 +11,7 @@ Where each HITL responsibility lives in the two-process design.
 
 | Piece | Lives in | Source |
 |---|---|---|
-| Question schema, reconciliation rules | `packages/core` → `core/hitl` (*"question protocol, park/resume"*) | PRD §3; architecture README module layout; `notifier.ts` |
+| Question schema, reconciliation rules | `packages/core` → `core/hitl` (*"question protocol, park/resume"*) | architecture README module layout; `notifier.ts` (PRD §3's `core` lists no `hitl/`) |
 | Advancement: gates, no-outcome, escalation | `packages/core/engine` | PRD §3, `02` §3 |
 | Notifier interface | `core/ports` | PRD §3, `01-ports.md` |
 | Slack adapter | `packages/adapters/notify` (`notify/slack/`) | PRD §3, architecture README |
@@ -91,7 +91,7 @@ async function onAnswered(notifier: Notifier, q: Question, by: string) {
 
 ## Testing
 
-- *"Verify end to end with a trivial skill that asks three questions of different kinds."* (PRD §14 M4). That skill is `ask-three`, a test fixture (**D30**).
+- *"Verify end to end with a trivial skill that asks three questions of different kinds."* (PRD §14 M4). That skill is `ask-three`, a test fixture (Capability Library **D30**).
 - `ReplayProvider`: *"Every engine, park/resume, and cost test runs deterministic and zero-spend."* (`01-ports.md`)
 - Backlog Story 0.2: a fake-`claude` integration lane *"so runner/park/resume can be tested without spend"*, and a Playwright lane including *"inbox keyboard"*.
 - Backlog Story 6.3: *"Unit tests (signature, shapes, idempotency, modal) exist; run once against a real workspace — never done."*

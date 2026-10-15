@@ -54,7 +54,7 @@ sequenceDiagram
 > [!bug] Backlog Story 3.2
 > *"Resume prompt must repeat the requires/produces paths, not only the answers."* `03` §6 repeats it under *Genericize*.
 
-Without fork support (`resume_fork` capability), *"park/resume falls back to **context-replay** (re-inject requires/produces + answers into a fresh prompt — which the spec already does anyway)"* (`01-ports.md`). v1 is Claude-only (**D1**, [[Capability Library Decisions]]), so in v1 every resume forks.
+Without fork support (`resume_fork` capability), *"park/resume falls back to **context-replay** (re-inject requires/produces + answers into a fresh prompt — which the spec already does anyway)"* (`01-ports.md`). v1 is Claude-only (Capability Library **D1**, [[Capability Library Decisions]]), so in v1 every resume forks.
 
 ## The race
 
@@ -73,7 +73,7 @@ The guide's state strip reads: *asked a batch, or just one* → *parked · slot 
 
 ## In a sandbox
 
-The broker path is the same on every tier: the shim talks to the broker over a bind-mounted socket, `/run/fb/ask.sock` (PRD §9, §11.1). The artifact-file exchange *"remains the fallback for a provider without MCP"*. Backlog decision **D9** still reads *"Artifact-file park/resume by default"*. See [[Ask User MCP Server]] and Open Questions #9.
+The broker path is the same on every tier: the shim talks to the broker over a per-run unix socket, `data/sock/<run_id>.sock`, bind-mounted into a sandbox as `/run/fb/ask.sock` (PRD §9, §11.1). The artifact-file exchange *"remains the fallback for a provider without MCP"*. Backlog decision **D9** still reads *"Artifact-file park/resume by default"*. See [[Ask User MCP Server]] and Open Questions #9.
 
 ## Related
 

@@ -11,7 +11,7 @@ The engine stops for you in some cases nobody designed as a gate. The sources de
 
 ## In the PRD: an escalated-loop gate
 
-*"Escalate, don't fail, when a loop is spent or stuck."* (PRD §8, decision **D3**, *"Decided 2026-10-15"*)
+*"Escalate, don't fail, when a loop is spent or stuck."* (PRD §8; backlog decision D3, *"Decided 2026-10-15"*)
 
 | Case | Trigger |
 |---|---|
@@ -45,6 +45,7 @@ The monitor guide's *Failed* status: *"A step errored, hit its retry limit, or y
 > - An egress denial is not obviously a counted attempt. Under PRD §7 a non-zero agent exit is an *infrastructure failure*. A transient one retries automatically and uncounted. Anything else puts the task in `blocked` without spending an attempt. The card reads *Attempt 3 of 3*.
 > - *Retry as-is* is offered for *"a rate limit, a transient error"*, which PRD §7 already retries automatically (30 s, 2 min, 8 min).
 > - *Allow host & retry* changes a step definition from outside the designer. Same as [[Flow Design Open Questions]] #14.
+> - Some sources still fail the task at the cap instead of escalating: PRD §16 (*"three failed attempts fail the task"*), backlog Story 10.1 and the drawio card *D3 · max_attempts = attempts allowed* (*"Fail on the 4th"*). See [[Flow Design Open Questions]] #11.
 
 ## Infra failures never reach you as attempts
 

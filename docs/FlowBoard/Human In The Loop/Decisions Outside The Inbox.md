@@ -5,11 +5,11 @@ module: Human In The Loop
 
 # Decisions Outside The Inbox
 
-The inbox is not the only place to answer, approve or send back. Three sibling screens offer the same decisions with the same keys.
+The inbox is not the only place to answer, approve or send back. The monitor and task detail offer the same decisions with the same keys. The board only signals that a decision is waiting.
 
 ## Monitor — the *Needs you* band
 
-`docs/mockups/monitor.html`, region 3: *"Everything blocked on a human, oldest first. Empty most of the time."* Its header: *"needs you · N · oldest first — clear these and everything else runs itself"*.
+`docs/mockups/monitor.html`. The monitor guide's region 3: *"Everything blocked on a human, oldest first. Empty most of the time."* Its header: *"needs you · N · oldest first — clear these and everything else runs itself"*.
 
 | Item | Body | Actions |
 |---|---|---|
@@ -31,7 +31,7 @@ The monitor's Timeline view hatches the stretches a task spent waiting on a pers
 
 ## Task detail — the gate banner
 
-`docs/mockups/task-detail.html`: a **needs you** banner above the tabs, *"review passed with 2 notes · waited 5m"*, with `a Approve`, `r Send back`, and **Compare plan vs built**. The reason form submits as **Send back to build**. The status pill reads `‖ waiting on you`. The Story tab shows what you answered: *"you answered Every use after 2m 14s — the run resumed where it stopped"*. The cost panel notes: *"Answering is free. Plan paused for $0.00 while it waited 2m 14s on your answer"*.
+`docs/mockups/task-detail.html`: a **needs you** banner above the tabs, *review passed with 2 notes · waited 5m 00s* with a ticking timer (the guide shows *"review passed with 2 notes · waited 5m"*), with `a Approve`, `r Send back`, and **Compare plan vs built**. The reason form submits as **Send back to build**. The status pill reads `‖ waiting on you`. The Story tab shows what you answered: *"you answered Every use after 2m 14s — the run resumed where it stopped"*. The cost panel notes: *"Answering is free. Plan paused for $0.00 while it waited 2m 14s on your answer"*.
 
 The guide: *"Plan vs built — Always, before approving. It is the only view that compares intent against the working tree."* And for an item marked *not built*: *"If it was, send it back — approving is accepting the gap."*
 
@@ -46,7 +46,7 @@ PRD §13: *"a state dot (running / awaiting answers / awaiting approval / failed
 Backlog Story 9.2: *"amber inbox count"*. The old handoff's Inbox nav pill *"carries its pending count in mono, amber"*.
 
 > [!note] One decision, many doors
-> Every surface writes through the same endpoints (`approve`, `reject`, `retry`, `answer`, PRD §12), so the first decision wins wherever it was made. No source says how a second surface reacts when a gate is cleared somewhere else. For questions the rule is *"already answered by <channel>"*.
+> Every surface writes through the same PRD §12 endpoints (`approve`, `reject`, `retry`, `answer`). First write wins is specified only for answers: *"already answered by <channel>"* (PRD §10). No source sets a rule for a gate acted on from two surfaces. *Allow host & retry* has no endpoint at all ([[Human In The Loop Open Questions]] #26).
 
 ## Related
 

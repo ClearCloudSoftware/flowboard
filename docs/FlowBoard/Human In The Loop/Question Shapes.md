@@ -12,7 +12,7 @@ module: Human In The Loop
 
 ## The five shapes
 
-| `kind` (PRD) | Guide label | Mockup `type` | For (inbox guide) | Keyboard (mockup) |
+| `kind` (PRD) | Guide label | Mockup `type` | For (inbox guide) | Keyboard (inbox guide) |
 |---|---|---|---|---|
 | `yes_no` | yes / no | `yesno` | *"A decision with exactly two outcomes. The cheapest possible question and the one agents should reach for first."* | `1` Yes, `2` No |
 | `single_select` | pick one | `one` | *"Several mutually exclusive routes. A well-written one includes an option that hands the choice back — 'you decide' — so a non-expert is never stuck."* | `1`–`9` select and replace |
@@ -20,7 +20,7 @@ module: Human In The Loop
 | `number` | a number | `num` | *"A quantity with a unit and a sensible default already filled in, so accepting it is the fast path."* | type, or accept |
 | `text` | free text | `text` | *"Anything that cannot be narrowed to options. Usually the last question in a batch, and usually optional."* | type |
 
-The old design handoff used a third naming, `'yes_no'|'single'|'multi'|'text'|'number'`. **Proposal:** the PRD kinds are canonical and the guide labels are display text. See [[Human In The Loop Open Questions]] #10.
+The old design handoff used a fourth naming, `'yes_no'|'single'|'multi'|'text'|'number'`. **Proposal:** the PRD kinds are canonical and the guide labels are display text. See [[Human In The Loop Open Questions]] #10.
 
 ## Controls on each surface
 
@@ -47,7 +47,8 @@ From the mockup's `answered()`:
 |---|---|
 | `text` | Always. *"free text may be left blank"* |
 | `multi_select` | At least one option picked |
-| everything else | A value is present and not empty |
+| `number` | A value is present, or the pre-filled default is left in place (*"accepting it is the fast path"*, inbox guide) |
+| `yes_no`, `single_select` | An option is picked |
 
 The guide: *"Free text counts as answered even when empty, because 'nothing to add' is a real answer. Every other shape has to be given a value before Submit lights up."* The PRD makes `required` a per-question flag instead. See [[Answering Rules]] and Open Questions #11 and #13.
 
