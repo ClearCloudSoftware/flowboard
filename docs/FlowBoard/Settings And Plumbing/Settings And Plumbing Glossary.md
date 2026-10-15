@@ -33,12 +33,12 @@ module: Settings And Plumbing
 | **Thin handler** | A route that validates with zod, calls one function, returns JSON | PRD §12, `06` §15 |
 | **Three-liner** | `06` §15's name for a thin handler: *"validate → lib → JSON"* | `06` §15 |
 | **zod** | The validation library every handler uses | PRD §12 |
-| **Server action** | A Next.js function called from a form; the drawio's alternative to a route | PRD §3, drawio |
+| **Server action** | A Next.js server function the UI calls directly; PRD §3 lists them in `apps/web`, and the drawio uses one where PRD §12 uses a route | PRD §3, drawio |
 | **SSE** | Server-Sent Events, the one-way live transport | PRD §2 |
 | **EventSource** | The browser API that consumes SSE | drawio |
 | **Tail by `seq`** | Read new rows after the last sequence number seen | PRD §7 |
 | **`Last-Event-ID`** | The SSE header a reconnecting client sends to resume | PRD §12 |
-| **Snapshot stream** | An SSE stream that sends the full current state, then changes | backlog 4.3 |
+| **Snapshot stream** | The inbox's SSE stream of *"pending + answered in last 2 min"* questions, so Slack answers repaint the page | backlog 4.3, `04` §9 |
 | **Lost the orchestrator** | The error state when the live connection drops | old handoff 1d |
 | **`apps/web`** | The Next.js process: routes, server actions, SSE | PRD §3 |
 | **`apps/worker`** | The Node process that runs jobs and agents | PRD §3 |

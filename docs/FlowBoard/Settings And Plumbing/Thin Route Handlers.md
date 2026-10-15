@@ -15,7 +15,7 @@ Feature map §20: *"**Thin, predictable connections** — Every screen action go
 | `06` §15 | *"REST route handlers under `src/app/api/` are *thin* — validate with zod, call a function in `src/lib/`, return JSON. Every port is called from `src/lib/`, **never from a route**, so the whole system stays testable headless."* |
 | `06` §15, idea | *"keep every handler a three-liner (validate → lib → JSON) and the ports stay the only place provider knowledge exists. If a route ever needs to know whether it's Claude or Codex, something leaked upward."* |
 | PRD §2 | *"Next.js route handlers must never spawn a long-lived child process; they enqueue jobs and the worker picks them up"* |
-| PRD §3 | *"`apps/web` — Next.js: routes, server actions, SSE, components. Calls core; holds no rules"* |
+| PRD §3 | The layout's comment on `apps/web/`: *"Next.js: routes, server actions, SSE, components. Calls core; holds no rules"* |
 | drawio *Harness architecture* | *"Process 1 · apps/web (Next.js) thin: validates, calls core, enqueues; never spawns agents"*; *"API routes + server actions / zod-validated input → write rows → enqueue a job → return"* |
 | `01-ports.md` | The memory port *"is queried by the runner, never from a route"* |
 | feature map §8 | *"The screens never run agents directly; they drop a job on the queue and a background worker picks it up."* |

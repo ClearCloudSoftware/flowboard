@@ -14,8 +14,8 @@ module: Settings And Plumbing
 | Inbox SSE for Slack reconciliation | **M6** (reconciliation both directions) | PRD §10, §14 |
 | Draft mode toggle | not assigned; sits beside `/costs` (**M8**) in §13 | PRD §13, §14 |
 | Sandbox settings section | not assigned | PRD §11.1, §13 |
-| Memory settings section | **M9**, optional | PRD §11.2, §13, §14 |
-| Thin REST handlers | every milestone | PRD §12 |
+| Memory settings section | not named; memory itself is **M9**, optional | PRD §11.2, §13, §14 |
+| Thin REST handlers | every milestone (implied; §14 does not say) | PRD §12 |
 
 Acceptance (PRD §16):
 
@@ -39,7 +39,7 @@ Acceptance (PRD §16):
 | 3.2 | Draft mode records actual model/effort | PRD/FIX |
 | 3.4 | SSE tails `run_events`, replays from `Last-Event-ID`, sends `end`; dedupe by `seq`; stream-lost state | PRD, BUG, GAP |
 | 3.5 | Draft mode and sandbox profile compose as `RunSpec` transformers | NEW |
-| 4.3 | Inbox SSE snapshot stream; collapse three pollers into one; lost-orchestrator card | PRD, BUG |
+| 4.3 | Inbox SSE snapshot stream; collapse three pollers into one; lost-orchestrator card | PRD/handoff, BUG (perf) |
 | 6.1 | `escalation_threshold_ms` setting, default 5 min | PRD/NEW |
 | **8.3** | **Settings: draft mode toggle; theme light/dark/system (class before first paint, `?theme=`); escalation threshold in minutes** | **PRD/NEW** |
 | 9.1 | Tokens on `:root` and `.dark`; markdown readable in both themes | handoff, BUG |
@@ -72,6 +72,8 @@ Feature map §19 and §20 both have empty idea slots (*"💡 Ideas: _(add ideas)
 ## Out of scope
 
 PRD §17: *"Do not build: authentication, user accounts, roles, deployment config, multi-machine support, a plugin marketplace, or anything that talks to the Anthropic API directly."* And: *"shipping or *deploying* FlowBoard itself in a container is out of scope."* PRD §2: *"No auth, no multi-tenancy, no user table. Do not add them "for later""*.
+
+The drawio *Out of scope (v1)* card: *"Not building / Auth, accounts, roles, deployment, Docker, multi-machine, plugin marketplace."* Its *Docker* clashes with PRD §17's in-scope container sandbox; see [[Settings And Plumbing Open Questions]] #30.
 
 ## Related
 

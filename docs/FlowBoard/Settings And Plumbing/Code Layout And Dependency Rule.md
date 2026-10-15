@@ -11,6 +11,8 @@ PRD §3: *"The one rule that matters: **`packages/core` imports no framework, no
 
 Architecture `README.md`: *"**Dependency rule for the rebuild:** the domain (flow engine, board projection, question protocol, cost ledger) depends only on **ports**; everything provider-specific is an **adapter** behind one. `core/` and `runner/` must never import from `adapters/` — only from `core/ports/`. Enforce with a lint rule."* The drawio repeats it: *"core/ never imports adapters/ — Only core/ports. Enforce with a lint rule."*
 
+The arrows into `packages/db` and `packages/adapters` are inferred from the layout; the PRD states only that core *"depends on nothing below"*.
+
 ```mermaid
 flowchart TB
   WEB[apps/web] --> CORE
@@ -34,7 +36,7 @@ flowchart TB
 | `apps/web/`, `apps/worker/`, `apps/mcp-shim/` | `runner/`, `worker/`, `app/` |
 | handlers in `apps/web/app/api/` call `packages/core` (§12) | handlers in `src/app/api/` call `src/lib/` (`06` §15) |
 
-The `docs/old/reference/` tree mirrors the second layout (`core/ports`, `core/hitl`, `adapters/agent/replay`, `adapters/source/markdown`). The only code in the repo, `code/flowboard/`, is a stock `create-next-app` scaffold (Next.js 16.4.1, React 19.3.0, Tailwind 4), not yet a workspace.
+The `docs/old/reference/` tree mirrors the second layout (`core/ports`, `core/hitl`, `adapters/agent/replay`, `adapters/source/markdown`). The only code in the repo, `code/flowboard/`, is a stock `create-next-app` scaffold (Next.js 16.4.1, React 19.3.0, Tailwind 4). Its `pnpm-workspace.yaml` only lists ignored build dependencies; there are no `packages/` or `apps/` yet.
 
 > [!question] Where does application logic that needs the database live?
 > A handler must *"write rows → enqueue a job"* (drawio), but core may not import the DB driver (PRD §3). PRD §12 says handlers *"call a function in `packages/core`"*; `06` §15 says *"call a function in `src/lib/`"*, where ports are called. Neither names the layer that combines core rules with `packages/db`. See [[Settings And Plumbing Open Questions]] #13 and #15, and [[Execution Open Questions]] #63.

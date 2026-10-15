@@ -13,12 +13,12 @@ Escalation And Notifications documents it in full in [[Escalation Threshold]]. T
 |---|---|
 | Key | `settings.escalation_threshold_ms` (`04` §10, backlog 6.1) |
 | Unit in the UI | minutes (`06` §15, backlog 8.3) |
-| Default | 5 minutes in PRD §10, `04` §10, backlog and drawio; 10 minutes in the inbox and monitor mockups |
+| Default | 5 minutes in PRD §10, `04` §10, backlog, drawio and the old handoff; 10 minutes in the inbox and monitor mockups, the inbox guide and the mockups README ([[Escalation And Notifications Open Questions]] #1) |
 | Range | 1–30 minutes, only in the old design prototype (`escalationMinutes`, `min:1, max:30`) |
 | Read by | the `escalate_question` job, scheduled at *"`now + settings.escalation_threshold_ms`"* (`04` §10) |
 | Before it was a setting | PRD §10 fixes it: *"enqueue an `escalate_question` job with `run_after = now + 5 minutes`"* |
 
-The job reads the threshold when the question is inserted, because that is when `run_after` is computed. So, as written, a change only reaches questions asked afterwards ([[Escalation And Notifications Open Questions]] #19).
+The threshold is read when the question is inserted, because that is when the job's `run_after` is computed (PRD §10, `04` §10). So, as written, a change only reaches questions asked afterwards ([[Escalation And Notifications Open Questions]] #19).
 
 ## Related
 

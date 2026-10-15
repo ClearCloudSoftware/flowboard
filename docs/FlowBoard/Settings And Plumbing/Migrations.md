@@ -35,8 +35,8 @@ flowchart LR
 Each is already known, from [[Domain Schema]]:
 
 - the `runs` and `step_instances` columns PRD §5 leaves out (`model`, `effort`, `sandbox`, `provider`, `agent_session_id`, `reason`);
-- the optional `memories` (with FTS5) and `run_memories` tables, added at M9 (PRD §11.2). Memory is additive, so these can be created whether or not memory is on;
-- keys added to `settings` need no migration, because `settings` is key/value. Their defaults live in code ([[Settings Data Model]]).
+- the optional `memories` (with FTS5) and `run_memories` tables, added at M9 (PRD §11.2, §14). **Inference:** memory is additive, so these can be created whether or not memory is on;
+- **Inference:** keys added to `settings` need no migration, because `settings` is key/value; under the proposed encoding their defaults live in code ([[Settings Data Model]]).
 
 ## Gaps
 
@@ -46,7 +46,7 @@ Each is already known, from [[Domain Schema]]:
 > **Proposal:** run migrations once, before both processes start (a `predev` step), and have each process check the schema version on open and refuse to start on a mismatch. SQLite's write lock would serialise two migrators anyway, but a failed migration should stop both processes, not one. Listed in [[Settings And Plumbing Open Questions]] #23.
 
 > [!question] Data inside JSON columns
-> Flow versions are *"immutable JSON"* (`README.md`, architecture), and several columns hold JSON (`requires`, `produces`, `capability_pins`, `options`, `answer`, `settings.value`). A shape change in that JSON is not a schema change, so drizzle-kit will not see it. No source says how old flow versions are upgraded. Listed in [[Settings And Plumbing Open Questions]] #23.
+> Flow versions are *"immutable JSON"* (architecture `README.md`; `02` §2), and several PRD §5 columns hold JSON (`requires`, `produces`, `extra_plugin_ids`, `allowed_tools`, `capability_pins`, `options`, `answer`). `settings.value` would too under the proposed encoding. A shape change in that JSON is not a schema change, so drizzle-kit will not see it. No source says how old flow versions are upgraded. Listed in [[Settings And Plumbing Open Questions]] #23.
 
 ## Related
 

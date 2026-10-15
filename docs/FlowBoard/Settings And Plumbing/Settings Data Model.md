@@ -26,18 +26,18 @@ That is the whole schema. No source lists the keys, their types or their encodin
 | `settings.escalation_threshold_ms` | milliseconds, default 5 min | `04` §10, backlog 6.1 |
 | escalation threshold (minutes) | minutes | `06` §15, backlog 8.3 |
 | theme | `light` / `dark` / `system` | `06` §15, backlog 8.3 |
-| `sandbox_profile` | *"tier, image, egress allowlist, limits"* | PRD §11.1, backlog 1.1 |
-| `memory` block | *"adapter id, endpoint / key ref, enabled scopes, recall limit, `max_recall_chars`"* | PRD §11.2, `09` |
+| `sandbox_profile` | *"tier, image, egress allowlist, limits"* | PRD §11.1, backlog 1.1; drawio *"settings (memory, sandbox_profile)"* |
+| `memory` block | *"adapter id, endpoint / key ref, enabled scopes, recall limit, `max_recall_chars`"* | PRD §11.2 (`09` has the same list); drawio |
 | `settings.memory.max_recall_chars` | integer, default 6,000 | PRD §7 |
 
 `settings.memory.max_recall_chars` is a dotted path into a block, so at least the memory block is structured, not a flat scalar.
 
 ## Typed shapes from the ports
 
-Two settings have typed shapes in the port sketches:
+Two settings have typed shapes in the port sketches. The comments below are `01-ports.md`'s; `exec-host.ts` has the same fields with different comments (its `env` reads *"Run-scoped env (model/CLI auth). Never bake secrets into the image."*).
 
 ```ts
-// 01-ports.md, reference/core/ports/exec-host.ts
+// 01-ports.md (same fields in reference/core/ports/exec-host.ts)
 type IsolationTier = 'host' | 'container' | 'gvisor' | 'microvm';
 interface SandboxProfile {
   tier: IsolationTier;
@@ -45,7 +45,7 @@ interface SandboxProfile {
   egressAllow: string[];   // default-deny; model endpoint (via the credential-injecting proxy) + registries; no git remote. [] = offline
   limits?: { memoryMb?: number; cpus?: number; pids?: number; wallClockMs?: number };
   mounts?: Array<{ source: string; target: string; readOnly?: boolean }>;  // never host secrets / docker.sock
-  env?: Record<string, string>;   // run-scoped; never a real credential
+  env?: Record<string, string>;   // run-scoped; never a real credential (the proxy injects it), never baked into the image
   nonRoot?: boolean;              // default true; bypassPermissions requires it
 }
 
@@ -66,19 +66,12 @@ interface MemoryStore {
 >   draft_mode: z.boolean().default(false),
 >   theme: z.enum(['light', 'dark', 'system']),
 >   escalation_threshold_ms: z.number().int().min(60_000).max(1_800_000).default(300_000),
->   sandbox_profile: SandboxProfileSchema,
->   memory: z.object({
->     adapter: z.enum(['none', 'local', 'mem0', 'mem0-cloud']).default('none'),
->     endpoint: z.string().optional(),
->     key_ref: z.string().optional(),
->     scopes: z.array(z.enum(['user', 'project', 'agent', 'task'])),
->     recall_limit: z.number().int().optional(),
->     max_recall_chars: z.number().int().default(6000),
->   }),
+>   sandbox_profile: SandboxProfileSchema,   // shape proposed by Sandboxing
+>   memory: MemorySettingsSchema,            // shape proposed by Memory
 > });
 > ```
 >
-> The 1–30 minute range comes only from the old design prototype's `escalationMinutes` tweak (`min:1, max:30`). The draft-mode default and the theme default are not stated anywhere. Listed in [[Settings And Plumbing Open Questions]] #5.
+> The 1–30 minute range comes only from the old design prototype's `escalationMinutes` tweak (`min:1, max:30`). Storing milliseconds and showing minutes follows [[Escalation And Notifications Open Questions]] #2. The draft-mode default and the theme default are not stated anywhere. The sandbox and memory blocks reuse the shapes their own sets propose ([[Sandboxing Data Model]], [[Memory Settings]]) rather than a second one here. Listed in [[Settings And Plumbing Open Questions]] #5.
 
 ## What the run records
 

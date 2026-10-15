@@ -21,7 +21,7 @@ Settings And Plumbing is FlowBoard's platform layer: the **global switches** (fe
 ## Settings
 
 - [[Settings Catalogue]] — every global setting, who reads it, and where the lists disagree
-- [[Draft Mode Setting]] — the global switch, and the three places its toggle appears
+- [[Draft Mode Setting]] — the global switch, and the places its toggle appears
 - [[Sandbox Profile Setting]] — default tier, image, egress allowlist, limits; per-step override
 - [[Appearance And Theme]] — light, dark or system, and the default nobody agrees on
 - [[Nudge Timing Setting]] — the escalation threshold, seen from settings
@@ -50,7 +50,7 @@ Settings And Plumbing is FlowBoard's platform layer: the **global switches** (fe
 ## Direction
 
 - [[Settings And Plumbing Roadmap]] — v1 scope, backlog, beyond the PRD, ideas, out of scope
-- [[Settings And Plumbing Open Questions]] — 28 places the sources disagree or leave a gap
+- [[Settings And Plumbing Open Questions]] — 30 places the sources disagree or leave a gap
 - [[Settings And Plumbing Sources]] — where every fact comes from
 
 ## Related

@@ -13,18 +13,18 @@ The whole API surface in one place. Each functional set documents its own endpoi
 
 | Route | Purpose (PRD wording where given) | Documented in |
 |---|---|---|
-| `GET /api/projects`, `POST /api/projects` | List and create projects | [[Projects Index]] |
+| `GET /api/projects`, `POST /api/projects` | List and create projects | [[Projects API And Routes]] |
 | `GET /api/projects/:id/board` | *"board projection: columns + cards"* | [[Monitor API And Routes]] |
 | `GET /api/flows/:id`, `PUT /api/flows/:id` | Read; *"creates a new version"* | [[Flow Design API And Routes]] |
 | `POST /api/flows/:id/validate` | *"artifact contract check"* | [[Flow Design API And Routes]] |
-| `GET /api/tasks?project=&status=`, `POST /api/tasks` | List and create tasks | [[Task Detail API And Routes]] |
-| `POST /api/tasks/:id/promote` | *"backlog -> todo, pin flow, create worktree"* | [[Execution API And Routes]] |
+| `GET /api/tasks?project=&status=`, `POST /api/tasks` | List and create tasks | [[Intake API And Routes]], [[Task Detail API And Routes]] |
+| `POST /api/tasks/:id/promote` | *"backlog -> todo, pin flow, create worktree"* | [[Intake API And Routes]], [[Execution API And Routes]], [[Workspaces API And Routes]] |
 | `POST /api/tasks/:id/cancel` | Cancel | [[Execution API And Routes]] |
 | `POST /api/step-instances/:id/approve`, `…/reject`, `…/retry` | Gates and escalated loops | [[Human In The Loop API And Routes]] |
 | `GET /api/questions?state=pending`, `POST /api/questions/:id/answer` | The inbox feed and answers | [[Human In The Loop API And Routes]] |
 | `GET /api/runs/:id`, `GET /api/runs/:id/stream` | One run; SSE | [[Monitor API And Routes]], [[Live Updates]] |
 | `GET /api/projects/:id/library` and the plugin and agent routes | The capability library | [[Capability Library API And Routes]] |
-| `POST /api/import/backlog` | *"md file -> tasks"* | Intake And Import (not yet documented) |
+| `POST /api/import/backlog` | *"md file -> tasks"* | [[Intake API And Routes]] |
 | `GET /api/costs?project=&from=&to=` | Rollups | [[Cost API And Routes]] |
 | `POST /api/slack/interactions` | Inbound Slack | [[Escalation API And Routes]] |
 
@@ -36,7 +36,7 @@ From the backlog, not PRD §12:
 
 | Route | Source |
 |---|---|
-| `GET /api/tasks/:id` | backlog 2.1 |
+| `GET /api/tasks/:id` | backlog 2.1 (tagged **PRD**, though PRD §12 does not list it) |
 | `POST /api/tasks/:id/start` | backlog intro, item 3: *"the code added `POST /api/tasks/:id/start` with no button"* |
 | `/api/inbox/summary` | backlog 4.3: *"Collapse the three overlapping pollers (`/api/inbox/summary` ×2 + `/api/questions?state=pending`) into one"* — **BUG (perf)** |
 | `POST /api/questions/:id/unanswer` | backlog 4.4, only if the undo window is kept |
@@ -52,6 +52,8 @@ From the backlog, not PRD §12:
 > PATCH /api/settings          -- partial update; zod-validated against the one Settings schema
 > ```
 > `PATCH` merges at the top-level key, so sending `{ memory: {...} }` replaces the memory block whole. Secrets never travel through it: the memory block holds a *key ref*, not a key. A server action can call the same core function instead of the route. Listed in [[Settings And Plumbing Open Questions]] #2.
+>
+> Two newer sets propose differently: [[Memory API And Routes]] has `GET` / `PUT /api/settings`, and [[Sandboxing API And Routes]] has `GET` / `PUT /api/settings/sandbox`. One shape needs picking.
 
 ## Web routes
 
@@ -60,7 +62,7 @@ From the backlog, not PRD §12:
 | `/` | Projects list | PRD §13 |
 | `/p/[slug]` | Board | PRD §13 |
 | `/p/[slug]/flow` | Flow editor | PRD §13 |
-| `/p/[slug]/library` | Skills and agents | PRD §13 |
+| `/p/[slug]/library` | Skills and agents | PRD §13; the drawio *FlowBoard ideation* card says `/skills /agents` |
 | `/inbox` | Questions | PRD §10, §13 |
 | `/runs/[id]` | Live session viewer | PRD §13 |
 | `/t/[id]` | Task detail | drawio *Harness architecture* only; PRD §13 makes task detail a sheet |

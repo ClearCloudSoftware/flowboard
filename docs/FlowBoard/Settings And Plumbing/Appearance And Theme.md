@@ -18,11 +18,11 @@ Feature map §19: *"**Appearance** — Light, dark, or follow the system."*
 | Markdown must follow the theme | backlog 9.1 BUG: *"`markdown.tsx`: `prose dark:prose-invert` (today dark‑only → unreadable in the default theme)"* |
 | Both themes readable | feature map, *Across everything*: *"a consistent, readable design in light and dark, fully usable from the keyboard, and friendly to screen readers"* |
 
-*"Class before first paint"* means the theme class is on `<html>` before the page renders, so there is no flash of the wrong theme. A theme stored only in the `settings` table needs a server read on every page load to do that.
+*"Class before first paint"* means the theme class is on `<html>` before the page renders, so there is no flash of the wrong theme. **Inference, not in a source:** a theme stored only in the `settings` table needs a server read on every page load to do that (Open Questions #7).
 
 ## Which theme is the default
 
-> [!warning] Four answers
+> [!warning] Three answers from five sources
 > | Source | Position |
 > |---|---|
 > | PRD §13 | *"Dark-first, dense, keyboard-friendly."* |
@@ -31,7 +31,7 @@ Feature map §19: *"**Appearance** — Light, dark, or follow the system."*
 > | Mockups README and every mockup | *"Light only — no dark variant."* |
 > | drawio *Harness architecture* tech card | *"shadcn/ui + Tailwind (light, zero radius, IBM Plex)"* |
 >
-> Feature map §19 and backlog 8.3 offer a switch, which assumes both themes exist. The same question is open in [[Flow Design Open Questions]] #34, [[Human In The Loop Open Questions]] #34 and [[Monitor Open Questions]] #27. See [[Settings And Plumbing Open Questions]] #7.
+> Dark-first (PRD, old handoff), light by default with a dark theme (backlog 9.1), light only (mockups, drawio). Feature map §19 and backlog 8.3 offer a switch, which assumes both themes exist. The same question is open in [[Flow Design Open Questions]] #34, [[Human In The Loop Open Questions]] #34 and [[Monitor Open Questions]] #27. See [[Settings And Plumbing Open Questions]] #7.
 
 The Next.js scaffold at `code/flowboard/app/globals.css` follows the system (`prefers-color-scheme: dark`). It is the stock `create-next-app` output, not a design decision.
 

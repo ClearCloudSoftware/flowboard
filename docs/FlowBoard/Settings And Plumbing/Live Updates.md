@@ -15,8 +15,8 @@ The run stream itself (the seven event kinds, `seq`, the parser) is documented i
 |---|---|
 | SSE, not websockets | PRD §2: *"**Server-Sent Events** for live streaming (not websockets — SSE is enough and simpler in Next.js)"* |
 | Tail the database, not memory | PRD §7: *"The SSE endpoint lives in `apps/web`, a different process, so it cannot share an in-memory emitter: it tails `run_events` by `seq` (with `Last-Event-ID` for catch-up)."* |
-| Replay, then stream | PRD §12: *"The SSE endpoint replays existing `run_events` for the run, then streams new ones. Reconnect with `Last-Event-ID`."* |
-| Close on terminal state | backlog 3.4: *"sends `end` on terminal state"* |
+| Replay, then stream | PRD §12: *"The SSE endpoint replays existing `run_events` for the run, then streams new ones. Reconnect with `Last-Event-ID`."* Feature map §9: *"reopen the page and it catches you up from the start"* |
+| Close on terminal state | backlog 3.4, `03` §8: *"sends `end` on terminal state"* |
 | Not only runs | drawio: *"SSE endpoints / tail run_events by seq, questions and task state from SQLite (works across processes; catches up on reconnect)"* |
 | No client store | drawio tech card: *"EventSource for live updates · no client state store: the server is the source of truth"* |
 
@@ -31,7 +31,7 @@ The reason is the process split ([[Process Topology]]). The worker writes; the w
 | The board | not named | drawio beat G (*"→ SSE → run viewer and board"*); feature map §20 |
 
 > [!warning] The board has four transports in the sources
-> SSE (drawio, feature map §20), a polling hook (backlog 2.2), *"a **materialized view refreshed on job completion** instead of client polling, collapsing the three overlapping pollers"* (`02` §4), and the old handoff's *"One websocket for run events"*. Settled for runs and the inbox; open for the board. See [[Monitor Open Questions]] #30 and [[Human In The Loop Open Questions]] #31.
+> SSE (drawio, feature map §20), a polling hook (backlog 2.2), *"a **materialized view refreshed on job completion** instead of client polling, collapsing the three overlapping pollers"* (`02` §4), and the old handoff's *"One websocket for run events"* (it also pushes answered questions: *"Server push (websocket) marks a question resolved"*). SSE is settled for runs and the inbox (PRD §2, §10, §12; `04` §9; backlog 4.3); open for the board. See [[Monitor Open Questions]] #30 and [[Human In The Loop Open Questions]] #31.
 
 ## Fewer pollers
 
@@ -58,7 +58,7 @@ The old handoff models the connection explicitly: *"`connection: 'live'|'connect
 ```mermaid
 stateDiagram-v2
   [*] --> connecting
-  connecting --> live: first snapshot
+  connecting --> live: connected
   live --> lost: stream drops
   lost --> connecting: retry (auto, or r)
 ```

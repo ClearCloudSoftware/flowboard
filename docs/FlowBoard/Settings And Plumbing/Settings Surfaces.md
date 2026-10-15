@@ -24,7 +24,7 @@ PRD §13's route list (`/`, `/p/[slug]`, `/inbox`, `/runs/[id]`, `/p/[slug]/flow
 | drawio *FlowBoard ideation* | A *"Costs & settings /costs"* card holding the *"Draft mode toggle"* |
 | drawio *Logical components* | *"Costs /costs rollups and draft-mode toggle"* |
 | drawio *Harness architecture* | Front-end card *"Library · Costs · Settings / skills & agents, spend + wasted spend, draft mode, sandbox tier"* |
-| `flow-designer.html` | A *draft mode* toggle in the designer topbar, the only rendered settings control |
+| `flow-designer.html` | A *draft mode* toggle in the designer topbar, the only rendered settings control. Each step also has a **Sandbox** select (`none`, `container`, `sealed container`): a per-step override, not the global setting |
 | Old design prototype | *"Escalation threshold is a setting (default 5 minutes); the prototype exposes it as a tweak"* (handoff README) |
 | Backlog 8.3 | *"Draft mode toggle; theme light/dark/system …; escalation threshold in minutes"*. No route given |
 | Backlog 9.2 | The chrome: *"Wordmark, nav pills, amber inbox count, running dot + spend today"*. No settings entry |
@@ -34,7 +34,9 @@ PRD §13's route list (`/`, `/p/[slug]`, `/inbox`, `/runs/[id]`, `/p/[slug]/flow
 
 ## Showing that a setting is on
 
-Only the flow designer shows draft mode's effect: *"draft mode — every step forced to haiku"* in the canvas bar. No source says whether the board, monitor or run viewer show that draft mode is on, or that the sandbox fell back to `host` because Docker was missing. Cost And Control Open Questions #5 raises draft-mode visibility.
+Only the flow designer shows draft mode's effect: *"draft mode — every step forced to haiku"* in the canvas bar. No source says whether the board, monitor or run viewer show that draft mode is on ([[Cost And Control Open Questions]] #5).
+
+The monitor and task-detail status bars do show a sandbox posture, *"sandbox **container**, egress **default-deny**"*, but always the same one. No source says what they show when the Docker probe falls back to `host` ([[Sandboxing Open Questions]] #35).
 
 ## Related
 
@@ -43,3 +45,4 @@ Only the flow designer shows draft mode's effect: *"draft mode — every step fo
 - [[Settings And Plumbing API And Routes]]
 - [[Costs Page]]
 - [[Flow Design Controls]]
+- [[Sandboxing In The UI]]

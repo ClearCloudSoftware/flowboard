@@ -12,6 +12,8 @@ type SpecTransform = (spec: RunSpec) => RunSpec;
 const draftMode: SpecTransform = s => ({ ...s, model: 'fast-cheap', effort: 'low' });
 ```
 
+`06` §15 writes the logical id `fast-cheap`; PRD §13 and the drawio force `haiku`. See [[Flow Design Open Questions]] #15.
+
 ## The chain
 
 ```mermaid
@@ -43,14 +45,14 @@ Only two layered settings exist in the sources:
 | Setting | Lower layer | Higher layer |
 |---|---|---|
 | Sandbox profile | `settings.sandbox_profile` | `step_defs.sandbox_profile` (backlog 1.1). After both, the machine's Docker probe can force `host` (PRD §11.1) |
-| Draft mode | step's own `model`, `effort` | global draft mode wins, for every step |
+| Draft mode | step's own `model`, `effort` | global draft mode wins, for every step (*"overrides every step"*, PRD §13) |
 
 > [!example] Proposal — the order of the chain
 > No source fixes the order. Draft mode before sandbox resolution is natural, because the two touch different fields. The permission gate must run last, because it checks the *resolved* tier. Listed in [[Settings And Plumbing Open Questions]] #10.
 
 ## When a change takes effect
 
-No source says. The transform runs when a `RunSpec` is built, so a setting change reaches the **next run**, including later steps of tasks already in flight. A run already going keeps what it launched with. The escalation threshold is read when a question is inserted. See [[Settings And Plumbing Open Questions]] #10.
+No source says. **Inference:** the transform runs when a `RunSpec` is built (*"applied before `launch()`"*), so a setting change reaches the **next run**, including later steps of tasks already in flight. A run already going keeps what it launched with. The escalation threshold is read when a question is inserted. See [[Settings And Plumbing Open Questions]] #10.
 
 ## Related
 

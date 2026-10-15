@@ -5,17 +5,17 @@ module: Settings And Plumbing
 
 # Memory Settings Block
 
-Memory is the optional, additive layer that lets runs start warm (feature map §21, PRD §11.2, `09-memory.md`). This note covers only the settings that switch it on and tune it.
+Memory is the optional, additive layer that lets runs start warm (feature map §21, PRD §11.2, `09-memory.md`), documented in [[Memory Index]]. The Memory set's [[Memory Settings]] covers the same block from the memory side; this note covers it as one of the global settings.
 
 ## The block
 
 | Field | Values | Source |
 |---|---|---|
 | Adapter | PRD §13: `none` / `local` / self-hosted Mem0 / Mem0 cloud. `06` §15: `mem0`/`local`/`none`. Port: `'mem0' \| 'mem0-cloud' \| 'local' \| 'none'` | PRD §13, `06` §15, `01-ports.md`, `memory-store.ts` |
-| Endpoint or key ref | *"endpoint (self-host URL / cloud key ref)"* | `09`, PRD §11.2 |
+| Endpoint or key ref | *"endpoint (self-host URL / cloud key ref)"* (`09`); *"endpoint / key ref"* (PRD §11.2) | `09`, PRD §11.2, §13 |
 | Enabled scopes | `user` / `project` / `agent` / `task` | PRD §13, §11.2 |
 | Recall limit | number of hits, no default given | PRD §11.2, `06` §15, `09` |
-| `max_recall_chars` | default 6,000, *"roughly 1,500 tokens"* | PRD §7 |
+| `max_recall_chars` | default 6,000, *"roughly 1,500 tokens"*. PRD §13 and `06` §15 leave it out of their lists | PRD §7, §11.2; `09` |
 
 PRD §13: *"Add a **memory** section in settings as well (§11.2): the adapter (`none` / `local` / self-hosted Mem0 / Mem0 cloud), its endpoint or key ref, which scopes are enabled (user / project / agent / task), and the recall limit. Default the adapter to `none` — memory is additive, and nothing else in the app depends on it being on."*
 
@@ -24,19 +24,20 @@ PRD §13: *"Add a **memory** section in settings as well (§11.2): the adapter (
 - **Off means exactly as before.** *"With memory off (`none`), the prompt is exactly the six parts above"* (PRD §7). Acceptance: *"With memory disabled (`none`), every flow behaves exactly as in M1–M8"* (PRD §16).
 - **A hard cap on recall.** *"Part 7 has a hard size cap (`settings.memory.max_recall_chars`, default 6,000 …): hits are ranked by relevance and the tail is dropped to fit. It never grows the other six parts."* (PRD §7). Execution covers the prompt part in [[Prompt Assembly]].
 - **A key ref, not a key.** The block holds an *"endpoint or key ref"*. No source says what a ref points at (an env var name is the obvious reading). See [[Settings And Plumbing Open Questions]] #9.
-- **Host-side only.** The runner reads the block and calls the store on the host, so *"memory adds nothing to the sandbox egress allowlist"* (PRD §11.2).
+- **Host-side only.** The runner reads the block and calls the store on the host, so *"memory adds nothing to the sandbox egress allowlist"* (PRD §11.2). `09` adds the exception: *"If you ever run Mem0 remote *and* let a step reach it directly, that endpoint joins the allowlist (§08) — the default avoids it entirely."*
 
 ## Recommended defaults
 
-`09` recommendation: *"Adapter = `local` first …, default `none` until the first flow opts in"* and *"Recall the `user` scope into every run; `project`/`agent`/`task` per step."* Feature map §21 leaves the first scope open: *"❓ Which memory to switch on first — just *your* preferences (the cheapest win), or project memory too?"*
+`09` recommendation: *"Adapter = `local` first …, default `none` until the first flow opts in"* and *"Recall the `user` scope into every run; `project`/`agent`/`task` per step."* Feature map §21 leaves the first scope open: *"❓ Which memory to switch on first — just *your* preferences (the cheapest win), or project memory too?"* Architecture `README.md` open decision 4 lists *"which scopes are on by default"* as open, recommending *"`user` scope first"*. See [[Memory Open Questions]] #3.
 
 > [!warning] "Until the first flow opts in"
-> `09` implies a per-flow opt-in. The settings block is global, and no source gives flows or steps a memory field. See [[Settings And Plumbing Open Questions]] #9.
+> `09` implies a per-flow opt-in. The settings block is global, and no source gives flows or steps a memory field. See [[Settings And Plumbing Open Questions]] #9 and [[Memory Open Questions]] #4.
 
 Memory's own cost is tagged apart from run cost: see [[Memory Cost Accounting]].
 
 ## Related
 
+- [[Memory Settings]]
 - [[Settings Catalogue]]
 - [[Settings Defaults]]
 - [[Prompt Assembly]]

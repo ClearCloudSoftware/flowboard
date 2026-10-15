@@ -15,7 +15,7 @@ Where this layer's state lives. Durable state is split between one SQLite file a
 | The job queue | `jobs` | [[Job Queue]] |
 | Everything else in the domain | the other tables | [[Domain Schema]] |
 
-Settings are read by both processes: the worker when it builds a `RunSpec` and schedules escalation, the web process when it renders (theme) and serves `GET /api/settings` (proposed).
+Settings are read by both processes: the worker when it builds a `RunSpec` (`06` §15, `03` §6) and schedules escalation (`04` §10), and the web process, because *"the flow editor and board read settings for display toggles"* (`06` §15). Rendering the theme and serving `GET /api/settings` are proposals ([[Settings And Plumbing API And Routes]]).
 
 ## On disk, outside SQLite
 

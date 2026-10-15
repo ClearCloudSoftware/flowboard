@@ -41,7 +41,7 @@ flowchart LR
 - **Same machine.** Stop is *"SIGTERM by pid from the route (same machine)"* (backlog 3.4). Out of scope: *"multi-machine support"* (PRD §17). The worker is *"a **generic executor host** … the decoupling point that later allows remote executors or a fleet"* (`03` §7).
 
 > [!warning] Does the MCP process open the database?
-> PRD §3 and §9 say never. `02` §1 and backlog 1.1 describe a DB path env var *"so worker and MCP (spawned with a foreign cwd) open the same file"*, which is the first build's design. See [[Execution Open Questions]] #54.
+> PRD §3 and §9 say never. Backlog 1.1 describes a DB path env var *"so worker and MCP (spawned with a foreign cwd) open the same file"*, and `02` §1 says the same (*"so worker and MCP (foreign cwd) hit the same file"*): the first build's design. See [[Execution Open Questions]] #54.
 
 ## Ports and binding
 
