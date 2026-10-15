@@ -8,7 +8,6 @@ node_modules/
 data/*.db*
 data/runs/
 .vibe-worktrees/
-skills/_installed/
 
 # Obsidian per-user UI state
 docs/FlowBoard/.obsidian/workspace.json

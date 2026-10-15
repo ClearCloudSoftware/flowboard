@@ -11,15 +11,16 @@ Every control on the [[Capability Library Screen]].
 
 | Control | What it does |
 |---|---|
-| **+ Install from GitHub** | Clone, parse, review, confirm. Nothing is written until the last step. See [[Installing A Capability From GitHub]]. |
-| **+ Define agent** | Meant to create an agent here — a prompt, a default model and effort, and an allowed-tools list (field guide). In the mockup it only selects `architect` and switches the kind filter to Agents; no form is designed. See [[Agent Capabilities]]. |
+| **+ Install from git** | Clone any git URL (GitHub or `file://`), parse, review, confirm. Nothing is written until the last step. The mockup labels it *Install from GitHub*. See [[Installing A Capability From GitHub]]. |
+| **+ Define agent** | Opens a form: name, description, prompt, default model, default effort, allowed tools ([[Capability Library Decisions|D21]]). In the mockup it only selects `architect` and switches the kind filter to Agents. See [[Agent Capabilities]]. |
+| **Check for updates** | v1. Checks every git-sourced plugin in the project against its remote. The only way updates are found (D13). |
 
 ## In the rail
 
 | Control | What it does |
 |---|---|
-| **Kind filter** | Narrows to skills, agents or packs. The count on each chip is how many are installed. |
-| **Provider filter** | Narrows to capabilities packaged for one agent CLI — the fastest way to see what survives a provider switch. |
+| **Kind filter** | Narrows to skills or agents (packs deferred, D3). The count on each chip is how many are installed. |
+| **Provider filter** | Narrows to capabilities packaged for one agent CLI. *Not in v1* (D1). |
 | **Search** | Matches name, author and description together. Type an author to see everything they published. |
 | **A row** | Opens it in the detail pane. |
 
@@ -27,9 +28,10 @@ Every control on the [[Capability Library Screen]].
 
 | Control | What it does | Availability |
 |---|---|---|
-| **Update to n** | Replaces the installed pack with the newer commit. | Only when the source has moved. |
-| **Open on GitHub** | The source repository, at the installed commit. | Only when the capability has a source (not locally defined agents). |
-| **Remove** | Deletes it from the capability store. The mockup deletes on the first click; the PRD and backlog want a confirm. | **Disabled while any step references it**, with the count shown beside the button. |
+| **Update to n** | Opens a preview — the note, skills added and removed — then moves the plugin to the newer commit. Refused if it drops a skill in use (D19). Running tasks keep their pinned commit (D10). | Only when **Check for updates** found a newer commit. |
+| **Open on GitHub** | The source repository, at the installed commit. | Only when the plugin has a remote web URL (not seeds, `file://` sources or locally defined agents). |
+| **Duplicate to edit** | Copies a seeded agent into an editable one (D21). | Seeded agents. |
+| **Remove** | Deletes the plugin — all its skills — or the agent, after a confirm (D18). The mockup deletes on the first click. | **Disabled while any step references it** (D17), with the count shown beside the button. |
 
 ## In the install dialog
 
@@ -49,5 +51,6 @@ The field guide's walkthrough also takes `←` / `→` to step through it.
 
 ## Related
 
+- [[Capability Library Decisions]]
 - [[Capability Library Screen]]
 - [[Updating And Removing Capabilities]]

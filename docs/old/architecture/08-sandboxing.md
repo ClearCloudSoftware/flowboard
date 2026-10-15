@@ -60,7 +60,8 @@ the CLI.
 - **Drop capabilities:** `--cap-drop ALL`, add back only what a build needs. [docker]
 - **No privilege escalation:** `--security-opt no-new-privileges`; a `seccomp` profile. [docker]
 - **Read-only root filesystem** + `tmpfs` scratch; the only writable bind-mount is the task worktree.
-- **Mount only the worktree** (and the declared artifact dir). Never mount `~/.ssh`, cloud credential files,
+- **Mount only the worktree** (and the declared artifact dir), plus the plugin dirs the step names, read-only — the
+  agent CLI runs inside the box and needs them to register skills. Never mount `~/.ssh`, cloud credential files,
   the host SQLite DB, or the Docker socket. [cc-devcontainer][docker]
 - **Resource limits:** `--memory`, `--cpus`, `--pids-limit`, and a wall-clock timeout — the *physical* backstop
   to the *logical* `max_turns` / `max_budget_usd` caps. A runaway or looping agent is contained at the OS level,

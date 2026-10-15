@@ -5,9 +5,55 @@ module: Capability Library
 
 # Capability Data Model
 
-Three layers of the model exist in the sources: the **v1 PRD schema**, the **architecture's generalisation**, and the **record shape the mockup implies**. They are not yet reconciled — see [[Capability Library Open Questions]].
+Three layers of the model exist in the sources: the **v1 PRD schema**, the **architecture's generalisation**, and the **record shape the mockup implies**. The [[Capability Library Decisions|2026-10-15 decisions]] reconcile them into the v1 schema below; the sections after it are kept as source history.
+
+## v1 schema (decided)
+
+```sql
+CREATE TABLE plugins (
+  id           TEXT PRIMARY KEY,
+  project_id   TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  name         TEXT NOT NULL,          -- plugin.json name, else repo name
+  source       TEXT NOT NULL,          -- 'seed' | 'git'
+  repo_url     TEXT,                   -- any git URL, incl. file://; null for seeds
+  commit_sha   TEXT NOT NULL,          -- installed commit; seeds: FlowBoard's sha
+  has_mcp      INTEGER NOT NULL,       -- ships .mcp.json → amber
+  has_hooks    INTEGER NOT NULL,       -- ships hooks/ → amber
+  installed_at INTEGER NOT NULL,
+  UNIQUE (project_id, name)
+);
+
+CREATE TABLE skills (
+  id            TEXT PRIMARY KEY,
+  plugin_id     TEXT NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
+  slug          TEXT NOT NULL,         -- invoked as /<plugin.name>:<slug>
+  description   TEXT,
+  allowed_tools TEXT,                  -- JSON array, from SKILL.md
+  UNIQUE (plugin_id, slug)
+);
+
+-- agents: the PRD table below, plus project_id,
+--   UNIQUE (project_id, slug); default_model holds a Claude alias (opus|sonnet|haiku)
+
+-- step_defs: kind becomes 'ai' | 'shell' | 'manual'; an 'ai' step sets agent_id, skill_id or both (D27)
+--             + extra_plugin_ids TEXT   -- JSON array of plugins.id, mounted alongside the skill's plugin
+-- tasks:     + capability_pins  TEXT   -- JSON {plugins: {id: sha}, agents: {id: <agent row>}}, set at task start
+```
+
+| Choice | Why | Decision |
+|---|---|---|
+| Plugin row, skills as children | The plugin dir is what gets mounted, updated and removed | D4 |
+| No `install_path` column | Derived: `<project>/.flowboard/skills/<name>/<commit_sha>/` | D5 |
+| No `frontmatter` column | The disk is the source of truth; parse `SKILL.md` when shown | D23 |
+| `UNIQUE (plugin_id, slug)`, not global | Skills are invoked fully qualified, so two plugins may share a slug | D16 |
+| `capability_pins` as JSON on `tasks` | GC reads it with `json_each` over non-terminal tasks; a `task_pins` table only pays off if that query gets slow | D10, D11 |
+| No `provider` / packs table | v1 is Claude-only; `CapabilityPack` stays in the port | D1, D2 |
+
+`used` is a query, never stored: steps in each flow's latest version, plus versions pinned by a non-terminal task, whose skill belongs to the plugin or whose `extra_plugin_ids` contain it (D17).
 
 ## v1 PRD schema (SQLite)
+
+As the PRD first specified it. The PRD now carries the decided schema above.
 
 ```sql
 CREATE TABLE skills (
@@ -80,7 +126,7 @@ export interface RunSpec {
 `ProviderId` is `'claude-code' | 'codex' | 'replay' | (string & {})` — an open set.
 
 > [!warning] Two shapes for `CapabilityPack`
-> `05-environment-and-registry.md` §13 sketches it with a method — `provider: AgentProvider['id']; mount(spec: RunSpec): void;` — while `agent-provider.ts` makes `mount` a data union the adapter interprets. The union suits a registry that stores packs as rows. Undecided — see [[Capability Library Open Questions]] #14.
+> `05-environment-and-registry.md` §13 sketches it with a method — `provider: AgentProvider['id']; mount(spec: RunSpec): void;` — while `agent-provider.ts` makes `mount` a data union the adapter interprets. The union suits a registry that stores packs as rows. **Decided: the data union** ([[Capability Library Decisions|D2]]).
 
 ## Record shape implied by the mockup
 
@@ -132,6 +178,7 @@ The install dialog's candidate (`CANDIDATE`) has the same shape plus `url`, the 
 
 ## Related
 
+- [[Capability Library Decisions]]
 - [[Capability Versus Provider Pack]]
 - [[Capability Runtime Mounting]]
 - [[Capability Library API And Routes]]

@@ -10,6 +10,10 @@ Every fact in these notes comes from the files below (paths relative to the repo
 > [!note] Working tree, not HEAD
 > When these notes were checked (2026-10-15), the PRD, backlog, feature map, several architecture docs and the drawio had uncommitted edits — the whole *Harness architecture* drawio page among them. The notes follow the working tree.
 
+## Decisions
+
+[[Capability Library Decisions]] records the v1 design settled in a grilling session on 2026-10-15. It is not grounded in a file; where it overrides a source below, the notes say so and cite the decision number (D1–D31). The PRD, backlog, `.gitignore` and `08-sandboxing.md` were then updated to match, so notes that cite them describe the corrected text.
+
 ## Primary
 
 | File | What it contributes |
@@ -19,7 +23,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 | `docs/flowboard-ideation.drawio` | *Functional components*: Capability library group and its edge to Flow design. *FlowBoard ideation*: Skills & agents (`/skills`, `/agents`), capability packs. *Logical components*: Skills & agents → Disk. *Harness architecture*: durable-state store, `ro` `/skills` mount, GitHub install edge, out-of-scope marketplace |
 | `docs/old/architecture/05-environment-and-registry.md` §13 | Skill/Agent registry → Capability packs: the seam, `CapabilityPack`, provider-tagged install, seed idea |
 | `docs/old/reference/core/ports/agent-provider.ts` | `CapabilityPack`, mount kinds, open `ProviderId`, `RunSpec.capabilities` and `toolPolicy`, `plugins` capability flag |
-| `.gitignore` | `skills/_installed/` |
+| `.gitignore` | `skills/_installed/` (removed on 2026-10-15) |
 
 ## Secondary
 

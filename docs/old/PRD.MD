@@ -84,7 +84,7 @@ Get these three distinctions right; everything else follows.
 
 **Flow** — a versioned DAG of step definitions belonging to a project. Editing a flow creates a new version rather than mutating the old one.
 
-**Step definition** — a node in the flow. "Code review, Sonnet, high effort, waits for my approval." Belongs to a flow version.
+**Step definition** — a node in the flow. "Code review, Sonnet, high effort, waits for my approval." Belongs to a flow version. An AI step names an **agent** (who does the work: a system prompt and defaults), a **skill** (how: a slash command), or both — "the `reviewer` running `/code-review`".
 
 **Step instance** — one task's occupancy of one step definition. Has state and artifacts.
 
@@ -128,10 +128,11 @@ CREATE TABLE step_defs (
   flow_id        TEXT NOT NULL REFERENCES flows(id) ON DELETE CASCADE,
   key            TEXT NOT NULL,          -- stable slug, e.g. "code_review"
   name           TEXT NOT NULL,          -- column header, e.g. "Code review"
-  kind           TEXT NOT NULL,          -- 'skill' | 'agent' | 'shell' | 'manual'
+  kind           TEXT NOT NULL,          -- 'ai' | 'shell' | 'manual'; an 'ai' step sets skill_id, agent_id or both
   command        TEXT,                   -- kind='shell' only; null = the project's check_command
   skill_id       TEXT REFERENCES skills(id),
   agent_id       TEXT REFERENCES agents(id),
+  extra_plugin_ids TEXT NOT NULL DEFAULT '[]', -- JSON array of plugins.id mounted alongside the skill's plugin
   prompt_template TEXT,                  -- appended to the invocation, supports {{placeholders}}
   model          TEXT NOT NULL DEFAULT 'sonnet',   -- passed to --model
   effort         TEXT NOT NULL DEFAULT 'medium',   -- low|medium|high|xhigh|max
@@ -168,6 +169,7 @@ CREATE TABLE tasks (
   import_key    TEXT,            -- stable key for idempotent md import
   branch_name   TEXT,
   worktree_path TEXT,
+  capability_pins TEXT,          -- JSON {plugins:{id:commit_sha}, agents:{id:<agent row>}}, set when the task starts
   created_at    INTEGER NOT NULL,
   updated_at    INTEGER NOT NULL,
   UNIQUE (project_id, import_key)
@@ -249,32 +251,43 @@ CREATE TABLE questions (
 );
 CREATE INDEX questions_pending ON questions(state, created_at);
 
+CREATE TABLE plugins (                -- the unit of install, update and remove
+  id            TEXT PRIMARY KEY,
+  project_id    TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  name          TEXT NOT NULL,          -- plugin.json name, else the repo name
+  source        TEXT NOT NULL,          -- 'seed'|'git'
+  repo_url      TEXT,                   -- any git URL, incl. file://; null for seeds
+  commit_sha    TEXT NOT NULL,          -- installed commit; seeds: FlowBoard's commit
+  has_mcp       INTEGER NOT NULL,       -- ships .mcp.json (marked as network-capable)
+  has_hooks     INTEGER NOT NULL,       -- ships hooks/ (marked as network-capable)
+  installed_at  INTEGER NOT NULL,
+  UNIQUE (project_id, name)
+);
+-- The plugin dir is derived, not stored: <repo_path>/.flowboard/skills/<name>/<commit_sha>/
+
 CREATE TABLE skills (
   id            TEXT PRIMARY KEY,
-  slug          TEXT NOT NULL UNIQUE,   -- the slash command, e.g. 'grill-me'
-  name          TEXT NOT NULL,
+  plugin_id     TEXT NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
+  slug          TEXT NOT NULL,          -- invoked as /<plugin.name>:<slug>, e.g. '/grill-me:grill-me'
   description   TEXT,
-  source        TEXT NOT NULL,          -- 'local'|'github'
-  repo_url      TEXT,
-  git_ref       TEXT,
-  install_path  TEXT NOT NULL,          -- plugin dir passed to --plugin-dir
-  frontmatter   TEXT,                   -- JSON
-  installed_at  INTEGER NOT NULL,
-  updated_at    INTEGER NOT NULL
+  allowed_tools TEXT,                   -- JSON array, from SKILL.md; SKILL.md itself is read from disk
+  UNIQUE (plugin_id, slug)
 );
 
 CREATE TABLE agents (
   id             TEXT PRIMARY KEY,
-  slug           TEXT NOT NULL UNIQUE,
+  project_id     TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  slug           TEXT NOT NULL,
   name           TEXT NOT NULL,
   description    TEXT,
   system_prompt  TEXT NOT NULL,
-  default_model  TEXT NOT NULL DEFAULT 'sonnet',
+  default_model  TEXT NOT NULL DEFAULT 'sonnet',  -- a Claude alias, used as the logical model id
   default_effort TEXT NOT NULL DEFAULT 'medium',
   allowed_tools  TEXT,                  -- JSON array
-  is_builtin     INTEGER NOT NULL DEFAULT 0,
+  is_builtin     INTEGER NOT NULL DEFAULT 0,   -- seeded: read-only, "Duplicate to edit" makes a copy
   created_at     INTEGER NOT NULL,
-  updated_at     INTEGER NOT NULL
+  updated_at     INTEGER NOT NULL,
+  UNIQUE (project_id, slug)
 );
 
 CREATE TABLE jobs (
@@ -341,14 +354,14 @@ claude -p "<prompt>"
   --mcp-config <generated per-run mcp.json>
   --settings <generated per-run settings.json with PreToolUse hooks>
   --strict-mcp-config
-  --plugin-dir <each installed skill's install_path>
+  --plugin-dir <dir of each plugin the step names: its skill's plugin + extra_plugin_ids>
   [--allowedTools ...]  [--max-turns N]  [--max-budget-usd N]
-  [--append-system-prompt <agent.system_prompt, for kind='agent'>]
+  [--append-system-prompt <agent.system_prompt, when the step names an agent>]
 ```
 
 Run with `cwd` set to the task's worktree path. `--strict-mcp-config` is important: it stops my personal MCP config leaking into runs and keeps them reproducible.
 
-Use `--plugin-dir`, not `--add-dir`: only `--plugin-dir` registers a skill's `/slug`; `--add-dir` merely grants file access. When `--allowedTools` is set, always append `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`. Snapshot the final args to `data/runs/<id>/args.json`.
+Use `--plugin-dir`, not `--add-dir`: only `--plugin-dir` registers a plugin's skills; `--add-dir` merely grants file access. Mount only the plugins the step names, never every installed one: plugins are mounted as-is, hooks and MCP servers included, so they should run only where a step asked for them. Each plugin dir is the commit recorded in the task's `capability_pins`, not the currently installed one, so an update never reaches a running task; agent rows are pinned the same way. **Allowed tools** are the intersection of the agent's list and the skill's `allowed-tools` (whichever the step names), narrowed further by the step's own `allowed_tools` when set; the flow editor warns at design time when the intersection drops a tool the skill declares, because the agent's restrictions ("reads only") are the role's guarantee. When `--allowedTools` is set, always append `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`. Snapshot the final args to `data/runs/<id>/args.json`.
 
 **In-agent gate (hooks).** The per-run `settings.json` registers Claude Code `PreToolUse` hooks. They are the second mechanical gate: the sandbox limits what *can* happen, and the hooks block what *shouldn't*. The hook denies:
 - writes outside the task's worktree;
@@ -361,7 +374,7 @@ A denial returns its reason to the agent, so it changes course instead of stalli
 1. A short preamble naming the task, its title and body, its acceptance criteria ("the task is done when…") and its non-goals ("do not touch…"). Omit a heading when its field is empty.
 2. A list of input artifacts with their absolute paths, one per `requires` entry, phrased as "read these first".
 3. The exact output path the step should write, one per `produces` entry.
-4. For `kind='skill'`: the slash invocation, e.g. `/grill-me`.
+4. When the step names a skill: the slash invocation, fully qualified as `/<plugin>:<slug>`, e.g. `/grill-me:grill-me`. Claude Code namespaces plugin skills, so two plugins may ship the same slug.
 5. The step's `prompt_template` with `{{task_title}}`, `{{task_body}}`, `{{acceptance_criteria}}`, `{{non_goals}}`, `{{artifact:<type>}}` and `{{worktree}}` substituted.
 6. A closing instruction: this is a headless run, there is no terminal to ask into — use the `ask_user` MCP tool for any question.
 
@@ -489,7 +502,7 @@ Parallel steps within one task share the task's worktree. If two concurrent step
 
 ### 11.1 Sandboxed execution (optional, recommended for headless runs)
 
-Every step runs with `permission_mode='bypassPermissions'` by default — a fully-autonomous agent that reads untrusted content (repo files, the backlog, web pages, prior artifacts). Running that directly on the host is the dangerous configuration. Optionally run each step inside a **container** (or, for untrusted repos, a gVisor/microVM) instead of a host process. The task's worktree is bind-mounted as the working directory; nothing else from the host is mounted.
+Every step runs with `permission_mode='bypassPermissions'` by default — a fully-autonomous agent that reads untrusted content (repo files, the backlog, web pages, prior artifacts). Running that directly on the host is the dangerous configuration. Optionally run each step inside a **container** (or, for untrusted repos, a gVisor/microVM) instead of a host process. The task's worktree is bind-mounted as the working directory; the only other mounts are the step's plugin dirs, read-only (§7).
 
 The container applies a **security profile**: default-deny **network egress** with an allowlist (the model endpoint and the package registries a build needs; **not** the project's git remote, because the host does all git work and the agent never needs to push or fetch), a non-root user, `--cap-drop ALL`, `--security-opt no-new-privileges`, a read-only root filesystem with `tmpfs` scratch, and resource limits (`--memory`, `--cpus`, `--pids-limit`, wall-clock) that physically backstop the logical `max_turns`/`max_budget_usd` caps. Containers are ephemeral — one per run, destroyed on completion. Implement egress as a proxy (Squid or tinyproxy) on an internal-only Docker network: the container has no other route out.
 
@@ -499,7 +512,7 @@ The container applies a **security profile**: default-deny **network egress** wi
 
 Because the agent runs with `cwd` inside the container, no host mounts, and restricted egress, the `ask_user` MCP server cannot open the host SQLite file. It doesn't need to: the shim talks to the host broker over the mounted socket (§9), never to the database or the network. Never mount host secrets (`~/.ssh`, cloud credentials), the host DB, or the Docker socket.
 
-Configuration: a `sandbox_profile` in `settings` (tier, image, egress allowlist, limits), overridable per step; `runs.sandbox` records the tier that actually ran, alongside `runs.model`/`runs.effort`. Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`. Full threat model, isolation ladder, and prior art (Claude Code's dev-container firewall, Codex's default OS sandbox, gVisor/Firecracker): `docs/architecture/08-sandboxing.md`.
+Configuration: a `sandbox_profile` in `settings` (tier, image, egress allowlist, limits), overridable per step; `runs.sandbox` records the tier that actually ran, alongside `runs.model`/`runs.effort`. Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`. On the host tier, a step that mounts a git-installed plugin does not run: that plugin's hooks and MCP servers would execute as me, with no egress wall. Seed plugins still run there. Full threat model, isolation ladder, and prior art (Claude Code's dev-container firewall, Codex's default OS sandbox, gVisor/Firecracker): `docs/architecture/08-sandboxing.md`.
 
 ### 11.2 Agentic memory (optional, additive)
 
@@ -541,8 +554,13 @@ POST   /api/step-instances/:id/approve      POST /api/step-instances/:id/reject
 POST   /api/step-instances/:id/retry
 GET    /api/questions?state=pending         POST /api/questions/:id/answer
 GET    /api/runs/:id                        GET  /api/runs/:id/stream   -- SSE
-GET    /api/skills                          POST /api/skills/install    -- from github url
-GET    /api/agents                          POST /api/agents
+GET    /api/projects/:id/library            -- plugins + skills + agents, with used-by
+POST   /api/projects/:id/plugins/preview    -- {url}: clone to staging, parse, return what was found
+POST   /api/projects/:id/plugins            -- {previewId}: confirm the install
+POST   /api/projects/:id/plugins/check-updates
+POST   /api/plugins/:id/update/preview      POST /api/plugins/:id/update   -- 409 if it drops an in-use skill
+DELETE /api/plugins/:id                     -- 409 while in use
+POST   /api/projects/:id/agents             PATCH /api/agents/:id   DELETE /api/agents/:id
 POST   /api/import/backlog                  -- md file -> tasks
 GET    /api/costs?project=&from=&to=
 POST   /api/slack/interactions
@@ -566,9 +584,9 @@ Dark-first, dense, keyboard-friendly. Use shadcn defaults; do not build a design
 
 **`/runs/[id]` — live session viewer.** Streams the normalised event summaries as they arrive, with tool calls collapsible to show their full input and result. Sticky footer with elapsed time, turn count, running cost. A Stop button that kills the process.
 
-**`/p/[slug]/flow` — flow editor.** A node graph is nice but not required for v1. A vertical list of steps with an "add step" button and a connections panel is acceptable and much faster to build. When adding a step: choose Skill or Agent, pick from installed skills or defined agents, then set model, effort, advance mode, requires, produces, and limits. Show a live validation banner when the artifact contract is unsatisfied.
+**`/p/[slug]/flow` — flow editor.** A node graph is nice but not required for v1. A vertical list of steps with an "add step" button and a connections panel is acceptable and much faster to build. When adding a step: choose an AI, shell or manual step; for an AI step pick an agent, a skill or both (from defined agents and installed skills), then set model, effort, advance mode, requires, produces, and limits. Show a live validation banner when the artifact contract is unsatisfied.
 
-**`/skills` and `/agents`.** Skills: list installed, install from a GitHub URL (clone or sparse-checkout into `./skills/<slug>`, parse `SKILL.md` frontmatter for name and description), update, remove. Agents: a form for name, description, system prompt, default model, default effort, allowed tools.
+**`/p/[slug]/library` — skills and agents.** One screen per project. Plugins: install from any git URL (GitHub or `file://`), cloned into `<repo_path>/.flowboard/skills/<plugin>/<commit>/` (gitignored, one dir per commit) after a preview of what was found; a plugin is installed, updated and removed as one unit with all its skills. **Check for updates** is manual; an update first previews the skills it adds and removes and is refused if it drops one a step uses. Remove asks for confirmation and is disabled while any step uses the plugin (counting each flow's latest version and any version a running task pins). Mark plugins that ship `.mcp.json` or `hooks/`, and skills that ask for `Bash`, `WebFetch` or `WebSearch`, as network-capable. Agents: a form for name, description, system prompt, default model, default effort, allowed tools; seeded agents are read-only, with a Duplicate to edit action.
 
 **`/costs`.** Not just a total. Show:
 - spend per project over time (bar chart, Recharts)
@@ -611,27 +629,29 @@ Commit after each milestone.
 
 ## 15. Seed data
 
-Seed one project and one flow that reproduces my actual workflow. Steps, in order, with edges:
+Seed one project and one flow, **Software delivery**, that reproduces my actual workflow. Steps, in order, with edges:
 
-| key | name | kind | model | effort | advance | requires | produces |
-|---|---|---|---|---|---|---|---|
-| `research` | Research | agent `researcher` | sonnet | medium | auto | — | `research_brief` |
-| `grill` | Grill me | skill `/grill-me` | sonnet | medium | auto | `research_brief` | `questions`, `answers` |
-| `plan` | Plan | agent `planner` | opus | high | auto | `research_brief`, `answers` | `plan` |
-| `explain` | Explain plan | skill `/explain-simply` | haiku | low | **approval** | `plan` | `explainer` |
-| `implement` | Implement | skill `/ponytail` | opus | high | auto | `plan` | `implementation_notes` |
-| `tests` | Write tests | agent `test-writer` | sonnet | high | auto | `plan` | `test_notes` |
-| `check` | Lint & test | shell (project `check_command`) | — | — | auto | — | `check_output` |
-| `review` | Code review | skill `/code-review` | opus | high | **approval** | `implementation_notes`, `test_notes`, `check_output` | `review` |
-| `summarize` | Summarize built | agent `summarizer` | sonnet | medium | auto | `review` | `summary` |
+| key | name | agent | skill | model | effort | advance | requires | produces |
+|---|---|---|---|---|---|---|---|---|
+| `research` | Research | `scout` | — | sonnet | medium | auto | — | `research_brief` |
+| `grill` | Grill me | — | `/grill-me` | sonnet | medium | auto | `research_brief` | `questions`, `answers` |
+| `plan` | Plan | `architect` | `/plan-implementation` | opus | high | auto | `research_brief`, `answers` | `plan` |
+| `explain` | Explain plan | — | `/explain-simply` | haiku | low | **approval** | `plan` | `explainer` |
+| `implement` | Implement | `developer` | `/ponytail` | opus | high | auto | `plan` | `implementation_notes` |
+| `tests` | Write tests | `tester` | — | sonnet | high | auto | `plan` | `test_notes` |
+| `check` | Lint & test | shell (project `check_command`) | — | — | — | auto | — | `check_output` |
+| `review` | Code review | `reviewer` | `/code-review` | opus | high | **approval** | `implementation_notes`, `test_notes`, `check_output` | `review` |
+| `summarize` | Summarize built | `scribe` | — | sonnet | medium | auto | `review` | `summary` |
+
+**The seeds are exactly what this flow uses** — six agents (`scout`, `architect`, `developer`, `tester`, `reviewer`, `scribe`, read-only in the editor) and five skills (`grill-me`, `plan-implementation`, `explain-simply`, `ponytail`, `code-review`) — so nothing ships unused. `scout` gets `Read, Grep` only: it researches the repo, so the first step of every task never fails closed on egress. `tester` writes tests for the acceptance criteria without touching the implementation; the `check` step runs them.
 
 Edges: `research → grill → plan → explain`. Then `explain → implement` and `explain → tests` (the fan-out). Then `implement → check` and `tests → check` (the join). Then `check → review` on `on_pass` and `check → implement` on `on_fail` (the mechanical loop: the model never gets reviewed on code that doesn't pass). Then `review → summarize` on `on_pass`, and `review → implement` on `on_fail` (the review loop). Seed the scratch project's `check_command` with something that exists in the scratch repo.
 
 The seeded `/code-review` skill reviews the diff against the task's acceptance criteria and non-goals and against the raw `check_output`, and must call `set_outcome`. It is told to look for failures, not to confirm the work.
 
-Also seed a builtin agent **`backlog-importer`** whose job is: given a markdown file path, produce a JSON array of `{ import_key, title, body, acceptance_criteria?, non_goals? }` (the last two from "Acceptance criteria" / "Non-goals" sub-sections when present). Derive `import_key` from front-matter `id` if present, otherwise a slug of the heading. The import endpoint upserts on `(project_id, import_key)` so re-importing an edited file updates existing tasks instead of duplicating them.
+The import endpoint also uses an internal **`backlog-importer`** agent — part of the import feature, not a seed, so it never appears in the library or the step picker. Its job: given a markdown file path, produce a JSON array of `{ import_key, title, body, acceptance_criteria?, non_goals? }` (the last two from "Acceptance criteria" / "Non-goals" sub-sections when present). Derive `import_key` from front-matter `id` if present, otherwise a slug of the heading. The import endpoint upserts on `(project_id, import_key)` so re-importing an edited file updates existing tasks instead of duplicating them.
 
-Write the seeded skills as real local skill directories under `./skills/` with a `SKILL.md` each, so M4 and M5 are testable without any GitHub access. They can be short.
+Write the seeded skills as real local plugin dirs under FlowBoard's `./skills/` with a `SKILL.md` each, so M5 is testable without any GitHub access. The M4 three-question skill (`ask-three`) is a test fixture loaded by the test setup, not a seed. They can be short. Registering a project copies the seeds into its store under FlowBoard's commit; upgrading FlowBoard stages new seed commits as an available update rather than applying them.
 
 ---
 

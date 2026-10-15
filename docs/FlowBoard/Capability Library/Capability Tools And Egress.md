@@ -17,6 +17,8 @@ The ones that can reach outside the workspace are marked **amber**, because they
 
 In the mockup this set is `NET_TOOLS = {'WebFetch', 'WebSearch', 'Bash'}`.
 
+**v1 also marks a plugin amber when it ships `.mcp.json` or `hooks/`** ([[Capability Library Decisions|D9]]). Plugin contents are mounted as-is (D8), and an MCP server's tool names are only known once it starts, so the tool list alone would miss a plugin that reaches the network that way. The check is a file-exists test at install time (`plugins.has_mcp`, `plugins.has_hooks`).
+
 ## Installing does not open the wall
 
 > [!important]
@@ -42,7 +44,8 @@ From `old/architecture/08-sandboxing.md` and the harness-architecture diagram:
 
 - **Egress allowlist is load-bearing.** Default-deny outbound; allow only the model/CLI endpoint and the package registries the step needs. **Not the git remote** — the host does all git work.
 - Implemented as an egress proxy (Squid / tinyproxy) on an internal Docker network, which also injects the real API key on model requests.
-- **Installed skills are mounted read-only** into the sandbox (`ro: skills/ → /skills`) — harness diagram only; `08-sandboxing.md` says to mount only the worktree and the declared artifact dir. The only writable mount is the task worktree.
+- **Installed skills are mounted read-only** into the sandbox (`ro: skills/ → /skills`) — harness diagram. **v1 (D14), now also in `08-sandboxing.md`:** only the step's pinned plugin dirs, read-only. The only writable mount is the task worktree.
+- **No sandbox, no git plugins.** On the host tier, a step whose plugins came from a git URL does not run (D15).
 - A default-deny allowlist holds even when tool approval is bypassed.
 
 ## Tool enforcement depends on the provider
@@ -59,6 +62,7 @@ A second layer sits inside the agent: PreToolUse **hooks** (PRD §7, `03-executi
 
 ## Related
 
+- [[Capability Library Decisions]]
 - [[Installing A Capability From GitHub]]
 - [[Capability Runtime Mounting]]
 - [[Skill Capabilities]]

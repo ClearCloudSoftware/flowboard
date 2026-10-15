@@ -26,6 +26,7 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 - [ ] Run the `stream-json` probe, commit `docs/stream-sample.jsonl` + stderr; note where `total_cost_usd`, `num_turns`, `session_id` and `message_delta.usage` live. **PRD**
 - [ ] Verify flags exist: `--effort`, `--session-id`, `--strict-mcp-config`, `--plugin-dir`, `--allowedTools`, `--tools`, `--max-turns`, `--max-budget-usd`, `--append-system-prompt`, `--resume`, `--fork-session`. Record in README. **FIX**
 - [ ] Confirm `--plugin-dir <dir>` registers `/slug` and `--add-dir` does not. **FIX**
+- [ ] Confirm the fully qualified form `/<plugin>:<slug>` invokes a plugin skill reliably in headless `-p` mode. **DEC**
 - [ ] Decide how to isolate headless runs from `~/.claude` hooks/settings (e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`). **DEC**
 - [ ] Probe Docker (or Podman) availability and version; decide the runtime and whether gVisor/Firecracker are worth an opt-in tier. If absent, the sandbox tier is unavailable — fall back to `host` and disable `bypassPermissions`. See Story 3.5. **NEW**
 
@@ -36,7 +37,7 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 
 ### Story 0.3 Repo hygiene
 - [ ] Dev server on port 3111; README warns agents kill :3000. **FIX**
-- [ ] `.gitignore`: `data/*.db*`, `data/runs`, `.vibe-worktrees`, `skills/_installed`. **FIX**
+- [ ] `.gitignore`: `data/*.db*`, `data/runs`, `.vibe-worktrees`. Installed plugins live in each managed project's `.flowboard/skills/`, which FlowBoard adds to that repo's `.git/info/exclude`. **FIX**
 - [ ] Commit or drop the four dirty files before starting. **BUG**
 
 ---
@@ -53,9 +54,9 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 - [ ] Either use `questions.state='expired'` or remove it. Today it is never set. **BUG**
 
 ### Story 1.2 Seed (PRD §15)
-- [ ] Flow templates as JSON: `software-development` (the 9‑step table, exact models/efforts/gates/edges) and `researcher` (scope → web research → summarize → grounding ✋, `on_fail` loop). **PRD/NEW**
-- [ ] Agents: researcher, planner, test‑writer, summarizer, backlog‑importer (builtin), web‑researcher, research‑summarizer, fact‑checker. **PRD/NEW**
-- [ ] Skills as local plugin dirs `skills/<slug>/.claude-plugin/plugin.json` + `skills/<slug>/skills/<slug>/SKILL.md`: grill‑me (uses `ask_user_batch` and honours `no_answer_yet`), code‑review (calls `set_outcome`), explain‑simply, ponytail, ask‑three (M4 smoke). **PRD**
+- [ ] Flow template as JSON: *Software delivery* (the 9‑step table, exact agent/skill pairs, models/efforts/gates/edges). The `researcher` web-research template is out of v1 until open-web egress has an answer. **PRD/NEW**
+- [ ] Agents (seeded, read-only): scout (`Read, Grep` only), architect, developer, tester (writes tests), reviewer, scribe — exactly the agents the seed flow uses. `backlog-importer` is internal to import (Story 7.3), not a seed. **PRD/NEW**
+- [ ] Skills as local plugin dirs `skills/<slug>/.claude-plugin/plugin.json` + `skills/<slug>/skills/<slug>/SKILL.md`: grill‑me (uses `ask_user_batch` and honours `no_answer_yet`), plan‑implementation, explain‑simply, ponytail, code‑review (calls `set_outcome`). `ask-three` (M4 smoke) is a test fixture, not a seed. **PRD**
 - [ ] Seed project pointing at an auto‑`git init`ed scratch repo. **PRD**
 
 ### Story 1.3 Projects list `/` (PRD §13)
@@ -104,7 +105,7 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 - [ ] `start_run` must not be completed before the child is spawned; a crash mid‑spawn currently loses the run. **BUG**
 
 ### Story 3.2 Runner
-- [ ] Command exactly as §7 with `--plugin-dir` per installed skill; `--allowedTools` always appended with `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`; args snapshot to `data/runs/<id>/args.json`. **PRD/FIX**
+- [ ] Command exactly as §7 with `--plugin-dir` per plugin the step names (its skill's plugin + `extra_plugin_ids`), at the commit pinned in `tasks.capability_pins`; `--allowedTools` always appended with `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`; args snapshot to `data/runs/<id>/args.json`. **PRD/FIX**
 - [ ] Per‑run `mcp.json` pointing at `mcp/ask-user.ts` via `tsx --tsconfig <root>/tsconfig.json` (path aliases break when spawned from the worktree cwd). **FIX**
 - [ ] Prompt builder: six parts in order, `{{task_title}} {{task_body}} {{artifact:<type>}} {{worktree}}`, closing headless instruction. **PRD**
 - [ ] Resume prompt must repeat the requires/produces paths, not only the answers. **BUG**
@@ -210,13 +211,13 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 
 ## Epic 7 — Library and import (M7)
 
-### Story 7.1 Skills `/skills`
-- [ ] Install from GitHub URL into `./skills/<slug>` as a plugin dir (add `.claude-plugin/plugin.json` when missing), parse `SKILL.md` frontmatter; update; remove with confirm. **PRD/BUG**
-- [ ] Show stored frontmatter or stop storing it. **GAP**
+### Story 7.1 Skills (library screen `/p/[slug]/library`)
+- [ ] Install a plugin from any git URL into `<repo_path>/.flowboard/skills/<plugin>/<commit>/` (add `.claude-plugin/plugin.json` when missing), parse every `skills/*/SKILL.md`; manual check for updates; update with an added/removed-skills preview; remove with confirm. **PRD/BUG**
+- [ ] Stop storing frontmatter: read `SKILL.md` from the plugin dir when shown. **GAP**
 - [ ] Loading/empty states. **BUG**
 
-### Story 7.2 Agents `/agents`
-- [ ] CRUD form: name, description, system prompt, default model, default effort, allowed tools; builtin agents read‑only. **PRD**
+### Story 7.2 Agents (library screen `/p/[slug]/library`)
+- [ ] CRUD form: name, description, system prompt, default model, default effort, allowed tools; builtin agents read‑only, with a Duplicate to edit action. **PRD**
 - [ ] One error‑handling style for create and update. **BUG**
 
 ### Story 7.3 Backlog import (PRD §15/§16)
@@ -240,7 +241,7 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 
 ### Story 8.2 Flow editor `/p/[slug]/flow`
 - [ ] React Flow canvas: nodes = steps, drag‑to‑connect, edge label cycles `always → on_pass → on_fail`, Backspace deletes, dagre auto‑layout, backwards edges routed under the row. **NEW**
-- [ ] Inspector: kind, skill/agent, model, effort, advance mode, entry, requires, produces, limits, permission mode, allowed tools, prompt template. **PRD**
+- [ ] Inspector: kind (`ai`/`shell`/`manual`), agent and/or skill, model, effort, advance mode, entry, requires, produces, limits, permission mode, allowed tools, prompt template. **PRD**
 - [ ] Live validation banner (debounced). **PRD**
 - [ ] Reuse… picker (steps or whole flow from other projects, key uniquified). **NEW**
 - [ ] Start from flow type. **NEW**

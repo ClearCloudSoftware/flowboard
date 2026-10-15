@@ -5,6 +5,9 @@ module: Capability Library
 
 # Capability Versus Provider Pack
 
+> [!check] v1: one provider, seam kept
+> v1 is Claude-only ([[Capability Library Decisions|D1]]): every capability has exactly one pack, a Claude plugin dir, and the library shows no per-provider packs. `CapabilityPack` stays in the port as the data union below (D2), so adding a second provider later needs no change to the flow graph. Everything in this note about multiple packs per capability describes that later state.
+
 ## The distinction
 
 A step says *"run code-review"*. It does not say how.
@@ -50,7 +53,7 @@ export interface CapabilityPack {
 }
 ```
 
-`ProviderId` is `'claude-code' | 'codex' | 'replay' | (string & {})` — an open set. `05-environment-and-registry.md` sketches the pack differently, with a `mount(spec: RunSpec): void` method; see [[Capability Library Open Questions]] #14.
+`ProviderId` is `'claude-code' | 'codex' | 'replay' | (string & {})` — an open set. `05-environment-and-registry.md` sketches the pack differently, with a `mount(spec: RunSpec): void` method. **Decided: the data union** (D2).
 
 Three mount strategies cover the field:
 
@@ -64,16 +67,17 @@ Three mount strategies cover the field:
 
 - Each capability's detail pane lists **packs — one packaging per provider**, with an installed version per provider or *"not packaged for this provider"*.
 - The status bar reports **codex packs for N of M** — the share of the library that survives switching a flow to Codex.
-- Per the mockup, the flow editor refuses to save a step whose provider has no pack for the capability it names (blocking vs warning is open — [[Capability Library Open Questions]] #13).
+- Per the mockup, the flow editor refuses to save a step whose provider has no pack for the capability it names (blocking vs warning returns with the second provider — moot in v1).
 
 See [[Provider Coverage And Portability]].
 
 ## Agents are nearly provider-neutral already
 
-An agent is a prompt plus defaults. The only provider-specific part is the default model id. The architecture wants that to be a **logical** id (`reasoning-high`, `fast-cheap`, `default`) resolved through `resolveModel()`; the PRD still stores a native one (`sonnet`). See [[Agent Capabilities]].
+An agent is a prompt plus defaults. The only provider-specific part is the default model id. The architecture wants that to be a **logical** id (`reasoning-high`, `fast-cheap`, `default`) resolved through `resolveModel()`; the PRD still stores a native one (`sonnet`). For v1 the Claude aliases (`opus` / `sonnet` / `haiku`) serve as the logical ids ([[Capability Library Decisions|D20]]). See [[Agent Capabilities]].
 
 ## Related
 
+- [[Capability Library Decisions]]
 - [[Capability Kinds]]
 - [[Capability Runtime Mounting]]
 - [[Capability Data Model]]
