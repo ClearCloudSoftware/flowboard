@@ -16,7 +16,7 @@ Money shows on almost every screen. This note lists each place, what the figure 
 | Monitor topbar | **burn** `/hr`, **today**, **wasted** `(N%)` | Rate of running runs; kept + wasted today; wasted part only | `monitor.html`, monitor guide | [[Burn Today And Wasted]] |
 | Monitor workers strip | burn per hour | Same as topbar | `monitor.html:881` | [[Worker Slots]] |
 | Monitor pulse row | cost in bold, `$X wasted` under it when over half a cent | The task's kept and wasted | `monitor.html` | [[Pulse View]] |
-| Monitor pipeline | *"↺ sent back ×N today · $X burned"* on the retry loop | Wasted on that loop today | `monitor.html:1009` | [[Pipeline View]] |
+| Monitor pipeline | *"↺ sent back ×N today · $X burned"* on the retry loop | Not what the label says: `×N` is every extra attempt on every task, failure retries included (`monitor.html:975`), and `$X` is all wasted spend on every task (`:976`). No date filter applies | `monitor.html:975`–`976`, `:1009` | [[Pipeline View]] |
 | Monitor row detail | *This task, so far*; *Burned on redone work* | The task's kept spend (`costOf`, wasted excluded); the task's wasted | `monitor.html:865`–`866` | [[Task Row Detail]] |
 | Monitor needs-you failure card | *"$X spent on the attempts so far"* | The failed step's wasted spend | `monitor.html:750` | [[Needs You Band]] |
 | Inbox context panel | **costing you** `$/hr`, today, wasted | Burn of running runs; hard-coded `$19.46` and `$2.55` in the mockup. Backlog 4.3: *"running steps with live cost estimate"* | `inbox.html:379`–`388`, backlog 4.3 | [[Human In The Loop Screen]] |
