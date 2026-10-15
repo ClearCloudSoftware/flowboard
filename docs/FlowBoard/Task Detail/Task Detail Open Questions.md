@@ -143,6 +143,10 @@ The banner states the reviewer's findings in prose. Is that `set_outcome`'s `rea
 
 The guide's pill table says you can *"stop the run from the story row if it is clearly lost"*. The mockup has no such control. The PRD puts Stop on `/runs/[id]` with no listed endpoint. See [[Task Actions]].
 
+### 31. A deliberate stop looks like a transient failure
+
+Cancel and Stop end a run with SIGTERM (backlog Story 2.1; `03` §8), and the run should be finalised as `cancelled` (`03` §7–§8). But PRD §7 classes *"process killed by a signal"* as **transient**, retried automatically up to 3 times. Unless the runner records that the kill was intentional before the process exits, a cancelled task's run comes back by itself. See [[Task Actions]].
+
 ## Related
 
 - [[Task Detail Index]]

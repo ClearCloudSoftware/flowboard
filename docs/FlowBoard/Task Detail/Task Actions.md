@@ -33,7 +33,7 @@ Feature map §3: *"Send a task back to the backlog (keeping its workspace)"*. Th
 
 > **Pause, send back, or cancel** — Send a task back to the backlog (keeping its workspace), or cancel it — which stops any running agents and tidies up. — feature map §3
 
-What "tidies up" means, from backlog Story 2.1 (**FIX**): *"Cancel: SIGTERM live runs, cancel pending questions, mark instances skipped."* A stopped run is finalised as `cancelled`, not `failed` (`03` §7–§8). Spend on a cancelled run moves to wasted (guide). The callout:
+What "tidies up" means, from backlog Story 2.1 (**FIX**): *"Cancel: SIGTERM live runs, cancel pending questions, mark instances skipped."* A stopped run is finalised as `cancelled`, not `failed` (`03` §7–§8). PRD §7, however, retries *"process killed by a signal"* as a transient failure, so the runner has to know the kill was deliberate (see [[Task Detail Open Questions]] #31). Spend on a cancelled run moves to wasted (guide). The callout:
 
 > [!warning] Stopping never refunds
 > *"Cancelling a task, or sending a step back, does not recover what has already been spent — it moves that spend into wasted and stops the future spend. The only free decision on this screen is approving."* — task-detail guide
