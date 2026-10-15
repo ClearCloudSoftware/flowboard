@@ -41,7 +41,7 @@ sequenceDiagram
   UI-->>You: "6 created", and which path ran
 ```
 
-Assembled from backlog 7.3, `05` §14 and PRD §5, §7. The steps after `{queued}` follow the order in backlog 7.3; how the board learns the result is not specified.
+Assembled from backlog 7.3, `05` §14 and PRD §5, §7. The sources give the route's half in order (temp file, enqueue, `{queued}`) and say only that the *"worker deletes the temp file"*. The worker's order (lease, parse, upsert, delete, done) is this set's inference. How the board learns the result is not specified.
 
 ## Statuses the user sees
 
@@ -54,7 +54,7 @@ Feature map §17: *"The import reports its status (queued → running → "6 cre
 | "6 created" | `done` |
 | (failure) | `failed`, with `last_error` |
 
-The mapping is a **proposal**: the PRD's job states are `queued`, `leased`, `done`, `failed`, and none of the sources pairs them with the UI words. The `jobs` table has no column for a result such as *"6 created"* or *which path ran*. See [[Intake And Import Open Questions]] #9.
+The mapping is a **proposal** ([[Intake And Import Open Questions]] #9): the PRD's job states are `queued`, `leased`, `done`, `failed`, and none of the sources pairs them with the UI words. The `jobs` table has no column for a result such as *"6 created"* or *which path ran*. See [[Intake And Import Open Questions]] #9.
 
 ## The job
 

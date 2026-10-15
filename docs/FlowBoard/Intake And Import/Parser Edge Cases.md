@@ -20,6 +20,7 @@ How the reference [[Markdown Task Source]] behaves on input the sources do not d
 | `* **Star** : x` | task `Star`, body `x` | `*` and `-` bullets both count; `:` is a separator |
 | Two headings with the same title | `same`, then `same-2` | in-file de-dupe |
 | Two titles with the same explicit id `{#k}` | `k`, then `b-2` (the slug of the second title, plus `-2`) | the de-dupe falls back to `slugify(title)` |
+| `## Title {#Upper}` | title `Title {#Upper}`, key `title-upper` | `splitId` accepts only `[a-z0-9][a-z0-9-]*`; anything else stays in the title |
 | `Ünïcode café` | key `n-code-caf` | `slugify` keeps `[a-z0-9]` only |
 | `日本語` | key `""` (empty) | nothing survives `slugify` |
 | YAML front matter with `id: foo` | ignored; the key is the heading slug | the reference has no front-matter reader |

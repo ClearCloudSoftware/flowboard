@@ -28,14 +28,16 @@ The *Harness architecture* card draws only the agent path. Which path is the def
 Backlog 7.3 (**FIX**): *"Agent invocation: haiku, `--tools ""`, extract the first `[`…`]`; fall back to the parser on any failure and **report which path ran**."*
 
 - **Model**: haiku.
-- **Tools**: none (`--tools ""`). The agent reads the file it is given, not the repo.
+- **Tools**: none (`--tools ""`). Backlog 0.1 lists `--tools` among the CLI flags to verify (**FIX**).
+- **Input**: PRD §15 says the agent is *"given a markdown file path"*. With no tools it cannot open a path, so the file's text would have to travel in the prompt. That is an inference; no source says how the file reaches the agent ([[Intake And Import Open Questions]] #27).
 - **Output**: the first JSON array in its reply.
 - **On failure**: the deterministic parser runs instead.
 - **Report**: which path ran. `05` §14: the endpoint *"reports which path ran (deterministic vs agent)"*.
+- **Through the CLI**: PRD §17 rules out *"anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI."* The importer is a headless `claude` call like any run, not an SDK call.
 
-Backlog 7.3 (**BUG**): *"Isolate the importer from global hooks (see 0.1)."* Story 0.1 is the general problem: *"Decide how to isolate headless runs from `~/.claude` hooks/settings (e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`)"*. Decision D5 recommends *"Empty `--settings` file per run"*. See [[Import Trust And Isolation]].
+Backlog 7.3 (**BUG**): *"Isolate the importer from global hooks (see 0.1)."* Story 0.1 is the general problem: *"Decide how to isolate headless runs from `~/.claude` hooks/settings (e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`)"*. Decision D5 recommends *"Empty `--settings` file per run"*. The backlog's *What went wrong*, item 6, gives the reason: *"global `~/.claude` hooks apply to headless runs"*. See [[Import Trust And Isolation]] and [[Agent Providers Open Questions]] #24.
 
-The backlog's header lists *"nine headless `backlog-importer` runs"* among the sessions it was derived from.
+The backlog's header lists a *"2026‑09‑09 import debugging"* session and *"nine headless `backlog-importer` runs"* among the sessions it was derived from.
 
 ## Not a seed, not in the library
 

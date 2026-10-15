@@ -43,14 +43,14 @@ Intake is spread over three milestones (PRD §14):
 | Keyboard equivalent for promote and demote | **BUG** | backlog 9.4 |
 | Scripted import-twice check over both shapes | — | backlog 10.1, `05` §14 |
 
-The backlog's *"Four uncommitted files"* included *"import route"* and *"board Import button"* (preamble item 7).
+The backlog's *"Four uncommitted files"* were the *"import route, worker cleanup, board Import button, sheet Start button"* (*What went wrong*, item 7).
 
-## Decided
+## Decisions
 
 | # | Decision | Source |
 |---|---|---|
-| D6 | *"Deterministic parser supports headings **and** bullets; agent optional"* | backlog decisions table (recommendation) |
-| D30 | `backlog-importer` is not a seed and never shows in the library | [[Capability Library Decisions]] |
+| D6 | *Recommended*, not closed: *"Deterministic parser supports headings **and** bullets; agent optional"*. The architecture README still lists *"import parser shape"* among its open decisions (item 5) | backlog *Decisions to close* (default recommendation) |
+| D30 | Decided: `backlog-importer` is not a seed and never shows in the library | [[Capability Library Decisions]] |
 | D1 | *Recommended*, not closed: explicit Start, *"promote stays cheap"* | backlog, drawio |
 
 ## Designed beyond the PRD
@@ -65,12 +65,12 @@ The backlog's *"Four uncommitted files"* included *"import route"* and *"board I
 - **More task sources**: GitHub Issues, Linear, Jira, webhook (architecture README, `05` §14). See [[Future Task Sources]].
 - **Kick off work from outside**: *"start a task straight from a GitHub issue, a Slack message, or on a schedule"* (feature map parking lot).
 - **Schedule trigger (later)** (drawio *Harness architecture*).
-- **An owner per task** and **Pull a teammate in** (feature map §3): would give imported tasks an assignee.
+- **An owner per task** (feature map §3): *"a task can belong to a teammate"*. That imported tasks would then need an owner is this set's inference.
 - Feature map §17's own *💡 Ideas* slot is empty: *"(add ideas)"*.
 
 ## Out of scope
 
-- PRD §17: *"authentication, user accounts, roles, deployment config, multi-machine support, a plugin marketplace"*. Imports are one operator's.
+- PRD §17: *"authentication, user accounts, roles, deployment config, multi-machine support, a plugin marketplace, or anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI."* Imports are one operator's, and the importer agent is a `claude` CLI call.
 - Deleting or syncing back to the source: not mentioned anywhere.
 
 ## Related

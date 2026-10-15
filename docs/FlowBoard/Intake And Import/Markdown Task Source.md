@@ -53,7 +53,7 @@ const tasks = await source.fetch({ content: '## Backlog\n- **Filter list by stat
 
 ## The self-check
 
-`node docs/old/reference/adapters/source/markdown/markdown-source.ts` prints *"MarkdownTaskSource self-check passed"* (verified with Node 24.11). It asserts:
+`node docs/old/reference/adapters/source/markdown/markdown-source.ts` prints *"MarkdownTaskSource self-check passed"* (verified with Node 24.11). The file's own header, `07` and the reference README still give the path from before the move to `docs/old/`: `docs/reference/…`. It asserts:
 
 | Case | Input | Expected |
 |---|---|---|

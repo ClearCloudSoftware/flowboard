@@ -10,7 +10,7 @@ Intake And Import is how work gets into FlowBoard: import a markdown backlog, cr
 > [!important] The one idea to get right first
 > A task's import identity is its `import_key`, and the server derives it, never the agent. *"Never trust the agent's key — it drifted between runs … and that is what duplicated tasks."* (`05` §14). Everything else follows: one parser for both file shapes, an upsert on `(project_id, import_key)`, and the acceptance test *"re-import twice = 0 created, N updated"*.
 
-There is no mockup for this component. This set is built from the PRD, the backlog, the architecture notes, the reference port and adapter (run to check their behaviour), the drawio, and the places the monitor and task-detail mockups show the backlog and promotion.
+There is no mockup for this component in `docs/mockups/`. This set is built from the PRD, the backlog, the architecture notes, the reference port and adapter (run to check their behaviour), the drawio, the old v1 design handoff (`docs/old/design/`, which draws the board's Backlog and Todo columns), and the places the monitor and task-detail mockups show the backlog and promotion.
 
 ## Start here
 
@@ -48,7 +48,7 @@ There is no mockup for this component. This set is built from the PRD, the backl
 
 ## Content and direction
 
-- [[Seed Project]]: the project, flow and capabilities seeded on first run
+- [[Seed Data]]: the project, flow and capabilities seeded on first run, and the drawio's sample tasks
 - [[Future Task Sources]]: GitHub Issues, Linear, Jira, webhook
 - [[Intake And Import Roadmap]]: v1 scope, designed beyond the PRD, ideas, out of scope
 - [[Intake And Import Open Questions]]: where the sources disagree or leave a gap
@@ -61,4 +61,6 @@ There is no mockup for this component. This set is built from the PRD, the backl
 - [[Flow Design Index]]: the flow a promoted task pins
 - [[Monitor Index]]: the backlog count and the life-of-a-task walkthrough
 - [[Capability Library Index]]: seeded capabilities
+- [[Projects Index]]: the seed project and which project an import lands in
+- [[Workspaces Index]]: the worktree promote creates
 - [[Component Documentation Tracker]]

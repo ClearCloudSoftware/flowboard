@@ -59,7 +59,7 @@ From the doc comment in `task-source.ts`:
 
 > *"TaskSource — ingestion behind one port. Markdown import today; GitHub Issues, Linear, and webhooks are other adapters. Every adapter must derive `import_key` itself and never trust an upstream/agent-supplied key — an unstable key is what duplicated tasks across runs (backlog Story 7.3)."*
 
-And the acceptance test for the port (`01-ports.md`, `05` §14): *"Idempotent upsert on `(project_id, import_key)`: re-import twice = 0 created, N updated."*
+And the acceptance test for the port (`01-ports.md`): *"Idempotent upsert on `(project_id, import_key)`: re-import twice = 0 created, N updated."* `05` §14 calls the same check *"the acceptance test for the whole port"*.
 
 The port only **parses**. Writing rows is the caller's job: in `07-ports-in-practice.md` the upsert loop sits outside `fetch()`. See [[Idempotent Upsert]].
 
@@ -67,9 +67,9 @@ The port only **parses**. Writing rows is the caller's job: in `07-ports-in-prac
 
 | Adapter | Status | Source |
 |---|---|---|
-| `markdown` ([[Markdown Task Source]]) | v1, runnable reference | `markdown-source.ts`, `07` |
+| `markdown` ([[Markdown Task Source]]) | v1, runnable reference; its `id` is `'markdown'` | `markdown-source.ts`, `07` |
 | `backlog-importer` agent ([[Backlog Importer Agent]]) | v1, *"the "messy file" adapter"* | `01-ports.md`, `05` §14 |
-| GitHub Issues | later | architecture README, `05` §14, drawio |
+| GitHub Issues | later | architecture README, `05` §14, feature map §17 (*"tools like GitHub or Linear"*), drawio |
 | Linear | later | architecture README, `05` §14, feature map §17, drawio |
 | Jira | later | architecture README, `05` §14, drawio *FlowBoard ideation* |
 | webhook | later | architecture README, `05` §14, feature map §17 |

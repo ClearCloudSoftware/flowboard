@@ -45,7 +45,7 @@ The drawio card says *"Create / edit task"*, but PRD §12 lists no `PATCH /api/t
 
 ## No form is designed
 
-No mockup draws a new-task form. The projects list has a *"New‑project dialog"* (backlog 1.3), but there is no matching story for tasks. The Monitor has no create control.
+No mockup draws a new-task form, and neither does the old v1 design handoff, whose board shows Backlog and Todo columns but no create control. The projects list has a *"New‑project dialog"* (backlog 1.3), but there is no matching story for tasks. The Monitor has no create control.
 
 ## Related
 

@@ -31,6 +31,8 @@ prints *"MarkdownTaskSource self-check passed"*. It covers both shapes, an expli
 
 *"Milestone verification was curl + sqlite only. No browser was ever driven"* (backlog, *What went wrong*, item 1). The browser lane (backlog 0.2) lists *"board drag"*. The import button's progress and the Backlog ↔ Todo drag are UI behaviour that a curl check cannot see.
 
+The same story's integration lane *"spawns the real worker against a fake `claude` binary"* (backlog 0.2, **GAP**). No source says whether the importer agent's path is tested through it; the self-check covers only the parser.
+
 ## Gaps
 
 **Proposal**, not in a source. Cases worth adding, from [[Parser Edge Cases]]:

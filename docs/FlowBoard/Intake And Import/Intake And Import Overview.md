@@ -14,7 +14,7 @@ Intake And Import is how work gets into FlowBoard before any agent touches it. I
 | Import backlog | *"markdown headings + bullets → tasks"* | [[Markdown Task Source]], [[Import Job Lifecycle]] |
 | Create / edit task | — | [[Creating A Task]] |
 | Promote Backlog → Todo | *"the only drag that means anything"* | [[Promoting A Task]] |
-| Seed project | *"default flow + sample tasks"* | [[Seed Project]] |
+| Seed project | *"default flow + sample tasks"* | [[Seed Data]] |
 
 Behind the import sits architecture component **#14, *Ingestion → TaskSource port*** (`docs/old/architecture/README.md`, `05` §14). TaskSource is one of the *"five ports that carry the whole program"*: *"markdown import"* today, *"GitHub Issues, Linear, Jira, webhook"* later (architecture README).
 
@@ -29,15 +29,15 @@ flowchart LR
   TS --> P[MarkdownTaskSource<br/>deterministic parser]
   TS -.messy files.-> AG[backlog-importer agent]
   P --> UP[Upsert on project_id, import_key]
-  AG --> UP
+  AG -->|key recomputed| UP
   NEW[Create task<br/>POST /api/tasks] --> T[(tasks<br/>status backlog)]
   UP --> T
-  SEED[Seed project] --> T
+  SEED[Seed data] -.sample tasks, drawio only.-> T
   T -->|promote| TODO[Todo<br/>flow pinned, worktree made]
   TODO -->|start| EX[Execution]
 ```
 
-Drawn from PRD §5, §12, §15; backlog Story 7.3; `05` §14; drawio *Logical components* (edge *TaskSource → Task & run state*, labelled *"import tasks"*) and *Functional components* (edge *Intake → Execution*, labelled *"tasks"*). That imported and created tasks land in `backlog` is an inference; see [[Intake And Import Open Questions]] #6.
+Drawn from PRD §5, §12, §15; backlog Story 7.3; `05` §14; drawio *Logical components* (edge *TaskSource → Task & run state*, labelled *"import tasks"*) and *Functional components* (edge *Intake → Execution*, labelled *"tasks"*). That imported and created tasks land in `backlog` is an inference; see [[Intake And Import Open Questions]] #6. Only the drawio seeds tasks ([[Intake And Import Open Questions]] #19).
 
 What it hands on:
 
@@ -61,7 +61,7 @@ The sources state these rules in their own words.
 > [!important] Why this component has a history
 > *"Backlog import was rewritten three times in one session (sync parser → sync agent inside the request → async job with temp file). Each rewrite was a reaction to the user re‑testing, not a design. Root causes: two parsers with different task shapes (`##` headings vs bullets), and the agent‑derived `import_key` is not stable across runs (`filter-list-by-status` vs `filter-the-list-by-status`), so re‑import can duplicate."* (backlog, *What went wrong the first time*, item 2). The pitch names *"one deterministic import contract"* as one of the ways v3 differs (`docs/pitch.md`).
 
-There is no mockup for this component. The board (`/p/[slug]`), where the Import button, the Backlog and Todo columns and the drag live, has no mockup either. See [[Intake In The UI]].
+There is no mockup for this component in `docs/mockups/`. The board (`/p/[slug]`), where the Import button, the Backlog and Todo columns and the drag live, has no v3 mockup either; only the old v1 design handoff (`docs/old/design/`) draws it, with Backlog and Todo columns but no Import button. See [[Intake In The UI]].
 
 ## Related
 

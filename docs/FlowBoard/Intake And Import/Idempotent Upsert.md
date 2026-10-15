@@ -13,7 +13,7 @@ How parsed tasks become rows without duplicates.
 
 ## The acceptance test
 
-Every source states the same test:
+Five sources state the test, in two forms: *no duplicates, edits picked up* (PRD, backlog) and *0 created, N updated* (architecture):
 
 | Source | Wording |
 |---|---|
@@ -58,7 +58,7 @@ flowchart LR
 
 ## Hand-made tasks
 
-A task made with `POST /api/tasks` has no `import_key` (nothing sets it), so an import never matches it. SQLite lets many rows share a `NULL` in a `UNIQUE` column, so hand-made tasks never collide with each other. Importing an item you already typed in by hand gives two tasks. ([[Intake And Import Open Questions]] #13)
+A task made with `POST /api/tasks` has no `import_key` (nothing sets it), so an import never matches it. SQLite lets many rows share a `NULL` in a `UNIQUE` column (database behaviour, not stated in a source), so hand-made tasks never collide with each other. Importing an item you already typed in by hand gives two tasks. ([[Intake And Import Open Questions]] #13)
 
 ## Related
 

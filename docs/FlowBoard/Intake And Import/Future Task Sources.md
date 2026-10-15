@@ -13,12 +13,12 @@ Sources beyond a markdown file. None is in v1.
 
 | Source | Where named |
 |---|---|
-| GitHub Issues | architecture README (five-ports table), `05` §14, `task-source.ts` comment, `01-ports.md` id `'github'`, drawio *FlowBoard ideation* |
+| GitHub Issues | architecture README (five-ports table), `05` §14, `task-source.ts` comment, `01-ports.md` id `'github'`, feature map §17 (*"tools like GitHub or Linear"*), drawio *FlowBoard ideation* |
 | Linear | architecture README, `05` §14, `task-source.ts`, `01-ports.md` id `'linear'`, feature map §17, drawio |
 | Jira | architecture README, `05` §14, drawio *FlowBoard ideation*. Not in the `01-ports.md` id union |
 | webhook | architecture README, `05` §14, `task-source.ts`, `01-ports.md` id `'webhook'`, feature map §17 |
 
-The architecture README's module layout reserves `adapters/source/markdown/  github/`. The drawio *Logical components* adapter box is labelled *"Markdown / Issues import"*.
+The architecture README's module layout reserves `adapters/source/markdown/  github/`. The drawio *Logical components* adapter box is labelled *"Markdown / Issues import"*. The PRD names none of them: its `adapters/` list has no `source/` folder (PRD §3).
 
 ## Related ideas
 

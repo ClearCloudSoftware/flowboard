@@ -5,7 +5,7 @@ module: Intake And Import
 
 # Intake In The UI
 
-Every place intake shows on a screen. There is no mockup for this component, and none for the board `/p/[slug]` where most of it lives. What follows is from the PRD, the backlog, the old design handoff (`docs/old/design/`), and the monitor and task-detail mockups.
+Every place intake shows on a screen. There is no mockup for this component in `docs/mockups/`, and none for the board `/p/[slug]` where most of it lives. The only drawing of the board is the old v1 design handoff (`docs/old/design/`, artboards 1b and 1c). What follows is from the PRD, the backlog, that handoff, and the monitor and task-detail mockups.
 
 ## The board's two intake columns
 
@@ -18,18 +18,22 @@ Every place intake shows on a screen. There is no mockup for this component, and
 | *"Only Backlog → Todo is draggable. Everything downstream is engine-driven. Make that legible so I don't try to drag a card and wonder why it snapped back."* | old brief §2 |
 | *"Only Backlog → Todo (either direction)."* *"Prefer making the affordance absent over letting a drag snap back."* | old handoff, *Drag* |
 | *"Columns come from the flow / Backlog + Todo fixed in front, Done at the end."* | drawio *FlowBoard ideation* |
+| *"Drag only Backlog ↔ Todo / Everything downstream is engine-driven; dragging there would lie about what the system does."* | drawio *FlowBoard ideation*; *Harness architecture*: *"drag only Backlog ↔ Todo"* |
+| *"Drag limited to Backlog↔Todo — downstream is engine-driven and dragging there would lie."* | `02` §4 |
+| *"You can drag cards between Backlog and To do, but not further"* | feature map §5 |
+| *"Columns: Backlog, Todo, flow steps by `board_order` …, Done."* (**PRD/NEW**) | backlog 2.2 |
 
 ### Marks (old handoff)
 
 | Element | Mark |
 |---|---|
-| Draggable card (Backlog/Todo) | *"**dashed** `#2e2e33`"* border, *"2px-radius square outline, not a circle"*, *"A `⠿` grip top-right; meta reads `Backlog` / `drag → Todo`. No cost, no progress"* |
+| Draggable card (Backlog/Todo) | border *"**dashed** `#2e2e33`"*; state marker a *"2px-radius square outline, not a circle"*; *"A `⠿` grip top-right; meta reads `Backlog` / `drag → Todo`. No cost, no progress"* |
 | Why it matters | *"The dashed border + grip + square marker are the *only* things that say "you can drag this". Engine-driven cards are solid-bordered with round dots and never respond to drag."* |
 | Column header | *"either `⠿ drag` (Backlog, Todo) or `engine`"* |
 | Drop target | *"Todo shows the **drop target**: a 44px dashed accent box … reading `drop to queue` in 10px mono accent. It only appears while dragging."* |
 | Flow strip | *"the fixed columns are `#18181b` on `#2e2e33`"* |
 
-The handoff's colours come from the dark-first design (PRD §13: *"Dark-first, dense, keyboard-friendly."*). The drawio *Harness architecture* tech card has moved to *"shadcn/ui + Tailwind (light, zero radius, IBM Plex)"*, so the colours will change; the shapes (dashed, grip, square marker) are what carry the meaning.
+The handoff's colours are the dark ones (PRD §13: *"Dark-first, dense, keyboard-friendly."*); its artboard 1f is a light variant with the tokens inverted. The drawio *Harness architecture* tech card has moved to *"shadcn/ui + Tailwind (light, zero radius, IBM Plex)"*, so the colours will change; the shapes (dashed, grip, square marker) are what carry the meaning. The handoff's board draws no Import button and no create control.
 
 ## The Import button
 
@@ -40,7 +44,7 @@ Backlog 2.2: *"Import .md button (see 7.3)."* (**NEW**). Backlog 7.3: *"Board bu
 | Input | a file picker and a paste box |
 | While working | a busy state |
 | Progress | *queued → running → "6 created"* |
-| Done | a toast, and which path ran (*"deterministic vs agent"*, `05` §14) |
+| Done | a toast (backlog 7.3). The import also *"reports which path ran (deterministic vs agent)"* (`05` §14); that this shows in the toast is an inference |
 
 ## The task sheet
 
@@ -50,7 +54,7 @@ Backlog 2.3: *"Retry, Cancel, Cleanup, Promote, Start, Demote."* (**PRD/GAP**). 
 
 Backlog 9.4 (**BUG**): *"keyboard equivalent for promote/demote"*. No key is named.
 
-## On the mockups that exist
+## On other screens
 
 | Screen | What it shows of intake |
 |---|---|
@@ -58,9 +62,9 @@ Backlog 9.4 (**BUG**): *"keyboard equivalent for promote/demote"*. No key is nam
 | Monitor guide | Beats *"In the backlog"* (*"This is the only place on the board you can drag a card into."*) and *"You promote it"*. Note *"Why you can't drag a card."* See [[Life Of A Task]] |
 | Task detail (`task-detail.html`) | **Send to backlog** action |
 | Task-detail guide | Lifecycle box *backlog · "no workspace yet"*, arrow *"you promote it"* |
-| Projects list (PRD §13) | *"Cards with task counts by status"*, so backlog counts show there |
+| Projects list (PRD §13, no mockup) | *"Cards with task counts by status"*, so backlog counts show there |
 
-No mockup draws an Import button, a new-task form, a Todo column, or a Promote or Start button.
+No v3 mockup draws an Import button, a new-task form, a Todo column, or a Promote or Start button. The old handoff draws Backlog and Todo columns (with the drop target) but none of the controls.
 
 ## Related
 

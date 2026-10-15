@@ -33,15 +33,15 @@ CREATE TABLE tasks (
 
 | Column | Create | Import | Promote |
 |---|---|---|---|
-| `title`, `body` | set by you | set; overwritten on re-import (`07`) | — |
-| `acceptance_criteria`, `non_goals` | set by you | set by the agent path (PRD §15); not by the reference parser | — |
+| `title`, `body` | set by you (*inferred*: no source gives the create body) | set; overwritten on re-import (`07`) | — |
+| `acceptance_criteria`, `non_goals` | set by you | returned by the agent path (PRD §15), not by the reference parser; whether the upsert writes them is open (#7) | — |
 | `status` | `backlog` (*inferred*) | `backlog` (*inferred*) | → `todo` |
 | `import_key` | null | the derived key | — |
 | `flow_id` | null | null | pinned |
 | `branch_name`, `worktree_path` | null | null | set (PRD §11) |
 | `capability_pins` | null | null | *"set when the task starts"*; promote or Start is open |
 
-The two *inferred* cells are [[Intake And Import Open Questions]] #6.
+The `status` cells are [[Intake And Import Open Questions]] #6; editing and the create form are #18.
 
 ## `jobs`
 
@@ -59,7 +59,7 @@ CREATE TABLE jobs (
 );
 ```
 
-An import is one `import_backlog` row. Backlog 7.3 adds a `cleanup` flag to its payload. No other payload field is given.
+An import is one `import_backlog` row. Backlog 7.3 adds a `cleanup` flag to its payload. No other payload field is given. Backlog 1.1 may add a fifth kind, `resume_step` (*"`jobs.kind` includes `resume_step` (or drop it, see 4.4)"*, **DEC**); it does not touch import.
 
 ## Port types
 

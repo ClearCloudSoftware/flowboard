@@ -9,7 +9,7 @@ A backlog file is untrusted input, and its text ends up in every prompt the task
 
 > *"Those agents then read **untrusted content**: repo files, web pages, the backlog markdown, issue/PR text, prior artifacts. Any of it can carry a **prompt injection** that redirects the agent to exfiltrate secrets, corrupt the repo, or run arbitrary commands."* — `08-sandboxing.md`, *Why — the threat model*
 
-PRD §11.1 lists *"the backlog"* among the untrusted content a `bypassPermissions` agent reads.
+PRD §11.1 lists *"the backlog"* among the untrusted content a `bypassPermissions` agent reads: *"a fully-autonomous agent that reads untrusted content (repo files, the backlog, web pages, prior artifacts)"*.
 
 ## Where imported text goes
 
@@ -30,17 +30,17 @@ flowchart LR
 |---|---|
 | The deterministic parser runs no model at all | backlog 7.3, D6 |
 | The importer agent gets no tools: *"haiku, `--tools ""`"* | backlog 7.3 (**FIX**) |
-| *"Isolate the importer from global hooks (see 0.1)."* | backlog 7.3 (**BUG**) |
+| *"Isolate the importer from global hooks (see 0.1)."* The first build found *"global `~/.claude` hooks apply to headless runs"* | backlog 7.3 (**BUG**); *What went wrong*, item 6 |
 | The key is never taken from the agent | backlog 7.3, `05` §14 |
 | Every route validates with zod | PRD §12: *"All handlers are thin: validate with zod, call a function in `packages/core`, return JSON."* |
-| Agents downstream run in a sandbox with an egress allowlist | PRD §11.1, `08-sandboxing.md` |
+| Agents downstream may run in a sandbox with an egress allowlist. The sandbox is *"optional, recommended for headless runs"*, but *"`bypassPermissions` is only allowed when the step runs in a sandbox tier"* | PRD §11.1, `08-sandboxing.md`, backlog D7 |
 | *Injection scan (later)*: *"LLM Guard over artifacts before the next step or memory trusts them"* | drawio *Harness architecture* |
 | *Check for hidden manipulation*: *"scan the files agents produce (and the untrusted things they read) for prompt-injection before the next step trusts them"* | feature map parking lot |
 
 ## Gaps
 
-- **`path` reads any server file.** `POST /api/import/backlog` accepts *"`path` (server file)"* (backlog 7.3). No source limits which paths. FlowBoard is single-user and local (PRD §1), so the caller is the operator, but nothing says so for this route. ([[Intake And Import Open Questions]] #8)
-- **Where the importer agent runs.** Not stated: host or sandbox, through the [[TaskSource Port]] or the AgentProvider port. ([[Intake And Import Open Questions]] #12)
+- **`path` reads any server file.** `POST /api/import/backlog` accepts *"`path` (server file)"* (backlog 7.3). No source limits which paths. FlowBoard is single-user and local (PRD §1), so the caller is the operator, but nothing says so for this route. See also [[Settings And Plumbing Open Questions]] #25 on the unauthenticated local API. ([[Intake And Import Open Questions]] #8)
+- **Where the importer agent runs.** Not stated: host or sandbox, through the [[TaskSource Port]] or the AgentProvider port. PRD §17 says only that every model call goes through the `claude` CLI. ([[Intake And Import Open Questions]] #12)
 - **No scan at import.** The injection scan is *later* and aimed at artifacts. Nothing scans a backlog file before its text enters prompts.
 
 ## Related
