@@ -32,10 +32,10 @@ The reference implementation is in `07-ports-in-practice.md`. See [[Git Worktree
 
 Backlog Story 3.5 (**NEW**) specifies it: *"ephemeral container per run, task worktree bind-mounted as `cwd`, non-root, `--cap-drop ALL`, `--security-opt no-new-privileges`, seccomp default, read-only rootfs + `tmpfs`, `--memory`/`--cpus`/`--pids-limit` + wall-clock. Also removes the shared-worktree collision (2.2)."*
 
-So the container adapter still uses the task's git worktree. It changes where processes run, not where the files live. The drawio *Mounts* card: *"rw: task worktree → /work / ro: skills/ → /skills / socket: ask.sock / never : ~/.ssh, cloud credentials, flowboard.db, docker.sock"*.
+So the container adapter still uses the task's git worktree. It changes where processes run, not where the files live. The drawio *Mounts* card: *"rw: task worktree → /work / ro: skills/ → /skills / socket: ask.sock / never: ~/.ssh, cloud credentials, flowboard.db, docker.sock"*. See [[Sandbox Mounts]].
 
 > [!question] Does it really remove the collision?
-> Four sources say the container adapter removes the shared-worktree collision (`01-ports.md`, `07`, `workspace.ts`, backlog 3.5). But each container is per run and bind-mounts the **same** task worktree read-write. Two parallel runs in two containers would still write the same files. No source explains how the collision goes away. See [[Shared Worktree Within A Task]] and [[Workspaces Open Questions]].
+> Five sources say the container adapter removes the shared-worktree collision (`01-ports.md`, `05` §11, `07`, `workspace.ts`, backlog 3.5). But each container is per run and bind-mounts the **same** task worktree read-write. Two parallel runs in two containers would still write the same files. No source explains how the collision goes away. See [[Shared Worktree Within A Task]], [[Workspaces Open Questions]] #22 and [[Sandboxing Open Questions]] #21.
 
 ## Remote
 
@@ -43,12 +43,14 @@ So the container adapter still uses the task's git worktree. It changes where pr
 
 ## Adapter or tier?
 
-The sources use two lists. Adapters: worktree, devcontainer, Docker sandbox, remote. Tiers: `host`, `container`, `gvisor`, `microvm`. `05` §11 joins them: *"Workspace adapters climb an isolation ladder: `host` (worktree) → `container` → `gvisor` → `microvm` (Firecracker/Kata)."* See [[Isolation Tiers]].
+The sources use two lists. Adapters: worktree, devcontainer, Docker sandbox, remote. Tiers: `host`, `container`, `gvisor`, `microvm`. `05` §11 joins them: *"Workspace adapters climb an isolation ladder: `host` (worktree) → `container` → `gvisor` → `microvm` (Firecracker/Kata)."*
+
+The `07` sketch blurs the line further. Inside `worktreeWorkspace`, the `execHost` line carries the comment *"container tier returns a docker ExecHost instead"*, so the worktree adapter itself would pick the tier. A few lines later `07` describes a separate `containerWorkspace` adapter whose `execHost` *"returns a container `ExecHost`"*. See [[Workspace Isolation Tiers]] and [[Workspaces Open Questions]] #28.
 
 ## Related
 
 - [[Workspaces Index]]
 - [[Workspace Port]]
 - [[Git Worktree Adapter]]
-- [[Isolation Tiers]]
+- [[Workspace Isolation Tiers]]
 - [[Workspaces Roadmap]]

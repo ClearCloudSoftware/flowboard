@@ -46,7 +46,7 @@ export interface ExecHost {
 - `mounts`: *"Extra mounts beyond the task worktree. Never mount host secrets or the Docker socket."*
 - `nonRoot`: *"Default true; `bypassPermissions` requires this."*
 
-The rest of the profile (egress proxy, capabilities, limits, credentials) belongs to sandboxing, which has no set in this vault yet. [[Run Guardrails At Launch]] and [[Step Guardrails]] cover what a run sees.
+The rest of the profile belongs to the Sandboxing set: [[Sandbox Security Profile]], [[Egress Allowlist]], [[Credential Injecting Proxy]], [[Resource Limits]] and [[Sandbox Mounts]]. Its [[ExecHost Port]] note covers the same interface from the sandbox side. [[Run Guardrails At Launch]] and [[Step Guardrails]] cover what a run sees.
 
 ## How it flows
 
@@ -70,15 +70,16 @@ Shell steps use the same seam: *"A `kind='shell'` step runs `command` (or the pr
 
 ## The rule it carries
 
-*"The gate: the runner refuses `permission_mode='bypassPermissions'` unless the tier is a sandbox (`container`/`gvisor`/`microvm`)."* (`01-ports.md`). The tier comes from the `ExecHost` the workspace returned, so the workspace choice decides whether a fully autonomous step may run. See [[Isolation Tiers]].
+*"The gate: the runner refuses `permission_mode='bypassPermissions'` unless the tier is a sandbox (`container`/`gvisor`/`microvm`)."* (`01-ports.md`). The tier comes from the `ExecHost` the workspace returned, so the workspace choice decides whether a fully autonomous step may run. See [[Workspace Isolation Tiers]] and [[Permission Gate]].
 
 > [!question] Per task or per step?
-> `execHost(task)` takes only the task. PRD §11.1 makes the sandbox profile *"overridable per step"*, and backlog 1.1 adds *"an optional `step_defs.sandbox_profile` override"*. A per-step tier cannot be expressed through a call that never sees the step. See [[Workspaces Open Questions]].
+> `execHost(task)` takes only the task. PRD §11.1 makes the sandbox profile *"overridable per step"*, backlog 1.1 adds *"an optional `step_defs.sandbox_profile` override"*, and the flow-designer mockup gives each step a **Sandbox** field (`none`, `container`, `sealed container`). A per-step tier cannot be expressed through a call that never sees the step. See [[Workspaces Open Questions]] #25 and [[Sandboxing Open Questions]] #39.
 
 ## Related
 
 - [[Workspaces Index]]
 - [[Workspace Port]]
-- [[Isolation Tiers]]
+- [[Workspace Isolation Tiers]]
 - [[Workspace In A Run]]
 - [[Agent Launch Contract]]
+- [[ExecHost Port]]

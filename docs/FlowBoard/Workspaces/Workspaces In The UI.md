@@ -15,12 +15,13 @@ The richest source. See [[Task Detail Screen]], [[Task Detail Controls]] and [[T
 |---|---|---|
 | Aside, *repo & branch* | `flowboard/api` / `flowboard/auth-refactor` | `task-detail.html` `asideHTML` |
 | Aside, *workspace* | `~/.flowboard/ws/auth-refactor`, *"its own copy of the repo — kept until you clean it up"* | same |
-| Status bar | *"sandbox container, egress default-deny"* | `task-detail.html` |
+| Status bar | *"sandbox container, egress default-deny"* | `task-detail.html`; see [[Sandboxing In The UI]] |
 | Top actions, while running | **Pause** · **Send to backlog** · **Cancel task** | `drawHeader` |
 | Top actions, when done | **Open workspace** · **Clean up workspace** | `drawHeader` |
 | Files tab, *working tree* | changed files with `+`/`−` counts *"on"* the task branch; closing note: *"The workspace stays until you clean it up, and only once the task is finished or cancelled."* | `task-detail.html` |
 | Plan vs built | *"what the plan asked for"* against *"what landed in the workspace"* | `task-detail.html`; see [[Plan Versus Built]] |
-| Lifecycle diagram | backlog *"no workspace yet"*, done *"workspace kept"* | `task-detail-guide.html`; see [[Task Lifecycle]] |
+| Lifecycle diagram | backlog *"no workspace yet"*, done *"workspace kept"*; *"you promote it"* leads from backlog to running | `task-detail-guide.html`; see [[Task Lifecycle]] |
+| Walkthrough, done | *"The task is finished and its branch is still there until you clean it up."* | `task-detail-guide.html` |
 
 ## Monitor
 

@@ -36,7 +36,7 @@ The drawio *Logical components* page: **Disk** holds *"worktrees, artifacts, ski
 
 ## What never goes in
 
-From PRD §11.1 and the drawio *Mounts* card: never mount `~/.ssh`, cloud credentials, `flowboard.db` or `docker.sock` into a run. The worktree is the only writable mount.
+From PRD §11.1 and the drawio *Mounts* card: never mount `~/.ssh`, cloud credentials, `flowboard.db` or `docker.sock` into a run. *"The only writable bind-mount is the task worktree"* (`08`). See [[Sandbox Mounts]] and [[Sandboxing Storage]].
 
 ## Related
 

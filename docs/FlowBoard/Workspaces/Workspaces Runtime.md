@@ -13,7 +13,7 @@ Where workspace code lives and which process runs it.
 |---|---|---|
 | Architecture README *Suggested module layout* | `core/ports/` holds *"AgentProvider, Notifier, Workspace, ArtifactStore, TaskSource, MemoryStore"* | `adapters/workspace/worktree/  container/  (05)` |
 | PRD §3 | `packages/core/ports/` holds *"AgentProvider, ExecHost, MemoryStore, Notifier, TaskSource interfaces"* | `adapters/exec/` *"host, docker"* |
-| Drawio *Harness architecture* | — | *"packages/adapters : agent · exec · notify · memory"*; **Workspace manager** in `apps/worker` |
+| Drawio *Harness architecture* | — | *"packages/adapters: agent · exec · notify · memory"*; **Workspace manager** in `apps/worker` |
 
 The PRD and drawio make **ExecHost** the port and keep worktree handling in the worker. The architecture makes **Workspace** the port and ExecHost something it hands out. See [[Workspaces Open Questions]].
 
@@ -32,18 +32,19 @@ flowchart LR
   subgraph worker[apps/worker]
     WM[Workspace manager<br/>git worktree add / remove<br/>ExecHost per tier]
     RN[Runner]
+    PG[Permission gate]
   end
   GIT[(project repo +<br/>git worktrees)]
-  BOX[Container per run]
+  BOX[Agent sandbox<br/>one container per run]
   P -. ? .-> WM
   C -. ? .-> WM
-  RN --> WM
+  RN -. ? .-> WM
   WM -- worktree add --> GIT
-  WM -- docker run via ExecHost --> BOX
-  GIT -- bind mount /work --> BOX
+  PG -- docker run via ExecHost --> BOX
+  GIT -. bind mount /work .-> BOX
 ```
 
-*Solid edges are drawn on the drawio Harness page ("worktree add", "docker run via ExecHost", "bind mount /work"). The dashed `?` edges are the gap: `apps/web` is "thin: validates, calls core, enqueues; never spawns agents", and no job kind creates or removes a workspace.*
+*From the drawio Harness page: "worktree add" runs from the Workspace manager to the repo; "E docker run via ExecHost" runs from the **Permission gate**, not the Workspace manager; "bind mount /work" is drawn dashed (optional or later). The `?` edges are not on the drawio and are this note's gap markers: `apps/web` is "thin: validates, calls core, enqueues; never spawns agents", no job kind creates or removes a workspace, and the drawio draws no edge from the runner to the Workspace manager.*
 
 ## In the runner
 
@@ -58,7 +59,7 @@ const run = deps.provider.launch({
 });
 ```
 
-The sketch passes `cwd` but not `exec`. `03` §6 and `08` add it: *"the runner gets an `ExecHost` from `workspace.execHost(task)` and puts it on the `RunSpec`"*. See [[Runner Pipeline]].
+The sketch passes `cwd` but not `exec`. `03` §6 adds it: *"the runner gets an `ExecHost` from `workspace.execHost(task)` … and puts it on the `RunSpec`"*; `08` says it *"passes it in the `RunSpec`"*. See [[Runner Pipeline]].
 
 ## Startup
 
@@ -71,3 +72,4 @@ The sketch passes `cwd` but not `exec`. `03` §6 and `08` add it: *"the runner g
 - [[ExecHost Seam]]
 - [[Git Worktree Adapter]]
 - [[Execution Runtime]]
+- [[Sandboxing Runtime]]

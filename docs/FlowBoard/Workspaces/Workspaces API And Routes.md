@@ -29,7 +29,7 @@ PRD §12 handlers are *"thin: validate with zod, call a function in `packages/co
 > [!note] Proposal
 > `POST /api/tasks/:id/cleanup`, allowed only in the end states, calling `workspace.destroy(task)`, and `POST /api/tasks/:id/demote`. These are these notes' suggestions, not in any source. Listed in [[Workspaces Open Questions]].
 
-**Open workspace** is a button with no defined behaviour. Opening a folder on the host from a browser page needs something on the server side. *(Inference.)*
+**Open workspace** is a button with no defined behaviour. Opening a folder on the host from a browser page needs something on the server side. *(Inference, listed in [[Workspaces Open Questions]] #17.)*
 
 ## Web routes
 

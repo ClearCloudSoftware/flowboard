@@ -39,10 +39,10 @@ flowchart LR
 | `07` | `containerWorkspace` *"removes the shared-worktree collision (PRD §11) and needs no engine change."* |
 | `workspace.ts` | a container or microVM adapter *"removes the shared-worktree collision the spec lists as a known constraint"* |
 | `05` §11 | *"Beyond fixing the shared-worktree collision (PRD §11), the sandboxed tiers add a security boundary"* |
-| Backlog 3.5 | *"Also removes the shared-worktree collision (2.2)."* |
+| Backlog 3.5 | *"Also removes the shared-worktree collision (2.2)."* The *(2.2)* points at Story 2.2, the board projection, which says nothing about a collision. |
 
 > [!question] How?
-> The same sources say the container is *"ephemeral … per run"* with the *"task worktree bind-mounted as `cwd`"* (backlog 3.5), and *"the only writable bind-mount is the task worktree"* (`08`). Two parallel runs would mount the same folder read-write, so the collision stays. No source describes a separate copy per branch. *Proposal (these notes'):* one worktree per parallel branch, merged at the join. See [[Workspaces Open Questions]].
+> The same sources say the container is *"ephemeral … per run"* with the *"task worktree bind-mounted as `cwd`"* (backlog 3.5), and *"the only writable bind-mount is the task worktree"* (`08`). Two parallel runs would mount the same folder read-write, so the collision stays. No source describes a separate copy per branch. *Proposal (these notes'):* one worktree per parallel branch, merged at the join. See [[Workspaces Open Questions]] #22, [[Sandboxing Open Questions]] #21 and [[Sandbox Mounts]].
 
 ## Related
 

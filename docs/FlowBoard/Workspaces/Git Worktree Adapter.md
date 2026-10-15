@@ -41,7 +41,7 @@ export function worktreeWorkspace(repoPath: string): Workspace {
 
 ## What the reference sketch shows
 
-- **One adapter per repo.** `worktreeWorkspace(repoPath)` is built for one project's repo (`projects.repo_path`). How the composition root picks it per project is not stated.
+- **One adapter per repo.** `worktreeWorkspace(repoPath)` is built for one project's repo (`projects.repo_path`). How the composition root picks it per project is not stated. See [[Projects Open Questions]] #24.
 - **Path is derived, not looked up.** `cwd` recomputes the folder from the task id. It does not read `tasks.worktree_path`, which the PRD says to store (*"Store both paths on the task."*, PRD §11).
 - **`destroy` removes the worktree, not the branch.** No `git branch -d`. The task-detail guide says cleanup *"Removes the branch and the folder."* See [[Cleaning Up A Workspace]].
 - **No start point.** `worktree add … -b <branch>` names no base commit. With git's default, that branches from the repo's current `HEAD`. *(Inference from git's behaviour, not stated by a source.)*
@@ -53,6 +53,8 @@ The bullets about start point and reuse are readings of the sketch. They are lis
 ## Host side
 
 On the drawio *Harness architecture* page the **Workspace manager** runs in the worker process (`apps/worker`) on the host: *"git worktree add / remove per task · ExecHost per tier: host · docker · gVisor"*. Its edge to the repo is labelled *"worktree add"*. The drawio shows a different path from the PRD's: *"<repo>/.flowboard/worktrees/task-<id> on branch fb/task-<id>"*. See [[Workspace Naming]].
+
+The sketch's `execHost` comment, *"container tier returns a docker ExecHost instead"*, puts the tier choice inside this adapter. See [[Workspace Adapters]].
 
 ## Related
 

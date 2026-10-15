@@ -73,11 +73,11 @@ interface Workspace {
 ## What the port does not own
 
 - **Artifacts.** The ArtifactStore is a separate port (*"two concerns fused today. Separate them"*, `05` §11). It locates files *inside* the workspace. See [[Task Artifacts]].
-- **The security profile.** The `ExecHost` the workspace hands out carries the `SandboxProfile`. See [[ExecHost Seam]].
+- **The security profile.** The `ExecHost` the workspace hands out carries the `SandboxProfile`. See [[ExecHost Seam]] and [[Sandbox Security Profile]].
 - **The provider.** *"any provider × any tier, for free (2×N, not N×M)"* (`01-ports.md`).
 
 > [!warning] Not a port in the PRD
-> PRD §3 lists the port interfaces in `packages/core/ports/` as *"AgentProvider, ExecHost, MemoryStore, Notifier, TaskSource"*, and the adapters as `agent/`, `exec/` (*"host, docker"*), `notify/`, `memory/`. There is no Workspace port and no workspace adapter folder. The drawio *Harness architecture* page agrees (*"packages/adapters : agent · exec · notify · memory"*) and puts a **Workspace manager** inside `apps/worker`. The architecture README's layout has `adapters/workspace/worktree/ container/`. See [[Workspaces Open Questions]].
+> PRD §3 lists the port interfaces in `packages/core/ports/` as *"AgentProvider, ExecHost, MemoryStore, Notifier, TaskSource"*, and the adapters as `agent/`, `exec/` (*"host, docker"*), `notify/`, `memory/`. There is no Workspace port and no workspace adapter folder. The drawio *Harness architecture* page agrees (*"packages/adapters: agent · exec · notify · memory"*) and puts a **Workspace manager** inside `apps/worker`. The architecture README's layout has `adapters/workspace/worktree/ container/`. See [[Workspaces Open Questions]].
 
 ## Related
 

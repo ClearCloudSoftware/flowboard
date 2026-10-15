@@ -19,7 +19,7 @@ The seed content that bears on workspaces: a git repo to cut worktrees from, and
 The scratch repo is what M2 first promotes into (*"Promote Backlog → Todo creates a worktree"*).
 
 > [!note] Gap
-> `git worktree add` needs at least one commit to branch from. A freshly `git init`ed repo has none. *(Git behaviour, inferred.)* No source says the seed makes an initial commit. Listed in [[Workspaces Open Questions]].
+> `git worktree add` needs at least one commit to branch from. A freshly `git init`ed repo has none. *(Git behaviour, inferred.)* No source says the seed makes an initial commit. Listed in [[Workspaces Open Questions]] #4. The scratch repo's path and contents are [[Intake And Import Open Questions]] #20 and [[Projects Open Questions]] #19.
 
 ## The seeded flow on one worktree
 

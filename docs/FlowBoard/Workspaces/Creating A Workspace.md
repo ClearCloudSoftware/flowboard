@@ -18,7 +18,7 @@ module: Workspaces
 | Feature map §14 | *"Its own branch and folder, created when the task starts."* |
 | Feature map §3 | *"Kicking off a task gives it a clean, private copy of the code to work in and locks in the recipe it will follow."* |
 
-Most sources say **promote**. The feature map says **start**. Backlog D1 makes Start a separate action (*"Explicit Start button on card + sheet; promote stays cheap"*), so the two moments differ. See [[Starting A Task]] and [[Workspaces Open Questions]].
+Most sources say **promote**. The feature map says **start**. Backlog D1 recommends Start as a separate action (*"Explicit Start button on card + sheet; promote stays cheap"*), so the two moments would differ. The mockup guides read the other way: the task-detail guide's *"you promote it"* arrow goes from backlog straight to running, and in the monitor guide's beat 2 the promoted task's first step is already queued. See [[Starting A Task]], [[Promoting A Task]] and [[Workspaces Open Questions]] #1.
 
 ## Steps
 
@@ -44,14 +44,14 @@ sequenceDiagram
 
 1. **Add the worktree** on a new branch. See [[Git Worktree Adapter]].
 2. **Store both on the task**: `tasks.worktree_path`, `tasks.branch_name` (PRD §5, §11).
-3. **Pre-create the artifact folder** `.vibe/task-<id>` inside it, so the [[Task Artifacts]] scan has a folder to read.
+3. **Pre-create the artifact folder** `.vibe/task-<id>` inside it. The backlog gives no reason. *(Inference: the [[Task Artifacts]] scan in `07` calls `readdir` on that folder, which would fail if it were missing.)*
 4. **Exclude the worktree folder** from the parent repo. See [[Parent Repo Hygiene]].
 
-The order of steps 2–4 and of pinning the flow is not specified. The diagram follows the backlog sentence's order.
+The order of steps 2–4 and of pinning the flow is not specified. The diagram puts the pin first, as PRD §12's *"pin flow, create worktree"* does, and then follows the backlog sentence's order. *(These notes' ordering.)*
 
 ## Who runs it
 
-The drawio puts the **Workspace manager** in the worker. It also says `apps/web` is *"thin: validates, calls core, enqueues; never spawns agents"*. The job kinds are `start_run`, `advance_task`, `escalate_question`, `import_backlog` (drawio *Job loop*). There is no job for creating a workspace. So either the promote route runs `git` itself, or a job kind is missing. See [[Workspaces Open Questions]].
+The drawio puts the **Workspace manager** in the worker. It also says `apps/web` is *"thin: validates, calls core, enqueues; never spawns agents"*. The job kinds are `start_run`, `advance_task`, `escalate_question`, `import_backlog` (PRD §5 `jobs.kind`; drawio *Job loop*). There is no job for creating a workspace. So either the promote route runs `git` itself, or a job kind is missing. See [[Workspaces Open Questions]] #2, [[Intake And Import Open Questions]] #15 and [[Projects Open Questions]] #24.
 
 ## Failure
 
@@ -64,3 +64,4 @@ No source says what happens when `worktree add` fails: the repo is not a git rep
 - [[Starting A Task]]
 - [[Workspaces API And Routes]]
 - [[Version Pinning]]
+- [[Promoting A Task]]

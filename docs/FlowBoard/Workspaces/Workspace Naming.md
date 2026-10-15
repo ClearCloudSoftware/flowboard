@@ -30,7 +30,7 @@ PRD §5 `tasks`: `branch_name TEXT`, `worktree_path TEXT`. PRD §11: *"Store bot
 `vibe` is the first build's name. The backlog's sources include *"the live `data/vibe.db`"*, env vars are `VIBE_DB_PATH`, `VIBE_MAX_RUNS`, and the design handoff is `docs/design_handoff_vibe_kanban`. The drawio's `fb/` and `.flowboard/` match the later FlowBoard name, and the capability store already uses `<repo_path>/.flowboard/skills/` (PRD §5, §13).
 
 > [!question] Pick one
-> No source chooses. [[Task Detail Open Questions]] #20, [[Execution Open Questions]] #3 and [[Monitor Open Questions]] #26 raise the same split. See [[Workspaces Open Questions]].
+> No source chooses. [[Task Detail Open Questions]] #20, [[Execution Open Questions]] #3, [[Monitor Open Questions]] #26, [[Projects Open Questions]] #17 and [[Intake And Import Open Questions]] #15 raise the same split. See [[Workspaces Open Questions]] #6.
 
 ## Related
 
@@ -38,3 +38,4 @@ PRD §5 `tasks`: `branch_name TEXT`, `worktree_path TEXT`. PRD §11: *"Store bot
 - [[Git Worktree Adapter]]
 - [[Workspaces Storage]]
 - [[Task Workspace]]
+- [[Project Repository]]

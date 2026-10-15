@@ -21,8 +21,8 @@ module: Workspaces
 |---|---|
 | M1 | Seed project on a scratch git repo |
 | M2 | *"Promote Backlog → Todo creates a worktree. No agents run yet."* |
-| M3 | Runs spawn with the worktree as `cwd` |
-| M5 | Fan-out branches share it; check steps run in it |
+| M3 | Runs spawn with the worktree as `cwd` *(from PRD §7; M3's text does not name the worktree)* |
+| M5 | Fan-out branches share it; check steps run in it *(from PRD §7, §11; M5's text does not name the worktree)* |
 
 ## Designed beyond the PRD
 
@@ -43,7 +43,7 @@ module: Workspaces
 
 From the architecture and drawio, all drawn dashed or marked later:
 
-- **Container workspace** — devcontainer, Docker sandbox (`07`, drawio).
+- **Container workspace** — devcontainer, Docker sandbox (`07`, drawio). Backlog 3.5 files it under Epic 3 (M3) as **NEW**; see [[Sandboxing Roadmap]].
 - **gVisor and microVM** tiers — *"opt-in for untrusted repos"* (`08`, backlog D8).
 - **Remote workspace** — *"the later shared/remote tier"* (PRD §17), *"the honest path to a shared or remote tier later without a rewrite"* (pitch).
 - **Host-side push / fetch** — dashed edge to GitHub on the drawio *Harness* page.
@@ -58,7 +58,7 @@ Feature map §14's *💡 Ideas* slot is empty (*"(add ideas)"*). Related ideas e
 ## Out of scope
 
 - *"multi-machine support"* (PRD §17).
-- Deploying FlowBoard itself in a container: *"shipping or *deploying* FlowBoard itself in a container is out of scope."* (PRD §17).
+- Deploying FlowBoard itself in a container: PRD §17, *"shipping or deploying FlowBoard itself in a container is out of scope"* (emphasis dropped). The drawio *Out of scope (v1)* area's *Not building* card lists *"Auth, accounts, roles, deployment, Docker, multi-machine, plugin marketplace."* PRD §17 keeps sandboxing in a container *"in scope but optional"*. See [[Sandboxing Open Questions]] #38.
 - Automatic cleanup, by every source.
 
 ## Related

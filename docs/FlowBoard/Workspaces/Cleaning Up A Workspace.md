@@ -26,7 +26,9 @@ The only way a workspace goes away. Always an explicit action by you.
 | PRD §11 | ✓ | ✓ | — |
 | Feature map §14, task-detail guide | ✓ (*"finished"*) | ✓ | — |
 | Backlog 2.1, `05` §11, `workspace.ts` | ✓ | ✓ | ✓ |
-| Task-detail mockup | ✓ (button shows only when every step is done) | — | — |
+| Task-detail mockup | ✓ (button shows only when every step is done, `isDone()`) | — | — |
+
+The same split is [[Task Detail Open Questions]] #13 and [[Execution Open Questions]] #60.
 
 ## What it removes
 
@@ -34,6 +36,7 @@ The only way a workspace goes away. Always an explicit action by you.
 |---|---|---|
 | Task-detail guide | ✓ *"Removes the branch and the folder."* | ✓ |
 | Task-detail guide, status table | — | *"clean up the workspace when you no longer need the branch."* |
+| Task-detail guide, walkthrough (done) | — | *"its branch is still there until you clean it up."* |
 | `07` reference `destroy` | ✓ `git worktree remove [--force]` | not deleted |
 | PRD §11 | *"clean up worktree"* | not mentioned |
 

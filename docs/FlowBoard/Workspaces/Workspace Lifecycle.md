@@ -20,7 +20,9 @@ stateDiagram-v2
 ```
 
 > [!note] Proposal
-> The phase names `none`, `active`, `kept_in_backlog`, `kept` and `removed` are these notes' labels. No source names workspace states. Listed in [[Workspaces Open Questions]].
+> The phase names `none`, `active`, `kept_in_backlog`, `kept` and `removed` are these notes' labels, and so is the mapping of task statuses onto them. No source names workspace states. Listed in [[Workspaces Open Questions]].
+
+The task-detail guide's own lifecycle diagram has no `todo` box: its *"you promote it"* arrow goes from *backlog* (*"no workspace yet"*) straight to *running*. The monitor guide's beat 2, *"You promote it"*, also queues the first step. Backlog D1 instead separates promote from Start. See [[Workspaces Open Questions]] #1.
 
 ## Phase by phase
 
@@ -49,8 +51,8 @@ From the task-detail guide's action table (see [[Task Actions]]):
 ## Edge cases the sources leave open
 
 - **Cancel from the backlog.** A backlog task has no workspace, so there is nothing to keep. Not discussed.
-- **Deleting a task.** DB rows cascade (`ON DELETE CASCADE`, PRD §5). No source says what happens to the worktree, and PRD §12 has no delete endpoint.
-- **Failed tasks.** Backlog 2.1, `05` §11 and `workspace.ts` allow cleanup after `failed`. PRD §11 and the guide do not mention it.
+- **Deleting a task.** DB rows cascade (`ON DELETE CASCADE`, PRD §5). No source says what happens to the worktree, and PRD §12 has no delete endpoint. Deleting a whole project has the same gap: [[Projects Open Questions]] #9.
+- **Failed tasks.** Backlog 2.1, `05` §11 and `workspace.ts` allow cleanup after `failed`. PRD §11 (`done` or `cancelled`), feature map §14 and the guide (*"finished or cancelled"*) do not mention it.
 
 All three are in [[Workspaces Open Questions]].
 

@@ -13,7 +13,7 @@ The worktree folder lives inside the project's own repo (`<repo_path>/.vibe-work
 
 `05` §11 repeats it: *"Worktree hygiene: append `.vibe-worktrees/` to `<repo>/.git/info/exclude` so the parent repo stays clean; cleanup only via explicit action, only when done/cancelled/failed."*
 
-`.git/info/exclude` is the repo-local ignore file. It is not committed, so FlowBoard does not change the project's tracked `.gitignore`.
+`.git/info/exclude` is the repo-local ignore file. It is not committed *(git behaviour)*, so FlowBoard does not change the project's tracked `.gitignore`. See [[Project Repository]].
 
 ## Same rule for the capability store
 
@@ -21,7 +21,7 @@ Backlog 0.3 (**FIX**): *"Installed plugins live in each managed project's `.flow
 
 ## FlowBoard's own repo
 
-FlowBoard's root `.gitignore` (per backlog 0.3) lists `data/*.db*`, `data/runs/` and `.vibe-worktrees/`. That covers the case where FlowBoard's own repo is the managed project.
+Backlog 0.3 (**FIX**) gives FlowBoard's own `.gitignore` *"`data/*.db*`, `data/runs`, `.vibe-worktrees`"*; the repo's actual `.gitignore` has `data/*.db*`, `data/runs/` and `.vibe-worktrees/`. *(Inference: this matters only if FlowBoard's own repo is ever the managed project. The seed points at a separate scratch repo, PRD §14 M1.)*
 
 ## Gaps
 

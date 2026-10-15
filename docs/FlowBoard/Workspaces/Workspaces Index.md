@@ -21,7 +21,7 @@ Workspaces is the FlowBoard platform component that gives each task *"A private 
 - [[ExecHost Seam]] — where a process runs, owned by the workspace
 - [[Workspace Adapters]] — git worktree now; container, devcontainer, remote later
 - [[Git Worktree Adapter]] — the v1 reference implementation
-- [[Isolation Tiers]] — `host`, `container`, `gvisor`, `microvm`
+- [[Workspace Isolation Tiers]] — `host`, `container`, `gvisor`, `microvm` as the workspace sees them
 
 ## Lifecycle and rules
 
@@ -51,7 +51,7 @@ Workspaces is the FlowBoard platform component that gives each task *"A private 
 ## Direction
 
 - [[Workspaces Roadmap]] — v1, beyond the PRD, later, out of scope
-- [[Workspaces Open Questions]] — 30 gaps and every proposal
+- [[Workspaces Open Questions]] — 31 gaps and every proposal
 - [[Workspaces Sources]] — where every fact comes from
 
 ## Related
@@ -60,3 +60,5 @@ Workspaces is the FlowBoard platform component that gives each task *"A private 
 - [[Task Detail Index]]
 - [[Execution Index]]
 - [[Component Documentation Tracker]]
+- [[Sandboxing Index]]
+- [[Projects Index]]

@@ -12,16 +12,16 @@ Workspaces add no table. They use a few columns on existing tables, a settings k
 | Table.column | Type | Meaning | Source |
 |---|---|---|---|
 | `projects.repo_path` | `TEXT NOT NULL` | *"absolute path to the git repo"*; the repo every worktree is cut from | PRD §5 |
-| `tasks.branch_name` | `TEXT` | the task's branch; null until created | PRD §5, §11 |
+| `tasks.branch_name` | `TEXT` | the task's branch; nullable, so presumably null until created *(inference)* | PRD §5, §11 |
 | `tasks.worktree_path` | `TEXT` | the task's folder; every run's `cwd` | PRD §5, §11 |
 | `tasks.status` | `TEXT NOT NULL` | decides when cleanup may be offered | PRD §5 |
 | `tasks.flow_id` | `TEXT` | *"null while in backlog, pinned on promotion"*, the same moment the worktree is made | PRD §5 |
 | `artifacts.path` | `TEXT NOT NULL` | *"absolute path on disk"*, inside the worktree | PRD §5 |
-| `runs.sandbox` | — | *"records the tier that actually ran"* | PRD §11.1, backlog 1.1 |
+| `runs.sandbox` | — | *"records the tier that actually ran"* | PRD §11.1, backlog 1.1, drawio *SQLite* card (*"runs (… sandbox)"*) |
 | `step_defs.sandbox_profile` | — | *"an optional `step_defs.sandbox_profile` override"* | backlog 1.1 (**NEW**) |
-| `settings` key `sandbox_profile` | JSON value | *"tier, image, egress allowlist, limits"* | PRD §11.1 |
+| `settings` key `sandbox_profile` | `settings.value TEXT NOT NULL`; the encoding is not given | *"tier, image, egress allowlist, limits"* | PRD §5, §11.1; drawio *SQLite* card (*"settings (memory, sandbox_profile)"*) |
 
-`runs.sandbox` and `step_defs.sandbox_profile` are not in the PRD §5 SQL. They come from §11.1's prose and backlog 1.1. Their types are not given.
+`runs.sandbox` and `step_defs.sandbox_profile` are not in the PRD §5 SQL. They come from §11.1's prose, backlog 1.1 and the drawio. Their types are not given. See [[Sandboxing Data Model]] and [[Sandboxing Open Questions]] #8 and #9.
 
 PRD §11 says *"Store both paths on the task."* Only one of the two values is a path; the other is a branch name.
 
