@@ -30,17 +30,23 @@ Every fact in these notes comes from the files below (paths relative to the repo
 |---|---|
 | `docs/old/architecture/README.md` | *A projection, not the model*; *Board = projection of `step_instances` → CQRS*; component index #4 and #8 |
 | `docs/old/architecture/01-ports.md` | The normalized event envelope, versioning and OTel names, keep the raw line |
-| `docs/old/architecture/06-cost-and-platform.md` §12, §15 | Cost ledger and PricingService; live card cost and viewer estimate read the same `Usage`; settings (escalation threshold) |
-| `docs/old/reference/core/ports/events.ts` | `NormalizedEvent` and `Usage` types |
+| `docs/old/architecture/06-cost-and-platform.md` §12, §15 | Cost ledger and PricingService (Claude's price table is a passthrough); live card cost and viewer estimate read the same `Usage`; settings (escalation threshold) |
+| `docs/old/reference/core/ports/events.ts` | `NormalizedEvent` and `Usage` types; no `v`, `summary` only on `tool_use`, usage only on `result` |
+| `docs/old/reference/core/ports/agent-provider.ts` | `AgentRun.stop()` (*"SIGTERM the child"*), *"tees this to run_events + SSE"*, the `partial_stream` capability |
+| `docs/old/reference/core/ports/exec-host.ts` | `ChildHandle.kill()` |
+| `docs/old/reference/adapters/agent/replay/replay-provider.ts` | A stopped replay settles with `exitCode: 130, error: 'stopped'` |
+| `docs/old/architecture/03-execution-substrate.md` §6 | *"tee events to `run_events` + the SSE emitter"* |
+| `docs/old/architecture/07-ports-in-practice.md` | Live cost updated only on `result` |
+| `docs/old/design/Vibe Kanban.dc.html` | The looped-back card labelled with the failed step |
 | `docs/old/stream-sample.jsonl` | The probe the parser is written against (PRD §0) |
 | `docs/old/design/brief.md` | §2 the board (card must show, drag legibility), §4 live session viewer (*signal density*), §5 wasted spend; *Calm, not alarming*; *Dark-first* |
-| `docs/old/design/README.md` | 1b card states, 1c board and flow strip, 1d empty/loading/error, board keyboard (`h`/`l`, `[`/`]`), live cost cadence, one shared ticker, 5-minute default threshold, *≤ ~14 columns* |
+| `docs/old/design/README.md` | 1b card states, 1c board and flow strip, 1d empty/loading/error, board keyboard (`h`/`l`, `[`/`]`), live cost cadence, one shared ticker, 5-minute default threshold, *≤ ~14 columns*, *"Blocked 4m 12s · burning idle"*, accent for approvals and amber for questions |
 | `docs/mockups/README.md` | Monitor and guide summaries; the accounting bug the guide found; palette and *spend boldness in one place* |
 | `docs/mockups/inbox.html`, `inbox-guide.html` | Oldest-first rule shared with the band; `ESCALATE = 10 * MIN`; shared seed tasks (`billing-webhook`, `csv-export` as a batch, `provider-codex`, `auth-refactor`, `pdf-import` with `who: 'dana'`); `RUNNING` set; *a parked run is not billing you*; *the next task down this flow will not pay the same toll* |
 | `docs/mockups/task-detail.html`, `task-detail-guide.html` | `auth-refactor` *"the same task the monitor shows waiting"*; workspace path `~/.flowboard/ws/auth-refactor`; NEEDS YOU gate banner |
 | `docs/mockups/flow-designer-guide.html` | Approval *"is what puts it in the monitor's Needs you band"*; selected node rail *"matches the row treatment on the monitor"* |
 | `docs/FlowBoard/Flow Design/*` | Linked rather than repeated: [[Branching Joining And Loops]], [[Approval Gates]], [[Canvas Layout And Board Order]], [[Version Pinning]], [[Seeded Flows]], [[Flow Design Open Questions]] #11, #14, #24, #34 |
-| `docs/FlowBoard/Capability Library/Capability Library Decisions.md` | D26, the nine-step seed flow |
+| `docs/FlowBoard/Capability Library/Capability Library Decisions.md` | D26, the nine-step seed flow; D15, host tier fails closed for git-sourced plugins |
 
 ## Related
 

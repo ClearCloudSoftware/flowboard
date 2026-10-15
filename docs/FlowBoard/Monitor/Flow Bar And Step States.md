@@ -48,7 +48,7 @@ stateDiagram-v2
   build_requeues --> queued
 ```
 
-The box labels in the diagram are part of the rule: *asking: "paused, billing stops"*; *failed: "spend becomes wasted"*; *build re-queues: "with your reason"*; *gate: "waiting for your call"*; *done: "artifact written"*.
+The guide's SVG draws no Approve arrow: *"Approve → the next step queues"* is a free label beside the gate box, drawn here as the `gate → done` edge. The box labels in the diagram are part of the rule: *asking: "paused, billing stops"*; *failed: "spend becomes wasted"*; *build re-queues: "with your reason"*; *gate: "waiting for your call"*; *done: "artifact written"*.
 
 ## Tooltip
 

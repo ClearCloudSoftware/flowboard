@@ -13,7 +13,7 @@ The flow drawn left to right as fixed SVG nodes (140 × 70): research → plan �
 
 - The step name in capitals and its model
 - A large **count**: live tasks at that step, meaning running, queued, or held at a gate, question or failure. Grey when zero
-- `avg <duration> · <$ per run>`: average duration of finished runs and spend per finished run (wasted included)
+- `avg <duration> · <$ per run>`: average duration of finished runs, and the step's total spend (every run, live and wasted included) divided by its number of finished runs
 - A `GATE` label on gated steps
 
 Node marks:

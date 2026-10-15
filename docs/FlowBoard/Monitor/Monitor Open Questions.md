@@ -41,7 +41,7 @@ Monitor step states: `pending | queued | running | asking | gate | failed | done
 
 ### 8. Does an asking run free its worker at once?
 
-The monitor guide: asking is *"paused, billing stops"*, and the run *"let go of its worker"*. PRD §9: the broker *"holds the shim's call open"* for 20 minutes, then the run parks. For those 20 minutes the process is alive and holds one of the `VIBE_MAX_RUNS` slots. Billing is likely idle (no tokens while blocked), but the slot is not free. Either the monitor counts a blocked process as a busy slot, or the PRD parks sooner. See [[Waiting And Escalation]].
+The monitor guide: asking is *"paused, billing stops"*, and the run *"let go of its worker"*. The inbox guide agrees: *"When an agent asks, it saves its place and lets go of its worker."* PRD §9: the broker *"holds the shim's call open"* for 20 minutes, then the run parks. For those 20 minutes the process is alive, and nothing in the PRD releases its `VIBE_MAX_RUNS` slot. Billing is likely idle (no tokens while blocked), but the slot is not obviously free. Either the monitor counts a blocked process as a busy slot, or the PRD parks sooner. See [[Waiting And Escalation]].
 
 ### 9. Escalate after 10 minutes or 5?
 
@@ -161,6 +161,58 @@ The band's gate card always reads *"Review passed. Approve the change so the tas
 ### 34. Monitor endpoints
 
 No source defines endpoints for the monitor's snapshot, live stream, stop, or retry with a note or host. **Proposal** in [[Monitor API And Routes]].
+
+## Added on grounding review
+
+Found when these notes were checked against the sources a second time.
+
+### 35. Does a stopped run get retried automatically?
+
+PRD §7 classes *"process killed by a signal"* as a **transient** failure: *"retry the same attempt automatically, up to 3 times, with backoff of 30 s, 2 min and 8 min"*, marked `wasted = 1`. Backlog 3.4's Stop is *"SIGTERM by pid"*. Nothing marks a run as stopped by the user before the signal, so the runner would re-run what you just stopped. The replay adapter's `stop()` settles with `exitCode: 130, error: 'stopped'`, a non-zero exit, so it is classified the same way. **Proposal:** record the stop on the run first and exclude it from the transient class. Linked to #14.
+
+### 36. Where does Stop run?
+
+Backlog 3.4 and `03` §8: *"Stop = SIGTERM by pid from the route (same machine)"*. PRD §2: *"Next.js route handlers must never spawn a long-lived child process; they enqueue jobs and the worker picks them up"*. The ports already have a stop: `AgentRun.stop()` (*"SIGTERM the child"*, `agent-provider.ts`) and `ChildHandle.kill()` (`exec-host.ts`). On the container tier the host pid belongs to the docker client, not the agent. Should Stop be a job the worker handles through the port?
+
+### 37. Retry as-is for rate limits
+
+The guide offers **Retry as-is** for *"a flaky test, a rate limit, a transient error"*. PRD §7 retries rate limits and transient errors itself and only blocks the task after a 4th failure. Which failures should ever reach the band, and does a manual retry after four automatic ones make sense?
+
+### 38. Live cost has no source path
+
+PRD §7: *"Accumulate per-message token usage as you stream so the live view shows a running number before the run ends."* Backlog 3.4: *"estimate from tokens until result lands"*. But `events.ts` carries `Usage` only on `result`; `07-ports-in-practice.md` updates live cost only `if (ev.type === 'result')`; and `06` §12 makes Claude's price table *"a **passthrough**"*, so there are no rates to turn mid-run tokens into dollars. `agent-provider.ts` names the capability (*"partial_stream emits incremental deltas (live token counts) mid-turn"*) but no event carries them. Needed for the row cost, burn and the viewer footer.
+
+### 39. The event envelope
+
+PRD §7: *"each event carries `v`, starting at 1"*; `01-ports.md`: *"every event also carries `v: 1`"*. The `NormalizedEvent` type in `events.ts` has no `v` (it is only the `run_events.v` column). `summary` exists only on `tool_use`, yet `run_events.summary` is a *"short human-readable line for the session viewer"* on every row. Who writes the summary for the other six kinds?
+
+### 40. The stale "deviation" label
+
+PRD §7 now says the SSE endpoint *"tails `run_events` by `seq`"*. Backlog 3.4 still tags this *"PRD (deviation, keep)"*, `03` §8 calls it a *"deviation from PRD's in-memory emitter"*, and `03` §6 (*"tee events to `run_events` + the SSE emitter"*), `agent-provider.ts` (*"tees this to run_events + SSE"*) and `07` (*"→ run_events + SSE"*) still describe an emitter. The architecture docs need to catch up with the PRD.
+
+### 41. Furthest-advanced after a rework
+
+PRD §4: *"A card's column is derived from its furthest-advanced step instance."* Backlog 5.2: on rework *"downstream `done` → `skipped` so they re‑instantiate"*. Does a skipped instance still count as furthest? The old handoff's looped-back card (`Vibe Kanban.dc.html`) is labelled with the step that failed (`Review · attempt 2 of 3`, *"Sent back to Implementation"*) while the work runs upstream. The monitor's *where* column names the running step instead.
+
+### 42. Is waiting free?
+
+The mockups say waiting costs nothing (*"Costs nothing while it waits"*, *"a parked run is not billing you"*). The old handoff's inbox batch says *"Answer all six to unblock the run. Blocked 4m 12s · burning idle."* (`docs/old/design/README.md`). This follows #8: if the asking run holds its process for 20 minutes, "burning idle" may be closer to true.
+
+### 43. One colour for gates and questions?
+
+The old handoff: *"only two of those ever mean "act now" (amber = a question with a clock, accent = an approval decision)"*. The mockups use one ochre for both (*"ochre `#A35A00` wants you"*), and petrol for running.
+
+### 44. The keyboard on first load
+
+*"Number keys act on the top item in Needs you — the oldest one — so you can clear the band without ever choosing what to look at next."* On the seeded screen the oldest item is the `billing-webhook` failure, which has no key. `a`, `r` and `1`–`9` do nothing until it is cleared with the mouse. Should failures get keys, or should each key act on the oldest item of its own kind?
+
+### 45. A step that will not run
+
+Decision **D15**: without Docker, *"a step whose plugins (skill or extras) came from a git URL does not run."* Is that a failure card, a blocked task, or a mark on the queued cell? No source says.
+
+### 46. `Esc` in the reason box
+
+The guide's key list: *"Esc — Close the detail, cancel a reason box"*. In the mockup the reason input takes focus when it opens (`monitor.html:1100`) and the key handler returns early for any input (`monitor.html:1126`), so `Esc` never reaches it. Fix the mockup or the guide.
 
 ## Related
 

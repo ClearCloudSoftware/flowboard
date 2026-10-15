@@ -35,7 +35,7 @@ The *where* column (`whereOf`) shows the blocking step, the running step(s) join
 
 ## Against the PRD
 
-PRD §13 gives the board card a *"state dot (running / awaiting answers / awaiting approval / failed)"*: four states. The monitor has six icons and splits *waiting* into gate and question with different glyphs but one colour. `tasks.status` in PRD §5 is `backlog | todo | running | blocked | done | failed | cancelled`. The mockup has no `todo` and no `cancelled`, and folds PRD `blocked` (waiting on you) and `failed` (terminal) into its single **Failed** status. A **proposal** mapping is in [[Monitor Data Model]]; see [[Monitor Open Questions]] #7.
+PRD §13 gives the board card a *"state dot (running / awaiting answers / awaiting approval / failed)"*: four states. The monitor has six icons and splits *waiting* into gate and question with different glyphs but one colour. `tasks.status` in PRD §5 is `backlog | todo | running | blocked | done | failed | cancelled`. The mockup has no `todo` and no `cancelled`. PRD `blocked` splits across two icons: **Waiting on you** when a step is `awaiting_approval` or `awaiting_answers`, and **Failed** when a run failed. **Failed** also covers the PRD's terminal `failed`. A **proposal** mapping is in [[Monitor Data Model]]; see [[Monitor Open Questions]] #7.
 
 The old design handoff (1b) styled the done card with *"No colour at all"* and a hollow dot. The monitor keeps the idea but uses a tick.
 

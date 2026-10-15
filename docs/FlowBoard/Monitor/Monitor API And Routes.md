@@ -24,7 +24,7 @@ PRD §12: *"REST route handlers under `apps/web/app/api/`. All handlers are thin
 | `GET /api/runs/:id/stream` | SSE, the live log and the [[Live Run Viewer]] |
 | `GET /api/costs?project=&from=&to=` | Rollups (the `/costs` screen) |
 
-Backlog 2.1 also lists `GET /api/tasks/:id` and a `POST /api/tasks/:id/start` that the code added (decision **D1**: explicit Start).
+Backlog 2.1 also lists `GET /api/tasks/:id`. The backlog preamble (item 3) records a `POST /api/tasks/:id/start` that the code added, and Story 2.1 still has to *"decide auto‑start on promote vs explicit Start"* (decision **D1** recommends an explicit Start).
 
 ## Web routes
 
@@ -58,6 +58,8 @@ GET  /api/monitor/stream                -- SSE: snapshot, then deltas on job com
 POST /api/runs/:id/stop                 -- SIGTERM by pid, finalise the run
 POST /api/step-instances/:id/retry      -- add { note?, allowHost? }
 ```
+
+The stop endpoint must record that the user stopped the run before signalling it, or the runner classifies the exit as a transient infra failure and retries it. It should go through the worker rather than kill by pid from the route ([[Monitor Open Questions]] #35, #36).
 
 `GET /api/monitor` would take `?project=` to narrow to one project, so it can also serve `/p/[slug]`. The stream follows `02` §4's idea of a projection refreshed on job completion. `allowHost` would write the step's egress override, which is [[Flow Design Open Questions]] #14.
 

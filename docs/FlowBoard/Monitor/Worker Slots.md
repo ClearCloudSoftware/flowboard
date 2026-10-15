@@ -40,7 +40,7 @@ The guide: *"Opens the four slots: which task, which step, which model, elapsed,
 
 ## Scheduling in the mockup
 
-`schedule()` hands free slots to queued runs in task order, oldest seeded task first. It is a simulation. The real queue is the `jobs` table, leased by the worker *"inside a transaction"* with *"stale‑lease reclaim at 10 min"* (backlog 3.1). Whether a [[Check Steps|check step]] (a shell run, *"no model"*) takes a slot is not stated.
+`schedule()` hands free slots to queued runs in the order of the `TASKS` array: the seed list's order, not age or priority. It is a simulation. The real queue is the `jobs` table, leased by the worker *"inside a transaction"* with *"stale‑lease reclaim at 10 min"* (backlog 3.1). Whether a [[Check Steps|check step]] (a shell run, *"no model"*) takes a slot is not stated.
 
 ## Related
 

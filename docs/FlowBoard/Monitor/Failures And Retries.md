@@ -22,7 +22,7 @@ How a failure shows on the monitor, and what the sources say happens next.
 | Action | For | Source wording |
 |---|---|---|
 | **Allow host & retry** | An egress denial | *"the sandbox correctly refused a call the step genuinely needs"* |
-| **Retry as-is** | Anything else | *"a flaky test, a rate limit, a transient error"* |
+| **Retry as-is** | Anything else | *"a flaky test, a rate limit, a transient error"*. PRD §7 retries rate limits and transient errors automatically, so they should rarely reach you ([[Monitor Open Questions]] #37) |
 | Leave it | — | *"or leave it and let the spend stop there"* |
 
 Each retry moves the failed attempt's spend to wasted and re-queues the run as the next attempt.
@@ -49,6 +49,12 @@ At the cap, PRD §8 escalates rather than fails: *"Set the target step instance 
 ## Stop
 
 A run you stop is *"recorded as failed, with "stopped by you" as the reason"*, and its spend moves to wasted. Backlog Story 3.4 finalises a stopped run as `cancelled`, and Story 3.3 says graceful shutdown should mark runs *"`cancelled`, not `failed`"*. [[Monitor Open Questions]] #14.
+
+Two more conflicts sit under Stop. PRD §7 counts *"process killed by a signal"* as a transient failure and retries it, so a SIGTERM Stop needs its own path or the run comes back (#35). And backlog 3.4 kills *"by pid from the route"*, which skips the ports' `stop()` and `kill()` and crosses the web/worker boundary (#36).
+
+## Steps that never start
+
+Decision **D15**: without Docker, *"a step whose plugins (skill or extras) came from a git URL does not run."* No source says how the monitor shows that step ([[Monitor Open Questions]] #45).
 
 ## Related
 

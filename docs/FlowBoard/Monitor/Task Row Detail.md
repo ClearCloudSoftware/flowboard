@@ -18,7 +18,7 @@ Clicking a row in the [[Pulse View]] (or `↵` / `o`) opens an inline detail und
 | Log | The agent's recent lines, styled by kind; a failed run adds `✕ <error>` |
 | Actions | **Stop this run** (only while a run is live) · **See it on the timeline** · **See the flow** |
 
-The log lines in the mockup are canned per task and reveal one line every 18 seconds. Their prefixes suggest the event kinds the real viewer would summarise:
+The log lines in the mockup are canned per task and reveal one line per 18 simulated seconds (1.8 s real at ×10), then loop. Their prefixes suggest the event kinds the real viewer would summarise:
 
 | Prefix | Example | Matching `NormalizedEvent` (inferred) |
 |---|---|---|

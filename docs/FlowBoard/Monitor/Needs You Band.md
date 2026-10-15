@@ -27,7 +27,9 @@ The keyboard acts only on the **top** card: *"Number keys act on the top item in
 
 ## Send back
 
-**Send back** swaps the action row for a one-line form: an input with the placeholder *"Why — this goes to the next build attempt"*, a **Send back** submit, and **Cancel**. `Esc` also cancels. While the input has focus the band does not re-render.
+**Send back** swaps the action row for a one-line form: an input with the placeholder *"Why — this goes to the next build attempt"*, a **Send back** submit, and **Cancel**. While the input has focus the band does not re-render.
+
+The guide says `Esc` cancels the form (*"Close the detail, cancel a reason box"*). In the mockup it cannot: opening the form puts focus in the input, and the key handler ignores every key while focus is in an input (`monitor.html:1100, 1126`). Only **Cancel** closes it ([[Monitor Open Questions]] #46).
 
 ## Empty state
 

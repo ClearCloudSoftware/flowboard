@@ -13,7 +13,7 @@ The monitor writes nothing of its own. It reads the engine's tables (PRD §5) an
 |---|---|---|
 | `tasks` | `id`, `project_id`, `flow_id`, `title`, `status`, `created_at`, `updated_at` | Rows, status, flow version |
 | `flows`, `step_defs`, `step_edges` | `name`, `version`; `key`, `name`, `model`, `advance_mode`, `board_order`, `max_attempts`; `from_step`, `to_step`, `condition` | Flow bar shape, gate marks, pipeline graph, *of N* attempts |
-| `step_instances` | `task_id`, `step_def_id`, `state`, `attempts`, `outcome`, `updated_at` | Step states, where a task is, attempt counts |
+| `step_instances` | `task_id`, `step_def_id`, `state`, `attempts`, `outcome`, `reason`, `updated_at` | Step states, where a task is, attempt counts, the sent-back and failure text |
 | `runs` | `step_instance_id`, `attempt`, `state`, `cost_usd`, token columns, `num_turns`, `wasted`, `error`, `started_at`, `ended_at`, `pid` | Live cost, wasted, durations, timeline bars, the error line, stop |
 | `run_events` | `run_id`, `seq`, `v`, `type`, `summary`, `raw`, `created_at` | The live log and the [[Live Run Viewer]] |
 | `questions` | `task_id`, `step_instance_id`, `prompt`, `kind`, `options`, `state`, `created_at`, `escalated_at`, `answered_via` | Question cards, wait time, the escalated tag |
@@ -21,7 +21,7 @@ The monitor writes nothing of its own. It reads the engine's tables (PRD §5) an
 | `jobs` | `kind`, `state`, `payload`, `run_after` | The queue (queued `start_run` jobs) |
 | `settings` | escalation threshold, draft mode, sandbox defaults | The escalated tag, the status bar |
 
-The drawio *Harness architecture* SQLite card adds `runs.sandbox` and `step_defs.kind, command`; backlog 8.1 reads `runs.model/effort`, which PRD §5 does not list.
+Some columns are named outside PRD §5. Backlog Story 1.1 adds `runs.model`, `runs.effort` and `step_instances.reason` (*"rejection/failure text shown on the card"*). PRD §11.1 already refers to `runs.model`/`runs.effort` and `runs.sandbox`, and the drawio *Harness architecture* SQLite card lists `runs (… sandbox)` and `step_defs (kind, command, max_attempts)`. Backlog 8.1 reads `runs.model/effort` for its cost tables.
 
 ## The mockup's in-memory model
 
@@ -71,6 +71,7 @@ One `RUN` per step per task: the mockup keeps no history of earlier attempts, on
 | Attempt N of M | `step_instances.attempts` of `step_defs.max_attempts` |
 | Waited since | `questions.created_at` for questions; for gates, `step_instances.updated_at` (no dedicated column) |
 | Fork badge | Count of the task's runs in `running` |
+| Sent-back line, failure reason | `step_instances.reason` (backlog 1.1); the run's `error` for the raw stderr tail |
 
 ## Related
 

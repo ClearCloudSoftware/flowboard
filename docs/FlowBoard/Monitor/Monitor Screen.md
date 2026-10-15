@@ -55,7 +55,7 @@ The middle region (`main`) switches between [[Pulse View]], [[Timeline View]] an
 | Dashed brick edge | pipeline | The review → build retry path |
 | `NOW` line | brick, on the timeline | The current moment |
 
-Colours are the three signal colours of the house palette: petrol `#0E6E74` (*run*), ochre `#A35A00` (*wait*), brick `#B0231B` (*fail*), with *done* `#B8B4A8` and *pending* `#EAE7DE`.
+Colours are the three signal colours of the house palette: petrol `#0E6E74` (*run*), ochre `#A35A00` (*wait*), brick `#B0231B` (*fail*), with *done* `#B8B4A8` and *pending* `#EAE7DE`. Gates and questions share ochre; the old handoff gave approvals the accent and questions amber ([[Monitor Open Questions]] #43).
 
 ## States of the screen
 

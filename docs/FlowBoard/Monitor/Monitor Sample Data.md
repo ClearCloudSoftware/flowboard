@@ -42,7 +42,7 @@ The two questions:
 
 ## Log lines
 
-Canned per task in `LOGS`, revealed one every 18 seconds of real time. For example, `sandbox-egress`:
+Canned per task in `LOGS`, revealed one line per 18 seconds of the simulated clock (1.8 s of real time at ×10), looping back to the start when they run out. For example, `sandbox-egress`:
 
 ```
 › read  docs/old/architecture/08-sandboxing.md (412 lines)

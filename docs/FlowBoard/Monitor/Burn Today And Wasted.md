@@ -52,7 +52,7 @@ The guide's rate table (mockup rates, not real prices):
 
 ## Where the real numbers come from
 
-PRD §7: *"Take the final result event's total cost as authoritative for `runs.cost_usd`. Accumulate per-message token usage as you stream so the live view shows a running number before the run ends."* `06` §12: a `PricingService` prices providers without native cost from tokens. The card's live cost and the viewer's estimate *"both read the same `Usage`"*. No source defines burn rate or the *today* boundary for real data ([[Monitor Open Questions]] #15, #16).
+PRD §7: *"Take the final result event's total cost as authoritative for `runs.cost_usd`. Accumulate per-message token usage as you stream so the live view shows a running number before the run ends."* `06` §12: a `PricingService` prices providers without native cost from tokens. The card's live cost and the viewer's estimate *"both read the same `Usage`"*. No source defines burn rate or the *today* boundary for real data ([[Monitor Open Questions]] #15, #16). The sources also give no working path for a dollar figure *during* a run: usage arrives only on the final `result` event, and Claude's pricing is a passthrough with no rate table ([[Monitor Open Questions]] #38).
 
 ## Per task
 

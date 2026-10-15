@@ -16,12 +16,14 @@ The monitor guide says a waiting task is free:
 - Gate: *"Until you do, the task occupies no worker and costs nothing."*
 - *"leaving a question unanswered costs nothing but time."*
 
-The inbox guide agrees: *"**a parked run is not billing you.** … Leaving the inbox full costs calendar time and a worker slot's worth of throughput — not money."*
+The inbox guide agrees: *"**a parked run is not billing you.** When an agent asks, it saves its place and lets go of its worker. Leaving the inbox full costs calendar time and a worker slot's worth of throughput — not money."* The lost throughput is the stalled task's: the slot itself is free.
+
+The old design handoff disagrees: its inbox batch sub-line reads *"Blocked 4m 12s · burning idle."* ([[Monitor Open Questions]] #42).
 
 The [[Timeline View]] shows this cost in time: *"Flat, hatched stretches are the hours nobody paid for — the board waiting on a human."*
 
 > [!warning] The PRD keeps the run alive first
-> PRD §9: the broker *"holds the shim's call open. After 20 minutes with no answer, return a sentinel"*. Only then does *"the runner see the process exit, set the run to `parked`"*. For those first 20 minutes the agent process is alive and, per the guide's own *"a worker slot's worth of throughput"*, holds a slot. The monitor shows the slot freed at once. See [[Monitor Open Questions]] #8.
+> PRD §9: the broker *"holds the shim's call open. After 20 minutes with no answer, return a sentinel"*. Only then does *"the runner see the process exit, set the run to `parked`"*. For those first 20 minutes the agent process is alive and blocked on the call, and nothing in the PRD releases its worker slot while it waits. The monitor and the inbox guide both show the slot freed at once. See [[Monitor Open Questions]] #8.
 
 ## Escalation
 
