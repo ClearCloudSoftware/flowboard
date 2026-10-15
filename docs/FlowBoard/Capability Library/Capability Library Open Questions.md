@@ -9,7 +9,7 @@ Places where the sources disagree or leave a gap. Each needs a decision before b
 
 ## 1. Where does the capability store live?
 
-`./skills/<slug>` (PRD), `skills/_installed/` (`.gitignore`), `skills/<slug>/…` for seeds (backlog), `~/.flowboard/capabilities` (mockup). Per-repo or per-user? Seeds committed in the repo vs installs in the home directory is a reasonable split, but nothing says so. See [[Capability Storage On Disk]].
+`./skills/<slug>` (PRD), `skills/_installed/` (`.gitignore`), `skills/<slug>/…` for seeds (backlog), `~/.flowboard/capabilities` (mockup). Per-repo or per-user? Seeds committed in the repo vs installs in the home directory is a reasonable split, but nothing says so. Note that PRD §13 and Story 7.1 install into `./skills/<slug>`, which the `skills/_installed/` ignore rule does not cover. See [[Capability Storage On Disk]].
 
 ## 2. One table or three?
 
@@ -25,7 +25,7 @@ Today: no — an update reaches every flow on its next run, and the UI warns ins
 
 ## 5. Agents and provider packs
 
-The mockup gives agents a pack per provider (versionless). The architecture says agents are already provider-neutral apart from the logical model id. Does an agent need a pack record at all, or only a model-resolution check?
+The mockup gives agents versionless packs, but unevenly: four agents have Claude and Codex packs, three are Claude-only. The architecture says agents are provider-neutral once their default model is a logical id (the PRD still stores a native one). Does an agent need a pack record at all, or only a model-resolution check?
 
 ## 6. How does the pack/step provider check reach the flow editor?
 
@@ -45,15 +45,39 @@ The PRD lists four endpoints. The mockup needs preview, confirm, update, delete 
 
 ## 10. Define agent UI
 
-The mockup's **+ Define agent** button only selects `architect` — no form is designed. The PRD lists the fields; the screen design is missing.
+The mockup's **+ Define agent** button only selects `architect` and switches the kind filter to Agents — no form is designed. The PRD lists the fields; the screen design is missing.
 
 ## 11. Seed set
 
-PRD seeds (`researcher`, `planner`, `ponytail`, `explain-simply`…) differ from the mockup's Delivery pack (`scout`, `architect`, `developer`, `scribe`…). Which is canonical? See [[Seeded Capabilities]].
+PRD seeds (`researcher`, `planner`, `ponytail`, `explain-simply`…), plus backlog Story 1.2's research agents, differ from the mockup's Delivery pack (`scout`, `architect`, `developer`, `scribe`…). Which is canonical? See [[Seeded Capabilities]].
 
 ## 12. Network tools list
 
 The mockup treats `Bash` as network-capable alongside `WebFetch` and `WebSearch`. MCP tools that reach the network are not covered. Should the list be data-driven per provider?
+
+## 13. Provider mismatch: block or warn?
+
+The capability-library mockup and guide say the flow editor refuses to save a step whose provider has no pack for its capability. `01-ports.md` calls a capability-contract violation a design-time **warning**; only the artifact contract rejects the save. `05` gives the provider-match check no severity, and the flow-designer mockup does not implement it. See [[Provider Coverage And Portability]].
+
+## 14. Data or behaviour: what is a `CapabilityPack`?
+
+`05-environment-and-registry.md` §13 gives it a `mount(spec: RunSpec): void` method; `agent-provider.ts` gives it a data union (`plugin_dir` / `system_prompt` / `native`) that the adapter interprets. See [[Capability Data Model]].
+
+## 15. Is the skills directory mounted into the sandbox?
+
+The harness diagram mounts `ro skills/ → /skills`. `08-sandboxing.md` says *mount only the worktree (and the declared artifact dir)* and lists no skills mount. If the agent CLI runs inside the sandbox, it needs the plugin dirs. See [[Capability Runtime Mounting]].
+
+## 16. Does ACP change how packs mount?
+
+`01-ports.md`, the architecture README (open decision 2), feature map §6 and the drawio propose checking whether the `AgentProvider` port should *be* the Agent Client Protocol. If it does, pack mounting has to be re-checked against what ACP exposes rather than a per-vendor adapter.
+
+## 17. Source documents drift from each other
+
+- PRD §7 still says `--add-dir`; backlog Story 0.1 and Story 3.2 require `--plugin-dir`.
+- Backlog Story 1.2 still says "the 8-step table"; the PRD seed flow now has nine steps (it added `check`).
+- Backlog Story 3.5 allows the project git remote through egress; the PRD and `08-sandboxing.md` now exclude it.
+- The drawio *Prompt builder* puts recalled memory after the headless instruction; PRD §7 and `09-memory.md` put it before.
+- `01-ports.md` adds the `tool_hooks` flag; `agent-provider.ts` lacks it.
 
 ## Related
 

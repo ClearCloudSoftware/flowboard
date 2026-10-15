@@ -59,7 +59,7 @@ Backlog gap (Story 7.1): *"Show stored frontmatter or stop storing it."*
 ```ts
 export interface CapabilityPack {
   id: string;
-  provider: ProviderId;                // 'claude-code' | 'codex' | 'replay'
+  provider: ProviderId;
   mount:
     | { kind: 'plugin_dir'; path: string }
     | { kind: 'system_prompt'; text: string }
@@ -70,12 +70,17 @@ export interface RunSpec {
   prompt: PromptParts;
   model: string;                       // logical id
   effort?: Effort;
-  allowedTools?: string[];
+  toolPolicy?: { allow?: string[]; deny?: string[] };
   capabilities?: CapabilityPack[];     // skills / plugins to mount
   cwd: string;
   ...
 }
 ```
+
+`ProviderId` is `'claude-code' | 'codex' | 'replay' | (string & {})` — an open set.
+
+> [!warning] Two shapes for `CapabilityPack`
+> `05-environment-and-registry.md` §13 sketches it with a method — `provider: AgentProvider['id']; mount(spec: RunSpec): void;` — while `agent-provider.ts` makes `mount` a data union the adapter interprets. The union suits a registry that stores packs as rows. Undecided — see [[Capability Library Open Questions]] #14.
 
 ## Record shape implied by the mockup
 
@@ -89,7 +94,7 @@ interface Capability {
   author: string;                     // '@flowboard/core', '@team-sec'
   seeded?: boolean;                   // ships with FlowBoard
   desc: string;
-  packs: Partial<Record<Provider, { ver: string; at: string }>>; // one per provider
+  packs: Partial<Record<Provider, { ver: string; at: string }>>; // one per provider; agent packs use ver '—'
   update?: { ver: string; note: string };  // upstream moved past installed commit
   src?: string;                       // 'github.com/team-sec/fb-secret-scan'
   commit?: string;                    // installed commit, e.g. '7d3e0b1'
@@ -98,7 +103,7 @@ interface Capability {
 
   // skill
   command?: string;                   // '/secret-scan'
-  manifest?: unknown;                 // parsed SKILL.md
+  manifest?: [cls: string, text: string][]; // SKILL.md as highlight tuples, not a parsed object
 
   // agent
   model?: string;                     // logical id
@@ -109,6 +114,8 @@ interface Capability {
   contains?: { skills: string[]; agents: string[]; flows: string[] };
 }
 ```
+
+The install dialog's candidate (`CANDIDATE`) has the same shape plus `url`, the pasted repository.
 
 ### Derived values
 

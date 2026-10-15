@@ -15,8 +15,8 @@ The architecture states the same rule as validation: *"the flow editor reference
 
 **In the flow editor, at design time — not at run time.** You find out while designing, not when a task is halfway through.
 
-> [!danger] Not a soft warning
-> A step set to run on Codex CLI can't use a capability with no Codex pack. The flow editor refuses to save that combination. It is the same kind of block as a step needing a file nothing writes (the artifact contract).
+> [!warning] Blocking in the mockup, a warning in the ports doc
+> The capability-library mockup and guide say a step set to run on Codex CLI can't use a capability with no Codex pack, and the flow editor refuses to save that combination. `01-ports.md` calls a capability-contract violation a design-time **warning**; only the artifact contract rejects the save (`02-core-and-engine.md`). `05` gives the provider-match check no severity, and the flow-designer mockup does not implement it. Undecided — see [[Capability Library Open Questions]] #13.
 
 ## How the library shows it
 
@@ -43,8 +43,9 @@ None of these is a workaround — they are the three honest options.
 ## Supporting machinery
 
 - **Capability negotiation.** Providers advertise a set of capability flags. `plugins` means *can mount CapabilityPacks as plugin dirs*; without it a pack must use the `system_prompt` or `native` mount kind. The Codex adapter may lack `plugins` (`06-cost-and-platform.md`).
-- **Capability contract.** Flow validation's second check: every knob a step uses is supported by its target provider (`02-core-and-engine.md`). Provider-match of packs is the library-facing half of that.
+- **Capability contract.** Flow validation's second check: every knob a step uses is supported by its target provider (`02-core-and-engine.md`). Provider-match of packs is the library-facing counterpart, though `01-ports.md` makes capability-contract violations warnings.
 - **Adding Codex** requires, among four items, *"Codex-format `CapabilityPack`s for any skills used by flows targeting it"*, and zero changes to engine, board, HITL, notifier, costs, viewer and API.
+- **ACP.** `01-ports.md` proposes first checking whether the `AgentProvider` port should *be* the Agent Client Protocol, which has adapters for Claude Code and Codex. If adopted, how packs mount needs re-checking — see [[Capability Library Open Questions]] #16.
 - **Seeded skills as reference implementation** — the seeded plugin dirs double as the reference for a second provider's pack format.
 
 ## Related

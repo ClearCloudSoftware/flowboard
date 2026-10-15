@@ -12,7 +12,7 @@ Every control on the [[Capability Library Screen]].
 | Control | What it does |
 |---|---|
 | **+ Install from GitHub** | Clone, parse, review, confirm. Nothing is written until the last step. See [[Installing A Capability From GitHub]]. |
-| **+ Define agent** | Creates an agent here rather than cloning one — a prompt, a default model and effort, and an allowed-tools list. See [[Agent Capabilities]]. |
+| **+ Define agent** | Meant to create an agent here — a prompt, a default model and effort, and an allowed-tools list (field guide). In the mockup it only selects `architect` and switches the kind filter to Agents; no form is designed. See [[Agent Capabilities]]. |
 
 ## In the rail
 
@@ -29,7 +29,7 @@ Every control on the [[Capability Library Screen]].
 |---|---|---|
 | **Update to n** | Replaces the installed pack with the newer commit. | Only when the source has moved. |
 | **Open on GitHub** | The source repository, at the installed commit. | Only when the capability has a source (not locally defined agents). |
-| **Remove** | Deletes it from the capability store. | **Disabled while any step references it**, with the count shown beside the button. |
+| **Remove** | Deletes it from the capability store. The mockup deletes on the first click; the PRD and backlog want a confirm. | **Disabled while any step references it**, with the count shown beside the button. |
 
 ## In the install dialog
 
@@ -44,6 +44,8 @@ Every control on the [[Capability Library Screen]].
 | Key | Action |
 |---|---|
 | `esc` | Close the install dialog |
+
+The field guide's walkthrough also takes `←` / `→` to step through it.
 
 ## Related
 

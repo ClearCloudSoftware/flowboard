@@ -14,10 +14,14 @@ stateDiagram-v2
   InUse --> Orphan: last reference removed
   InUse --> UpdateAvailable: upstream moves past installed commit
   Orphan --> UpdateAvailable: upstream moves past installed commit
-  UpdateAvailable --> InUse: Update (replaces pack)
+  UpdateAvailable --> InUse: Update, if referenced
+  UpdateAvailable --> Orphan: Update, if unreferenced
   Orphan --> [*]: Remove
+  UpdateAvailable --> [*]: Remove, if unreferenced
   InUse --> InUse: Remove blocked
 ```
+
+*Update available* is a display state over *in use* / *used by nothing*: the dot shows the update first, but removal depends only on whether a step references it.
 
 The rail dot carries these states — see [[Capability Library Screen]].
 
@@ -47,7 +51,7 @@ Update `secret-scan` from 1.3 to 1.5 and every flow that draws on it uses 1.5 on
 - The **Remove** button is disabled, with *"in use by N steps — can't be removed"* beside it.
 - A capability nothing uses shows a **hollow dot** and a callout: *"Nothing uses this. No step in any flow references it, so removing it is safe — and leaving it installed is just clutter in the step editor's picker."*
 - The argument for removing orphans: every installed capability is another row in the step editor's picker.
-- PRD / backlog: remove **with confirm**.
+- PRD / backlog: remove **with confirm**. The mockup has no confirm step: an unreferenced capability is deleted on the first click.
 
 > [!note] The only destructive action
 > Removing is the only destructive action on the screen, and the only one it refuses outright. Installing, updating and defining an agent are additive, or reversible by re-installing from the same commit.

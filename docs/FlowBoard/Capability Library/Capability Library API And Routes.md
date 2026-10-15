@@ -9,10 +9,10 @@ module: Capability Library
 
 | Source | Route(s) | Content |
 |---|---|---|
-| PRD / drawio *Logical components* | `/skills`, `/agents` | Two pages: skills (list, install from GitHub, update, remove); agents (form) |
+| PRD §13 / drawio *FlowBoard ideation* | `/skills`, `/agents` | Two pages: skills (list, install from GitHub, update, remove); agents (form) |
 | Mockup | `flowboard/library` | One screen covering skills, agents and packs |
 
-The mockup consolidates the two PRD pages into one library screen. The harness-architecture diagram groups it as *"Library · Costs · Settings — skills & agents"* in the browser front end.
+The drawio *Logical components* page names the area *Skills & agents — install, edit, list*, without routes. The mockup consolidates the two PRD pages into one library screen. The harness-architecture diagram groups it as *"Library · Costs · Settings — skills & agents"* in the browser front end.
 
 ## HTTP API (PRD §12)
 

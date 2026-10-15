@@ -17,7 +17,7 @@ The Claude pack of a skill is a **plugin directory**:
   skills/<slug>/SKILL.md
 ```
 
-It is mounted with `--plugin-dir <dir>` and invoked as `/<slug>`. The rebuild backlog records a hard lesson here: **`--add-dir` does not register skills; `--plugin-dir` does** (backlog FIX item, "Environment leaks"). Install adds `.claude-plugin/plugin.json` when a repository lacks one.
+It is mounted with `--plugin-dir <dir>` and invoked as `/<slug>`. The rebuild backlog records a hard lesson here: **`--add-dir` does not register skills; `--plugin-dir` does** (backlog Story 0.1, a FIX item; the backlog intro lists the same lesson under "Environment leaks"). Install adds `.claude-plugin/plugin.json` when a repository lacks one.
 
 ## The SKILL.md manifest
 

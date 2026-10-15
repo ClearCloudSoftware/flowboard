@@ -61,7 +61,7 @@ One dot per row, carrying the only three states worth interrupting you for.
 | amber | **update available** | The source repository has moved past the installed commit. | Read the note, then take it or leave it. |
 | hollow | **used by nothing** | Installed, but no step references it. | Remove it, or wire it into a flow. |
 
-Precedence: update available > used by nothing > in use.
+Precedence: an available update overrides the other two. *In use* and *used by nothing* can never both apply.
 
 ## The detail pane
 

@@ -26,10 +26,11 @@ flowchart LR
 
 From PRD §7 and the backlog:
 
-- **Skills** — one `--plugin-dir <install_path>` per installed skill. The PRD originally said `--add-dir`; that **does not register skills** and was fixed to `--plugin-dir` (backlog FIX, must not regress).
+- **Skills** — one `--plugin-dir <install_path>` per installed skill (backlog Story 3.2). PRD §7 still says `--add-dir`, which **does not register skills**; backlog Story 0.1 found this and Story 3.2 overrides the PRD, which has not been updated.
 - **Agents** — `--append-system-prompt <agent.system_prompt>` for `kind='agent'`.
-- **Tools** — `--allowedTools …`, always with `mcp__vibe__*` appended so a restrictive list cannot lock out `ask_user`.
-- **Reproducibility** — `--strict-mcp-config` keeps personal MCP config out of runs; the args are snapshotted to `data/runs/<id>/args.json`.
+- **Tools** — `--allowedTools …`, always with `mcp__vibe__*` appended so a restrictive list cannot lock out `ask_user` (backlog Story 3.2).
+- **Hooks** — `--settings <generated per-run settings.json with PreToolUse hooks>` (PRD §7): an in-agent gate that blocks writes outside the worktree, non-goal paths and destructive commands. Needs the `tool_hooks` capability flag.
+- **Reproducibility** — `--strict-mcp-config` keeps personal MCP config out of runs (PRD §7); the args are snapshotted to `data/runs/<id>/args.json` (backlog Story 3.2).
 
 ## The prompt
 
@@ -41,7 +42,8 @@ The prompt builder assembles, in order:
 4. **For `kind='skill'`: the slash invocation, e.g. `/grill-me`**
 5. The step's `prompt_template`, with placeholders substituted
 6. Headless instruction: use the `ask_user` MCP tool for questions
-7. *(additive)* Recalled memory — scoped by user, project, **agent/skill**, task
+
+With memory on, a **seventh part** — recalled memory, scoped by user, project, **agent/skill** and task — is inserted just before the closing instruction (part 6), capped at `settings.memory.max_recall_chars` (default 6,000). It never grows the other six parts. PRD §7 and `09-memory.md` place it there; the drawio *Prompt builder* label lists it after part 6.
 
 ## Inside the sandbox
 
@@ -51,6 +53,8 @@ From the harness-architecture diagram:
 - **Never mounted:** `~/.ssh`, cloud credentials, `flowboard.db`, `docker.sock`
 - Skill installs happen on the host (`git clone` from GitHub); the sandbox only reads them.
 
+`08-sandboxing.md` says *mount only the worktree (and the declared artifact dir)* and lists no skills mount — see [[Capability Library Open Questions]] #15.
+
 ## Graceful degradation
 
 | Provider lacks | Effect |
@@ -58,6 +62,7 @@ From the harness-architecture diagram:
 | `plugins` | Pack must use `system_prompt` or `native` mount |
 | `allowed_tools` | Tool policy becomes advisory / prompt-level |
 | `effort` | Adapter drops it; editor greys the field |
+| `tool_hooks` | No in-agent gate; the sandbox alone enforces, and the flow editor says so |
 
 ## Testing without GitHub
 

@@ -24,7 +24,7 @@ flowchart LR
 
 The library feeds **design time**, not run time directly. Flow design picks capabilities; execution later mounts whatever the pinned flow version names (see [[Capability Runtime Mounting]]).
 
-In the logical-components diagram it appears as the *Skills & agents* web area (`/skills`, `/agents`), which writes to the *Disk* store (worktrees, artifacts, skills, session logs). In the harness-architecture diagram it is a piece of **durable state on the host filesystem**: `skills/<slug>/SKILL.md` as plugin dirs, plus agent definitions, installed from GitHub by `git clone`.
+In the logical-components diagram it appears as *Skills & agents — install, edit, list*, which writes to the *Disk* store (worktrees, artifacts, skills, session logs). The ideation page names its routes `/skills` and `/agents`. In the harness-architecture diagram it is a piece of **durable state on the host filesystem**: `skills/<slug>/SKILL.md` as plugin dirs, plus agent definitions, installed from GitHub by `git clone`.
 
 ## What the module does
 

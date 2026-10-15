@@ -26,10 +26,10 @@ Installed capabilities appear in the **step editor's picker** straight away — 
 
 Flow validation is pure functions over the graph. Two design-time checks share one engine (`02-core-and-engine.md`):
 
-1. **Artifact contract** — every `requires` is produced by exactly one ancestor.
-2. **Capability contract** — every knob a step uses is supported by its target provider.
+1. **Artifact contract** — every `requires` entry is produced by some ancestor; exactly one producer; known types. A violation rejects the save.
+2. **Capability contract** — every knob a step uses is supported by its target provider. `01-ports.md` calls a violation a design-time **warning**, same machinery as the artifact contract.
 
-The library adds the provider-match rule: **a pack's provider has to match the step's**. A step on Codex naming a capability with no Codex pack is a blocking error; Save is disabled. See [[Provider Coverage And Portability]].
+The library adds the provider-match rule: **a pack's provider has to match the step's** (`05-environment-and-registry.md` §13, which gives no severity). The capability-library mockup and guide say the flow editor *refuses to save* that combination. The flow-designer mockup has no provider check yet, and `01-ports.md` treats capability-contract violations as warnings. Blocking vs warning is undecided — see [[Capability Library Open Questions]] #13 and [[Provider Coverage And Portability]].
 
 ## Versioning interaction
 
@@ -49,7 +49,7 @@ The count drives the rail meta (`4 uses`), the rail dot, and the removal block.
 
 ## Cost and memory per capability
 
-- **Spend per step definition** — the costs screen answers *"what does `/grill-me` actually cost me?"*; the feature map: *"per step (so you can see what a particular skill really costs you)"*.
+- **Spend per step definition** — the drawio card *Spend per step definition* (page *FlowBoard ideation*) asks *"what does `/grill-me` actually cost me?"*; the feature map: *"per step (so you can see what a particular skill really costs you)"*.
 - **Agent/skill memory scope** — what a role or skill has picked up across runs, recalled into its next prompt.
 
 ## Related

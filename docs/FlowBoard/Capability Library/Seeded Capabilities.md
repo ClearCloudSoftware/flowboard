@@ -11,7 +11,7 @@ The sources give **two different starter sets**. The PRD/backlog set is what v1 
 
 ## v1 seed (PRD §15, backlog Story 1.2)
 
-**Skills** — real local plugin dirs under `skills/`, so the question loop (M4) and flow engine (M5) are testable without GitHub:
+**Skills** — real local skill directories under `./skills/` with a `SKILL.md` each (PRD §15); backlog Story 1.2 makes them plugin dirs (`.claude-plugin/plugin.json` + `skills/<slug>/SKILL.md`). Local, so the question loop (M4) and flow engine (M5) are testable without GitHub:
 
 | Skill | Contract |
 |---|---|
@@ -19,9 +19,9 @@ The sources give **two different starter sets**. The PRD/backlog set is what v1 
 | `code-review` | Reviews the diff against acceptance criteria, non-goals and raw `check_output`; **must call `set_outcome`**; told to look for failures, not confirm the work |
 | `explain-simply` | Explains the plan (approval step) |
 | `ponytail` | Implements the plan |
-| `ask-three` | M4 smoke test: asks three questions of different kinds |
+| `ask-three` | M4 smoke test: asks three questions of different kinds (named in backlog Story 1.2; the PRD's M4 only says "a trivial skill that asks three questions") |
 
-**Agents:** `researcher`, `planner`, `test-writer`, `summarizer`, `backlog-importer` (builtin), `web-researcher`, `research-summarizer`, `fact-checker`.
+**Agents:** PRD §15 seeds `researcher`, `planner`, `test-writer`, `summarizer` and `backlog-importer` (builtin). Backlog Story 1.2 adds `web-researcher`, `research-summarizer` and `fact-checker` for its second flow template.
 
 `backlog-importer` turns a markdown file into a JSON array of `{ import_key, title, body, acceptance_criteria?, non_goals? }`.
 
@@ -38,6 +38,10 @@ The sources give **two different starter sets**. The PRD/backlog set is what v1 
 | check | shell | project `check_command` | — | — | auto |
 | review | skill | `/code-review` | opus | high | **approval** |
 | summarize | agent | `summarizer` | sonnet | medium | auto |
+
+Backlog Story 1.2 still calls this "the 8-step table"; the working-tree PRD added the `check` shell step, making nine.
+
+**Second flow template** (backlog Story 1.2): `researcher` — scope → web research → summarize → grounding ✋, with an `on_fail` loop.
 
 ## Mockup catalogue (Delivery pack)
 
@@ -60,7 +64,7 @@ Non-seeded examples: Security pack (@team-sec), Marketing pack (@growth), `domai
 | `code-review` | `code-review` + `reviewer` |
 | `summarizer` | `scribe` |
 | `grill-me` | `grill-me` |
-| `explain-simply`, `ask-three`, `backlog-importer` | — |
+| `explain-simply`, `ask-three`, `backlog-importer`, `web-researcher`, `research-summarizer`, `fact-checker` | — |
 
 This mapping is an interpretation by role, not stated in the sources. See [[Capability Library Open Questions]].
 

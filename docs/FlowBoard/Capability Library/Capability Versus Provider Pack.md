@@ -12,7 +12,7 @@ A step says *"run code-review"*. It does not say how.
 - The **capability** is that logical name: `code-review`, `grill-me`, `architect`.
 - A **provider pack** is the actual bundle of files one agent CLI knows how to mount. For Claude Code that is a plugin directory; another provider has its own format.
 
-**The registry stores the packs; the adapter knows how to mount them.** The same logical capability can have one pack per provider.
+**The registry stores the pack; the adapter knows how to mount it.** The same logical capability can have one pack per provider.
 
 ```mermaid
 flowchart LR
@@ -42,13 +42,15 @@ From `old/reference/core/ports/agent-provider.ts`:
  */
 export interface CapabilityPack {
   id: string;
-  provider: ProviderId;            // 'claude-code' | 'codex' | 'replay'
+  provider: ProviderId;
   mount:
     | { kind: 'plugin_dir'; path: string }        // Claude: --plugin-dir
     | { kind: 'system_prompt'; text: string }     // provider without plugins
     | { kind: 'native'; config: Record<string, unknown> };
 }
 ```
+
+`ProviderId` is `'claude-code' | 'codex' | 'replay' | (string & {})` — an open set. `05-environment-and-registry.md` sketches the pack differently, with a `mount(spec: RunSpec): void` method; see [[Capability Library Open Questions]] #14.
 
 Three mount strategies cover the field:
 
@@ -62,13 +64,13 @@ Three mount strategies cover the field:
 
 - Each capability's detail pane lists **packs — one packaging per provider**, with an installed version per provider or *"not packaged for this provider"*.
 - The status bar reports **codex packs for N of M** — the share of the library that survives switching a flow to Codex.
-- The flow editor refuses to save a step whose provider has no pack for the capability it names.
+- Per the mockup, the flow editor refuses to save a step whose provider has no pack for the capability it names (blocking vs warning is open — [[Capability Library Open Questions]] #13).
 
 See [[Provider Coverage And Portability]].
 
 ## Agents are nearly provider-neutral already
 
-An agent is a prompt plus defaults. The only provider-specific part is the default model id, and that is a **logical** id (`opus`, `reasoning-high`) that the adapter resolves through `resolveModel()`. See [[Agent Capabilities]].
+An agent is a prompt plus defaults. The only provider-specific part is the default model id. The architecture wants that to be a **logical** id (`reasoning-high`, `fast-cheap`, `default`) resolved through `resolveModel()`; the PRD still stores a native one (`sonnet`). See [[Agent Capabilities]].
 
 ## Related
 

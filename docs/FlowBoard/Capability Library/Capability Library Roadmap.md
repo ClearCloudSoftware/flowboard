@@ -17,7 +17,9 @@ From the feature map (§16 *The library*), the PRD milestone **M7 — Library an
 - [ ] Show stored frontmatter or stop storing it (backlog GAP)
 - [ ] One error-handling style for agent create and update (backlog BUG)
 
-Prerequisite already found the hard way: `--plugin-dir`, not `--add-dir`, registers `/slug` (backlog Story 0.1 *Probe the CLI*, FIX — verify before building).
+M7 and Epic 7 also cover markdown backlog import (Story 7.3). That half is not a library feature and is left out here.
+
+Prerequisite already found the hard way: `--plugin-dir`, not `--add-dir`, registers `/slug` (backlog Story 0.1 *Probe the CLI*, FIX — verify before building). PRD §7 still says `--add-dir`; backlog Story 3.2 overrides it.
 
 ## Designed in the mockup, beyond the PRD
 

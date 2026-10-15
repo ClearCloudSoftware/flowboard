@@ -40,18 +40,20 @@ The sibling mockups show the failure this prevents:
 
 From `old/architecture/08-sandboxing.md` and the harness-architecture diagram:
 
-- **Egress allowlist is load-bearing.** Default-deny outbound; allow only the model/CLI endpoint and the package registries the step needs. **Not the git remote** — the host does all git work.
+- **Egress allowlist is load-bearing.** Default-deny outbound; allow only the model/CLI endpoint and the package registries the step needs. **Not the git remote** — the host does all git work. (Backlog Story 3.5 still lists the project git remote.)
 - Implemented as an egress proxy (Squid / tinyproxy) on an internal Docker network, which also injects the real API key on model requests.
-- **Installed skills are mounted read-only** into the sandbox (`ro: skills/ → /skills`). The only writable mount is the task worktree.
+- **Installed skills are mounted read-only** into the sandbox (`ro: skills/ → /skills`) — harness diagram only; `08-sandboxing.md` says to mount only the worktree and the declared artifact dir. The only writable mount is the task worktree.
 - A default-deny allowlist holds even when tool approval is bypassed.
 
 ## Tool enforcement depends on the provider
 
 The `allowed_tools` capability flag means *tool allow/deny is enforced, not advisory*. Without it, tool policy becomes advisory / prompt-level. The runner always appends the ask-user tools (`mcp__vibe__*`) so a restrictive list cannot lock out human-in-the-loop.
 
+A second layer sits inside the agent: PreToolUse **hooks** (PRD §7, `03-execution-substrate.md`) block writes outside the worktree, non-goal paths and destructive commands, and return the reason so the agent changes course. Hooks are a provider capability (`tool_hooks`): a provider without them relies on the sandbox alone, and the flow editor says so.
+
 ## Where amber shows
 
-- Rail detail: **tools it may use**, with the explainer *"Amber tools can reach outside the workspace. Egress is default-deny, so a step using this still needs the host on its allowlist — installing the capability does not open the wall."*
+- Detail pane: **tools it may use**, with the explainer *"Amber tools can reach outside the workspace. Egress is default-deny, so a step using this still needs the host on its allowlist — installing the capability does not open the wall."*
 - Install dialog: **tools it asks for**, with the callout *"It asks for WebFetch…"*
 - `SKILL.md` view: the network tool in `allowed-tools` is highlighted amber
 
