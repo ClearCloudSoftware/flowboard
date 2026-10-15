@@ -26,11 +26,11 @@ flowchart LR
 
 From PRD §7 and the backlog:
 
-- **Skills** — one `--plugin-dir <install_path>` per installed skill (backlog Story 3.2). PRD §7 still says `--add-dir`, which **does not register skills**; backlog Story 0.1 found this and Story 3.2 overrides the PRD, which has not been updated.
+- **Skills** — one `--plugin-dir <install_path>` per installed skill (PRD §7, backlog Story 3.2). `--add-dir` **does not register skills**; backlog Story 0.1 found this, and the PRD was corrected to match.
 - **Agents** — `--append-system-prompt <agent.system_prompt>` for `kind='agent'`.
-- **Tools** — `--allowedTools …`, always with `mcp__vibe__*` appended so a restrictive list cannot lock out `ask_user` (backlog Story 3.2).
+- **Tools** — `--allowedTools …`, always with `mcp__vibe__*` appended so a restrictive list cannot lock out `ask_user` (PRD §7, backlog Story 3.2).
 - **Hooks** — `--settings <generated per-run settings.json with PreToolUse hooks>` (PRD §7): an in-agent gate that blocks writes outside the worktree, non-goal paths and destructive commands. Needs the `tool_hooks` capability flag.
-- **Reproducibility** — `--strict-mcp-config` keeps personal MCP config out of runs (PRD §7); the args are snapshotted to `data/runs/<id>/args.json` (backlog Story 3.2).
+- **Reproducibility** — `--strict-mcp-config` keeps personal MCP config out of runs (PRD §7); the args are snapshotted to `data/runs/<id>/args.json` (PRD §7, backlog Story 3.2).
 
 ## The prompt
 

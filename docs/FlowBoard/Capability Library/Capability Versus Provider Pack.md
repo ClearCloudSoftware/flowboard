@@ -25,7 +25,7 @@ flowchart LR
 
 ## Why the split exists
 
-The original v1 design (PRD) hard-wired skills to Claude plugin directories mounted with `--plugin-dir` / `--add-dir`. The architecture review (`old/architecture/05-environment-and-registry.md`, component 13) turned that hard-wired assumption into a port:
+The original v1 design (PRD) hard-wired skills to Claude plugin directories mounted with `--plugin-dir` (it first said `--add-dir`, which does not register skills). The architecture review (`old/architecture/05-environment-and-registry.md`, component 13) turned that hard-wired assumption into a port:
 
 > A "skill" is *one packaging* of a general **capability**. A Claude plugin dir (`.claude-plugin/plugin.json` + `skills/<slug>/SKILL.md`, mounted via `--plugin-dir`, invoked as `/slug`) is the Claude adapter's format.
 

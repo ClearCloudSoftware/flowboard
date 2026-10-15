@@ -18,7 +18,7 @@ CREATE TABLE skills (
   source        TEXT NOT NULL,          -- 'local'|'github'
   repo_url      TEXT,
   git_ref       TEXT,
-  install_path  TEXT NOT NULL,          -- directory passed to --plugin-dir / --add-dir
+  install_path  TEXT NOT NULL,          -- plugin dir passed to --plugin-dir
   frontmatter   TEXT,                   -- JSON
   installed_at  INTEGER NOT NULL,
   updated_at    INTEGER NOT NULL

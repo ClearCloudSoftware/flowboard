@@ -39,8 +39,6 @@ The sources give **two different starter sets**. The PRD/backlog set is what v1 
 | review | skill | `/code-review` | opus | high | **approval** |
 | summarize | agent | `summarizer` | sonnet | medium | auto |
 
-Backlog Story 1.2 still calls this "the 8-step table"; the working-tree PRD added the `check` shell step, making nine.
-
 **Second flow template** (backlog Story 1.2): `researcher` — scope → web research → summarize → grounding ✋, with an `on_fail` loop.
 
 ## Mockup catalogue (Delivery pack)

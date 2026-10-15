@@ -73,9 +73,6 @@ The harness diagram mounts `ro skills/ → /skills`. `08-sandboxing.md` says *mo
 
 ## 17. Source documents drift from each other
 
-- PRD §7 still says `--add-dir`; backlog Story 0.1 and Story 3.2 require `--plugin-dir`.
-- Backlog Story 1.2 still says "the 8-step table"; the PRD seed flow now has nine steps (it added `check`).
-- Backlog Story 3.5 allows the project git remote through egress; the PRD and `08-sandboxing.md` now exclude it.
 - The drawio *Prompt builder* puts recalled memory after the headless instruction; PRD §7 and `09-memory.md` put it before.
 - `01-ports.md` adds the `tool_hooks` flag; `agent-provider.ts` lacks it.
 

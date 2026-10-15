@@ -40,7 +40,7 @@ The sibling mockups show the failure this prevents:
 
 From `old/architecture/08-sandboxing.md` and the harness-architecture diagram:
 
-- **Egress allowlist is load-bearing.** Default-deny outbound; allow only the model/CLI endpoint and the package registries the step needs. **Not the git remote** — the host does all git work. (Backlog Story 3.5 still lists the project git remote.)
+- **Egress allowlist is load-bearing.** Default-deny outbound; allow only the model/CLI endpoint and the package registries the step needs. **Not the git remote** — the host does all git work.
 - Implemented as an egress proxy (Squid / tinyproxy) on an internal Docker network, which also injects the real API key on model requests.
 - **Installed skills are mounted read-only** into the sandbox (`ro: skills/ → /skills`) — harness diagram only; `08-sandboxing.md` says to mount only the worktree and the declared artifact dir. The only writable mount is the task worktree.
 - A default-deny allowlist holds even when tool approval is bypassed.

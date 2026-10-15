@@ -26,8 +26,8 @@ Every fact in these notes comes from the files below (paths relative to the repo
 | File | What it contributes |
 |---|---|
 | `docs/feature-map.md` §2, §16, appendix | Library features and ideas; skill-or-agent steps; role starter packs |
-| `docs/old/PRD.MD` §5, §7, §11.2, §12, §13, §15, §17 | Schema; Claude command (`--add-dir`, `--append-system-prompt`, `--strict-mcp-config`, `--settings` hooks) and prompt builder incl. the memory part; API; `/skills` and `/agents` UI; seed data; out of scope |
-| `docs/old/REBUILD-BACKLOG.md` | Story 0.1 and 3.2 `--plugin-dir` fix (plus `mcp__vibe__*`, `args.json`), Story 1.2 seeds and flow templates, Story 3.5 egress, Epic 7 library stories, Story 8.2 inspector |
+| `docs/old/PRD.MD` §5, §7, §11.2, §12, §13, §15, §17 | Schema; Claude command (`--plugin-dir`, `--append-system-prompt`, `--strict-mcp-config`, `--settings` hooks) and prompt builder incl. the memory part; API; `/skills` and `/agents` UI; seed data; out of scope |
+| `docs/old/REBUILD-BACKLOG.md` | Story 0.1 and 3.2 `--plugin-dir` fix, Story 1.2 seeds and flow templates, Story 3.5 egress, Epic 7 library stories, Story 8.2 inspector |
 | `docs/old/architecture/01-ports.md` | Capability negotiation (incl. `tool_hooks`, warning severity), logical model ids, `toolPolicy`, ACP proposal |
 | `docs/old/architecture/02-core-and-engine.md` | `skills` gains `provider` + `format`; capability contract |
 | `docs/old/architecture/03-execution-substrate.md` | PreToolUse in-agent gate, memory recall cap |
