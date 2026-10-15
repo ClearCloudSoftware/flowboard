@@ -35,7 +35,7 @@ Sample values mix the guide's anatomy diagram (burn, today, wasted, `3/4`, `queu
 | 3 | **Needs you** | *"Everything blocked on a human, oldest first. Empty most of the time."* | Scrolls on its own past 42 % of the viewport height, with a sticky header. See [[Needs You Band]] |
 | 4 | **View switcher** | *"Pulse, Timeline, Pipeline — plus filter and sort."* | Tools change per view |
 | 5 | **Pulse list** | *"One row per task, with its whole flow as a bar."* | See [[Pulse View]] |
-| 6 | **Status bar** | *"Totals, and the sandbox posture everything is running under."* | `N tasks · N running · N waiting on you · N failed · N backlog · sandbox container, egress default-deny`, then the key hints. *waiting on you* counts every needs-you item, failures included, so a failed task is counted twice ([[Monitor Open Questions]] #48) |
+| 6 | **Status bar** | *"Totals, and the sandbox posture everything is running under."* | `N tasks · N running · N waiting on you · N failed · N backlog · sandbox container, egress default-deny`, then the key hints. *waiting on you* counts every needs-you item, failures included, so a failed task is counted twice ([[Monitor Open Questions]] #48). The sandbox posture is a fixed string, always *container*, though PRD §11.1 falls back to the host tier without Docker ([[Monitor Open Questions]] #25, [[Sandboxing In The UI]]) |
 
 The middle region (`main`) switches between [[Pulse View]], [[Timeline View]] and [[Pipeline View]].
 

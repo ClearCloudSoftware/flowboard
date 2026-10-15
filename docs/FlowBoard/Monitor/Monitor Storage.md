@@ -13,7 +13,7 @@ The monitor persists nothing of its own. Everything it shows lives in the places
 | Normalised events | `run_events` table, with the raw line in `raw` | PRD §5, §7 |
 | Run snapshots | `data/runs/<id>/args.json` (*"Snapshot the final args"*, PRD §7); `data/runs/<id>/spec.json + raw stream, replayable at $0` (drawio *Run records*) | PRD §7, drawio |
 | Artifacts | Files in the task's worktree, tracked in git (*"git tracks the files so they are diffable and reviewable"*). The `artifacts` table holds only type, path and metadata | PRD §6 |
-| Worktrees | `<repo>/.flowboard/worktrees/task-<id>` on branch `fb/task-<id>` (drawio); `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>` (PRD §11, backlog 2.1). The two conflict: [[Monitor Open Questions]] #26 | drawio, PRD §11, backlog |
+| Worktrees | `<repo>/.flowboard/worktrees/task-<id>` on branch `fb/task-<id>` (drawio); `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>` (PRD §11, backlog 2.1); `~/.flowboard/ws/auth-refactor` on `flowboard/auth-refactor` (task-detail mockup). The three conflict: [[Monitor Open Questions]] #26, [[Workspace Naming]] | drawio, PRD §11, backlog, `task-detail.html` |
 | Escalation threshold, draft mode, sandbox defaults | `settings` table | PRD §11.1 (sandbox profile), §13 (draft mode); `06` §15 and backlog 6.1, 8.3 (escalation threshold) |
 
 > [!warning] Artifact paths differ in every source
