@@ -20,14 +20,14 @@ An **agent** is a named role — a *who* rather than a *how*. In a step definiti
 | builtin flag | Builtin (seeded) agents are read-only in the editor; **Duplicate to edit** makes an editable copy (D21) |
 | project | Agents are scoped to a project, like plugins and flows (D5, D23) |
 
-The step can override model and effort; the agent's values are defaults.
+The step can override model and effort; the agent's values are defaults. How a default reaches a run is not stated: `step_defs.model` and `effort` are `NOT NULL` with their own defaults, and PRD §7 passes `--model <step.model>`. Open question 21.
 
 ## Provider neutrality
 
 > [!check] v1
 > Claude-only (D1): agents have no provider packs, and `default_model` holds a Claude alias (D20). The rest of this section describes the multi-provider design.
 
-The architecture wants agents provider-neutral. `05-environment-and-registry.md` §13 says they are *"already provider-neutral except default model ids (use logical ids …)"* — so moving `default_model` to a logical id, resolved per provider by `AgentProvider.resolveModel()`, is a change still to make; the PRD stores `DEFAULT 'sonnet'`.
+The architecture wants agents provider-neutral. `05-environment-and-registry.md` §13 says they are *"already provider-neutral except default model ids (use logical ids …)"*. PRD §5 answers that the v1 way: `default_model TEXT NOT NULL DEFAULT 'sonnet'`, commented *"a Claude alias, used as the logical model id"* (D20). `sonnet` is an alias the CLI resolves, not a native id: the stream sample (`docs/old/stream-sample.jsonl`) reports the native model as `claude-fable-5-1`. Provider-neutral ids such as `reasoning-high`, resolved per provider by `AgentProvider.resolveModel()`, stay the multi-provider design. See [[Logical Model Ids]].
 
 The mockup still records provider packs for agents, but unevenly: `architect`, `developer`, `reviewer` and `scout` have Claude and Codex packs; `tester`, `sec-analyst` and `scribe` are Claude-only. Agent packs carry no version (an internal `'—'` sentinel that is never displayed), so the row reads *installed · 12 Sep*.
 
@@ -37,7 +37,7 @@ At run time the Claude adapter passes the prompt with `--append-system-prompt` (
 
 ## Defining an agent
 
-Agents enter the library two ways: **defined here**, or **inside a bundle pack** cloned from GitHub — the Delivery, Security and Marketing packs all bring agents. The topbar's **+ Define agent** is meant to create one with:
+Agents enter the library two ways: **defined here**, or **inside a bundle pack** cloned from GitHub — the Delivery, Security and Marketing packs all bring agents. In v1, with bundle packs deferred (D3), they are defined here or seeded (D12). A git-installed plugin may also ship agent definitions, which D8 mounts as-is; whether they become library agents is open question 22. The topbar's **+ Define agent** is meant to create one with:
 
 - a prompt
 - a default model and effort
@@ -48,7 +48,7 @@ Agents enter the library two ways: **defined here**, or **inside a bundle pack**
 > [!check] Decided (D21)
 > A plain form with the PRD fields: name, description, prompt, default model, default effort, allowed tools. Seeded agents are read-only; **Duplicate to edit** copies one into an editable agent (client-side read, then create). In the mockup the button opens no form — it selects `architect` and switches the kind filter to Agents.
 
-The rebuild backlog (Story 7.2) asks for a CRUD form with builtin agents read-only, and one error-handling style for create and update.
+The rebuild backlog (Story 7.2) asks for a CRUD form with builtin agents read-only, *"with a Duplicate to edit action"*, and one error-handling style for create and update.
 
 ## Detail pane
 
@@ -77,7 +77,12 @@ Sample prompt (`reviewer`):
 
 ## Agent memory
 
-The memory design gives agents and skills their own scope: *about an agent or skill — what that role has picked up*. Memories scoped to the step's agent/skill are recalled into the prompt as a seventh part, inserted just before the closing headless instruction and capped at `settings.memory.max_recall_chars` (default 6,000). See [[Capability Library Roadmap]].
+The memory design gives agents and skills their own scope: feature map §21 lists memory *"about an agent or skill (what that role has picked up)"* (emphasis dropped). Memories scoped to the step's agent/skill (PRD §11.2; PRD §7 says *"agent"*) are recalled into the prompt as a seventh part, capped at `settings.memory.max_recall_chars` (default 6,000, PRD §7).
+
+> [!warning] Where part 7 goes is not settled
+> PRD §7 (*"inserted just before the closing instruction"*) and `09-memory.md` (*"just before the closing headless instruction"*) put it ahead of part 6. PRD §11.2 (*"append them to the prompt as a final part"*), `03` §6 (*"append the hits as a **7th prompt part**"*) and the drawio *Prompt builder* card (*"6 headless: use ask_user · +7 recalled memory"*) put it at the end. [[Capability Library Open Questions]] #17; also [[Execution Open Questions]] #51 and [[Memory Open Questions]] #6.
+
+The scope's field is `agentId` (`09-memory.md`), so skill-only steps and steps naming both an agent and a skill (D27) have no stated scope id: [[Memory Open Questions]] #8. See [[Agent Memory Scope]] and [[Capability Library Roadmap]].
 
 ## Related
 
@@ -86,3 +91,5 @@ The memory design gives agents and skills their own scope: *about an agent or sk
 - [[Seeded Capabilities]]
 - [[Capability Runtime Mounting]]
 - [[Capability Data Model]]
+- [[Logical Model Ids]]
+- [[Agent Memory Scope]]

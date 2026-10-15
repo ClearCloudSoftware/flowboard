@@ -9,7 +9,7 @@ module: Capability Library
 
 FlowBoard runs tasks through **flows**: versioned graphs of steps, where each step is one agent doing one job. A step does not carry its own instructions from scratch. It names a reusable building block — a **skill** ("run `/code-review`") or an **agent** ("be the `reviewer`") — and the library is where those building blocks are installed, defined, inspected, updated and removed.
 
-The feature map summarises it as: *"Your reusable building blocks: skills (packaged instructions) and agents (defined roles) that steps draw from."*
+The feature map summarises it as: *"Your reusable building blocks: skills (packaged instructions) and agents (defined roles) that steps draw from."* The pitch adds who fills it: *"engineers contribute flows, agents, and skills (the seeded library shows the shape)"* (emphasis dropped).
 
 ## Where it sits
 
@@ -24,7 +24,7 @@ flowchart LR
 
 The library feeds **design time**, not run time directly. Flow design picks capabilities; execution later mounts whatever the pinned flow version names (see [[Capability Runtime Mounting]]).
 
-In the logical-components diagram it appears as *Skills & agents — install, edit, list*, which writes to the *Disk* store (worktrees, artifacts, skills, session logs). The ideation page names its routes `/skills` and `/agents`. In the harness-architecture diagram it is a piece of **durable state on the host filesystem**: `skills/<slug>/SKILL.md` as plugin dirs, plus agent definitions, installed from GitHub by `git clone`.
+In the logical-components diagram it appears as *Skills & agents — install, edit, list*, with an edge to the *Disk* store (worktrees, artifacts, skills, session logs). The ideation page names its routes `/skills` and `/agents`; PRD §13 now routes one screen per project at `/p/[slug]/library`. In the harness-architecture diagram it is a piece of **durable state on the host filesystem**: `skills/<slug>/SKILL.md` as plugin dirs, plus agent definitions, installed from GitHub by `git clone`.
 
 ## What the module does
 

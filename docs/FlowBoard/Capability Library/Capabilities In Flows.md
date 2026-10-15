@@ -21,11 +21,11 @@ The PRD first had `kind = 'skill' | 'agent'`, one or the other. The mockup's use
 
 **Allowed tools with both** (D28): the intersection of the agent's list and the skill's `allowed-tools`, narrowed further by the step's `allowed_tools` when set. The flow editor warns at design time when the intersection drops a tool the skill declares. An agent's restrictions (*reads only*, *never edits code*) are the role's guarantee, so a skill cannot widen them silently.
 
-When adding a step in the flow editor: **pick an agent, a skill or both**, then set model, effort, advance mode, requires, produces and limits (PRD; drawio *Add step form*). The editor's inspector carries `kind`, agent and/or skill, model, effort, advance mode, entry, requires, produces, limits, permission mode, allowed tools and prompt template (backlog).
+When adding a step in the flow editor: **pick an agent, a skill or both**, then set model, effort, advance mode, requires, produces and limits (PRD §13). The drawio *Add step form* card (*"Skill or Agent → model, effort, advance mode, requires, produces, limits"*), the *Author steps* card and feature map §2 (*"A step can run a saved skill … or a defined agent"*) still offer one or the other; D27 settled on either or both. The editor's inspector carries `kind`, agent and/or skill, model, effort, advance mode, entry, requires, produces, limits, permission mode, allowed tools and prompt template (backlog Story 8.2).
 
-Installed capabilities appear in the **step editor's picker** straight away, listed as `plugin:slug` — which is also why orphans are clutter.
+Installed capabilities appear in the **step editor's picker** straight away (*"it becomes selectable in the step editor straight away"*, mockup) — which is also why orphans are clutter. Listing skills there as `plugin:slug` is a proposal that follows D16 ([[Capability Library Open Questions]] #25).
 
-A step can also name **extra plugins** (`step_defs.extra_plugin_ids`) to mount alongside its own, so its prompt template can invoke a second `/<plugin>:<slug>` ([[Capability Library Decisions|D14]]). Validation rejects an extra plugin that is not installed in the project, and extras count as uses (D17).
+A step can also name **extra plugins** (`step_defs.extra_plugin_ids`) to mount alongside its own, so its prompt template can invoke a second `/<plugin>:<slug>` ([[Capability Library Decisions|D14]]). Extras count as uses (D17). That validation rejects an extra plugin not installed in the project is a proposal; what happens when a step is reused in another project is open ([[Capability Library Open Questions]] #20).
 
 ## Validation at save time
 
@@ -55,7 +55,7 @@ A step that names both an agent and a skill counts as a use of each. The count d
 ## Cost and memory per capability
 
 - **Spend per step definition** — the drawio card *Spend per step definition* (page *FlowBoard ideation*) asks *"what does `/grill-me` actually cost me?"*; the feature map: *"per step (so you can see what a particular skill really costs you)"*.
-- **Agent/skill memory scope** — what a role or skill has picked up across runs, recalled into its next prompt.
+- **Agent/skill memory scope** — what a role or skill has picked up across runs, recalled into its next prompt as part 7 (where in the prompt is [[Capability Library Open Questions]] #17). See [[Agent Memory Scope]].
 
 ## Related
 
@@ -64,3 +64,4 @@ A step that names both an agent and a skill counts as a use of each. The count d
 - [[Capability Data Model]]
 - [[Capability Runtime Mounting]]
 - [[Bundle Packs]]
+- [[Step Kinds]]

@@ -13,18 +13,20 @@ module: Capability Library
 | **Plugin** | The v1 unit of install: one git repo cloned at one commit, mounted with `--plugin-dir`. Its skills are installed, updated and removed together (D4). |
 | **Skill** | A packaged instruction, invoked like a slash command. Described by a `SKILL.md`. Belongs to a plugin and is invoked fully qualified: `/<plugin>:<slug>` (D16). |
 | **Agent** | A named role: prompt, default model, default effort, allowed tools. |
-| **Provider** | An agent CLI FlowBoard can drive: `claude-code`, `codex`, `replay` (`ProviderId` is open, so others can be added). Each step names its provider. |
+| **Provider** | An agent CLI FlowBoard can drive: `claude-code`, `codex`, `replay` (`ProviderId` is open, so others can be added). In the mockup each step names its provider; v1 has no provider column (D1). |
 | **Adapter** | Provider-specific code behind the `AgentProvider` port. Knows how to mount packs. |
 | **Registry** | The store of installed capabilities and their packs. |
 | **Capability store** | The directory plugins are cloned into: `<project>/.flowboard/skills/<plugin>/<commit>/`, per project and gitignored (D5). The mockup showed `~/.flowboard/capabilities`. |
+| **Extra plugins** | `step_defs.extra_plugin_ids`: plugins a step mounts beside its skill's, so its prompt template can invoke a second `/<plugin>:<slug>`. They count as uses (D14, D17). |
+| **Staging** | `_staging/<uuid>/` in the store: the install preview's clone, kept until the install is confirmed or abandoned (D24). |
 | **Capability pins** | What a task records at start: the commit of every plugin and a copy of every agent row it can use. Every step of the task runs those versions (D10). |
 | **Seed** | A plugin or agent that ships in FlowBoard's repo and is copied into each project's store under FlowBoard's commit (D6). |
 | **Manifest** | What install parses: `.claude-plugin/plugin.json` and `skills/*/SKILL.md` frontmatter. |
 | **Used by** | The steps that reference a capability, counting each flow's latest version plus any version a non-terminal task pins (D17). The check that blocks removal. |
 | **Orphan** | A capability nothing uses. Hollow dot in the rail. |
 | **Network tool** | A tool that can reach outside the workspace: `WebFetch`, `WebSearch`, `Bash`. Marked amber, as are plugins that ship `.mcp.json` or `hooks/` (D9). |
-| **Egress allowlist** | Per-step list of hosts the sandbox lets the agent reach. Default-deny. |
-| **Logical model id** | A provider-neutral model name (`reasoning-high`, `fast-cheap`, `default`) that the adapter resolves to a native id (`reasoning-high` → `opus` / `o3`). In v1 the Claude aliases `opus`, `sonnet` and `haiku` serve as the logical ids (D20). |
+| **Egress allowlist** | The hosts the sandbox lets a run reach. Default-deny. The mockups speak of *this step's* allowlist; PRD §11.1 keeps one in `settings.sandbox_profile`, overridable per step ([[Capability Library Open Questions]] #23). |
+| **Logical model id** | A provider-neutral model name (`reasoning-high`, `fast-cheap`, `default`) that the adapter resolves to a native id (`reasoning-high` → `opus` / `o3`). In v1 the Claude aliases `opus`, `sonnet` and `haiku` serve as the logical ids (D20; PRD §5). The aliases are not native ids either: the CLI resolves them (see [[Logical Model Ids]]). |
 | **Capability flag** | A provider feature in the `Capability` union (`plugins`, `allowed_tools`, `effort`, `tool_hooks`…). `tool_hooks` is in `01-ports.md` but not yet in `agent-provider.ts`. Different from a library capability; used for capability negotiation. |
 
 > [!warning] Two overloaded words
@@ -37,3 +39,4 @@ module: Capability Library
 - [[Capability Library Index]]
 - [[Capability Versus Provider Pack]]
 - [[Capability Kinds]]
+- [[Agent Providers Glossary]]

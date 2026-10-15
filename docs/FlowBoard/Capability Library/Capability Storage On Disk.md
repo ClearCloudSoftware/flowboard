@@ -11,7 +11,7 @@ Installed plugins are files on the host. The DB records metadata; the plugin dir
 
 ```
 <project>/.flowboard/skills/            # gitignored, per project (D5)
-├── _staging/<uuid>/                    # install preview; deleted on confirm or close
+├── _staging/<uuid>/                    # install preview; deleted on confirm or close (D24)
 ├── code-review/                        # a seed plugin
 │   └── <flowboard-sha>/                # seeds are filed under FlowBoard's commit (D6)
 └── fb-dependency-audit/                # a git-installed plugin
@@ -20,7 +20,7 @@ Installed plugins are files on the host. The DB records metadata; the plugin dir
 ```
 
 - **Per project, not per user.** Flows are already scoped by project (`flows.project_id` in the PRD), so the capabilities they draw on are too.
-- **Gitignored.** Not committed, so no writable copy of a skill ever lands in a task worktree, and clones stay out of the project's history.
+- **Gitignored.** Not committed, so no writable copy of a skill ever lands in a task worktree, and clones stay out of the project's history. PRD §13 says *"gitignored"*; backlog Story 0.3 names the mechanism: FlowBoard adds `.flowboard/skills/` to the managed repo's `.git/info/exclude`, so nothing is written to the project's own `.gitignore`. See [[Parent Repo Hygiene]].
 - **One directory per commit.** This is what lets a task keep running the commit it started with after an update.
 - **Seeds are copied in** from FlowBoard's own repo on project registration and on FlowBoard upgrade; an upgrade stages a new `<flowboard-sha>/` dir as *update available* (D12).
 - **Garbage collection** deletes a commit dir once it is neither the installed commit nor pinned by a non-terminal task (D11).
@@ -42,9 +42,10 @@ Installed plugins are files on the host. The DB records metadata; the plugin dir
 
 | Source | Location | Note |
 |---|---|---|
-| PRD §13 (earlier draft) | `./skills/<slug>` | Clone or sparse-checkout target; the PRD now uses the v1 layout |
-| PRD §15 | `./skills/` | Seeds as "real local skill directories under `./skills/` with a `SKILL.md` each" — still where seeds live in FlowBoard's repo |
-| Root `.gitignore` / backlog | `skills/_installed/` | Ignored, never used; the rule was removed on 2026-10-15 |
+| PRD §13 (earlier draft), drawio *FlowBoard ideation* | `./skills/<slug>` | Clone or sparse-checkout target (*"Clone / sparse-checkout into ./skills/<slug>"*, drawio); the PRD now uses the v1 layout |
+| PRD §15 | FlowBoard's `./skills/` | Seeds as *"real local plugin dirs under FlowBoard's `./skills/` with a `SKILL.md` each"* — where seeds live in FlowBoard's repo (the first draft said *"real local skill directories"*) |
+| Root `.gitignore` / backlog Story 0.3 (earlier drafts) | `skills/_installed/` | Ignored, never used; the rule was removed on 2026-10-15 |
+| Backlog Story 0.3 | `.flowboard/skills/` in each managed repo's `.git/info/exclude` | How the store stays out of git |
 | Backlog Story 1.2 | `skills/<slug>/.claude-plugin/plugin.json` + `skills/<slug>/skills/<slug>/SKILL.md` | Seeded skills as plugin dirs — the source the seeds are copied from |
 | Harness diagram | `skills/<slug>/SKILL.md` as plugin dirs · agent definitions | *Durable state · host filesystem* |
 | Mockup status bar | `~/.flowboard/capabilities` | The "capability store" |
@@ -61,3 +62,5 @@ Installed plugins are files on the host. The DB records metadata; the plugin dir
 - [[Capability Library Decisions]]
 - [[Capability Runtime Mounting]]
 - [[Installing A Capability From GitHub]]
+- [[Projects Storage]]
+- [[Parent Repo Hygiene]]

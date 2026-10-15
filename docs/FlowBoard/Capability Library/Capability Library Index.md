@@ -51,5 +51,15 @@ The Capability Library is the FlowBoard module that holds the reusable building 
 
 - [[Seeded Capabilities]] — the starter set that ships with FlowBoard
 - [[Capability Library Roadmap]] — v1 scope, later ideas, and what is out of scope
-- [[Capability Library Open Questions]] — places where the sources disagree, each with its outcome
+- [[Capability Library Open Questions]] — places where the sources disagree or leave a gap: 1–18 with their outcome, 19–26 still open
 - [[Capability Library Sources]] — where every fact in these notes comes from
+
+## Related
+
+- [[Component Documentation Tracker]]
+- [[Flow Design Index]] — the steps that draw on the library
+- [[Execution Index]] — the runs that mount it
+- [[Agent Providers Index]] — the port and adapter that mount packs
+- [[Sandboxing Index]] — read-only plugin mounts and the egress wall
+- [[Projects Index]] — the project that owns the store
+- [[Memory Index]] — the agent/skill memory scope

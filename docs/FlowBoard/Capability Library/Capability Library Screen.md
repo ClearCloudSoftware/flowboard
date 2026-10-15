@@ -5,7 +5,7 @@ module: Capability Library
 
 # Capability Library Screen
 
-The `flowboard/library` screen. Mockup: `docs/mockups/capability-library.html`; field guide: `docs/mockups/capability-library-guide.html`. House design: light only, zero border-radius, IBM Plex Mono/Sans, hairlines instead of shadows.
+The `flowboard/library` screen of the mockup; PRD §13 and backlog Stories 7.1 and 7.2 route it at `/p/[slug]/library`. Mockup: `docs/mockups/capability-library.html`; field guide: `docs/mockups/capability-library-guide.html`. House design: light only, zero border-radius, IBM Plex Mono/Sans, hairlines instead of shadows. PRD §13 says *"Dark-first"* instead: [[Capability Library Open Questions]] #24.
 
 > [!check] v1 differences from the mockup
 > - **Scoped to the current project** — the store is per project ([[Capability Library Decisions|D5]]).

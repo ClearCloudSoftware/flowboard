@@ -10,7 +10,7 @@ module: Capability Library
 
 ## The rule
 
-**A pack's provider has to match the step's provider.** A capability with no Claude pack cannot run on a Claude step, and vice versa. Steps name their provider individually, so one flow can mix providers.
+**A pack's provider has to match the step's provider.** A capability with no Claude pack cannot run on a Claude step, and vice versa. Steps name their provider individually, so one flow can mix providers (guide). No PRD table has a provider column yet ([[Agent Providers Open Questions]] #14).
 
 The architecture states the same rule as validation: *"the flow editor references them by id; validation checks the pack's provider matches the step's provider"* (`05-environment-and-registry.md` §13).
 
@@ -19,7 +19,7 @@ The architecture states the same rule as validation: *"the flow editor reference
 **In the flow editor, at design time — not at run time.** You find out while designing, not when a task is halfway through.
 
 > [!warning] Blocking in the mockup, a warning in the ports doc
-> The capability-library mockup and guide say a step set to run on Codex CLI can't use a capability with no Codex pack, and the flow editor refuses to save that combination. `01-ports.md` calls a capability-contract violation a design-time **warning**; only the artifact contract rejects the save (`02-core-and-engine.md`). `05` gives the provider-match check no severity, and the flow-designer mockup does not implement it. Moot in v1; decide when the second provider arrives (OQ13).
+> The capability-library mockup and guide say a step set to run on Codex CLI can't use a capability with no Codex pack, and the flow editor refuses to save that combination; the guide adds *"It is not a soft warning; the recipe will not save."* `01-ports.md` calls a capability-contract violation a design-time **warning**; only the artifact contract rejects the save (`02-core-and-engine.md`). `05` gives the provider-match check no severity, and the flow-designer mockup does not implement it. Moot in v1; decide when the second provider arrives (OQ13).
 
 ## How the library shows it
 
@@ -58,3 +58,5 @@ None of these is a workaround — they are the three honest options.
 - [[Capabilities In Flows]]
 - [[Capability Runtime Mounting]]
 - [[Installing A Capability From GitHub]]
+- [[Capability Negotiation]]
+- [[Adding A Provider]]

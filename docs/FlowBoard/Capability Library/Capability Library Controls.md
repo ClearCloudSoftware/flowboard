@@ -21,7 +21,7 @@ Every control on the [[Capability Library Screen]].
 |---|---|
 | **Kind filter** | Narrows to skills or agents (packs deferred, D3). The count on each chip is how many are installed. |
 | **Provider filter** | Narrows to capabilities packaged for one agent CLI. *Not in v1* (D1). |
-| **Search** | Matches name, author and description together. Type an author to see everything they published. |
+| **Search** | Matches name, author and description together. Type an author to see everything they published. In v1 a plugin's author is not stored (`plugins` has no author column, PRD §5): [[Capability Library Open Questions]] #26. |
 | **A row** | Opens it in the detail pane. |
 
 ## In the detail pane
@@ -29,7 +29,7 @@ Every control on the [[Capability Library Screen]].
 | Control | What it does | Availability |
 |---|---|---|
 | **Update to n** | Opens a preview — the note, skills added and removed — then moves the plugin to the newer commit. Refused if it drops a skill in use (D19). Running tasks keep their pinned commit (D10). | Only when **Check for updates** found a newer commit. |
-| **Open on GitHub** | The source repository, at the installed commit. | Only when the plugin has a remote web URL (not seeds, `file://` sources or locally defined agents). |
+| **Open on GitHub** | The source repository, at the installed commit. | Mockup: whenever the record has a source, seeds included; never for agents. v1 *(proposal, [[Capability Library Open Questions]] #25)*: only when the plugin has a remote web URL, so not seeds (`repo_url` is null) or `file://` sources. |
 | **Duplicate to edit** | Copies a seeded agent into an editable one (D21). | Seeded agents. |
 | **Remove** | Deletes the plugin — all its skills — or the agent, after a confirm (D18). The mockup deletes on the first click. | **Disabled while any step references it** (D17), with the count shown beside the button. |
 
