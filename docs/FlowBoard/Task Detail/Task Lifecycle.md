@@ -68,7 +68,7 @@ The guide has no `todo` and goes straight from backlog to running on *promote*. 
 
 ## When a task is done
 
-*"Task‑done condition: 'nothing active and no edge fired' strands a task in `running` when a conditional edge never fires. Use 'no active instances and no reachable pending targets'."* (backlog Story 5.2, **BUG**; `02` §3).
+*Task‑done condition: "nothing active and no edge fired" strands a task in `running` when a conditional edge never fires. Use "no active instances and no reachable pending targets".* (backlog Story 5.2, **BUG**; `02` §3).
 
 In the mockup the flow simply has no step after Summarize. The monitor guide: *"The flow has no step after summarize, so the task is finished."*
 
