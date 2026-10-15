@@ -11,7 +11,7 @@ module: Flow Design
 |---|---|---|---|---|
 | `ai` | A headless agent session. With an agent, its system prompt is appended (*who*); with a skill, the prompt invokes `/<plugin>:<slug>` (*how*); with both, both | `agent_id`, `skill_id` — at least one | The run's outcome (`set_outcome` or `{"outcome":…}` in a produced JSON) | PRD §5, §7; outcome rule §8 |
 | `shell` | A plain command, no model | `command`, or the project's `check_command` | **The exit code** | PRD §7 *Shell steps*; see [[Check Steps]] |
-| `manual` | A human task | — | Not specified | PRD §5 only |
+| `manual` | A human task | — | Not specified | PRD §5; offered in PRD §13 and backlog Story 8.2 |
 
 The feature map's wording: *"A step can run a saved **skill** (a packaged instruction, like a slash-command) or a defined **agent** (a role with its own personality and instructions)."* and *"A step can also run a plain command, like your linter and test suite, with no AI involved."* (§2)
 
@@ -24,11 +24,11 @@ When adding a step: *"choose an AI, shell or manual step; for an AI step pick an
 
 ## `manual`
 
-Listed in the schema and nowhere else in the PRD. The feature map idea *"Assign a step to a person or role — a manual or approval step can name who does it"* (§2 ideas) and the parking-lot item *"A step could also … be a simple human checklist"* point at it.
+Listed in the schema, and offered when adding a step (*"choose an AI, shell or manual step"*, PRD §13; backlog Story 8.2 inspector *"kind (`ai`/`shell`/`manual`)"*). No source says what a manual step does when it runs, how it finishes or what outcome it sets. The feature map idea *"Assign a step to a person or role — a manual or approval step can name who does it"* (§2 ideas) and the parking-lot item *"A step could also … be a simple human checklist"* point at it.
 
 ## The StepExecutor idea
 
-`02-core-and-engine.md` §3 proposes generalising `kind` into an interface:
+`02-core-and-engine.md` §3 proposes generalising `kind` into an interface (its `'agent' | 'skill'` predates D27's single `ai` kind):
 
 ```ts
 interface StepExecutor {

@@ -29,6 +29,7 @@ CREATE TABLE step_defs (
   command        TEXT,                   -- kind='shell' only; null = the project's check_command
   skill_id       TEXT REFERENCES skills(id),
   agent_id       TEXT REFERENCES agents(id),
+  extra_plugin_ids TEXT NOT NULL DEFAULT '[]', -- JSON array of plugins.id mounted alongside the skill's plugin
   prompt_template TEXT,                  -- appended to the invocation, supports {{placeholders}}
   model          TEXT NOT NULL DEFAULT 'sonnet',   -- passed to --model
   effort         TEXT NOT NULL DEFAULT 'medium',   -- low|medium|high|xhigh|max
@@ -58,9 +59,10 @@ From PRD §5. The tables that point *at* a flow:
 
 | Column | Meaning |
 |---|---|
-| `projects.default_flow_id` | The adopted flow version for new tasks |
+| `projects.default_flow_id` | No comment in the PRD. Read as the project's default recipe (*"Each project remembers which recipe to use"*, feature map §1), which the mockup calls the **adopted** version and PRD §13 the *"active flow"*. That these are one column is an inference. See [[Project Default Flow]] |
 | `projects.check_command` | *"e.g. 'pnpm lint && pnpm test'; what a shell check step runs"* |
 | `tasks.flow_id` | *"null while in backlog, pinned on promotion"* |
+| `tasks.capability_pins` | *"JSON {plugins:{id:commit_sha}, agents:{id:<agent row>}}, set when the task starts"*. The plugin commits and agent rows a task's steps run ([[Capability Library Decisions\|D10]]) |
 | `step_instances.step_def_id` | A task's occupancy of a step definition |
 | `artifacts.type` | *"artifact type key, e.g. 'research_brief'"* |
 
@@ -81,8 +83,9 @@ erDiagram
 
 | Change | Source |
 |---|---|
-| Step `model` holds a **logical id** (`reasoning-high`, `fast-cheap`, `default`) | `01-ports.md` |
-| Optional `step_defs.sandbox_profile` override | backlog Story 1.1 |
+| Step `model` holds a **logical id** (`reasoning-high`, `fast-cheap`, `default`) | `01-ports.md`. For v1, D20 keeps the Claude aliases (`opus` / `sonnet` / `haiku`) as the logical ids — see [[Models And Effort]] |
+| `step_defs.extra_plugin_ids`, `tasks.capability_pins` | D14, D10, D23; now in PRD §5 |
+| Optional `step_defs.sandbox_profile` override; `runs.sandbox` records the tier that ran | backlog Story 1.1; PRD §11.1 (*"overridable per step"*) |
 | `runs.model`, `runs.effort` so draft mode can't corrupt cost views; `step_instances.reason` | backlog Story 1.1; `02` §1 |
 | Persisting positions *"needs a layout column"* | backlog Story 8.2 (**DEC**) |
 | Stable edge ids, not array index | backlog Story 8.2 (BUG) |
@@ -116,19 +119,19 @@ The mockup's library entry and step records (field names from `flow-designer.htm
 | `shape`, `steps`, `gates` | — | derived from the graph |
 | `runs`, `last` | — | derived from `tasks` |
 | `cost` (~$/task) | — | derived from the cost ledger |
-| `adopted` | `projects.default_flow_id` plus a timestamp | stored |
-| `running` | — | count of active tasks with `flow_id` = this version |
+| `adopted` | `projects.default_flow_id` (which version) plus a **new** adoption timestamp column, e.g. `projects.default_flow_adopted_at`. PRD §5 `projects` has only `created_at` | stored — new column, proposal ([[Flow Design Open Questions]] #36) |
+| `running` | — | derived: count of non-terminal tasks with `flow_id` = this version |
 | step `id`, `label` | `key`, `name` | stored |
 | step `agent` | `agent_id` / `skill_id` | stored |
 | step `budget` | `max_budget_usd` | stored |
 | step `gate` | `advance_mode = 'approval'` | stored |
 | step `needs` | `requires` | stored |
 | step `retries` | `max_attempts − 1` | stored |
-| step `sandbox` | `sandbox_profile` override | stored |
+| step `sandbox` | backlog 1.1's `step_defs.sandbox_profile` override (not a PRD §5 column); value mapping is a proposal ([[Step Guardrails]]) | stored |
 | step `x`, `y` | layout column, if positions persist | open |
 | edge `pass` / `fail` | `on_pass` / `on_fail` | stored |
 
-Every **new** column above is a proposal. See [[Flow Design Open Questions]] #3.
+Every **new** column above is a proposal. See [[Flow Design Open Questions]] #3 and #36. The mockup has no field for the step's egress allowlist, its `extra_plugin_ids` or its kind, so the proposal has nothing to map them from.
 
 ## Related
 

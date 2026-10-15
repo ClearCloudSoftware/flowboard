@@ -53,7 +53,7 @@ flowchart LR
 | Artifact contract | The graph only | *"checks *type-graph reachability*, not bytes"* (`01-ports.md`, ArtifactStore) |
 | Known types | The artifact type list | Seed list in PRD §6 (10 types); backlog Story 1.1 says *"the nine PRD types"* — [[Flow Design Open Questions]] #25 |
 | Capability contract | Each step's target provider's capability set | *"Validation (component 2) checks steps against the *target provider's* capability set"* (`01-ports.md`) |
-| Provider match | The registry's pack list | Couples pure validation to registry state — [[Capability Library Open Questions]] #6 |
+| Provider match | The registry's pack list | Couples pure validation to registry state — [[Capability Library Open Questions]] #6. Moot in v1, which is Claude-only ([[Capability Library Decisions\|D1]]) |
 
 ## Consumers of a saved flow version
 
@@ -61,7 +61,7 @@ flowchart LR
 |---|---|---|
 | Flow engine | Edges and conditions, `advance_mode`, `max_attempts`, joins | PRD §8; `02` §3 |
 | Board projection | `board_order`, step names | PRD §13; `02` §4 |
-| Runner / prompt builder | `kind`, model, effort, limits, tools, `requires`, `produces`, `prompt_template` | PRD §7 |
+| Runner / prompt builder | `kind`, `agent_id`, `skill_id`, `extra_plugin_ids` (with the task's `capability_pins`), model, effort, limits, tools, `requires`, `produces`, `prompt_template` | PRD §7 |
 | Artifact scanner | `produces` | PRD §6 |
 | Cost views | Step definition and flow version ids | PRD §13 |
 | Memory recall | The step's agent or skill as a scope | PRD §11.2 |

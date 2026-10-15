@@ -64,4 +64,7 @@ Flow Design is the FlowBoard module where you define the **recipe** a task follo
 
 - [[Capability Library Index]] — the skills and agents that steps draw on
 - [[Capabilities In Flows]]
+- [[Project Default Flow]] — the project's adopted flow
+- [[Sandbox Configuration]] — the per-step sandbox override
+- [[Logical Model Ids]] — what `haiku` / `sonnet` / `opus` are
 - [[Component Documentation Tracker]]

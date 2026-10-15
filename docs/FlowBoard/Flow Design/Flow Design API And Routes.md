@@ -32,8 +32,8 @@ Flow-adjacent endpoints:
 | `POST` | `/api/projects` | Backlog Story 1.3: *"New‑project dialog with flow‑type select ("Empty" allowed); choosing one creates flow v1."* Story 1.3 names no endpoint; tying it to this one is an inference. |
 | `GET` | `/api/projects/:id/board` | *"board projection: columns + cards"* — columns from `board_order` |
 | `POST` | `/api/tasks/:id/promote` | *"backlog -> todo, pin flow, create worktree"* |
-| `GET` | `/api/skills`, `/api/agents` | Pickers for skill and agent steps |
-| `GET` | `/api/costs` | Spend per step definition and per flow version |
+| `GET` | `/api/projects/:id/library` | *"plugins + skills + agents, with used-by"*. The step editor's agent and skill pickers would read it (inference; PRD §13 says only *"from defined agents and installed skills"*). See [[Capability Library API And Routes]] |
+| `GET` | `/api/costs?project=&from=&to=` | Spend per step definition and per flow version (PRD §13) |
 
 ## Proposal: endpoints the mockup needs
 

@@ -19,7 +19,10 @@ The flow-designer guide: *"Each field is a guardrail — the things that decide 
 | Attempts | `max_attempts` (default 3) | **Retries** (0–5) | *"How many attempts before the step gives up and fails the task."* (guide) | *"Set high on a step that fails deterministically and you pay for the same failure several times."* |
 | Approval | `advance_mode` | **Approval** | See [[Approval Gates]] | *"No gate on the last step before a merge means nothing human ever sees the result."* |
 | Sandbox | no column; `settings.sandbox_profile` is *"overridable per step"* (§11.1). Backlog 1.1 adds optional `step_defs.sandbox_profile` | **Sandbox** | *"How locked down the run is: none, a container, or a sealed container with no network."* | *"**none** on an unattended step is an agent with your machine and your keys, reading untrusted content."* |
+| Egress allowlist | no column; the allowlist is part of `settings.sandbox_profile`, *"overridable per step"* (§11.1) | — | Hosts the step's sandbox may reach. Four other mockups call it *"that step's allowlist"* | — |
 | Permission mode | `permission_mode` (default `bypassPermissions`) | — | The agent CLI's permission mode | — |
+
+`docs/pitch.md` says *"Every step has a budget and a turn cap"*; in PRD §5 both are nullable with no default ([[Flow Design Open Questions]] #37).
 
 ## Logical caps, physical backstops
 
@@ -31,6 +34,10 @@ Whether a provider enforces them depends on capability flags: `budget_cap` — *
 
 - *"When `--allowedTools` is set, always append `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`."* (PRD §7)
 - Agents carry their own allowed tools (`agents.allowed_tools`), and skills declare theirs in `SKILL.md`. A step's effective tools are the agent's ∩ the skill's, narrowed by the step's `allowed_tools` when set; the flow editor warns at design time when that drops a tool the skill declares ([[Capability Library Decisions|D28]]). Network-capable tools need hosts on the egress allowlist — see [[Capability Tools And Egress]].
+
+## The egress allowlist
+
+Egress is default-deny with an allowlist (PRD §11.1). The capability library, inbox, monitor and task-detail mockups all treat it as **per step**: *"a step using it will still fail closed until you add the host it needs to that step's allowlist"* (capability-library mockup), and **Allow host & retry** *"adds the blocked host to that step's allowlist"* (inbox guide). The flow designer, the one screen that edits steps, has no allowlist field. Where the per-step list is stored, and whether editing it makes a flow version, is [[Flow Design Open Questions]] #14. See [[Egress Allowlist]] and [[Capability Tools And Egress]].
 
 ## The sandbox rule
 
@@ -51,7 +58,11 @@ The mockup inspector argues with one combination: no approval gate **and** sandb
 | container | container | `container` |
 | sealed container | microVM | `gvisor` / `microvm` |
 
-*Sealed container* is defined as *"a sealed container with no network"*; the PRD's container already has default-deny egress, so this mapping is a guess.
+*Sealed container* is defined as *"a sealed container with no network"*; the PRD's container already has default-deny egress, so this mapping is a guess. The other reading, a `container` with an empty allowlist, could not reach the model endpoint and so would only suit shell steps ([[Sandboxing Open Questions]] #7). The drawio's *Tiers* card adds a fourth vocabulary: *"host (no box, approval mode only) · container (default when autonomous) · gVisor runsc (untrusted repos, Linux hosts) · microVM / docker sandbox"*. All the vocabularies: [[Isolation Tiers]].
+
+### Steps the host tier refuses
+
+Two PRD §11.1 rules bite at run time on a step whose sandbox is `none` (host): *"On the host tier, a step that mounts a git-installed plugin does not run"* ([[Capability Library Decisions|D15]]), and *"Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`."* The mockup does not flag either. Whether the designer should is [[Flow Design Open Questions]] #38.
 
 ## Retries versus `max_attempts`
 
@@ -71,3 +82,5 @@ The canvas bar reads `est. $X ceiling per task`: the sum of every step's budget 
 - [[Approval Gates]]
 - [[Models And Effort]]
 - [[Capability Tools And Egress]]
+- [[Permission Gate]]
+- [[Sandbox Configuration]]

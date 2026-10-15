@@ -19,11 +19,12 @@ The flow-designer guide's lede: *"the screen refuses to save a recipe that can't
 | **Capability contract** | *"every knob a step uses is supported by its target provider"* | *"a design-time warning"* (`01-ports.md`) | `02` §2; `01-ports.md` | — |
 | **Provider match** | *"validation checks the pack's provider matches the step's provider"* | None given (`05`); *"the recipe will not save"* (capability-library guide). **Moot in v1**, which is Claude-only ([[Capability Library Decisions\|D1]]) | `05` §13 | — |
 | **Tool intersection** | The agent ∩ skill tool set drops a tool the skill declares | Warning ([[Capability Library Decisions\|D28]]) | — | — |
-| **Agent or skill** | An `ai` step names at least one of `agent_id` / `skill_id` | Blocks save (D27) | — | — |
+| **Agent or skill** | An `ai` step *"sets skill_id, agent_id or both"* (PRD §5, D27) | Blocks save (inferred; no source says how the rule is enforced) | PRD §5 | — |
+| **Check command resolves** | A shell step with no `command` runs the project's `check_command`, which may itself be null | None given. [[Projects Open Questions]] #6 proposes a design-time error | PRD §5 | — |
 | **Hooks missing** | *"a provider without them relies on the sandbox alone, and the flow editor says so"* | Notice | PRD §7 (`tool_hooks`) | — |
 | **Unattended and unsandboxed** | No gate and sandbox `none` | Flag only | flow-designer mockup | ✓ (inspector only) |
 
-Open questions: entry vs producer #23, capability severity #26, back-edges #22 in [[Flow Design Open Questions]].
+Open questions: entry vs producer #23, capability severity #26, back-edges #22, required budget and turn caps #37, steps the host tier refuses #38 in [[Flow Design Open Questions]].
 
 ## How the mockup validates
 

@@ -18,13 +18,13 @@ Deleting a project cascades to its flows, and deleting a flow cascades to its st
 | File | Contents | Source |
 |---|---|---|
 | `seed/flows/default.json` | The default flow | PRD §3 repo layout |
-| Flow templates as JSON | *Software delivery* (`software-development`); `researcher` is out of v1 ([[Capability Library Decisions\|D31]]) | backlog Story 1.2 |
+| Flow template as JSON | *Software delivery*; `researcher` is out of v1 ([[Capability Library Decisions\|D31]]) | backlog Story 1.2 |
 
 Backlog Story 1.3 creates *"flow v1"* from a chosen flow type when a project is made. See [[Seeded Flows]].
 
 ## Flows inside packs
 
-The capability-library mockup's bundle packs carry flows: *Delivery pack* → Software delivery, Code review; *Security pack* → Code review, Incident response; *Marketing pack* → Launch campaign, Positioning sprint. The drawio card *Capability packs*: *"Skills + agents + flows bundled and shareable as one unit."* How a pack's flow becomes rows, and whether removing the pack removes the flow, is open — see [[Bundle Packs]] and [[Capability Library Open Questions]] #7.
+The capability-library mockup's bundle packs carry flows: *Delivery pack* → Software delivery, Code review; *Security pack* → Code review, Incident response; *Marketing pack* → Launch campaign, Positioning sprint. The drawio card *Capability packs*: *"Skills + agents + flows bundled and shareable as one unit."* How a pack's flow becomes rows, and whether removing the pack removes the flow, was [[Capability Library Open Questions]] #7. It is moot in v1: there are no bundle packs ([[Capability Library Decisions\|D3]]). See [[Bundle Packs]].
 
 ## Export (idea)
 

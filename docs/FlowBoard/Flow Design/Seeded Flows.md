@@ -52,7 +52,9 @@ The milestone proof for M5: *"a deliberately failing test in the scratch repo se
 > [!check] Out of v1 (D31)
 > The `researcher` template and its agents are not seeded until open-web research has an egress answer. `backlog-importer` is internal to import, not a seed (D30).
 
-Backlog Story 1.2: *"Flow templates as JSON: `software-development` (the 9‑step table, exact models/efforts/gates/edges) and `researcher` (scope → web research → summarize → grounding ✋, `on_fail` loop)."* The same story seeds eight agents in one list (*"researcher, planner, test‑writer, summarizer, backlog‑importer (builtin), web‑researcher, research‑summarizer, fact‑checker"*); it does not say which steps of `researcher` use which agent ([[Flow Design Open Questions]] #32). Extra artifact types: `sources`, `grounding_report` (Story 1.1). The ✋ marks `grounding` as a gate.
+Backlog Story 1.2 now reads: *"Flow template as JSON: *Software delivery* (the 9‑step table, exact agent/skill pairs, models/efforts/gates/edges). The `researcher` web-research template is out of v1 until open-web egress has an answer."* The feature map still promises *"a research pipeline"* (§2), and Story 1.1 still lists the research artifact types *"`sources`, `grounding_report`"*.
+
+The template's shape survives only in the backlog's history. Before commit `8561b85` Story 1.2 read *"`researcher` (scope → web research → summarize → grounding ✋, `on_fail` loop)"* and seeded *"web‑researcher, research‑summarizer, fact‑checker"* without saying which step uses which agent ([[Flow Design Open Questions]] #32). The ✋ marked `grounding` as a gate.
 
 ```mermaid
 flowchart LR
@@ -60,7 +62,7 @@ flowchart LR
   grounding -.->|on_fail| summarize
 ```
 
-The loop target of the `on_fail` edge is not stated; the diagram's target is a guess ([[Flow Design Open Questions]] #32).
+Drawn from that earlier wording. The loop target of the `on_fail` edge was never stated; the diagram's target is a guess ([[Flow Design Open Questions]] #32).
 
 ## 3. The mockups' Software delivery
 
