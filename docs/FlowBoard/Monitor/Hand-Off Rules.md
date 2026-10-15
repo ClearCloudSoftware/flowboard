@@ -5,7 +5,7 @@ module: Monitor
 
 # Hand-Off Rules
 
-> *"Nothing on this screen moves because you dragged it. A task's position is decided entirely by the engine following the flow, with exactly four exceptions — the four decisions that are yours: approve, send back, answer, retry or stop."* (`monitor-guide.html:360`)
+> *"Nothing on this screen moves because you dragged it. A task's position is decided entirely by the engine following the flow, with exactly four exceptions — the four decisions that are yours: approve, send back, answer, retry or stop."* (`monitor-guide.html:359`)
 
 > *"When a step finishes, the engine reads the flow and applies these. Nothing else moves work."* (`monitor-guide.html:416`)
 
@@ -13,10 +13,12 @@ module: Monitor
 
 | Rule | Looks like | Trigger | In this flow (guide) |
 |---|---|---|---|
-| **Advance** | `done · queued · …` | *"A step finishes, so the next one queues."* | *"When `research` is done, `plan` queues. It does not start — it waits for a worker."* |
+| **Advance** | `done · pending · …` | *"A step finishes, so the next one queues."* | *"When `research` is done, `plan` queues. It does not start — it waits for a worker."* |
 | **Fan out** | `done · done · queued∥queued` | *"One step feeds several, and they all queue at once."* | *"`plan` feeds both `build` and `tests`, so finishing plan queues two runs. The row grows a ⑂2 badge and can occupy two worker slots."* |
 | **Join** | `done · done · running∥done · pending` | *"A step waits for every branch feeding it."* | *"`review` depends on build and tests. Tests finishing alone changes nothing — review stays pending until build lands too."* |
 | **Loop back** | `done · done · failed(2)∥done` | *"A failure or a rejection re-queues an earlier step."* | *"Sending a review back re-queues `build` as attempt 2 with your reason attached. Tests are not re-run — they already passed, and that result still stands."* |
+
+The guide's illustration for **Advance** draws `plan` as *pending* (`'done,pending,…'`, `monitor-guide.html:594`) although its own text says *"plan queues"*. The sentence matches the engine; the picture does not.
 
 ## In the mockup engine
 

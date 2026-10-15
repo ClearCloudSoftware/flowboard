@@ -9,7 +9,7 @@ The icon at the start of a row describes the task as a whole. The [[Flow Bar And
 
 > *"A task shows the most demanding thing true about it. Anything blocked outranks anything running, which outranks anything finished."* (`monitor-guide.html:334`)
 
-## The six statuses
+## Five statuses, six icons
 
 | Icon | Colour | Status | When you see it (guide) | What to do (guide) |
 |---|---|---|---|---|
@@ -24,7 +24,7 @@ The icon at the start of a row describes the task as a whole. The [[Flow Bar And
 
 `statusOf(t)` in `monitor.html`:
 
-1. Any run in `gate`, `asking` or `failed` → **fail** if that run failed, else **wait**.
+1. The first run in flow order that is in `gate`, `asking` or `failed` (`blocking(t)`) → **fail** if that run failed, else **wait**. A task with an earlier gate and a later failure shows **wait**.
 2. Any run `running` → **run**.
 3. Task has `finished` → **done**.
 4. Otherwise → **idle**.

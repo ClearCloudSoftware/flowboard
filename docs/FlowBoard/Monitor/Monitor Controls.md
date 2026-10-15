@@ -27,7 +27,7 @@ Every control on the [[Monitor Screen]]. What each decision costs is in [[Monito
 | **Approve** `a` | gate | Clears the gate |
 | **Send back** `r` | gate | Opens the reason form |
 | Reason input + **Send back** / **Cancel** | gate | Submits the reason or closes the form. The guide's `Esc` does not work here (see *Rules from the code*) |
-| **Read review.md** | gate | Opens the task's row in Pulse |
+| **Read review.md** | gate | Opens the task's row in Pulse. The gated review is not in its artifact list ([[Monitor Open Questions]] #47) |
 | Option buttons `1`…`9` | question | Answers with that option |
 | **Allow host & retry** | failure | Allowlists the host, re-queues |
 | **Retry as-is** | failure | Re-queues |
@@ -75,6 +75,7 @@ Rules from the code:
 - Keys are ignored while focus is in an input or select, and with ⌘, Ctrl or Alt held. Opening **Send back** focuses the reason input, so `Esc` cannot cancel it there, despite the guide ([[Monitor Open Questions]] #46).
 - `a`, `r` and `1`–`9` act on `needsList()[0]`, the oldest item, only if it is the right kind. If the oldest item is a failure, `a` does nothing even when a gate sits below it. On the seeded screen the oldest item *is* a failure (`billing-webhook`, 42m), so all three do nothing until it is cleared with the mouse ([[Monitor Open Questions]] #44).
 - `j`/`k` move within the current filter and sort.
+- The handler ignores the current view: `j`/`k`/`↵`/`o` move and open rows even while Timeline or Pipeline is showing, out of sight. With a row focused, `↵` toggles that row even when focus is on a needs-band button.
 
 The status bar shows `j k move · ↵ open · a approve · 1-9 answer · v view · w workers`. It omits `r`, `o` and `Esc`.
 

@@ -20,24 +20,24 @@ Node marks:
 
 | Mark | Means |
 |---|---|
-| Petrol left rail | A run is live at this step |
+| Petrol left rail and box stroke (`live`) | A run is live at this step |
 | Ochre outline and wash (`hot`) | A task is parked here on a human |
 
-Edges turn petrol with a flowing dash animation when work is moving into the target step. The **retry edge** from review back to build is dashed brick, labelled `↺ sent back ×N today · $X burned`.
+Edges turn petrol with a flowing dash animation: the edges into build and tests while those steps are live, the edge into plan when plan has any live, queued or held task, and the edges into review and summarize whenever any task sits there, a task held at the gate included. The **retry edge** from review back to build is dashed brick, labelled `↺ sent back ×N today · $X burned`.
 
 ## The readout
 
 Below the graph: `backlog · in flight · waiting on you · finished today · burn`.
 
-Then a sentence: *"Counts are live tasks sitting at each step."* Then either *"Right now **review** is where work stops — 1 task parked there waiting on a human, not on an agent."* or *"Nothing is parked on a human — every step is moving."* And: *"The dashed loop is the review→build retry path; a thick one means the recipe, not the code, is the problem."*
+Then a sentence: *"Counts are live tasks sitting at each step."* Then either a sentence such as *"Right now **review** is where work stops — 1 task parked there waiting on a human, not on an agent."* or *"Nothing is parked on a human — every step is moving."* And: *"The dashed loop is the review→build retry path; a thick one means the recipe, not the code, is the problem."*
 
 The topbar's flow button opens this view.
 
 ## In the mockup code
 
 - The node layout is hard-coded (`NODE` positions), and so are the edges. It draws only this one flow.
-- `×N` sums `attempts − 1` across **every** run of every task, so failed retries are counted as *sent back* too. It is not limited to today.
-- The worst step is the one with the most held tasks.
+- `×N` sums `attempts − 1` across **every** run of every task, so failed retries are counted as *sent back* too. It is not limited to today, and neither is `$X burned`, which is all wasted spend on every task.
+- The worst step is the one with the most held tasks. Ties go to the earliest step in flow order (`>` not `>=`), so the seeded screen, with one held task each at research, plan, build and review, names **research**.
 - *finished today* counts every finished task, with no date check.
 
 See [[Monitor Open Questions]] #3 and #23.

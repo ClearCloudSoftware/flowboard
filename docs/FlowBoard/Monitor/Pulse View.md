@@ -12,7 +12,7 @@ The home view. Guide: *"Where is every task, and which one wants me first?"* Rea
 | Column | Content |
 |---|---|
 | Icon | [[Task Status Icons]] |
-| Id + title | Task id in bold, `⑂2` when two steps run, title underneath |
+| Id + title | Task id in medium weight (regular once done), `⑂2` when two steps run, title underneath |
 | Flow bar | [[Flow Bar And Step States]] |
 | Step | `whereOf()`: the blocking step, `build ∥ tests`, `queued`, `done` or `backlog` |
 | Time | `failed 42m`, `waiting 5m`, the longest running run's elapsed time, `71m ago` when done, `in queue`, or `—` |

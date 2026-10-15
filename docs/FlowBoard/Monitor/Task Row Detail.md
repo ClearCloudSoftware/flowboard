@@ -12,7 +12,7 @@ Clicking a row in the [[Pulse View]] (or `↵` / `o`) opens an inline detail und
 | Part | Content |
 |---|---|
 | Header | `STEPS` and the task's repo (`flowboard/api`) |
-| Step chips | One per started step: `Label` then `model · duration · cost`, `· ×N` when retried. Petrol for running, brick for failed, ochre for held. A task with nothing started shows *"Not started"* |
+| Step chips | One per step that has a run, queued ones included: `Label` then `model · duration · cost` (or `model · queued`), `· ×N` when retried. Petrol for running, brick for failed, ochre for held. A task with no runs at all shows *"Not started"* |
 | Sent back | When a gate was rejected: `← <your reason>` |
 | Log header | `LIVE — build` with `33m · $5.96` when a run is live, else `LAST OUTPUT` |
 | Log | The agent's recent lines, styled by kind; a failed run adds `✕ <error>` |
@@ -33,7 +33,7 @@ The mapping is an inference, not stated in any source ([[Monitor Open Questions]
 
 | Part | Content |
 |---|---|
-| Artifacts | Header *"the contract for the next step"*. One line per finished step: `.flowboard/<task-id>/<file>` and its size. Otherwise *"Nothing written yet."* |
+| Artifacts | Header *"the contract for the next step"*. One line per finished step: `.flowboard/<task-id>/<file>` and its size. Otherwise *"Nothing written yet."* Only `done` runs are listed, so a review held at the gate is missing ([[Monitor Open Questions]] #47) |
 | Spend | *This task, so far*, *Burned on redone work* (brick when non-zero), and *Sandbox: container · default-deny egress* |
 
 Artifact files in the mockup: `brief.md`, `plan.md`, `changes.patch`, `test-report.md`, `review.md`, `summary.md`. The path differs from PRD §6 (`<worktree>/.vibe/task-<id>/NN-<type>.<ext>`). See [[Monitor Open Questions]] #26 and [[Artifact Contract]].

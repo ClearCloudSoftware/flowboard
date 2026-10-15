@@ -24,7 +24,7 @@ The monitor, `flowboard/monitor`. Mockup: `docs/mockups/monitor.html`; field gui
 └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Sample values follow the guide's anatomy diagram. The topbar wraps on narrow widths.
+Sample values mix the guide's anatomy diagram (burn, today, wasted, `3/4`, `queue 5`, `NEEDS YOU 2`) with the mockup (`v4`, the clock, `DEMO ×10`, the backlog count and the key hints). At load the mockup itself shows `4/4`, `queue 2` and four needs-you cards. The topbar wraps on narrow widths.
 
 ## Regions
 
@@ -32,10 +32,10 @@ Sample values follow the guide's anatomy diagram. The topbar wraps on narrow wid
 |---|---|---|---|
 | 1 | **Topbar** | *"The flow you're running, and the three money numbers. Click the flow to open Pipeline."* | Flow shape, version chip, burn, today, wasted, clock, a `DEMO ×10` tag (mockup only). See [[Burn Today And Wasted]] |
 | 2 | **Workers** | *"How saturated the machine is. Collapsed to one line; click to see each slot."* | See [[Worker Slots]] |
-| 3 | **Needs you** | *"Everything blocked on a human, oldest first. Empty most of the time."* | See [[Needs You Band]] |
+| 3 | **Needs you** | *"Everything blocked on a human, oldest first. Empty most of the time."* | Scrolls on its own past 42 % of the viewport height, with a sticky header. See [[Needs You Band]] |
 | 4 | **View switcher** | *"Pulse, Timeline, Pipeline — plus filter and sort."* | Tools change per view |
 | 5 | **Pulse list** | *"One row per task, with its whole flow as a bar."* | See [[Pulse View]] |
-| 6 | **Status bar** | *"Totals, and the sandbox posture everything is running under."* | `N tasks · N running · N waiting on you · N failed · N backlog · sandbox container, egress default-deny`, then the key hints |
+| 6 | **Status bar** | *"Totals, and the sandbox posture everything is running under."* | `N tasks · N running · N waiting on you · N failed · N backlog · sandbox container, egress default-deny`, then the key hints. *waiting on you* counts every needs-you item, failures included, so a failed task is counted twice ([[Monitor Open Questions]] #48) |
 
 The middle region (`main`) switches between [[Pulse View]], [[Timeline View]] and [[Pipeline View]].
 
@@ -54,6 +54,7 @@ The middle region (`main`) switches between [[Pulse View]], [[Timeline View]] an
 | `GATE` | small label on a pipeline node | The step is an approval gate |
 | Dashed brick edge | pipeline | The review → build retry path |
 | `NOW` line | brick, on the timeline | The current moment |
+| Open row | 2 px ink rail on the left edge | The row whose detail is open. The flow designer's selected step *"matches the row treatment on the monitor"* |
 
 Colours are the three signal colours of the house palette: petrol `#0E6E74` (*run*), ochre `#A35A00` (*wait*), brick `#B0231B` (*fail*), with *done* `#B8B4A8` and *pending* `#EAE7DE`. Gates and questions share ochre; the old handoff gave approvals the accent and questions amber ([[Monitor Open Questions]] #43).
 
@@ -61,7 +62,7 @@ Colours are the three signal colours of the house palette: petrol `#0E6E74` (*ru
 
 | State | What shows |
 |---|---|
-| Nothing waiting | Band 3 is one white line: *"Nothing waiting on you. · N running, N queued"*. No amber anywhere |
+| Nothing waiting | Band 3 is one white line: *"Nothing waiting on you. · N running, N queued"*. Amber leaves the band, but the topbar's *wasted* figure stays ochre ([[Monitor Open Questions]] #49) |
 | Something waiting | Band 3 turns amber with the count and cards |
 | All slots idle | Worker ticker: *"all slots idle"* |
 | Filter matches nothing | *"No tasks match this filter."* |
@@ -75,12 +76,12 @@ The mockup has **no loading, error or lost-connection state**. The old handoff d
 ## Responsive and accessible
 
 - Below 900 px: the flow button in the topbar hides; rows re-flow into a three-column grid with the flow bar on its own line; the row detail stacks; worker rows wrap.
-- `prefers-reduced-motion`: animations are cut to near zero (sweep, flowing edges).
+- `prefers-reduced-motion`: animations and transitions are cut to near zero (sweep, flowing edges).
 - Hatching *"reads as blocked even in greyscale"*: state is not carried by colour alone.
-- ARIA: the bands are labelled sections (`Worker slots`, `Waiting on you`), tabs carry `aria-selected`, the workers toggle and rows carry `aria-expanded`, the pipeline SVG has `role="img"` and a label, the sort select is labelled.
+- ARIA: the bands are labelled sections (`Worker slots`, `Waiting on you`), the view nav is labelled `Views` and its tabs carry `aria-selected`, filter and window chips carry `aria-pressed`, the workers toggle carries `aria-expanded` and `aria-controls`, rows carry `aria-expanded`, the pipeline SVG has `role="img"` and a label, the sort select is labelled.
 - Focus: a 2 px petrol `:focus-visible` outline.
 
-Typography: IBM Plex Mono for the whole screen (ids, steps, numbers, logs) at 13 px; IBM Plex Sans only for questions and prose. Light only, zero radius. PRD §13 says *"Dark-first"*: [[Flow Design Open Questions]] #34.
+Typography: IBM Plex Mono for the whole screen (ids, steps, numbers, logs) at 13 px; IBM Plex Sans for *"text a human wrote or reads as prose"* (mockups README): task titles, questions and notes. Light only, zero radius. PRD §13 says *"Dark-first"*: [[Flow Design Open Questions]] #34.
 
 ## Related
 

@@ -43,7 +43,7 @@ Backlog Story 2.2 adds: card *"looped‑back (attempt n of m + reason), failed, 
 
 The guide still states the drag rule: *"Why you can't drag a card. Everything past the backlog is driven by the engine, so dragging a task into `review` would be a lie — no review has run."* Its walkthrough says the backlog *"is the only place on the board you can drag a card into"*, yet the monitor has no backlog column.
 
-Whether the monitor replaces `/p/[slug]`, and where promote and Start live, are open: [[Monitor Open Questions]] #1, #2, #24. Which instance counts as *furthest-advanced* after a rework turns downstream steps `skipped` is open too (#41).
+Whether the monitor replaces `/p/[slug]`, and where promote and Start live, are open: [[Monitor Open Questions]] #1 and #24 (and #2 for one project versus all). Which instance counts as *furthest-advanced* after a rework turns downstream steps `skipped` is open too (#41).
 
 ## Related
 

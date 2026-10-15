@@ -15,7 +15,7 @@ PRD §13 specifies `/p/[slug]` as a Kanban board: *"Columns come from the projec
 
 ### 2. One project or every project?
 
-The board is per project (`/p/[slug]`, `GET /api/projects/:id/board`). The monitor shows tasks from six repos (`flowboard/api`, `core`, `docs`, `providers`, `runner`, `web`) on one screen, as the inbox does (*"Every pending question across all projects"*, PRD §10). Is a repo a project here? Can the monitor be narrowed to one project?
+The board is per project (`/p/[slug]`, `GET /api/projects/:id/board`). The monitor shows tasks from six repos (`flowboard/api`, `core`, `docs`, `providers`, `runner`, `web`) on one screen, as the inbox does (*"Every pending question across all projects"*, PRD §10). Is a repo a project here? Can the monitor be narrowed to one project? Related to [[Flow Design Open Questions]] #1 (per project or one shared library), which cites the same six repos.
 
 ### 3. One flow version per screen?
 
@@ -45,7 +45,7 @@ The monitor guide: asking is *"paused, billing stops"*, and the run *"let go of 
 
 ### 9. Escalate after 10 minutes or 5?
 
-10 in the monitor (`monitor.html:731`) and the inbox mockup (`ESCALATE = 10 * MIN`). 5 in PRD §10 and §16, both drawio pages, and the old handoff (*"default 5 minutes"*). The value is a setting either way (feature map §19, backlog 8.3). Which is the default?
+10 in the monitor (`monitor.html:731`) and the inbox mockup (`ESCALATE = 10 * MIN`). 5 in PRD §10 and §16, every drawio page, backlog 6.1 (`escalation_threshold_ms`, *"default 5 min"*) and the old handoff (*"default 5 minutes"*). The value is a setting either way (feature map §19, backlog 8.3). Which is the default?
 
 ### 10. Do gates and failures escalate?
 
@@ -55,7 +55,7 @@ The monitor tags any waiting item as `ESCALATED`, including gates and failures. 
 
 ### 11. Is an egress denial an attempt?
 
-The monitor shows *"Attempt 3 of 3 failed — egress denied"*. PRD §7: a non-zero agent exit is *"an **infrastructure failure**, never a verdict on the work"*; it does not count toward `max_attempts`, and a non-transient one puts the task in `blocked` with no automatic retry. Attempts only grow through rework loops (§8). What does the failure card say for an infra failure, and what does *of 3* count?
+The monitor shows *"Attempt 3 of 3 failed — egress denied"*. PRD §7: a non-zero agent exit is *"an **infrastructure failure**, never a verdict on the work"*; it does not count toward `max_attempts`, and a non-transient one puts the task in `blocked` with no automatic retry. Attempts only grow through rework loops (§8). What does the failure card say for an infra failure, and what does *of 3* count? In the mockup *of 3* is a fixed string (`monitor.html:750`) and `retry()` has no cap, so one more failed retry would read *Attempt 4 of 3*. Whether a sandbox denial ends the run with a non-zero exit at all, or only fails the tool call, is not stated (inference).
 
 ### 12. Retry with a note, and Fail task
 
@@ -63,11 +63,11 @@ PRD §8's escalation gate offers **Retry** (*"carries my note into it … does n
 
 ### 13. What does Allow host & retry write?
 
-It *"Adds the blocked host to this step's egress allowlist"*. In the mockup it only sets `t.allowed = true`. Which allowlist (global `sandbox_profile`, a per-step override, the flow version) and through which endpoint? The flow-version side is [[Flow Design Open Questions]] #14.
+It *"Adds the blocked host to this step's egress allowlist"*. In the mockup it only sets `t.allowed = true`. Which allowlist (global `sandbox_profile`, a per-step override, the flow version) and through which endpoint? The flow-version side is [[Flow Design Open Questions]] #14; [[Capability Tools And Egress]] describes egress as default-deny per step.
 
 ### 14. Is a stopped run failed or cancelled, and is it wasted?
 
-The monitor records a stop as **failed** (*"stopped by you"*) and moves its spend to wasted. Backlog 3.4: *"finalise as cancelled"*; Story 3.3: *"mark runs `cancelled`, not `failed`"*. PRD `runs.wasted` is set only for runs *"superseded by a rework loop or an infra retry"*. What state does the step and task take after a stop? In the mockup the task shows as failed and appears in Needs you.
+The monitor records a stop as **failed** (*"stopped by you"*) and moves its spend to wasted. Backlog 3.4: *"finalise as cancelled"*; Story 3.3, on graceful worker shutdown: *"mark runs `cancelled`, not `failed`"*. PRD `runs.wasted` is set only for runs *"superseded by a rework loop or an infra retry"*. What state does the step and task take after a stop? In the mockup the task shows as failed and appears in Needs you, and `stop()` leaves the run's `cost` in place after adding it to `wasted`, so the stopped spend counts twice (#17).
 
 ## Money
 
@@ -84,11 +84,14 @@ Local midnight or a rolling 24 h? All projects, or the filtered one? Does it inc
 | Source | Wasted |
 |---|---|
 | PRD §5 | Runs *"superseded by a rework loop or an infra retry"* |
-| PRD §13, drawio | *"money burnt by rework loops"* |
+| PRD §13, drawio *Wasted spend* card (ideation) | *"money burnt by rework loops"* |
+| Drawio *Cost ledger* card (harness) | *"wasted = rework + infra retries"* |
+| Brief §5 | *"money burnt on work later discarded by a review sending the task back"* |
+| Feature map §18 | *"money burned on work that got redone or thrown away"* |
 | Feature map §4 | Infra hiccups *"still show up in wasted spend"* |
 | Monitor guide | *"a failed build, a run you stopped, a review you sent back"* |
 
-The mockup's `reject()` adds the build's cost to wasted but **deletes the review run**, so the review's own cost disappears from *today*. It's the same kind of bug the README describes (*"sending a step back made the topbar's **today** total shrink"*). Is the rejected review's spend wasted, kept or dropped? Are stopped and failed runs wasted?
+The mockup's `reject()` adds the build's cost to wasted but **deletes the review run**, so the review's own cost disappears from *today*. It's the same kind of bug the README describes (*"sending a step back made the topbar's **today** total shrink"*). Is the rejected review's spend wasted, kept or dropped? Are stopped and failed runs wasted? A second mockup bug: `stop()` adds the run's cost to `wasted` without clearing `cost` (`monitor.html:698`), so a stopped run counts twice in *today*, and retrying it adds the same cost to wasted again.
 
 ### 18. Is "under a tenth" a rule?
 
@@ -96,13 +99,13 @@ The guide: *"A healthy board keeps it under roughly a tenth of the bill."* Guida
 
 ### 19. Progress on a running step
 
-The PRD board card and the old handoff have a progress hairline (*"turns vs. that step's median"*); backlog 2.2 has a BUG that it is always 0 %. The monitor has only a sweep animation and the elapsed time. Does the monitor show progress?
+The old handoff's card has a progress hairline (*"turns vs. that step's median"*), backlog 2.2 asks for it (with a BUG that it is always 0 %), and `02` §4 notes it needs incremental `num_turns`. The PRD card has none. The monitor has only a sweep animation and the elapsed time. Does the monitor show progress?
 
 ## Workers and views
 
 ### 20. The worker cap
 
-The mockup uses `CAP = 4`. The real cap is `VIBE_MAX_RUNS`, an environment variable with no stated default. The guide says *"raise the worker cap"*, but nothing says where: env, settings, or the monitor. Do shell check runs take a slot?
+The mockup uses `CAP = 4`. The real cap is `VIBE_MAX_RUNS`; no source says whether it is an environment variable or a setting, or gives a default. The guide says *"raise the worker cap"*, but nothing says where: env, settings, or the monitor. Do shell check runs take a slot?
 
 ### 21. Do Timeline and Pipeline ship in v1?
 
@@ -118,15 +121,15 @@ The timeline and the band's *waited* need the moment a step entered `awaiting_ap
 
 ### 24. Where are promote and Start?
 
-The guide's walkthrough begins with *"You promote it"*, and says the backlog *"is the only place on the board you can drag a card into"*. The monitor has no backlog column, no drag and no promote or Start control. Decision **D1** recommends *"Explicit Start button on card + sheet"*. Where do these live if the monitor replaces the board?
+The guide's walkthrough begins with *"You promote it"*, and says the backlog *"is the only place on the board you can drag a card into"*. The monitor has no backlog column, no drag and no promote or Start control. Backlog decision **D1** recommends *"Explicit Start button on card + sheet"* (a default, not decided). The pin-at-promote-or-Start side is [[Flow Design Open Questions]] #7. Where do these live if the monitor replaces the board?
 
 ### 25. Sandbox posture in the status bar
 
-The status bar says *"sandbox container, egress default-deny"* for everything. PRD §11.1 makes the tier *"overridable per step"*. What does it show when steps differ, and is draft mode shown?
+The status bar says *"sandbox container, egress default-deny"* for everything. PRD §11.1 makes the tier *"overridable per step"*. What does it show when steps differ, and is draft mode shown? Without Docker PRD §11.1 falls back to the host tier, so *host* is a legitimate status (see #45). Tier values are [[Flow Design Open Questions]] #13.
 
 ### 26. Artifact paths
 
-Monitor: `.flowboard/<task-id>/brief.md` (row detail) and `.flowboard/artifacts/brief.md` (sample log). PRD §6: `<worktree>/.vibe/task-<id>/01-research_brief.md`. Drawio: `.vibe/task-<id>/*.md | *.json` in `<repo>/.flowboard/worktrees/task-<id>`. Task-detail mockup: `~/.flowboard/ws/auth-refactor`. Filenames versus type keys is [[Flow Design Open Questions]] #24.
+Monitor: `.flowboard/<task-id>/brief.md` (row detail) and `.flowboard/artifacts/brief.md` (sample log). PRD §6: `<worktree>/.vibe/task-<id>/01-research_brief.md`. Drawio: `.vibe/task-<id>/*.md | *.json` in `<repo>/.flowboard/worktrees/task-<id>`. Task-detail mockup: `~/.flowboard/ws/auth-refactor`. Filenames versus type keys is [[Flow Design Open Questions]] #24. Worktrees conflict too: PRD §11 `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>`; drawio `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`.
 
 ### 27. Light or dark
 
@@ -134,7 +137,9 @@ The monitor is light only. PRD §13 says *"Dark-first"*. Tracked as [[Flow Desig
 
 ### 28. The monitor's flow and seed
 
-The monitor draws the six-step flow without a check step or the `explain` gate. Decision **D26** makes the seed the PRD's nine steps. A nine-step flow bar with two gates and a check step, and a nine-node pipeline, are not designed. Between mockups, `pdf-import` is a queued research run on the monitor but a plan question waiting on *dana* in the inbox; `csv-export` differs too (#5).
+> [!check] **Seed resolved — [[Capability Library Decisions|D26]].** The seed is the PRD's nine steps. Same conflict as [[Flow Design Open Questions]] #29. Still open: the monitor's design for it.
+
+The monitor draws the six-step flow without a check step or the `explain` gate. Under D27 a step names an agent, a skill or both, and `check` is a shell step with no model, which breaks the tooltip's `Label · model`, the worker row's model column and the per-model burn rate. A nine-step flow bar with two gates and a check step, and a nine-node pipeline, are not designed. Between mockups, `pdf-import` is a queued research run on the monitor but a plan question waiting on *dana* in the inbox; `csv-export` differs too (#5).
 
 ### 29. Owners on the monitor
 
@@ -144,7 +149,7 @@ The inbox mockup has a `who` per item (*dana*). The monitor has no owner. Featur
 
 ### 30. How does the monitor stay live?
 
-PRD: SSE for runs and the inbox. Backlog 2.2: a polling hook. `02` §4: a materialized view refreshed on job completion. Drawio: SSE endpoints for *"questions and task state"*. Old handoff: *"One websocket for run events"*. No source picks a transport for the board-wide view. **Proposal** in [[Monitor API And Routes]]: one SSE stream with a snapshot then deltas.
+PRD: SSE for runs and the inbox. Backlog 2.2: a polling hook. `02` §4: a materialized view refreshed on job completion. Drawio: SSE endpoints for *"questions and task state"*. Old handoff: *"One websocket for run events"*. The drawio does pick SSE for the board: life-of-a-step beat G ends *"→ SSE → run viewer and board"*, the front-end card says *"EventSource for live updates"*, and feature map §20 keeps *"the board, the viewer, and the inbox current"*. That conflicts with backlog 2.2's polling, `02` §4's refreshed view and the old handoff's websocket, and no source names an endpoint. **Proposal** in [[Monitor API And Routes]]: one SSE stream with a snapshot then deltas.
 
 ### 31. Loading, error and lost-connection states
 
@@ -213,6 +218,22 @@ Decision **D15**: without Docker, *"a step whose plugins (skill or extras) came 
 ### 46. `Esc` in the reason box
 
 The guide's key list: *"Esc — Close the detail, cancel a reason box"*. In the mockup the reason input takes focus when it opens (`monitor.html:1100`) and the key handler returns early for any input (`monitor.html:1126`), so `Esc` never reaches it. Fix the mockup or the guide.
+
+### 47. Read review.md shows no review
+
+The guide: **Read review.md** *"Jumps to the task's row and opens it, with the review in the artifact list"*. The mockup lists artifacts only for `done` runs (`monitor.html:844`), and a review held at the gate is in state `gate`, so the list has no `review.md`. Should a gated step's artifact be listed?
+
+### 48. Failures counted as waiting on you
+
+The status bar's and the pipeline readout's *waiting on you* use `needsList().length`, which includes failed runs, while the status bar also counts `N failed`. A failed task is counted twice. Should *waiting on you* mean gates and questions only, as the **blocked** filter does?
+
+### 49. Amber when nothing waits
+
+The guide: *"When nothing is blocked … every trace of amber leaves the screen."* The topbar's *wasted* figure is always ochre (`.stat.warn`). Keep it as the one permanent warning, or colour it only above a threshold (#18)?
+
+### 50. Step state for screen readers
+
+The flow bar and the row icons are `aria-hidden`, so a screen reader hears neither the task status nor any step state; hatching only helps sighted users in greyscale. The tabs use `aria-selected` without `role="tab"`. Backlog 9.4 sets an accessibility baseline. What text alternative should the bar carry?
 
 ## Related
 

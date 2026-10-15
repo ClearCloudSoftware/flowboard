@@ -65,7 +65,7 @@ interface Usage {
 
 ## Other streams
 
-The inbox also subscribes to SSE: *"Answering in Slack must update the open web page (the inbox subscribes to an SSE stream)."* (PRD §10). Backlog 4.3: *"SSE snapshot stream (pending + answered in last 2 min)"*. The drawio SSE card covers *"questions and task state"* too. No source defines a stream for the monitor's whole-board view ([[Monitor Open Questions]] #30).
+The inbox also subscribes to SSE: *"Answering in Slack must update the open web page (the inbox subscribes to an SSE stream)."* (PRD §10). Backlog 4.3: *"SSE snapshot stream (pending + answered in last 2 min)"*. The drawio SSE card covers *"questions and task state"* too. The drawio's life-of-a-step beat G ends *"→ SSE → run viewer and board"*, and feature map §20 keeps *"the board, the viewer, and the inbox current"*, but no source gives the board stream an endpoint ([[Monitor Open Questions]] #30).
 
 ## Related
 

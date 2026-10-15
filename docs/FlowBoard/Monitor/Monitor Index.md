@@ -17,8 +17,8 @@ The Monitor is the FlowBoard screen you leave open all day. It shows every task 
 
 ## Core concepts
 
-- [[Task Status Icons]]: the six task statuses and which one wins
-- [[Flow Bar And Step States]]: one cell per step, the seven step states
+- [[Task Status Icons]]: five task statuses (six icons) and which one wins
+- [[Flow Bar And Step States]]: one cell per step, seven run states shown as six marks
 - [[Needs You Band]]: everything blocked on a human, oldest first
 - [[Worker Slots]]: the concurrency cap, the queue and what is running now
 - [[Burn Today And Wasted]]: the three money numbers and what each counts

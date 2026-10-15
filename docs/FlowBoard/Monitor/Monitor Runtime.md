@@ -35,7 +35,7 @@ The facts behind it:
 - **Polling today.** Backlog 2.2: *"Polling hook: `cache: "no-store"`, catch network errors, surface an error state"*. `02` §4 suggests *"a materialized view refreshed on job completion instead of client polling, collapsing the three overlapping pollers the backlog flags into one."* Backlog 9.2: *"one summary poller"* for the chrome.
 - **One clock.** The old handoff: *"`now` — one shared 1s ticker for every elapsed time and cost readout (one interval for the page, not one per row)."* Live cost *"Ticks up while a step runs, ~1s cadence, from the run's token accounting."*
 
-The transport for the monitor (SSE, polling or a refreshed view) is not chosen ([[Monitor Open Questions]] #30).
+The drawio and feature map §20 send a stream to the board (SSE: *"→ SSE → run viewer and board"*), while backlog 2.2 still polls and `02` §4 suggests a refreshed view. No endpoint is defined for the board stream ([[Monitor Open Questions]] #30).
 
 ## Derivations
 

@@ -17,7 +17,7 @@ Any task whose first blocking run is in one of three states (`needsList()`):
 | **Question** | ? ochre | The agent's question, in sans | One button per option, keyed `1`…`9`, the first one primary |
 | **Failure** | ✕ brick | *"Attempt N of 3 failed — <error>. $X spent on the attempts so far."* | **Allow host & retry** (primary) · **Retry as-is** · **Open the log** |
 
-Each card shows `task-id · step`, then `waited 12m`, with an `ESCALATED` tag in front when the wait passes 10 minutes (`monitor.html:731`). A failure card has a brick tint (`is-fail`). Actions are in [[Monitor Actions And Costs]].
+Each card shows `task-id · step`, then `waited 12m`, with an `ESCALATED` tag in front when the wait passes 10 minutes (`monitor.html:731`). A failure card has a brick left edge and border (`is-fail`). Actions are in [[Monitor Actions And Costs]].
 
 ## Ordering
 

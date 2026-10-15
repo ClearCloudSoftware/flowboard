@@ -5,14 +5,14 @@ module: Monitor
 
 # Monitor Sample Data
 
-The mockup opens on *"the board mid-morning"*: twelve tasks seeded in `TASKS` (`monitor.html`), all of them FlowBoard working on itself. The PRD's real seed is separate: one project, the *Software delivery* flow, and sample tasks (PRD §15; drawio card *Seed data*: *"One project, default flow, sample tasks, so the app is alive on first run."*). See [[Seeded Flows]].
+The mockup opens on *"the board mid-morning"*: twelve tasks seeded in `TASKS` (`monitor.html`), nearly all of them FlowBoard working on itself (`pdf-import` is not). The PRD's real seed is separate: one project, the *Software delivery* flow, and sample tasks (PRD §15; drawio card *Seed data*: *"One project, default flow, sample tasks, so the app is alive on first run."*). See [[Seeded Flows]].
 
 ## The flow
 
 `research → plan → build ∥ tests → review → summarize`, shown as `v4` in the topbar. Only `review` is a gate. Models: research haiku, plan opus, build opus, tests sonnet, review sonnet, summarize haiku.
 
 > [!note] The seeded flow has moved on
-> Decision **D26** (2026-10-15) makes the seed flow the PRD's **nine** steps with the `explain` and `review` gates and a `check` step. The monitor still draws the older six-step flow. See [[Monitor Open Questions]] #28.
+> Decision [[Capability Library Decisions|D26]] (2026-10-15) makes the seed flow the PRD's **nine** steps with the `explain` and `review` gates and a `check` step. The monitor still draws the older six-step flow. See [[Monitor Open Questions]] #28.
 
 ## The twelve tasks
 
@@ -74,7 +74,7 @@ Canned per task in `LOGS`, revealed one line per 18 seconds of the simulated clo
 | `auth-refactor` | Gate at review, 5m | Task-detail mockup opens on it at the gate (*"the same task the monitor shows waiting"*); inbox: gate, 5m, *"Review passed with 2 notes"* |
 | `billing-webhook` | Failed build, attempt 3, $1.44 | Inbox: *"Attempt 3 of 3 failed — egress denied to api.stripe.com"*, 42m |
 | `csv-export` | One question, 3 options | Inbox: a **batch of five** questions |
-| `provider-codex` | Question at research | Inbox: same question |
+| `provider-codex` | Question at research, 8m | Inbox: same question, waited 9.7m |
 | `pdf-import` | Research queued | Inbox: a question at **plan**, waiting on **dana** |
 | Running set | sandbox-egress build, mem0 build ∥ tests, docs-pass research | Inbox `RUNNING`: the same four |
 

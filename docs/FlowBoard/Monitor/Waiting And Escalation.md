@@ -23,7 +23,7 @@ The old design handoff disagrees: its inbox batch sub-line reads *"Blocked 4m 12
 The [[Timeline View]] shows this cost in time: *"Flat, hatched stretches are the hours nobody paid for — the board waiting on a human."*
 
 > [!warning] The PRD keeps the run alive first
-> PRD §9: the broker *"holds the shim's call open. After 20 minutes with no answer, return a sentinel"*. Only then does *"the runner see the process exit, set the run to `parked`"*. For those first 20 minutes the agent process is alive and blocked on the call, and nothing in the PRD releases its worker slot while it waits. The monitor and the inbox guide both show the slot freed at once. See [[Monitor Open Questions]] #8.
+> PRD §9: the broker *"holds the shim's call open. After 20 minutes with no answer, return a sentinel"*. Only then *"The runner sees the process exit, sets the run to `parked`"*. For those first 20 minutes the agent process is alive and blocked on the call, and nothing in the PRD releases its worker slot while it waits. The monitor and the inbox guide both show the slot freed at once. See [[Monitor Open Questions]] #8.
 
 ## Escalation
 
@@ -38,7 +38,8 @@ A needs-you card shows an **ESCALATED** tag once its wait passes the threshold.
 | PRD §16 | *"Leaving a question for 5 minutes posts it to Slack"* | Questions |
 | Drawio | *Escalate after 5 min* (*Functional components*); *escalate_question after 5 min* (*Harness architecture*) | Questions. The harness concept *Human escalation*: *"Every stop (gate, question, spent or stuck loop) lands in one inbox, then Slack."* |
 | Feature map §13, §19 | *"If a question isn't answered within a set time"*; **Nudge timing** is a setting | Questions |
-| Backlog 8.3, `06` §15 | *"escalation threshold in minutes"* setting | — |
+| Backlog 8.3; `06` §15 | *"escalation threshold in minutes"* (8.3); *"escalation threshold (minutes)"* (`06`) | — |
+| Backlog 6.1 | `settings.escalation_threshold_ms` (*"default 5 min"*) | `escalate_question` |
 | Old handoff | *"past the threshold (default 5 minutes)"* | — |
 
 Two open points: 10 minutes or 5 ([[Monitor Open Questions]] #9), and whether gates and failures escalate too (#10).

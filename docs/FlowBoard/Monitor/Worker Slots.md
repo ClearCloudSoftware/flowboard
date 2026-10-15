@@ -16,9 +16,10 @@ A slot is taken by a **running** step. In the mockup, a task that fans out holds
 ## Collapsed strip
 
 ```
-▸ WORKERS ■■■□ 3/4 · queue 5 · $20.28/hr   build · sandbox-egress · › edit runner/src/sandbox/egress.ts
+▸ WORKERS ■■■■ 4/4 · queue 2 · $20.28/hr   build · sandbox-egress · › edit runner/src/sandbox/egress.ts
 ```
 
+- That is the seeded screen at load: four running, two queued. The guide's anatomy diagram draws an illustrative `3/4 · queue 5`
 - Four squares, filled petrol when busy
 - `running/cap`, the queue length, the burn rate
 - A ticker with the first running slot's step, task and current log line, or `all slots idle`

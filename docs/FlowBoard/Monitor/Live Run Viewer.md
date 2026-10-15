@@ -16,6 +16,8 @@ Feature map §9, *"A live screen that streams an agent's session as it happens."
 - **A running tally:** *"A pinned footer with elapsed time, number of turns, and live cost."*
 - **Stop button:** *"End a run you don't want to keep paying for."*
 
+The drawio card *Sticky footer + Stop* (page *FlowBoard ideation*): *"Elapsed, turn count, running cost. Stop kills the process."*
+
 PRD §13: *"Streams the normalised event summaries as they arrive, with tool calls collapsible to show their full input and result. Sticky footer with elapsed time, turn count, running cost. A Stop button that kills the process."*
 
 The old design brief, §4: *"The design problem is **signal density**. A raw log is unreadable. Design the collapsed representation of a tool call (one line: what it did, to what, whether it succeeded) with expansion to full input and output. Distinguish thinking from output from tool activity without four different colours."*
@@ -29,11 +31,11 @@ The old design brief, §4: *"The design problem is **signal density**. A raw log
 - [ ] *"Loading, 404 and stream‑lost states; auto‑scroll opt‑out."* **GAP**
 - [ ] *"Stop: SIGTERM by pid from the route (same machine), finalise as cancelled."* **PRD**
 
-Story 3.2 adds the live numbers it depends on: *"persist `num_turns` per assistant turn so the viewer/board show live numbers"*, and *"`message_delta.usage` is cumulative per message — reset per `message_start`, do not sum across deltas."* **BUG**
+Story 3.2 adds the live numbers it depends on: *"persist `num_turns` per assistant turn so the viewer/board show live numbers"* (**PRD/BUG**), and *"`message_delta.usage` is cumulative per message — reset per `message_start`, do not sum across deltas."* (**BUG**)
 
 ## What it shows
 
-Each row is one stored `run_events` row: its `type` and a one-line `summary` *"for the viewer (e.g. `Read src/auth/session.ts`, `Bash: pnpm test`)"* (PRD §7). The seven types are `assistant_text`, `thinking`, `tool_use`, `tool_result`, `system`, `result`, `error`. See [[Event Stream And SSE]].
+Each row is a stored `run_events` row, with partial deltas folded (backlog 3.2: *"fold partial deltas"*): its `type` and a one-line `summary` *"for the viewer (e.g. `Read src/auth/session.ts`, `Bash: pnpm test`)"* (PRD §7). The seven types are `assistant_text`, `thinking`, `tool_use`, `tool_result`, `system`, `result`, `error`. See [[Event Stream And SSE]].
 
 ## Milestone
 

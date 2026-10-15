@@ -14,7 +14,7 @@ The Monitor is the component you watch while FlowBoard works. It covers three th
 | Piece | Older name | Source |
 |---|---|---|
 | Status at a glance | **The board** — *"columns are the steps of the recipe, and each task sits in whichever step it has reached"* | feature map §5, PRD §13 `/p/[slug]` |
-| What needs you | The *attention* cards and states on the board; the inbox's *"Everything waiting, most-urgent first"* | feature map §5, §12 |
+| What needs you | Cards with a *"status dot (running / waiting on you / needs approval / failed)"* on the board; the inbox's *"Everything waiting, most-urgent first"* | feature map §5, §12 |
 | Live run viewer | *"A live screen that streams an agent's session as it happens"* | feature map §9, PRD §13 `/runs/[id]` |
 
 The monitor mockup (`docs/mockups/monitor.html`) is the newest design of the first two. `docs/mockups/README.md` describes it as *"the monitoring module. A *needs-you* triage band over a task-pulse list, worker slots as a collapsed strip, and timeline and pipeline drill-ins."* It does not draw the PRD's Kanban columns. See [[Board Projection]] and [[Monitor Open Questions]] #1.
@@ -52,7 +52,7 @@ On the *Logical components* page, **Board `/p/[slug]`** (*projection of task + s
 | **Only honest movement** | *"Nothing on this screen moves because you dragged it. A task's position is decided entirely by the engine following the flow, with exactly four exceptions — the four decisions that are yours"* (monitor guide, *Movement*) |
 | **Colour means something is happening or wanted** | *"colour only appears where something is happening or something is wanted. When nothing is blocked, band 3 collapses to a single white line and every trace of amber leaves the screen. If you see amber, a human is the bottleneck."* (monitor guide, *Anatomy*) |
 | **Most urgent at the top** | *"Reading down the screen is reading from *most urgent* to *least*."* (monitor guide) |
-| **Done drains to grey** | *"*Done* is drained to stone grey on purpose — it's most of the screen, and colouring it would drown the part that matters"* (mockups README) |
+| **Done drains to grey** | *"*Done* is drained to stone grey on purpose — it's most of the screen, and colouring it would drown the part that needs you"* (mockups README) |
 | **The viewer never parses provider JSON** | *"the 7 `NormalizedEvent` kinds are the universal contract … The viewer never parses provider JSON."* (`03` §8) |
 | **Catch up on reconnect** | *"reopen the page and it catches you up from the start."* (feature map §9) |
 | **Waste is the number to attack** | *"Wasted is the number to attack. It's every dollar spent on an attempt that was thrown away"* (monitor guide, *Money*) |

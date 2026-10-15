@@ -24,7 +24,7 @@ PRD §12: *"REST route handlers under `apps/web/app/api/`. All handlers are thin
 | `GET /api/runs/:id/stream` | SSE, the live log and the [[Live Run Viewer]] |
 | `GET /api/costs?project=&from=&to=` | Rollups (the `/costs` screen) |
 
-Backlog 2.1 also lists `GET /api/tasks/:id`. The backlog preamble (item 3) records a `POST /api/tasks/:id/start` that the code added, and Story 2.1 still has to *"decide auto‑start on promote vs explicit Start"* (decision **D1** recommends an explicit Start).
+Backlog 2.1 also lists `GET /api/tasks/:id`. The backlog preamble (item 3) records a `POST /api/tasks/:id/start` that the code added, and Story 2.1 still has to *"decide auto‑start on promote vs explicit Start"* (backlog decision **D1** recommends an explicit Start; it is a default, not decided).
 
 ## Web routes
 
@@ -44,13 +44,13 @@ Backlog 2.1 also lists `GET /api/tasks/:id`. The backlog preamble (item 3) recor
 | A cross-project view (tasks from six repos) | `board` is per project |
 | **Stop** a run | No endpoint. Backlog 3.4: *"SIGTERM by pid from the route (same machine), finalise as cancelled"* |
 | **Allow host & retry** | No endpoint for editing a step's egress allowlist |
-| Worker slots, burn, today, wasted | No endpoint |
-| A live stream of board changes | Only per-run SSE and the inbox stream |
+| Worker slots, burn | No endpoint. *today* and *wasted* could come from `GET /api/costs?from=&to=` |
+| A live stream of board changes | The drawio and feature map §20 want one; no endpoint is defined |
 
 ## Proposal
 
 > [!info] Proposal
-> None of these endpoints is in any source. Listed in [[Monitor Open Questions]] #34.
+> None of these is in any source except `POST /api/step-instances/:id/retry` (PRD §12), which only gets a new body. Listed in [[Monitor Open Questions]] #34.
 
 ```
 GET  /api/monitor                       -- tasks + needs + workers + money, one snapshot

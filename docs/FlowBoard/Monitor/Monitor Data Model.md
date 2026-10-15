@@ -12,7 +12,7 @@ The monitor writes nothing of its own. It reads the engine's tables (PRD §5) an
 | Table | Columns the monitor uses | For |
 |---|---|---|
 | `tasks` | `id`, `project_id`, `flow_id`, `title`, `status`, `created_at`, `updated_at` | Rows, status, flow version |
-| `flows`, `step_defs`, `step_edges` | `name`, `version`; `key`, `name`, `model`, `advance_mode`, `board_order`, `max_attempts`; `from_step`, `to_step`, `condition` | Flow bar shape, gate marks, pipeline graph, *of N* attempts |
+| `flows`, `step_defs`, `step_edges` | `name`, `version`; `key`, `name`, `kind`, `model`, `advance_mode`, `board_order`, `max_attempts`; `from_step`, `to_step`, `condition` | Flow bar shape, gate marks, pipeline graph, *of N* attempts |
 | `step_instances` | `task_id`, `step_def_id`, `state`, `attempts`, `outcome`, `reason`, `updated_at` | Step states, where a task is, attempt counts, the sent-back and failure text |
 | `runs` | `step_instance_id`, `attempt`, `state`, `cost_usd`, token columns, `num_turns`, `wasted`, `error`, `started_at`, `ended_at`, `pid` | Live cost, wasted, durations, timeline bars, the error line, stop |
 | `run_events` | `run_id`, `seq`, `v`, `type`, `summary`, `raw`, `created_at` | The live log and the [[Live Run Viewer]] |
@@ -26,7 +26,7 @@ Some columns are named outside PRD §5. Backlog Story 1.1 adds `runs.model`, `ru
 ## The mockup's in-memory model
 
 ```js
-TASK = { id, title, repo, runs: { [stepKey]: RUN }, finished?, rejectedFor?, allowed? }
+TASK = { id, title, repo, runs: { [stepKey]: RUN }, log, finished?, rejectedFor?, allowed? }
 RUN  = { step, state, start, end, ms, planned, cost, attempts, wasted, since?, ask?, opts?, answered?, err? }
 // state: pending | queued | running | gate | asking | failed | done
 ```
