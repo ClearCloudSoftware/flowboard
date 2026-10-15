@@ -10,10 +10,10 @@ module: Cost And Control
 | Item | Milestone | Source |
 |---|---|---|
 | Cost captured on the run | **M3**: *"cost captured on the run. **This is the milestone that proves the whole idea.** Do not proceed until you can watch a real session stream in the browser and see its cost land in the database."* | PRD §14 |
-| Rework and infra-retry runs marked wasted | M3 (runner), M5 (flow engine) | PRD §7, §8 |
-| Live cost on card and viewer footer | M2–M3 | PRD §13 |
+| Rework runs marked wasted | M5 lists *"rework loops with `max_attempts` escalation"*; no milestone names the `wasted` flag or infra retries | PRD §7, §8, §14 |
+| Live cost on the viewer footer and board card | M3 lists the *"SSE session viewer"*; no milestone names live cost | PRD §13, §14 |
 | `/costs` rollups and the draft mode toggle | **M8**: *"Cost views and flow editor UI."* | PRD §14 |
-| Per-step `max_turns`, `max_budget_usd` | with the runner | PRD §5, §7 |
+| Per-step `max_turns`, `max_budget_usd` | Not assigned a milestone | PRD §5, §7 |
 | Memory cost tagged apart | M9, optional | PRD §11.2, §14 |
 
 Acceptance (PRD §16):
@@ -75,7 +75,7 @@ Backlog 10.1 tightens the first: *"with non‑zero cost **and live turns/cost du
 
 ## Out of scope
 
-- *"anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI."* (PRD §17). So FlowBoard reads cost from the CLI, never from a billing API.
+- *"anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI."* (PRD §17). **Inferred:** so FlowBoard reads cost from the CLI, never from a billing API.
 - Authentication, user accounts, roles (PRD §17). Per-person spend needs identities first.
 - Mem0's managed cloud (PRD §17).
 

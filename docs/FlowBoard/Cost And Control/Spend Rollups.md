@@ -44,7 +44,7 @@ Every rollup starts from `runs`. **Proposal** (no source spells out the joins):
 
 - Shown on the task Cost tab as *"this recipe averages $2.14 across 182 tasks on v4"*. Task-detail guide: *"a task well over its recipe's average usually means something went around in circles."*
 - Shown in the flow library as `~$/task` per variant. Flow-designer guide: *"What it typically costs end to end."* Get it wrong: *"Paying for the heavy recipe on work that never needed it."*
-- Open: does it average the bill or only kept spend? Do failed or cancelled tasks count? Are draft-mode tasks mixed in? See [[Cost And Control Open Questions]] #10.
+- Open: does it average the bill or only kept spend? Do failed or cancelled tasks count? Are draft-mode tasks mixed in? See [[Cost And Control Open Questions]] #10. The library counts `182 runs` where the Cost tab says `182 tasks` (#22).
 
 ## Smaller rollups elsewhere
 

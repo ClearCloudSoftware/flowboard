@@ -49,7 +49,7 @@ Whether the draft toggle lives on `/costs`, on a settings screen, in the designe
 
 Nothing screen-specific. General rules that apply:
 
-- The newer mockups: *"Spend boldness in one place and keep everything around it quiet"* (`docs/mockups/README.md`). Wasted is the only money figure with a warning colour (ochre on the monitor, red on task detail).
+- The newer mockups colour only wasted, and not consistently. The monitor topbar's wasted figure uses `--wait` (`monitor.html:61`), the colour the monitor otherwise uses for work waiting on a human. The monitor row, the inbox and task detail use `--fail` red (`monitor.html:209`, `inbox.html:388`, `task-detail.html:64`). See [[Cost And Control Open Questions]] #21.
 - The old handoff: live cost is *"Always mono, always right-aligned, never coloured."* Type: *"IBM Plex Mono (all numbers, ids, keys, slugs, models, times, costs)"*.
 - Backlog 8.1: wasted uses *"the red token"*.
 
@@ -57,7 +57,7 @@ Nothing screen-specific. General rules that apply:
 
 - A layout, regions, empty state, or any control besides filters and charts.
 - How cost per finished task is "trended": by version number on the x-axis, or over time per version.
-- Whether the memory bucket appears here (`06` §12 implies so: *"so /costs shows the net"* in the drawio).
+- Whether the memory bucket appears here. The drawio card *Pays for itself, or it's off* says *"memory's own cost is tagged apart, so /costs shows the net"*. `06` §12 only says the honest number is the net, without naming a screen.
 - A drill-down from a rollup to tasks or runs.
 
 These are [[Cost And Control Open Questions]] #13. A mockup and guide for `/costs` would close most of them.

@@ -16,7 +16,7 @@ Places where the sources disagree or leave a gap. Each needs a decision before b
 | PRD §5 | runs *"superseded by a rework loop or an infra retry"* |
 | PRD §13, drawio ideation and functional cards | *"money burnt by rework loops"* |
 | Drawio *Cost ledger* | *"wasted = rework + infra retries"* |
-| Feature map §4 | infra hiccups *"still show up in wasted spend"* |
+| Feature map §4 | an infra hiccup *"still shows up in wasted spend"* |
 | Brief §5 | *"money burnt on work later discarded by a review sending the task back"* |
 | Monitor guide | *"a failed build, a run you stopped, a review you sent back"* |
 | Task-detail guide, on cancel | *"Anything in flight becomes wasted."* |
@@ -32,7 +32,7 @@ The Claude stream carries per-message tokens mid-run (`message_start`, `message_
 
 ### 3. What is burn rate for real runs?
 
-Every mockup prices by the minute per model. Real cost comes from tokens. No source defines burn. **Proposal** (from [[Burn Today And Wasted]]): Σ over running runs of (cost added in the last *N* minutes) × 60 / *N*. Depends on #2. Monitor Open Questions #15.
+Every mockup prices by the minute per model. Real cost comes from tokens. No source defines burn. **Proposal** (from Monitor Open Questions #15, linked from [[Burn Today And Wasted]]): Σ over running runs of (cost added in the last *N* minutes) × 60 / *N*. Depends on #2. Monitor Open Questions #15.
 
 ### 4. What are "today" and "this week"?
 
@@ -106,7 +106,9 @@ No mockup, no guide. No layout, empty state, drill-down, or trend axis for *cost
 
 ### 15. Where the memory bucket lives
 
-`06` §12 and PRD §11.2 tag memory spend separately. No source gives it storage. **Proposal:** `memory_usage(at, adapter, op, tokens, cost_usd)`. See [[Memory Cost Accounting]].
+`06` §12 and PRD §11.2 tag memory spend separately. No source gives it storage. **Proposal:** `memory_usage(at, adapter, op, tokens, cost_usd)`.
+
+A second gap: recall adds a seventh prompt part of up to 6,000 characters (PRD §7). Those tokens are billed inside the run (**inferred**). Do they count as run cost, or are they memory's cost? If they count as run cost, the *net* figure never sees them. See [[Memory Cost Accounting]].
 
 ### 16. A resumed run: one cost or two?
 
@@ -132,7 +134,20 @@ Monitor `reject()` drops the review run's cost. Monitor `stop()` double-counts. 
 
 ### 21. Colour of money
 
-Old handoff: live cost *"never coloured"*. Newer mockups colour wasted (ochre on the monitor, red on task detail). Backlog 8.1: wasted uses *"the red token"*. Ochre or red?
+Old handoff: live cost *"never coloured"*. The newer mockups colour wasted two ways:
+
+| Where | Colour | Line |
+|---|---|---|
+| Monitor topbar `wasted` stat | `--wait` (`#A35A00`), the colour the monitor uses for work waiting on a human | `monitor.html:61` |
+| Monitor row `$X wasted` | `--fail` | `monitor.html:209` |
+| Inbox context panel | `--fail` | `inbox.html:388` |
+| Task detail header, timeline, Cost tab bars | `--fail` | `task-detail.html:64`, `:135`, `:198` |
+
+Backlog 8.1: wasted uses *"the red token"*. Should the monitor's wasted total keep borrowing the waiting colour, which makes it read like a human bottleneck?
+
+### 22. Runs or tasks behind the recipe average?
+
+The flow library shows `Software delivery @core v4` at `~$2.14/task` with `182 runs` (`flow-designer.html:292`, `:577`). The task Cost tab says *"this recipe averages $2.14 across 182 tasks on v4"*. A task has many runs, so both can't be 182. Which count does the average divide by? Related to #10.
 
 ## Related
 

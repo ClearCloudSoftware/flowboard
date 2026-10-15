@@ -29,6 +29,8 @@ No source sets a retention period for `runs` or `run_events`. Cost history is me
 
 ## Who writes
 
+**Inferred** from the runner's and the engine's roles (`03` §6, `02` §3). No source tabulates the writers.
+
 | Writer | Writes |
 |---|---|
 | Worker (runner) | `runs` cost and tokens, `run_events`, `wasted` on infra retry |

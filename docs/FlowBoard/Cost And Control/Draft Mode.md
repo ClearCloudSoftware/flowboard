@@ -30,7 +30,7 @@ type SpecTransform = (spec: RunSpec) => RunSpec;
 const draftMode: SpecTransform = s => ({ ...s, model: 'fast-cheap', effort: 'low' });
 ```
 
-*"Provider-neutral, composable with any future override (force-local-model, cap-budget-globally, pin-a-model for an incident), and it records the *resolved* model/effort on the run so cost stays honest (12)."* The runner applies the chain: *"Draft mode is applied here as a `RunSpec` transformer and the *actual* model/effort recorded on the run"* (`03` §6). Backlog 3.5: *"draft mode and the sandbox profile compose as `RunSpec` transformers."* The drawio *Runner* card: *"builds the RunSpec · draft-mode transform · writes per-run mcp.json + settings.json (hooks) · records model, effort, tier"*.
+*"Provider-neutral, composable with any future override (force-local-model, cap-budget-globally, pin-a-model for an incident), and it records the *resolved* model/effort on the run so cost stays honest (12)."* The runner applies the chain: *"Draft mode is applied here as a `RunSpec` transformer … and the *actual* model/effort recorded on the run"* (`03` §6). Backlog 3.5: *"draft mode and the sandbox profile compose as `RunSpec` transformers."* The drawio *Runner* card: *"builds the RunSpec · draft-mode transform · writes per-run mcp.json + settings.json (hooks) · records model, effort, tier"*.
 
 ```mermaid
 flowchart LR

@@ -39,7 +39,7 @@ Three things make the journal work:
 
 ## Provider-blind by construction
 
-The ledger never sees provider JSON. `agent-provider.ts`: *"Everything else — the flow engine, board projection, cost ledger, HITL … — depends only on these types."* `06`, *Where a new provider actually touches the codebase*, requires **zero changes** to *"cost rollups"* when Codex is added. The only cost-specific step for a new provider is *"A `(codex, model) → rates` row in the price table (12), because `native_cost` is absent."*
+The ledger never sees provider JSON. `agent-provider.ts`: *"Everything else — the flow engine, board projection, cost ledger, HITL protocol, live viewer — consumes only the normalized outputs and never learns which provider ran."* `06`, *Where a new provider actually touches the codebase*, requires **zero changes** to *"cost rollups"* when Codex is added. The only cost-specific step for a new provider is *"A `(codex, model) → rates` row in the price table (12), because `native_cost` is absent."*
 
 ## A clear record
 

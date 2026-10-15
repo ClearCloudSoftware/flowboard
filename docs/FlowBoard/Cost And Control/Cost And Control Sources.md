@@ -38,12 +38,12 @@ Every fact in these notes comes from the files below (paths relative to the repo
 | `docs/old/reference/adapters/agent/replay/replay-provider.ts` | Declares `native_cost` and `partial_stream`; zero usage until `result`; stop settles with `exitCode: 130` |
 | `docs/old/design/brief.md` | §2 live accumulating cost; §3 timeline with model, effort, cost; §4 footer running cost; §5 `/costs` *"which parts of my flow are worth their price"*, wasted spend *"the number that changes my behaviour"* |
 | `docs/old/design/README.md` | `/costs` not designed; live cost cadence and *"never coloured"*; per-branch cost; done card total; *"burning idle"*; Plex Mono for costs; `StepRun.costUsd` |
-| `docs/mockups/monitor.html`, `monitor-guide.html` | `RATE`, `burnRate()`, today = kept + wasted, wasted %, *"under roughly a tenth"*, rate table, per-row cost, sent-back loop label. Covered in [[Burn Today And Wasted]] and [[Monitor Actions And Costs]] |
+| `docs/mockups/monitor.html`, `monitor-guide.html` | `RATE`, `burnRate()`, today = kept + wasted, wasted %, *"under roughly a tenth"*, rate table, per-row cost, sent-back loop label, wasted colours (`--wait` on the topbar, `--fail` on rows). Covered in [[Burn Today And Wasted]] and [[Monitor Actions And Costs]] |
 | `docs/mockups/inbox.html`, `inbox-guide.html` | `RUNNING` burn, context panel today and wasted, decision costs, *"a parked run is not billing you"*, `billing-webhook` $1.44, `provider-codex` pricing question, `cost-rollup` answer |
 | `docs/mockups/task-detail.html`, `task-detail-guide.html` | Kept, wasted, bill; Cost tab; recipe average; *"Answering is free"*; `RATE`; *"Anything in flight becomes wasted"*. Covered in [[Task Cost And Wasted Spend]] |
 | `docs/mockups/flow-designer.html`, `flow-designer-guide.html` | Draft mode toggle and its effects; budget field and chip; ceiling per task; library `~$/task`; model, effort and budget guidance; *"Draft mode isn't a version"* |
 | `docs/mockups/capability-library-guide.html` | The *"portability budget"* sense of budget; the `$0.48` build toll |
-| `docs/mockups/README.md` | Retries bill wasted spend; the *today* accounting bug; *"Spend boldness in one place"* |
+| `docs/mockups/README.md` | Retries bill wasted spend; the *today* accounting bug |
 | `docs/pitch.md` | The cost of the current state (unattributed spend, rework waste); objection 4, the spend-control layer; wasted spend as the success metric; illustrative figures |
 | `docs/competitor-multica.md` | Multica has no spend caps or budgets; FlowBoard's per-step caps and wasted metric |
 | `docs/FlowBoard/Monitor/*` | Linked: [[Burn Today And Wasted]], [[Monitor Actions And Costs]], [[Live Run Viewer]], [[Board Projection]]; Monitor Open Questions #14–#18, #38, #42 |

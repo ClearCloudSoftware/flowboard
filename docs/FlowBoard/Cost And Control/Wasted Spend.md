@@ -23,7 +23,7 @@ Wasted is never subtracted from anything. The task-detail guide: *"Sending a ste
 | A run **superseded by a rework loop** | Yes | PRD §5, §8: *"Mark the superseded runs `wasted = 1` so the cost view can report discarded spend."* |
 | Runs **downstream** of a rework target | Yes | backlog 5.2: *"Rework: same instance, `attempts++`, new run, downstream runs `wasted=1`, downstream `done` → `skipped` so they re‑instantiate."* |
 | A run that failed **transiently** and was retried | Yes | PRD §7: *"The failed run is marked `wasted = 1` and does **not** count toward `max_attempts`."* Feature map §4: *"It doesn't use up a try, but it still shows up in wasted spend."* |
-| A run **you stopped** | The guides say yes; the PRD does not | Monitor guide: *"a failed build, a run you stopped, a review you sent back"*. Task-detail guide on cancel: *"Anything in flight becomes wasted."* PRD and backlog: a stop finalises the run as `cancelled`, with no `wasted` rule |
+| A run **you stopped** | The guides say yes; the PRD does not | Monitor guide: *"a failed build, a run you stopped, a review you sent back"*. Task-detail guide on cancel: *"Anything in flight becomes wasted."* Backlog 3.4: *"finalise as cancelled"*. PRD §13 only says the Stop button *"kills the process"*. Neither sets `wasted` |
 | A run that **failed and blocked** the task (budget or turn cap hit, auth error) | Not specified | PRD §7 blocks the task. Whether the spend becomes wasted if you then retry, or fail the task, is open |
 | A **shell** step's failing run | Costs `$0`, so the flag doesn't matter | PRD §7 |
 | **Memory**-layer calls | Never in run rollups | PRD §11.2 |

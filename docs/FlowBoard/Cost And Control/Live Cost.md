@@ -49,7 +49,7 @@ The monitor topbar's `burn /hr` and the inbox panel's `costing you $/hr` are a r
 | Inbox | `RUNNING` rows carry the same per-minute rate; `burn = Σ rate × 60` | `inbox.html:379` |
 | Task detail | Same `RATE`; a running step's cost is `(ms / 60000) × RATE[model] × 24` on a ×24 demo clock | `task-detail.html:274`, `:620` |
 
-Real runs are not priced by the minute. No source defines burn for real data. **Proposal** (from [[Burn Today And Wasted]]): Σ over running runs of (cost added in the last *N* minutes) × 60 / *N*. See [[Cost And Control Open Questions]] #3.
+Real runs are not priced by the minute. No source defines burn for real data. **Proposal** (from Monitor Open Questions #15): Σ over running runs of (cost added in the last *N* minutes) × 60 / *N*. See [[Cost And Control Open Questions]] #3.
 
 The monitor guide's reason for showing it: *"To know what leaving the board running will cost you while you make coffee."* And the rate table's comment: *"Four agents at once is not a small number — that's the point of showing it."*
 

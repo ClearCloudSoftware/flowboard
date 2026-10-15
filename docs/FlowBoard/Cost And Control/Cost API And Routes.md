@@ -10,7 +10,7 @@ module: Cost And Control
 | Method | Path | What | Source |
 |---|---|---|---|
 | GET | `/api/costs?project=&from=&to=` | The rollups behind `/costs` | PRD §12 |
-| GET | `/api/runs/:id` | One run, including its cost | PRD §12 |
+| GET | `/api/runs/:id` | One run; the PRD gives no response shape | PRD §12 |
 | GET | `/api/runs/:id/stream` | SSE for the viewer; *"replays existing `run_events` for the run, then streams new ones"* | PRD §12 |
 | GET | `/api/projects/:id/board` | Board projection, cards with live cost | PRD §12 |
 

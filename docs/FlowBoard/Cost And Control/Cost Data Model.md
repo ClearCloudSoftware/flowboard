@@ -29,7 +29,7 @@ From PRD §5, with the columns later sources add.
 | `sandbox` | TEXT | **Added.** The tier that ran | PRD §11.1, backlog 1.1 |
 | `provider` | TEXT | **Proposed** in `02` §1 (*"add `runs.provider`"*); needed by `PricingService.price(provider, …)` | `02` §1 |
 
-`runs.model`, `runs.effort` and `runs.sandbox` appear in PRD §11.1 prose (*"`runs.sandbox` records the tier that actually ran, alongside `runs.model`/`runs.effort`"*) and in the drawio *SQLite* card, but not in the §5 `CREATE TABLE`.
+`runs.model`, `runs.effort` and `runs.sandbox` appear in PRD §11.1 prose (*"`runs.sandbox` records the tier that actually ran, alongside `runs.model`/`runs.effort`"*) but not in the §5 `CREATE TABLE`. The drawio *SQLite* card lists `runs (attempt, fingerprint, wasted, cost, tokens, sandbox)`: it has `sandbox`, but not `model` or `effort`.
 
 ## `step_defs`: what a step may spend
 

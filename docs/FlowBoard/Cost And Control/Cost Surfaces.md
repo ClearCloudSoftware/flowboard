@@ -25,15 +25,15 @@ Money shows on almost every screen. This note lists each place, what the figure 
 | Live run viewer | sticky footer: elapsed, turns, **running cost** | One run, estimate until `result` | PRD §13, backlog 3.4 | [[Live Run Viewer]] |
 | Flow designer node | third chip: budget | `max_budget_usd`, per attempt | `flow-designer.html:486` | [[Step Guardrails]] |
 | Flow designer canvas bar | `est. $X ceiling per task` | Sum of step budgets; `$0.05` per step in draft mode | `flow-designer.html:611` | [[Spend Caps And Limits]] |
-| Flow library | `~$/task` per variant | Cost per finished task for that flow version | `flow-designer.html:577` | [[Flow Library]] |
+| Flow library | `~$/task` per variant | *"What it typically costs end to end"* (flow-designer guide). **Proposal:** cost per finished task for that flow version | `flow-designer.html:577` | [[Flow Library]] |
 | `/costs` | the five rollups | See note | PRD §13 | [[Costs Page]] |
 
 ## Consistency across screens
 
 - **Bill never goes down.** The monitor and task-detail guides both state it, and both mockups break it on send-back. See [[Wasted Spend]].
-- **Same sample.** `auth-refactor` is *"the same task the monitor shows waiting"*; its task-detail bill is `$2.61`. The flow library's `Software delivery @core v4` shows `~$2.14/task` over 182 runs, matching the task Cost tab's *"this recipe averages $2.14 across 182 tasks on v4"*.
+- **Same sample.** `auth-refactor` is *"the same task the monitor shows waiting"*; its task-detail bill is `$2.61`. The flow library's `Software delivery @core v4` shows `~$2.14/task` and `182 runs` (`flow-designer.html:577`). The task Cost tab says *"this recipe averages $2.14 across 182 tasks on v4"*. The dollar figure matches, but one source counts runs and the other tasks. See [[Cost And Control Open Questions]] #22.
 - **Same rates.** The monitor, inbox and task-detail mockups all use `haiku 0.008`, `sonnet 0.05`, `opus 0.14` dollars per minute. See [[Cost Defaults And Sample Figures]].
-- **Colour.** The old handoff says live cost is *"never coloured"*. The newer mockups colour only wasted. *"Spend boldness in one place"* (`docs/mockups/README.md`).
+- **Colour.** The old handoff says live cost is *"never coloured"*. The newer mockups colour only wasted: `--wait` on the monitor topbar, `--fail` red on monitor rows, the inbox and task detail. See [[Cost And Control Open Questions]] #21.
 
 ## Related
 
