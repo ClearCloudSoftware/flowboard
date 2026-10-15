@@ -53,7 +53,7 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 - [ ] Either use `questions.state='expired'` or remove it. Today it is never set. **BUG**
 
 ### Story 1.2 Seed (PRD §15)
-- [ ] Flow templates as JSON: `software-development` (the 8‑step table, exact models/efforts/gates/edges) and `researcher` (scope → web research → summarize → grounding ✋, `on_fail` loop). **PRD/NEW**
+- [ ] Flow templates as JSON: `software-development` (the 9‑step table, exact models/efforts/gates/edges) and `researcher` (scope → web research → summarize → grounding ✋, `on_fail` loop). **PRD/NEW**
 - [ ] Agents: researcher, planner, test‑writer, summarizer, backlog‑importer (builtin), web‑researcher, research‑summarizer, fact‑checker. **PRD/NEW**
 - [ ] Skills as local plugin dirs `skills/<slug>/.claude-plugin/plugin.json` + `skills/<slug>/skills/<slug>/SKILL.md`: grill‑me (uses `ask_user_batch` and honours `no_answer_yet`), code‑review (calls `set_outcome`), explain‑simply, ponytail, ask‑three (M4 smoke). **PRD**
 - [ ] Seed project pointing at an auto‑`git init`ed scratch repo. **PRD**
@@ -131,9 +131,10 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 ### Story 3.5 Sandboxed execution (Docker/microVM) (PRD §11.1)
 - [ ] **ExecHost seam:** route process spawning through an `ExecHost` (`host` | `container` | `gvisor` | `microvm`); providers spawn through it, not raw `child_process`, so any provider runs sandboxed unchanged. **NEW**
 - [ ] **`containerWorkspace` adapter:** ephemeral container per run, task worktree bind-mounted as `cwd`, non-root, `--cap-drop ALL`, `--security-opt no-new-privileges`, seccomp default, read-only rootfs + `tmpfs`, `--memory`/`--cpus`/`--pids-limit` + wall-clock. Also removes the shared-worktree collision (2.2). **NEW**
-- [ ] **Egress allowlist (load-bearing):** default-deny outbound; allow the model endpoint + registries + the project git remote. In-container firewall (`NET_ADMIN`/`NET_RAW`, an `init-firewall` like Claude's) or an egress proxy. `[]` = offline. **NEW**
+- [ ] **Egress allowlist (load-bearing):** default-deny outbound; allow the model endpoint + the registries a build needs; **not** the project git remote (the host does all git work). Egress proxy (Squid or tinyproxy) on an internal-only Docker network, so the container has no other route out. `[]` = offline. **NEW**
+- [ ] **No real credential in the container:** `ANTHROPIC_BASE_URL` points at the egress proxy with a dummy key; the proxy swaps in the real credential only on model-endpoint requests. **NEW**
 - [ ] **Gate:** refuse `bypassPermissions` unless the tier is a sandbox; on `host` tier downgrade to an approval/auto mode or fail with a readable reason. **NEW/DEC**
-- [ ] **HITL in a sandbox:** the sealed container can't open the host SQLite file — use artifact-file park/resume (Story 4.2) or a host-side `ask_user` broker over a bind-mounted unix socket. Never mount host secrets, the host DB, or the Docker socket; auth as run-scoped env. **NEW**
+- [ ] **HITL in a sandbox:** the sealed container can't open the host SQLite file — use artifact-file park/resume (Story 4.2) or a host-side `ask_user` broker over a bind-mounted unix socket. Never mount host secrets, the host DB, or the Docker socket; run-scoped env never holds a real credential. **NEW**
 - [ ] Map logical `max_turns`/`max_budget_usd` to physical limits; a limit/timeout hit marks the run failed with reason. **NEW**
 - [ ] `runs.sandbox` records the tier; draft mode and the sandbox profile compose as `RunSpec` transformers. **NEW**
 - [ ] **Tests:** integration lane runs a step in a container against the fake `claude`; assert egress denied except allowlist, and that `bypassPermissions` is refused on the `host` tier. **GAP**
@@ -176,10 +177,10 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 - [ ] `board_order` = layered topological order. **NEW**
 
 ### Story 5.2 Advancement (PRD §8)
-- [ ] Approval gate; awaiting_answers gate; `advance_task` with `always`/`on_pass`/`on_fail`; default `pass`. **PRD**
+- [ ] Approval gate; awaiting_answers gate; `advance_task` with `always`/`on_pass`/`on_fail`; unset outcome → human gate, never `pass`. **PRD**
 - [ ] Fan‑out creates and starts all targets; join waits for every non‑`on_fail` upstream instance. **PRD**
 - [ ] Rework: same instance, `attempts++`, new run, downstream runs `wasted=1`, downstream `done` → `skipped` so they re‑instantiate. **PRD**
-- [ ] **Decide `max_attempts` semantics**: fail on the 4th start (current, matches §16 "three failed attempts") vs on reaching 3. **DEC**
+- [ ] `max_attempts` = total runs incl. the first (default 3); counter on the rework *target*, shared by every loop into it; escalate at the cap or on a repeated shell-check fingerprint; infra retries uncounted (PRD §7–8). **PRD**
 - [ ] Downstream steps reset `attempts` on every loop; only the loop target is capped. Decide if downstream should also count. **DEC**
 - [ ] Task‑done condition: "nothing active and no edge fired" strands a task in `running` when a conditional edge never fires. Use "no active instances and no reachable pending targets". **BUG**
 - [ ] Guard `getInstance()!` / `defs.find()!` so a missing row fails the task cleanly instead of throwing three times. **BUG**
@@ -301,7 +302,7 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 |---|---|---|
 | D1 | Auto‑start on promote vs explicit Start | Explicit Start button on card + sheet; promote stays cheap |
 | D2 | Keep the 10 s undo window | Drop from the MCP path; keep web‑side undo only while no agent is waiting |
-| D3 | `max_attempts` = attempts allowed (fail on 4th) | Keep; matches §16 wording |
+| D3 | `max_attempts` = total runs incl. the first (default 3); escalate to a gate, never auto-fail | Decided 2026-10-15; see PRD §8 |
 | D4 | Persist React Flow positions | No; dagre is deterministic |
 | D5 | Hook isolation for headless runs | Empty `--settings` file per run |
 | D6 | Import parser shape | Deterministic parser supports headings **and** bullets; agent optional |

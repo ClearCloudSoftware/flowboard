@@ -16,6 +16,8 @@ Two things you must verify empirically rather than assume:
 
 2. **That `claude --version` is on PATH.** If not, stop and tell me.
 
+3. **That the CLI works through a credential-injecting proxy.** Run the probe above with `ANTHROPIC_BASE_URL` pointing at a local proxy that adds the real credential, and a dummy key in the environment (§11.1). If the CLI refuses, stop and tell me; the fallback is a short-lived, run-scoped token.
+
 If any part of this spec turns out to be impossible or wrong given the actual CLI behaviour, stop and say so rather than silently substituting something else.
 
 ---
@@ -30,7 +32,7 @@ Single user, runs on my machine, no auth.
 
 ## 2. Stack
 
-- **Next.js 15+**, App Router, TypeScript, `src/` directory
+- **Next.js** (the current major when the build starts), App Router, TypeScript
 - **SQLite** via `better-sqlite3`, with **Drizzle ORM** and drizzle-kit migrations
 - **shadcn/ui** + Tailwind. Install components as needed; do not hand-roll anything shadcn provides
 - **Server-Sent Events** for live streaming (not websockets — SSE is enough and simpler in Next.js)
@@ -38,40 +40,41 @@ Single user, runs on my machine, no auth.
 - `concurrently` to run `next dev` and the worker together under `npm run dev`
 - **No auth, no multi-tenancy, no user table.** Do not add them "for later"
 
-Package manager: pnpm.
+Package manager: pnpm, as a workspace (§3).
 
 ---
 
 ## 3. Repository layout
 
+A pnpm workspace. The one rule that matters: **`packages/core` imports no framework, no database driver and no CLI.** The engine, loop guard, advancement rules, prompt builder, fingerprinting and the port interfaces live there. Next.js is one shell around the core, not its home, so a later CLI, a different UI or remote workers reuse the same logic without a rewrite. Keep this rule from the first commit: it is cheap now and a rewrite later.
+
 ```
-vibe-kanban/
-  src/
-    app/                    # Next.js routes + API handlers
-    components/             # shadcn + app components
-    db/
-      schema.ts             # Drizzle schema
-      index.ts              # db singleton
-      migrations/
-    lib/
-      flow.ts               # DAG traversal + advancement rules
-      artifacts.ts          # artifact path resolution, scanning
-      cost.ts               # cost rollups
-      slack.ts
-  worker/
-    index.ts                # job loop
-    runner.ts               # spawns claude, parses stream-json
-    escalation.ts           # 5-minute question timer
-  mcp/
-    ask-user.ts             # stdio MCP server, talks to the same SQLite file
+flowboard/
+  packages/
+    core/                   # framework-free; depends on nothing below
+      engine/               # DAG traversal, advancement rules, loop guard (§8)
+      prompt/               # the prompt parts (§7)
+      ports/                # AgentProvider, ExecHost, MemoryStore, Notifier, TaskSource interfaces
+      events.ts             # NormalizedEvent, versioned (§7 "Events")
+    db/                     # Drizzle schema, migrations, the db singleton
+    adapters/
+      agent/                # claude-cli, codex-cli (later), replay
+      exec/                 # host, docker
+      notify/               # slack
+      memory/               # none, local
+  apps/
+    web/                    # Next.js: routes, server actions, SSE, components. Calls core; holds no rules
+    worker/                 # job loop, runner, ask_user broker, escalation timer
+    mcp-shim/               # tiny stdio MCP server; forwards to the broker over a unix socket (§9)
   seed/
     flows/default.json
+  skills/
   data/
-    vibe.db
+    flowboard.db
   drizzle.config.ts
 ```
 
-The worker and the MCP server both open the same SQLite file directly. Enable WAL mode (`PRAGMA journal_mode = WAL`) so concurrent readers and writers do not block each other. Set `PRAGMA busy_timeout = 5000`.
+Only `apps/web` and `apps/worker` open the SQLite file; the MCP shim never does (§9). Enable WAL mode (`PRAGMA journal_mode = WAL`) so concurrent readers and writers do not block each other. Set `PRAGMA busy_timeout = 5000`.
 
 ---
 
@@ -91,7 +94,7 @@ Three more rules:
 
 - **The board is a projection, not the model.** The flow is a DAG. A card's column is derived from its furthest-advanced step instance. When a task has multiple step instances running in parallel, the card sits in the column of the split point and shows a split badge listing the active branches.
 - **Flows are version-pinned at task start.** `tasks.flow_id` points at a specific flow version. Editing a project's flow never moves an in-flight task.
-- **Loops are guarded.** Any step instance that reaches `max_attempts` (default 3) fails the task rather than looping again.
+- **Loops are guarded.** Any step instance that reaches `max_attempts` (default 3) stops looping and hands the task to me with the last error, rather than retrying again or failing silently (§8).
 
 ---
 
@@ -106,6 +109,7 @@ CREATE TABLE projects (
   slug          TEXT NOT NULL UNIQUE,
   repo_path     TEXT NOT NULL,           -- absolute path to the git repo
   default_flow_id TEXT,
+  check_command TEXT,                   -- e.g. 'pnpm lint && pnpm test'; what a shell check step runs
   created_at    INTEGER NOT NULL
 );
 
@@ -124,7 +128,8 @@ CREATE TABLE step_defs (
   flow_id        TEXT NOT NULL REFERENCES flows(id) ON DELETE CASCADE,
   key            TEXT NOT NULL,          -- stable slug, e.g. "code_review"
   name           TEXT NOT NULL,          -- column header, e.g. "Code review"
-  kind           TEXT NOT NULL,          -- 'skill' | 'agent' | 'manual'
+  kind           TEXT NOT NULL,          -- 'skill' | 'agent' | 'shell' | 'manual'
+  command        TEXT,                   -- kind='shell' only; null = the project's check_command
   skill_id       TEXT REFERENCES skills(id),
   agent_id       TEXT REFERENCES agents(id),
   prompt_template TEXT,                  -- appended to the invocation, supports {{placeholders}}
@@ -157,6 +162,8 @@ CREATE TABLE tasks (
   flow_id       TEXT REFERENCES flows(id),   -- null while in backlog, pinned on promotion
   title         TEXT NOT NULL,
   body          TEXT,
+  acceptance_criteria TEXT,      -- the exact conditions that close the task; reviewed against
+  non_goals     TEXT,            -- what the agents must not touch or attempt
   status        TEXT NOT NULL,   -- 'backlog'|'todo'|'running'|'blocked'|'done'|'failed'|'cancelled'
   import_key    TEXT,            -- stable key for idempotent md import
   branch_name   TEXT,
@@ -191,7 +198,8 @@ CREATE TABLE runs (
   cache_read_tokens INTEGER DEFAULT 0,
   cache_write_tokens INTEGER DEFAULT 0,
   num_turns         INTEGER DEFAULT 0,
-  wasted            INTEGER NOT NULL DEFAULT 0,  -- 1 if superseded by a rework loop
+  wasted            INTEGER NOT NULL DEFAULT 0,  -- 1 if superseded by a rework loop or an infra retry
+  fingerprint       TEXT,           -- shell steps: normalized hash of a failing check_output (§8)
   error             TEXT,
   started_at        INTEGER,
   ended_at          INTEGER
@@ -201,6 +209,7 @@ CREATE TABLE run_events (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   run_id     TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
   seq        INTEGER NOT NULL,
+  v          INTEGER NOT NULL DEFAULT 1,  -- NormalizedEvent schema version (§7 "Events")
   type       TEXT NOT NULL,     -- normalised: 'assistant_text'|'thinking'|'tool_use'|'tool_result'|'system'|'result'|'error'
   raw        TEXT NOT NULL,     -- the original JSON line
   summary    TEXT,              -- short human-readable line for the session viewer
@@ -248,7 +257,7 @@ CREATE TABLE skills (
   source        TEXT NOT NULL,          -- 'local'|'github'
   repo_url      TEXT,
   git_ref       TEXT,
-  install_path  TEXT NOT NULL,          -- directory passed to --plugin-dir / --add-dir
+  install_path  TEXT NOT NULL,          -- plugin dir passed to --plugin-dir
   frontmatter   TEXT,                   -- JSON
   installed_at  INTEGER NOT NULL,
   updated_at    INTEGER NOT NULL
@@ -310,7 +319,7 @@ The `artifacts` table stores only type, path and metadata. Rationale: Claude Cod
 
 After a run completes, the runner scans `<worktree>/.vibe/task-<id>/` for files created or modified during the run and registers any that match the step's declared `produces` types. The agent may also register one explicitly via the `declare_artifact` MCP tool. Do both — scanning catches the case where the agent forgets to call the tool.
 
-Seed these artifact types: `research_brief`, `questions`, `answers`, `plan`, `explainer`, `implementation_notes`, `test_notes`, `review`, `summary`.
+Seed these artifact types: `research_brief`, `questions`, `answers`, `plan`, `explainer`, `implementation_notes`, `test_notes`, `check_output`, `review`, `summary`.
 
 ---
 
@@ -330,31 +339,47 @@ claude -p "<prompt>"
   --permission-mode <step.permission_mode>
   --session-id <generated uuid, stored as runs.claude_session_id>
   --mcp-config <generated per-run mcp.json>
+  --settings <generated per-run settings.json with PreToolUse hooks>
   --strict-mcp-config
-  --add-dir <each installed skill's install_path>
+  --plugin-dir <each installed skill's install_path>
   [--allowedTools ...]  [--max-turns N]  [--max-budget-usd N]
   [--append-system-prompt <agent.system_prompt, for kind='agent'>]
 ```
 
 Run with `cwd` set to the task's worktree path. `--strict-mcp-config` is important: it stops my personal MCP config leaking into runs and keeps them reproducible.
 
+Use `--plugin-dir`, not `--add-dir`: only `--plugin-dir` registers a skill's `/slug`; `--add-dir` merely grants file access. When `--allowedTools` is set, always append `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`. Snapshot the final args to `data/runs/<id>/args.json`.
+
+**In-agent gate (hooks).** The per-run `settings.json` registers Claude Code `PreToolUse` hooks. They are the second mechanical gate: the sandbox limits what *can* happen, and the hooks block what *shouldn't*. The hook denies:
+- writes outside the task's worktree;
+- any path matching a line of the task's `non_goals` that is written as a path or glob;
+- destructive commands: `rm -rf` outside the worktree, any `git push`, `git reset --hard` or `git checkout` of the base branch, and piping a download into a shell.
+
+A denial returns its reason to the agent, so it changes course instead of stalling. The prompt states the same rules; the hook enforces them. Hooks are a provider capability (`tool_hooks`): a provider without them relies on the sandbox alone, and the flow editor says so.
+
 **Prompt construction.** The prompt is assembled from, in order:
-1. A short preamble naming the task, its title and body.
+1. A short preamble naming the task, its title and body, its acceptance criteria ("the task is done when…") and its non-goals ("do not touch…"). Omit a heading when its field is empty.
 2. A list of input artifacts with their absolute paths, one per `requires` entry, phrased as "read these first".
 3. The exact output path the step should write, one per `produces` entry.
 4. For `kind='skill'`: the slash invocation, e.g. `/grill-me`.
-5. The step's `prompt_template` with `{{task_title}}`, `{{task_body}}`, `{{artifact:<type>}}` and `{{worktree}}` substituted.
+5. The step's `prompt_template` with `{{task_title}}`, `{{task_body}}`, `{{acceptance_criteria}}`, `{{non_goals}}`, `{{artifact:<type>}}` and `{{worktree}}` substituted.
 6. A closing instruction: this is a headless run, there is no terminal to ask into — use the `ask_user` MCP tool for any question.
 
 That last line matters. A headless agent that ends with "let me know if you also want tests" is a stuck run.
 
-When the memory layer is enabled (§11.2), a **seventh part** is inserted just before the closing instruction: a short "context you've learned before" block from `MemoryStore.recall`, scoped to *user + project + agent + task*, labelled as background rather than instructions. With memory off (`none`), the prompt is exactly the six parts above.
+When the memory layer is enabled (§11.2), a **seventh part** is inserted just before the closing instruction: a short "context you've learned before" block from `MemoryStore.recall`, scoped to *user + project + agent + task*, labelled as background rather than instructions. Part 7 has a hard size cap (`settings.memory.max_recall_chars`, default 6,000 — roughly 1,500 tokens): hits are ranked by relevance and the tail is dropped to fit. It never grows the other six parts. With memory off (`none`), the prompt is exactly the six parts above.
 
-**Event handling.** Stream stdout line by line, parse each as JSON, write to `run_events` with an incrementing `seq`, and push onto an in-memory per-run emitter that the SSE endpoint subscribes to. Normalise each event into one of the `type` values in the schema and produce a one-line `summary` for the viewer (e.g. `Read src/auth/session.ts`, `Bash: pnpm test`).
+**Events are a versioned contract.** `NormalizedEvent` (in `packages/core`) is what every screen, the cost ledger and the engine read, so it is versioned: each event carries `v`, starting at 1. A reader handles the versions it knows and falls back to the raw line for the rest. Name fields after the OpenTelemetry GenAI semantic conventions where one exists (model, input and output tokens, tool name), so a tracing backend such as Langfuse can be fed later by a plain OTel exporter instead of a FlowBoard-specific bridge.
+
+**Event handling.** Stream stdout line by line, parse each as JSON, write to `run_events` with an incrementing `seq`, The SSE endpoint lives in `apps/web`, a different process, so it cannot share an in-memory emitter: it tails `run_events` by `seq` (with `Last-Event-ID` for catch-up). Normalise each event into one of the `type` values in the schema and produce a one-line `summary` for the viewer (e.g. `Read src/auth/session.ts`, `Bash: pnpm test`).
 
 **Cost.** Take the final result event's total cost as authoritative for `runs.cost_usd`. Accumulate per-message token usage as you stream so the live view shows a running number before the run ends. Verify the actual field names against your `docs/stream-sample.jsonl` probe.
 
-**Completion.** On exit code 0, set the run to `succeeded`, scan for artifacts, then apply the advancement rules in §8. On non-zero exit, set `failed`, record stderr in `runs.error`, and put the task into `blocked` rather than retrying automatically. When the memory layer is enabled, after a success the runner also `write()`s the run's salient output (declared artifacts + answers) to `MemoryStore` (§11.2).
+**Shell steps.** A `kind='shell'` step runs no model. The runner executes `step.command` (or the project's `check_command`) in the task's worktree through the same execution host, so it inherits the sandbox. It writes stdout and stderr (tail, ~20 kB) to a `check_output` artifact. The **exit code is the outcome**: 0 sets `pass`, anything else sets `fail`. A non-zero exit here is a result, not a run failure, so it follows the step's edges instead of blocking the task. Shell runs cost nothing and record `cost_usd = 0`.
+
+**Completion.** On exit code 0, set the run to `succeeded`, scan for artifacts, then apply the advancement rules in §8. On non-zero exit, set `failed` and record stderr in `runs.error`. A non-zero exit from an agent run is an **infrastructure failure**, never a verdict on the work, because work verdicts arrive as outcomes. Classify it:
+- **Transient** (rate limited, overloaded, network error, process killed by a signal or lost on restart): retry the same attempt automatically, up to 3 times, with backoff of 30 s, 2 min and 8 min. It is a new run with the same `attempt` number. The failed run is marked `wasted = 1` and does **not** count toward `max_attempts`.
+- **Anything else**, or a 4th transient failure (budget or turn cap hit, auth error, bad config, unknown): put the task into `blocked`, as before. Retrying these would only burn the same money again. When the memory layer is enabled, after a success the runner also `write()`s the run's salient output (declared artifacts + answers) to `MemoryStore` (§11.2).
 
 **Sandboxed runs.** When the step's sandbox tier is not `host`, the runner does not spawn `claude` directly; it launches the command *inside* the task's container (worktree bind-mounted as `cwd`) through the execution host and streams the same stdout. `bypassPermissions` is rejected unless the tier is a sandbox. See §11.1 and `docs/architecture/08-sandboxing.md`.
 
@@ -371,17 +396,29 @@ After a run succeeds:
 `advance_task` resolves outgoing edges from the completed step definition:
 
 - `always` edges always fire.
-- `on_pass` / `on_fail` edges fire based on `step_instances.outcome`. A step sets its outcome by writing `{"outcome":"pass"|"fail"}` into its artifact JSON, or via the `set_outcome` MCP tool. Default to `pass` if unset.
+- `on_pass` / `on_fail` edges fire based on `step_instances.outcome`. A shell step's outcome is its exit code. An agent step sets its outcome by writing `{"outcome":"pass"|"fail"}` into its artifact JSON, or via the `set_outcome` MCP tool.
+- **A missing outcome is never a pass.** If the step has an `on_pass` or `on_fail` edge and the run ended without setting an outcome, set the step instance to `awaiting_approval` with the reason "no outcome reported" and stop. I decide; approve means pass, reject means fail. Steps with only `always` edges need no outcome.
 - If more than one edge fires, create all the target step instances and start them concurrently. This is the fan-out.
 - A step definition with multiple incoming edges is a join: it starts only once every upstream step instance for this task is `done`.
 
-Rework loops: an `on_fail` edge pointing at an earlier step increments that step instance's `attempts` and creates a new run. Mark the superseded runs `wasted = 1` so the cost view can report discarded spend. At `max_attempts`, fail the task.
+Rework loops: an `on_fail` edge pointing at an earlier step increments that step instance's `attempts` and creates a new run. The counter lives on the **target** instance, so every loop that sends work back to the same step shares one budget. In the seeded flow, a failed `check` and a failed `review` both spend `implement`'s attempts. The new run's "read these first" list (prompt part 2) also gets the artifacts the failing step produced, so a rework sees the raw `check_output` or `review`, not a summary of it. Mark the superseded runs `wasted = 1` so the cost view can report discarded spend.
+
+**`max_attempts` counts total runs of the step, first try included** (infra retries excluded). The default of 3 means one try and two automatic redos.
+
+**Escalate, don't fail, when a loop is spent or stuck.** Escalate in either of two cases. First, when a rework edge would start a run past `max_attempts`. Second, when a shell step fails with the **same fingerprint** as its previous failed run, because the redo changed nothing. Either way, start nothing. Set the target step instance to `awaiting_approval` and the task to `blocked`, and show the failing step's last artifact (the error log or review) on the gate. I choose: **Retry** grants one more attempt and carries my note into it, like a rejection reason. It does not reset the counter. **Fail task** ends it.
+
+**Fingerprint.** For a failing shell step, take the last 20 non-empty lines of its output. Strip digits, hex ids, absolute paths and timestamps, then hash the result. Store it on `runs.fingerprint`. Fewer failing tests or a different error gives a different fingerprint, and the loop continues. Review failures get no fingerprint: model output varies too much to compare, so the review loop is bounded by `max_attempts` alone.
 
 ---
 
 ## 9. The ask-user MCP server
 
-`mcp/ask-user.ts` is a stdio MCP server. The runner writes a per-run `mcp.json` pointing at it and passes `TASK_ID`, `STEP_INSTANCE_ID` and `RUN_ID` as environment variables. It opens the same SQLite file.
+Questions take **one path on every tier**, host or sandbox. It has two halves:
+
+- The **broker** runs inside the worker. It is the only writer of the `questions` table. For each run it opens a unix socket, `data/sock/<run_id>.sock`, which is bind-mounted into a sandbox as `/run/fb/ask.sock`.
+- The **shim**, `apps/mcp-shim`, is a tiny stdio MCP server that the CLI launches. The runner writes a per-run `mcp.json` pointing at it and passes `RUN_ID` and the socket path as environment variables. The shim forwards each tool call over the socket and relays the reply. It never opens the database and needs no network.
+
+So a host run and a sandboxed run behave identically, and there is one path to test. The artifact-file exchange ("Blocking and parking" below) remains the fallback for a provider without MCP.
 
 Four tools:
 
@@ -393,7 +430,7 @@ Four tools:
 
 **`set_outcome({ outcome, reason })`** — sets `pass` or `fail` for conditional edges. Code review calls this.
 
-**Blocking and parking.** The tools poll the `questions` table every 2 seconds. After 20 minutes with no answer, return a sentinel instead of hanging forever:
+**Blocking and parking.** The broker polls the `questions` table every 2 seconds and holds the shim's call open. After 20 minutes with no answer, return a sentinel instead of hanging forever:
 
 ```json
 { "status": "no_answer_yet",
@@ -454,11 +491,13 @@ Parallel steps within one task share the task's worktree. If two concurrent step
 
 Every step runs with `permission_mode='bypassPermissions'` by default — a fully-autonomous agent that reads untrusted content (repo files, the backlog, web pages, prior artifacts). Running that directly on the host is the dangerous configuration. Optionally run each step inside a **container** (or, for untrusted repos, a gVisor/microVM) instead of a host process. The task's worktree is bind-mounted as the working directory; nothing else from the host is mounted.
 
-The container applies a **security profile**: default-deny **network egress** with an allowlist (the `claude` CLI's model endpoint, the package registries a build needs, and the project's git remote), a non-root user, `--cap-drop ALL`, `--security-opt no-new-privileges`, a read-only root filesystem with `tmpfs` scratch, and resource limits (`--memory`, `--cpus`, `--pids-limit`, wall-clock) that physically backstop the logical `max_turns`/`max_budget_usd` caps. Containers are ephemeral — one per run, destroyed on completion.
+The container applies a **security profile**: default-deny **network egress** with an allowlist (the model endpoint and the package registries a build needs; **not** the project's git remote, because the host does all git work and the agent never needs to push or fetch), a non-root user, `--cap-drop ALL`, `--security-opt no-new-privileges`, a read-only root filesystem with `tmpfs` scratch, and resource limits (`--memory`, `--cpus`, `--pids-limit`, wall-clock) that physically backstop the logical `max_turns`/`max_budget_usd` caps. Containers are ephemeral — one per run, destroyed on completion. Implement egress as a proxy (Squid or tinyproxy) on an internal-only Docker network: the container has no other route out.
+
+**No real credential enters the container.** The CLI gets `ANTHROPIC_BASE_URL` pointing at the egress proxy and a dummy key. The proxy swaps in the real credential, and only on requests to the model endpoint. A prompt-injected agent can read its own environment, so the environment holds nothing worth stealing. (Verify in §0, step 3.)
 
 **Egress restriction is the load-bearing control:** it holds even though `bypassPermissions` is on, because it is enforced below the agent's reasoning. Therefore **`bypassPermissions` is only allowed when the step runs in a sandbox tier.** On the host tier, refuse it (or downgrade to an approval mode).
 
-Because the agent runs with `cwd` inside the container, no host mounts, and restricted egress, the `ask_user` MCP server cannot open the host SQLite file. Use the artifact-file park/resume path (§9 — the agent writes `questions.json` and parks; the host watches the produced path), or expose a host-side `ask_user` broker over a bind-mounted unix socket. Never mount host secrets (`~/.ssh`, cloud credentials), the host DB, or the Docker socket; pass model/CLI auth as run-scoped env.
+Because the agent runs with `cwd` inside the container, no host mounts, and restricted egress, the `ask_user` MCP server cannot open the host SQLite file. It doesn't need to: the shim talks to the host broker over the mounted socket (§9), never to the database or the network. Never mount host secrets (`~/.ssh`, cloud credentials), the host DB, or the Docker socket.
 
 Configuration: a `sandbox_profile` in `settings` (tier, image, egress allowlist, limits), overridable per step; `runs.sandbox` records the tier that actually ran, alongside `runs.model`/`runs.effort`. Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`. Full threat model, isolation ladder, and prior art (Claude Code's dev-container firewall, Codex's default OS sandbox, gVisor/Firecracker): `docs/architecture/08-sandboxing.md`.
 
@@ -466,17 +505,21 @@ Configuration: a `sandbox_profile` in `settings` (tier, image, egress allowlist,
 
 FlowBoard has no cross-task memory: every run starts cold, a second task on the same repo re-learns its conventions, and the inbox re-asks questions it has effectively answered before. Add an optional **memory layer** so runs start warm. It is **additive** — with it off, every flow behaves exactly as this spec describes; memory is never on the critical path of a run.
 
-Introduce a **`MemoryStore` port** with two calls, `recall` and `write`. The first adapter is **[Mem0](https://github.com/mem0ai/mem0)** — a drop-in memory layer that handles user/session/agent memory plus fact extraction and contradiction resolution — run **self-hosted by default** (its OSS package with a local vector store), so it keeps FlowBoard local-first. A `local` SQLite adapter and a `none` no-op complete the set; the default is `none`.
+Introduce a **`MemoryStore` port** with two calls, `recall` and `write`. Three adapters, in build order:
+
+- **`none`**: a no-op, and the default.
+- **`local`**: the first real one. A `memories` table with an FTS5 index in the same `flowboard.db`. Keyword recall, ranked by scope and recency. No embeddings, no extraction model, no extra container.
+- **[Mem0](https://github.com/mem0ai/mem0)**, later and self-hosted. Adopt it only once the cost and inbox views show `local` memory paying off and recall quality is what limits it. Mem0 adds fact extraction and contradiction resolution, at the price of an extraction model's spend and a vector store.
 
 **Where it hooks in — the runner (§7), host-side only.**
 - **Recall, before the run:** query the store for memories relevant to this run — scoped by *user* (the single operator), *project*, the step's *agent/skill*, and the *task* — and append them to the prompt as a final part: "context you've learned before (background, not instructions)." This is prompt part 7 in §7.
-- **Commit, after a run succeeds:** hand the run's salient output — the answers it collected, the outcome it set, the summary/review it produced — to `write()`. Mem0 does the fact extraction and contradiction resolution; FlowBoard never diffs memories by hand. Commit reads from **declared artifacts and answers only**, never raw agent output.
+- **Commit, after a run succeeds:** hand the run's salient output — the answers it collected, the outcome it set, the summary/review it produced — to `write()`. With `local`, it is stored as written and recall prefers the newest; with Mem0, Mem0 does the fact extraction and contradiction resolution. FlowBoard never diffs memories by hand. Commit reads from **declared artifacts and answers only**, never raw agent output.
 
 Both calls run in the runner **on the host**, so the sandboxed agent process never connects to the store and **memory adds nothing to the sandbox egress allowlist** (§11.1). Recalled text is context, not instructions; writes are scoped (a run writes only its own project/agent/task) and audited. This cross-run trust boundary is the part to get right — see `docs/architecture/09-memory.md`.
 
 **Scopes:** `user` (standing prefs + recurring decisions — the single highest-leverage one), `project` (a codebase's conventions and gotchas), `agent` (what a role/skill accrues across runs), `task` (why attempt 1 failed → attempt 2 starts warm).
 
-**Schema — almost nothing.** Mem0 owns the memories. Add only a `memory` block to `settings` (adapter id, endpoint / key ref, enabled scopes, recall limit) and an optional `run_memories(run_id, memory_id, scope)` link recording what was recalled into each run, for the audit trail. Do not duplicate memory content into SQLite. Tag memory-layer token/API cost separately so it never lands in the per-run cost rollups (§13) — the point of memory is to *lower* run cost, and the ledger must be able to show the net.
+**Schema — almost nothing.** The `local` adapter adds one `memories` table (scope, scope_id, text, source_run_id, created_at) with an FTS5 index. Add a `memory` block to `settings` (adapter id, endpoint / key ref, enabled scopes, recall limit, `max_recall_chars`) and an optional `run_memories(run_id, memory_id, scope)` link recording what was recalled into each run, for the audit trail. With Mem0, Mem0 owns the memories and none of their content is duplicated into SQLite. Tag memory-layer token/API cost separately so it never lands in the per-run cost rollups (§13) — the point of memory is to *lower* run cost, and the ledger must be able to show the net.
 
 Full design, scope mapping, and trust boundary: `docs/architecture/09-memory.md`.
 
@@ -484,7 +527,7 @@ Full design, scope mapping, and trust boundary: `docs/architecture/09-memory.md`
 
 ## 12. API surface
 
-REST route handlers under `src/app/api/`. All handlers are thin: validate with zod, call a function in `src/lib/`, return JSON.
+REST route handlers under `apps/web/app/api/`. All handlers are thin: validate with zod, call a function in `packages/core`, return JSON.
 
 ```
 GET    /api/projects                       POST /api/projects
@@ -554,7 +597,7 @@ Commit after each milestone.
 
 **M4 — The question loop.** MCP server with `ask_user_batch`, blocking with the 20-minute sentinel, inbox page with all five control types, park-and-resume. Verify end to end with a trivial skill that asks three questions of different kinds.
 
-**M5 — Flow engine.** Step defs, edges, fan-out, joins, conditional edges, approval gates, rework loops with `max_attempts`, artifact contract validation.
+**M5 — Flow engine.** Step defs, edges, fan-out, joins, conditional edges, approval gates, rework loops with `max_attempts` escalation, shell check steps, artifact contract validation. Proof it works: a deliberately failing test in the scratch repo sends the seeded flow from `check` back to `implement` with the raw log, and a run that sets no outcome stops at a gate instead of passing.
 
 **M6 — Slack escalation.** 5-minute timer, Block Kit rendering, interaction handler, idempotency and reconciliation both directions.
 
@@ -562,7 +605,7 @@ Commit after each milestone.
 
 **M8 — Cost views and flow editor UI.**
 
-**M9 — Memory (optional, additive).** The `MemoryStore` port with a self-hosted Mem0 adapter and a `none` no-op (default). Recall injects the seventh prompt part before a run; commit writes the run's declared artifacts + answers to Mem0 after a success; both host-side. Off by default; ships last because it depends on runs, questions, and artifacts already existing. Proof it works: a preference answered once in the inbox is recalled into the next task and not asked again — and turning memory off returns the app to exactly its M1–M8 behaviour. See §11.2 and `docs/architecture/09-memory.md`.
+**M9 — Memory (optional, additive).** The `MemoryStore` port with the `local` SQLite adapter and a `none` no-op (default); Mem0 is a later adapter behind the same port. Recall injects the seventh prompt part before a run; commit writes the run's declared artifacts + answers to the store after a success; both host-side. Off by default; ships last because it depends on runs, questions, and artifacts already existing. Proof it works: a preference answered once in the inbox is recalled into the next task and not asked again — and turning memory off returns the app to exactly its M1–M8 behaviour. See §11.2 and `docs/architecture/09-memory.md`.
 
 ---
 
@@ -578,12 +621,15 @@ Seed one project and one flow that reproduces my actual workflow. Steps, in orde
 | `explain` | Explain plan | skill `/explain-simply` | haiku | low | **approval** | `plan` | `explainer` |
 | `implement` | Implement | skill `/ponytail` | opus | high | auto | `plan` | `implementation_notes` |
 | `tests` | Write tests | agent `test-writer` | sonnet | high | auto | `plan` | `test_notes` |
-| `review` | Code review | skill `/code-review` | opus | high | **approval** | `implementation_notes`, `test_notes` | `review` |
+| `check` | Lint & test | shell (project `check_command`) | — | — | auto | — | `check_output` |
+| `review` | Code review | skill `/code-review` | opus | high | **approval** | `implementation_notes`, `test_notes`, `check_output` | `review` |
 | `summarize` | Summarize built | agent `summarizer` | sonnet | medium | auto | `review` | `summary` |
 
-Edges: `research → grill → plan → explain`. Then `explain → implement` and `explain → tests` (the fan-out). Then `implement → review` and `tests → review` (the join). Then `review → summarize` on `on_pass`, and `review → implement` on `on_fail` (the rework loop).
+Edges: `research → grill → plan → explain`. Then `explain → implement` and `explain → tests` (the fan-out). Then `implement → check` and `tests → check` (the join). Then `check → review` on `on_pass` and `check → implement` on `on_fail` (the mechanical loop: the model never gets reviewed on code that doesn't pass). Then `review → summarize` on `on_pass`, and `review → implement` on `on_fail` (the review loop). Seed the scratch project's `check_command` with something that exists in the scratch repo.
 
-Also seed a builtin agent **`backlog-importer`** whose job is: given a markdown file path, produce a JSON array of `{ import_key, title, body }`. Derive `import_key` from front-matter `id` if present, otherwise a slug of the heading. The import endpoint upserts on `(project_id, import_key)` so re-importing an edited file updates existing tasks instead of duplicating them.
+The seeded `/code-review` skill reviews the diff against the task's acceptance criteria and non-goals and against the raw `check_output`, and must call `set_outcome`. It is told to look for failures, not to confirm the work.
+
+Also seed a builtin agent **`backlog-importer`** whose job is: given a markdown file path, produce a JSON array of `{ import_key, title, body, acceptance_criteria?, non_goals? }` (the last two from "Acceptance criteria" / "Non-goals" sub-sections when present). Derive `import_key` from front-matter `id` if present, otherwise a slug of the heading. The import endpoint upserts on `(project_id, import_key)` so re-importing an edited file updates existing tasks instead of duplicating them.
 
 Write the seeded skills as real local skill directories under `./skills/` with a `SKILL.md` each, so M4 and M5 are testable without any GitHub access. They can be short.
 
