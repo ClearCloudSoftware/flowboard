@@ -15,9 +15,11 @@ An edge is a row in `step_edges`: `from_step`, `to_step`, and a `condition` (PRD
 |---|---|---|---|
 | `always` | *(none)* | Grey line, grey arrow | *"Unconditional. The moment the step before it finishes, this one becomes eligible."* |
 | `on_pass` | `passed` | Petrol line, label *passed* | *"Only when the previous step reported success. This is the happy path out of a review or a health check."* |
-| `on_fail` | `failed ↺` | Red dashed line, arced over the top | *"Only when it failed — and it usually points *backwards*, which is what makes a rework loop. Arced over the top of the graph so it can't be confused with forward flow."* |
+| `on_fail` | `failed ↺` | Red dashed line; arced over the top when it points backwards | *"Only when it failed — and it usually points *backwards*, which is what makes a rework loop. Arced over the top of the graph so it can't be confused with forward flow."* |
 
 *When it fires* quotes the flow-designer guide's *Routes between steps* table. The guide's condition names are *always*, *on passed*, *on failed*; the mockup's data uses `always`, `pass`, `fail`. **Proposal:** map `pass` → `on_pass`, `fail` → `on_fail` ([[Flow Design Open Questions]] #31).
+
+In the mockup the arc depends on direction, not condition (`edgePath()`): any backward edge arcs over the top, and a forward `fail` edge, such as the one in the `branch` preview, is drawn as a forward curve.
 
 ## How the engine resolves edges
 
@@ -38,7 +40,7 @@ Human decisions also set outcomes: *"Approve overrides the agent's `fail` outcom
 | Source | How you edit a route |
 |---|---|
 | PRD §13 | A *"connections panel"* next to a vertical list of steps |
-| Backlog Story 8.2 | *"drag‑to‑connect, edge label cycles `always → on_pass → on_fail`, Backspace deletes … backwards edges routed under the row"*; BUG: *"Stable edge ids (not array index)"* |
+| Backlog Story 8.2 | *"drag‑to‑connect, edge label cycles `always → on_pass → on_fail`, Backspace deletes … backwards edges routed under the row"* (*Backspace deletes* follows the edge-label text, so it is ambiguous whether it deletes routes, steps or any selection — see [[Flow Design Controls]]); BUG: *"Stable edge ids (not array index)"* |
 | Feature map §2 | *"drag steps, draw connections"* |
 | Flow-designer mockup | No route editing. **+ Step** adds one route; **Delete this step** removes every route into or out of the step |
 

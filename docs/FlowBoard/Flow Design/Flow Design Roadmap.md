@@ -7,7 +7,7 @@ module: Flow Design
 
 ## v1 scope
 
-Flow Design spans two PRD milestones. **M5 — Flow engine**: *"Step defs, edges, fan-out, joins, conditional edges, approval gates, rework loops with `max_attempts` escalation, shell check steps, artifact contract validation."* **M8 — Cost views and flow editor UI.** (PRD §14)
+Flow Design is mostly two PRD milestones, with a few items from **M1** (seed templates, new-project flow type) and **M2** (pinning). **M5 — Flow engine**: *"Step defs, edges, fan-out, joins, conditional edges, approval gates, rework loops with `max_attempts` escalation, shell check steps, artifact contract validation."* **M8 — Cost views and flow editor UI.** (PRD §14)
 
 From M5 and backlog **Epic 5**:
 
@@ -43,7 +43,6 @@ From elsewhere:
 - The version chip with *adopted / edited / preview*, and *Save as v(n+1)*
 - The **validation strip** with one clickable row per problem
 - The **reachability** check (*"has nothing leading into it"*)
-- Per-step **budget**, **retries** and **sandbox** in the inspector
 - The *unattended and unsandboxed* flag
 - The canvas bar's **ceiling per task** and conditional-route count
 - The status bar's *N tasks still running on vN*
@@ -68,7 +67,7 @@ From elsewhere:
 
 ## Out of scope (v1)
 
-PRD §17: *"authentication, user accounts, roles, deployment config, multi-machine support, a plugin marketplace"*. That rules out authors, ownership and permissions on flows in v1 — the library's `@author` identities depend on the teams foundation the feature map calls *"a later, separate decision"*.
+PRD §17: *"authentication, user accounts, roles, deployment config, multi-machine support, a plugin marketplace"*. That rules out authors, ownership and permissions on flows in v1 — the library's `@author` identities depend on the teams foundation (feature map *Across everything → Teams & collaboration*). The feature map calls only the *shared team tier* (accounts, roles, a shared server) *"a later, separate decision"*. It says local collaboration with named people needs no accounts server.
 
 ## Related
 

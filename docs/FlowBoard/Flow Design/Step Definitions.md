@@ -24,19 +24,19 @@ Each source lists a different subset of fields. ✓ = present.
 | Model | `model` default `sonnet` | model | ✓ | **Model** | [[Models And Effort]] |
 | Effort | `effort` default `medium` | effort | ✓ | **Effort** | [[Models And Effort]] |
 | Permission mode | `permission_mode` default `bypassPermissions` | permission mode | — | — | [[Step Guardrails]] |
-| Allowed tools | `allowed_tools` (JSON, null = unrestricted) | allowed tools | limits | — | [[Step Guardrails]] |
-| Max turns | `max_turns` | limits | limits | — | [[Step Guardrails]] |
-| Budget | `max_budget_usd` | limits | limits | **Budget** | [[Step Guardrails]] |
-| Attempts | `max_attempts` default 3 | limits | — | **Retries** (0–5) | Not the same number — [[Flow Design Open Questions]] #11 |
+| Allowed tools | `allowed_tools` (JSON, null = unrestricted) | allowed tools | — | — | [[Step Guardrails]] |
+| Max turns | `max_turns` | limits* | limits* | — | [[Step Guardrails]] |
+| Budget | `max_budget_usd` | limits* | limits* | **Budget** | [[Step Guardrails]] |
+| Attempts | `max_attempts` default 3 | limits* | limits* | **Retries** (0–5) | Not the same number — [[Flow Design Open Questions]] #11 |
 | Advance mode | `advance_mode` `auto`/`approval` | advance mode | ✓ | **Approval** checkbox | [[Approval Gates]] |
-| Sandbox | — (setting; optional `step_defs.sandbox_profile` in backlog 1.1) | — | — | **Sandbox** | [[Step Guardrails]] |
+| Sandbox | no column; `settings.sandbox_profile` is *"overridable per step"* (§11.1). Backlog 1.1 adds an optional `step_defs.sandbox_profile` | — | — | **Sandbox** | [[Step Guardrails]] |
 | Requires | `requires` (JSON array of artifact type keys) | requires | ✓ | **needs** | [[Artifact Contract]] |
 | Produces | `produces` | produces | ✓ | **produces** | [[Artifact Contract]] |
 | Board order | `board_order` | — | — | — | [[Canvas Layout And Board Order]] |
 | Entry | `is_entry` | entry | — | — | [[Flow Validation]] |
 | Position | — | *Decide* (backlog 8.2) | *Don't persist* (D4) | `x`, `y` | [[Canvas Layout And Board Order]] |
 
-Bold = control label in the flow-designer mockup.
+Bold = control label in the flow-designer mockup. *limits\** = the generic word in backlog 8.2 and the drawio card (*"Skill or Agent → model, effort, advance mode, requires, produces, limits."*). Which columns it covers is inferred. Backlog 8.2 lists allowed tools separately.
 
 ## The prompt template
 
@@ -61,7 +61,20 @@ The provider-neutral version is `RunSpec` in `agent-provider.ts`: `model` (logic
 
 ## Mockup defaults
 
-`buildPreview()` and **+ Step** in the flow-designer mockup use: agent `agent`, model `sonnet`, effort `medium`, budget `$1.00`, no gate, `retries: 2`, sandbox `sealed container`, produces `<id>.md`. These are mockup values, not decided defaults.
+The flow-designer mockup fills steps in two ways:
+
+| Field | **+ Step** | `buildPreview()` (library preview) |
+|---|---|---|
+| Agent | `agent` | `ROLE[lib.domain] \|\| 'agent'` (e.g. `developer`, `analyst`) |
+| Model | `sonnet` | `opus` if `lib.cost / lib.steps > 0.3`, else `sonnet` |
+| Effort | `medium` | `medium` |
+| Budget | `$1.00` | `lib.cost / lib.steps * 1.6` |
+| Gate | none | set on `lib.gates` steps, counted back from the second-to-last |
+| Retries | `2` | `2` |
+| Sandbox | `sealed container` | `sealed container` |
+| Produces | `<id>.md` | `[]` |
+
+These are mockup values, not decided defaults.
 
 ## Sample step
 

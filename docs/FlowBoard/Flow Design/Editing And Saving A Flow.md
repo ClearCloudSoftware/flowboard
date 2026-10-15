@@ -16,7 +16,7 @@ stateDiagram-v2
   edited --> wontsave: a step needs a file nothing writes
   wontsave --> edited: you fix it
   edited --> saved: Save as v5
-  saved --> adopted: v5 becomes the version you're editing
+  saved --> adopted: v5 becomes the version you're editing · v4 keeps running for tasks already on it
   state "won't save" as wontsave
 ```
 
@@ -27,7 +27,9 @@ States and edge labels from the guide's *Versions* diagram.
 | **adopted** — *v4, unchanged* | `adopted 12 Sep`, quiet | Green | Inert: *"there is nothing to save"* |
 | **edited** — *saving makes v5* | `edited — saving makes v5`, amber | Green | Enabled |
 | **won't save** — *doesn't hold together* | Amber | Amber, *won't save — n problems* | Disabled |
-| **saved** — *v5, new version* | `adopted just now` | Green | Inert |
+| **saved** — *v5, new version* | `adopted just now` | Green | Inert (inferred) |
+
+The **saved** row comes from the guide's beat 9, which shows *"Green strip, Save enabled."* before you save. The mockup's Save button has no click handler, so the state after saving is not built.
 
 ## What counts as an edit
 

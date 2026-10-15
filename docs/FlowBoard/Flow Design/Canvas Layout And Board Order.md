@@ -24,7 +24,7 @@ Undecided — [[Flow Design Open Questions]] #5 and #6.
 ## Edge drawing in the mockup
 
 - Forward edges (target to the right) are cubic curves between node sides.
-- Backward edges *"arc over the top"* of both nodes so they *"can't be confused with forward flow"*.
+- Backward edges, whatever their condition, *"arc over the top"* of both nodes so they *"can't be confused with forward flow"*.
 - The canvas grows to fit: at least 880 × 400, plus 40 px past the furthest node.
 
 Backlog Story 8.2 instead routes *"backwards edges … under the row"*.
@@ -41,7 +41,7 @@ Backlog Story 8.2 instead routes *"backwards edges … under the row"*.
 | *"`board_order` = layered topological order."* | backlog Story 5.1 |
 | *"Columns: Backlog, Todo, flow steps by `board_order` (topological order from the graph, `on_fail` ignored), Done."* | backlog Story 2.2 |
 
-`on_fail` edges are back-edges, so ignoring them makes the graph acyclic and sortable. The board is a projection: *"A card's column is derived from its furthest-advanced step instance."* (PRD §4)
+Inference: an `on_fail` edge *"usually points *backwards*"* (guide), so ignoring them makes the graph acyclic and sortable. Not every one does — the mockup's `branch` preview draws a forward `fail` edge (`buildPreview()`). The board is a projection: *"A card's column is derived from its furthest-advanced step instance."* (PRD §4)
 
 ### Parallel steps on the board
 

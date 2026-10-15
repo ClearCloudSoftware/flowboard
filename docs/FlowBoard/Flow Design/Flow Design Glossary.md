@@ -22,7 +22,7 @@ module: Flow Design
 | **Outcome** | `pass` or `fail`, set by a step's run. Drives conditional edges. *"A missing outcome is never a pass."* (PRD §8) |
 | **Fan-out** | One step feeding several, which then run at the same time. Also **branching** (feature map) and **split** (board). |
 | **Join** | A step with several incoming edges. It waits for all of them. |
-| **Rework loop** | An `on_fail` edge pointing back to an earlier step. Also **loop back**, **send back**, **retry edge**. |
+| **Rework loop** | An `on_fail` edge pointing back to an earlier step. Also **loop back**, **send back**, **retry path** (monitor). |
 | **Branch (shape)** | In the library's shape glyph, a flow that splits into a pass path and a fail path that do not rejoin. Not the same as a git branch. |
 | **Approval gate** | A step with `advance_mode='approval'`: it stops when done and waits for you. Shown with pause bars. See [[Approval Gates]]. |
 | **Advance mode** | `auto` or `approval` (PRD §5). The drawio adds *wait for answers* as a third advance behaviour. |
@@ -49,10 +49,10 @@ module: Flow Design
 | **Role starter pack** | A ready-made flow per job function, with that role's skills and tools. See [[Role Starter Flows]]. |
 
 > [!warning] Overloaded words
-> - **"Retries"** — the mockup's **Retries** field means attempts after the first before the step gives up. In the runner, *infra retries* are automatic re-runs after a transient failure that do *not* count toward `max_attempts` (PRD §7). The inbox's **Retry** grants one more attempt after escalation. See [[Flow Design Open Questions]] #11.
+> - **"Retries"** — the mockup's **Retries** field is *"How many attempts before the step gives up and fails the task"* (guide). Reading it as attempts after the first (`max_attempts − 1`) is a proposal ([[Flow Design Open Questions]] #11). In the runner, *infra retries* are automatic re-runs after a transient failure that do *not* count toward `max_attempts` (PRD §7). The inbox's **Retry** grants one more attempt after escalation.
 > - **"Version"** — a *flow version* (`v4`) is not a *capability version*. *"Tasks are pinned to a flow version, flows are not pinned to a capability version"* (mockups README).
 > - **"Branch"** — a fan-out branch, a branch-shaped flow, and the task's git branch are three different things.
-> - **"Pack"** — a *role starter pack* is a seeded flow plus its toolbox; a *bundle pack* in the Capability Library installs skills, agents and flows together; a *provider pack* is a capability's packaging for one CLI. See [[Capability Library Glossary]].
+> - **"Pack"** — a *role starter pack* is a seeded flow plus its toolbox; a *bundle pack* in the Capability Library installs skills, agents and flows together; a *provider pack* is a capability's packaging for one CLI. See [[Capability Library Glossary]]. Whether role starter packs are bundle packs is open ([[Flow Design Open Questions]] #35).
 > - **"Flow editor" / "flow designer"** — the same screen. The PRD, backlog and two drawio pages say *editor*; the mockup and the *Harness architecture* page say *designer*.
 
 ## Related

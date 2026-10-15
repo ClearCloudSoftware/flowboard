@@ -5,7 +5,7 @@ module: Flow Design
 
 # Models And Effort
 
-Every agent step names a **model** and an **effort** (how hard it thinks). Check steps have neither.
+Every agent step names a **model** and an **effort** (how hard it thinks). Check steps don't use them: the seed table shows `—` (PRD §15), but both columns are `NOT NULL` with defaults (§5), so a shell step row still carries `sonnet`/`medium`, ignored rather than absent.
 
 ## The fields
 

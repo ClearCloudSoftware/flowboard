@@ -45,9 +45,10 @@ function validate(f){
 
 From `docs/mockups/flow-designer.html`. Notes:
 
-- `ancestors()` walks **every** incoming edge, `fail` back-edges included.
+- `ancestors()` walks **every** incoming edge, `fail` back-edges included. A step inside a loop is its own ancestor (`build` → `review` → `build`), so it would satisfy a need for its own output.
 - The entry is the *first* step with no incoming edge; every other such step is a problem.
-- It runs on every render, so the strip *"re-checks on every change, so the answer arrives as you type"* (guide). Backlog Story 8.2 asks for a *"Live validation banner (debounced)"*.
+- "Reachable" is really an incoming-edge check, not reachability from the entry. A disconnected cycle, or a step fed only by an edge from a deleted step (see **+ Step**, [[Flow Design Open Questions]] #18), passes.
+- It runs on every render except in preview (`live = !preview`), so the strip *"re-checks on every change, so the answer arrives as you type"* (guide). Backlog Story 8.2 asks for a *"Live validation banner (debounced)"*.
 
 ## Error messages
 

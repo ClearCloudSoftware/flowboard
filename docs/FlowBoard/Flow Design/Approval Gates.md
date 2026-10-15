@@ -59,7 +59,7 @@ See [[Flow Design Open Questions]] #29.
 ## Ideas
 
 - **Assign a step to a person or role** — *"a manual or approval step can name who does it (a specific teammate, or a role like 'reviewer')"* (feature map §2 ideas).
-- **Two sign-offs on one gate** — *"the same 'join' that waits for parallel branches, applied to humans"* (feature map §4 ideas). The @pm-guild *Story refinement* and @team-sec flows in the mockup library carry two gates.
+- **Two sign-offs on one gate** — *"the same 'join' that waits for parallel branches, applied to humans"* (feature map §4 ideas). The @pm-guild *Story refinement*, @team-sec and @growth *Launch campaign* v4 flows in the mockup library carry two gates.
 - **Team guardrails** — *"a review step must wait for approval"* as a rule nobody can quietly lift (feature map §16 ideas).
 - **Separation of duties** — *"whoever ran the build can't be the one who approves its own review"* (feature map §3 ideas).
 

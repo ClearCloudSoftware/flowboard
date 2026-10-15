@@ -67,7 +67,7 @@ From PRD §5. The tables that point *at* a flow:
 ```mermaid
 erDiagram
   projects ||--o{ flows : has
-  projects }o--|| flows : "default_flow_id"
+  projects }o--o| flows : "default_flow_id (nullable, no FK)"
   flows ||--o{ step_defs : contains
   flows ||--o{ step_edges : contains
   step_defs ||--o{ step_edges : "from / to"

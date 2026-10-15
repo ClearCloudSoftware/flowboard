@@ -29,7 +29,7 @@ Flow-adjacent endpoints:
 
 | Method | Path | Flow role |
 |---|---|---|
-| `POST` | `/api/projects` | Backlog Story 1.3: *"New‑project dialog with flow‑type select ('Empty' allowed); choosing one creates flow v1."* |
+| `POST` | `/api/projects` | Backlog Story 1.3: *"New‑project dialog with flow‑type select ("Empty" allowed); choosing one creates flow v1."* Story 1.3 names no endpoint; tying it to this one is an inference. |
 | `GET` | `/api/projects/:id/board` | *"board projection: columns + cards"* — columns from `board_order` |
 | `POST` | `/api/tasks/:id/promote` | *"backlog -> todo, pin flow, create worktree"* |
 | `GET` | `/api/skills`, `/api/agents` | Pickers for skill and agent steps |
@@ -52,7 +52,7 @@ Listed in [[Flow Design Open Questions]] #30.
 
 ## Server actions
 
-The drawio *Harness architecture* page, *API routes + server actions*: *"zod-validated input → write rows → enqueue a job → return"*. Saving a flow writes rows and enqueues nothing.
+The drawio *Harness architecture* page, *API routes + server actions*: *"zod-validated input → write rows → enqueue a job → return"*. No source says which job, if any, saving a flow enqueues.
 
 ## Related
 

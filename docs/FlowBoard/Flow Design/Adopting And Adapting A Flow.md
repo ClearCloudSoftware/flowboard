@@ -37,7 +37,7 @@ The guide's walkthrough: *Borrowing a step from `@team-sec/code-review` into `So
 | # | Beat | What happens | Rule shown |
 |---|---|---|---|
 | 1 | Where you start | *Software delivery v4* is adopted, holds together, nothing unsaved. *Three tasks are running on v4.* | **adopted** · chip quiet, strip green |
-| 2 | You need a security sweep | Something touches payments. Filter to SDLC: 17 flows narrow to 5. | Domains file a flow by **the job it does** |
+| 2 | You need a security sweep | Something touches payments. Filter to SDLC: 17 flows narrow to 5. (The guide's picture for this beat highlights the `QA 1` chip, not `SDLC 5`.) | Domains file a flow by **the job it does** |
 | 3 | Three recipes, one name | *Code review* by three authors collapses into one entry, `3 authors`. | **Names are not identifiers** |
 | 4 | Expand and compare | @alex's fork drops the security sweep; @team-sec's adds it. | Compare **runs**, **gates**, **cost**, **difference line** |
 | 5 | Preview before you commit | @team-sec's graph is drawn ghosted. | **preview** · inspector disabled, Save inert |

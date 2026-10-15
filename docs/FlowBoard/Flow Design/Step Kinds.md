@@ -9,8 +9,8 @@ module: Flow Design
 
 | Kind | What runs | References | Verdict comes from | Source |
 |---|---|---|---|---|
-| `skill` | A headless agent session that invokes a packaged instruction as `/slug` | `skill_id` | The run's outcome (`set_outcome` or `{"outcome":…}` in a produced JSON) | PRD §5, §7 |
-| `agent` | A headless agent session with the agent's system prompt appended | `agent_id` | Same as skill | PRD §5, §7 |
+| `skill` | A headless agent session that invokes a packaged instruction as `/slug` | `skill_id` | The run's outcome (`set_outcome` or `{"outcome":…}` in a produced JSON) | PRD §5, §7; outcome rule §8 |
+| `agent` | A headless agent session with the agent's system prompt appended | `agent_id` | Same as skill | PRD §5, §7; outcome rule §8 |
 | `shell` | A plain command, no model | `command`, or the project's `check_command` | **The exit code** | PRD §7 *Shell steps*; see [[Check Steps]] |
 | `manual` | A human task | — | Not specified | PRD §5 only |
 

@@ -14,7 +14,7 @@ The flow-designer guide: *"Two things the graph says that a list of steps can't"
 | **Fan-out** | *"Branching — One step can kick off several next steps at once (for example, write code and write tests in parallel)."* | *"one step feeding several — means those steps run *at the same time*, each taking its own worker. It buys wall-clock time at the cost of parallel spend."* | *"If more than one edge fires, create all the target step instances and start them concurrently. This is the fan-out."* |
 | **Join** | *"Joining — A step can wait for several earlier steps to all finish before it starts (review waits for both code and tests)."* | *"several steps feeding one — means that step waits for *all* of them. `review` sits behind `build` and `tests`, so it cannot start on a half-finished task however fast one branch is."* | *"A step definition with multiple incoming edges is a join: it starts only once every upstream step instance for this task is `done`."* |
 | **Loop** | *"Loops — A failed review can send the task back to an earlier step to try again."* | *"Something can send work back to an earlier step — a failed review, a defect. Cheap to add, expensive when it fires often."* | *"an `on_fail` edge pointing at an earlier step increments that step instance's `attempts` and creates a new run."* |
-| **Branch** | — | *"The flow takes one route or another and does not rejoin — a pass path and a failure path that end differently."* | Conditional edges with no shared target |
+| **Branch** | — | *"The flow takes one route or another and does not rejoin — a pass path and a failure path that end differently."* | None. PRD §8 has no branch rule; the shape exists only in the mockup and guide (conditional edges with no shared target) |
 
 The monitor guide's four hand-off rules say the same at run time: *Advance*, *Fan out*, *Join*, *Loop back*.
 
@@ -54,7 +54,7 @@ The rules a designer sets up when adding an `on_fail` back-edge (PRD §8; drawio
 | Total runs | *"`max_attempts` counts total runs of the step, first try included (infra retries excluded). The default of 3 means one try and two automatic redos."* |
 | Escalate, don't fail | When a rework would pass `max_attempts`, or a shell step fails with the same fingerprint twice: *"start nothing. Set the target step instance to `awaiting_approval` and the task to `blocked`"*. You pick **Retry** (one more attempt, with a note; counter not reset) or **Fail task**. |
 | Rework sees the raw failure | The new run also reads *"the artifacts the failing step produced"* |
-| Downstream re-runs | *"downstream `done` → `skipped` so they re‑instantiate"*, superseded runs `wasted=1` (backlog Story 5.2) |
+| Downstream re-runs | *"downstream runs `wasted=1`, downstream `done` → `skipped` so they re‑instantiate"* (backlog Story 5.2). PRD §8 says *"Mark the superseded runs `wasted = 1`"*. |
 
 The feature map (§4): *"Three tries by default — The first attempt plus two redos. Every loop that sends work back to the same step draws from the same three, whether the tests failed or the review did."*
 

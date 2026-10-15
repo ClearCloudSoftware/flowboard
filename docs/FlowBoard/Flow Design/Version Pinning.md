@@ -39,14 +39,22 @@ sequenceDiagram
 |---|---|---|
 | A task's flow version | Yes | PRD §4 |
 | A flow's capabilities (skills, agents) | **No** — a flow names capabilities, not capability versions; an update reaches every flow on its next run | capability-library guide; [[Updating And Removing Capabilities]] |
-| Settings such as draft mode and sandbox defaults | No — read at run time | PRD §13 |
+| Settings such as draft mode and sandbox defaults | No (inference: PRD §13 describes them as settings but does not say when they are read) | PRD §13 |
 
 > [!note] A pinned flow can still change behaviour
 > Because capabilities are not pinned, updating `code-review` changes what a pinned `v4` task does on its next run. The capability-library mockup warns instead of pinning. See [[Capability Library Open Questions]] #4.
 
 ## When pinning happens
 
-The sources disagree on whether pinning happens at **promotion** (backlog → todo) or at **start** (todo → running). PRD §5 says `tasks.flow_id` is *"null while in backlog, pinned on promotion"*; PRD §4 and the drawio card *Start task · pin flow version* say start. Decision D1 makes Start a separate button. See [[Flow Design Open Questions]] #7.
+The sources disagree on whether pinning happens at **promotion** (backlog → todo) or at **start** (todo → running).
+
+| Promotion | Start |
+|---|---|
+| PRD §5: `tasks.flow_id` *"null while in backlog, pinned on promotion"* | PRD §4: *"Flows are version-pinned at task start."* |
+| PRD §12: `POST /api/tasks/:id/promote -- backlog -> todo, pin flow, create worktree` | Architecture README: *"a task pins its version at start"* |
+| Backlog Story 2.1: *"Pin `tasks.flow_id` at promotion"* | drawio card *Start task · pin flow version* |
+
+Backlog D1's *default recommendation* (not yet decided) is an explicit Start button: *"Explicit Start button on card + sheet; promote stays cheap"*. See [[Flow Design Open Questions]] #7.
 
 The feature map (§3) says *"Kicking off a task gives it a clean, private copy of the code to work in and locks in the recipe it will follow."*
 

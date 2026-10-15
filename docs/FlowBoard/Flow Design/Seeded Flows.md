@@ -7,7 +7,7 @@ module: Flow Design
 
 > **Ready-made recipes** — Ships with a couple of complete ones (a full software-development pipeline and a research pipeline) so you're not starting from a blank page. — feature map §2
 
-The sources describe four different starter sets. They are not reconciled — [[Flow Design Open Questions]] #29.
+The sources describe three different starter sets (sections 1–3); section 4 is the mockup's sample library, not a seed set. They are not reconciled — [[Flow Design Open Questions]] #29.
 
 ## 1. The PRD default flow
 
@@ -47,7 +47,7 @@ The milestone proof for M5: *"a deliberately failing test in the scratch repo se
 
 ## 2. Backlog flow templates
 
-Backlog Story 1.2: *"Flow templates as JSON: `software-development` (the 9‑step table, exact models/efforts/gates/edges) and `researcher` (scope → web research → summarize → grounding ✋, `on_fail` loop)."* Seeded agents for the research template: `web‑researcher`, `research‑summarizer`, `fact‑checker`. Extra artifact types: `sources`, `grounding_report` (Story 1.1). The ✋ marks `grounding` as a gate.
+Backlog Story 1.2: *"Flow templates as JSON: `software-development` (the 9‑step table, exact models/efforts/gates/edges) and `researcher` (scope → web research → summarize → grounding ✋, `on_fail` loop)."* The same story seeds eight agents in one list (*"researcher, planner, test‑writer, summarizer, backlog‑importer (builtin), web‑researcher, research‑summarizer, fact‑checker"*); it does not say which steps of `researcher` use which agent ([[Flow Design Open Questions]] #32). Extra artifact types: `sources`, `grounding_report` (Story 1.1). The ✋ marks `grounding` as a gate.
 
 ```mermaid
 flowchart LR
@@ -59,7 +59,7 @@ The loop target of the `on_fail` edge is not stated; the diagram's target is a g
 
 ## 3. The mockups' Software delivery
 
-Used across the flow-designer, monitor, task-detail and capability-library mockups as *Software delivery @core v4* (`★ org default`, 182 runs, ~$2.14/task, `fanloop` shape):
+Named *Software delivery @core v4* in the flow-designer, task-detail and capability-library mockups; the monitor shows the same steps and `v4` but no name or author (`★ org default`, 182 runs, ~$2.14/task, `fanloop` shape):
 
 | Step | Agent | Model | Effort | Gate |
 |---|---|---|---|---|
@@ -78,7 +78,7 @@ Edges: research → plan → build ∥ tests → review → summarize, and revie
 
 | Name | Author | Ver | Domain | Shape | Steps | Gates | ~$/task | Runs | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| Software delivery | @core | 4 | SDLC | fanloop | 6 | 1 | 2.14 | 182 | ★ open now |
+| Software delivery | @core | 4 | SDLC | fanloop | 6 | 1 | 2.14 | 182 | ★ (the open flow; the rail shows `★ org default`, not *open now*) |
 | Software delivery | @alex | 2 | SDLC | fan | 5 | 0 | 1.61 | 23 | forked from @core v3; *"No approval gate — it merges itself."* |
 | Code review | @core | 7 | SDLC | linear | 3 | 1 | 0.42 | 410 | ★ *"Two reviewers on anything touching auth."* |
 | Code review | @alex | 3 | SDLC | linear | 2 | 1 | 0.19 | 64 | forked from @core v5; *"no security sweep"* |

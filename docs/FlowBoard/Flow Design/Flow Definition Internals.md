@@ -15,7 +15,7 @@ From `docs/old/architecture/02-core-and-engine.md` §2:
 |---|---|
 | **Role** | *"DAG of `step_defs` + `step_edges`; immutable versions; artifact-contract check; `board_order` topological sort."* |
 | **Seam** | *"pure functions over graph JSON — no I/O, no provider. The most reusable piece in the system."* |
-| **Genericize** | *"validation stays provider-independent *if* it validates against **capability descriptors** rather than hardcoded knobs. Two design-time checks share one engine"*: the artifact contract and the capability contract. |
+| **Genericize** | *"validation stays provider-independent *if* it validates against **capability descriptors** (…) rather than hardcoded knobs. Two design-time checks share one engine"*: the artifact contract and the capability contract. |
 | **Composes with** | *"feeds the engine (3), the editor (greys invalid edges *and* unsupported knobs), and the board's column order (4)."* |
 | **Idea** | *"flows are already immutable JSON — make them **exportable across projects** … A flow becomes a shareable artifact; keys uniquified on import."* |
 
@@ -51,7 +51,7 @@ flowchart LR
 | Check | Needs | Note |
 |---|---|---|
 | Artifact contract | The graph only | *"checks *type-graph reachability*, not bytes"* (`01-ports.md`, ArtifactStore) |
-| Known types | The artifact type list | Seed list in PRD §6 |
+| Known types | The artifact type list | Seed list in PRD §6 (10 types); backlog Story 1.1 says *"the nine PRD types"* — [[Flow Design Open Questions]] #25 |
 | Capability contract | Each step's target provider's capability set | *"Validation (component 2) checks steps against the *target provider's* capability set"* (`01-ports.md`) |
 | Provider match | The registry's pack list | Couples pure validation to registry state — [[Capability Library Open Questions]] #6 |
 
@@ -70,7 +70,7 @@ The engine *"Depends only on the AgentProvider port's `RunResult`, never on how 
 
 ## Types
 
-The reference tree (`docs/old/reference/`) has no `StepDef`, `FlowDef`, `Edge` or `FlowVersion` type. `StepDef` appears only as an undeclared name in `07-ports-in-practice.md`. The nearest typed shapes are `RunSpec`, `PromptParts` and `RunResult` in `agent-provider.ts`.
+The reference tree (`docs/old/reference/`) has no `StepDef`, `FlowDef`, `Edge` or `FlowVersion` type. `StepDef` appears only as an undeclared name, in three places: `02-core-and-engine.md` (`run(step: StepDef, …)`), `07-ports-in-practice.md` (`runStep`) and `docs/old/design/README.md` (`columns: StepDef[]`). The nearest typed shapes are `RunSpec`, `PromptParts` and `RunResult` in `agent-provider.ts`.
 
 ## Tests
 

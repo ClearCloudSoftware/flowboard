@@ -28,7 +28,7 @@ From the appendix:
 | QA / Test engineer | plan the testing · author cases · execute and automate · triage defects · regression and sign-off | defects → triage → execute |
 | Marketing / Product marketing | positioning and messaging · create content · plan the launch · run the campaign · measure and iterate | *missed* → content |
 
-The developer flow *"is FlowBoard's own built-in pipeline — a fan-out to build and tests, a join at review, and a rework loop."*
+The developer flow *"is FlowBoard's own built-in pipeline — a fan-out to build and tests, a join at review, and a rework loop."* The PRD §15 seed differs: its join is at `check`, with `review` after it on `on_pass`.
 
 ```mermaid
 flowchart LR
@@ -65,7 +65,7 @@ flowchart LR
 
 ## Relation to bundle packs
 
-A role pack ships a flow *and* its skills and tools, which is what a [[Bundle Packs|bundle pack]] is in the Capability Library. The sources don't say whether role starter packs *are* bundle packs.
+A role pack ships a flow *and* its skills and tools, which is what a [[Bundle Packs|bundle pack]] is in the Capability Library. The sources don't say whether role starter packs *are* bundle packs ([[Flow Design Open Questions]] #35).
 
 ## Related
 

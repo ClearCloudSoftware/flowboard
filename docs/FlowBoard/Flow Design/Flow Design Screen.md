@@ -13,14 +13,15 @@ The flow designer, `flowboard/flows`. Mockup: `docs/mockups/flow-designer.html`;
 
 ```
 ┌ flowboard/flows  [Software delivery @core v4 adopted 12 Sep]   draft mode  + Step  Save as v5 ┐
-├───────────────┬──────────────────────────────────────────┬──────────────┤
+├───────────────┬───────────────────────────────────────────┬──────────────┤
 │ FLOW LIBRARY  │ CANVAS   drag a step to move it · click…  │ STEP  review │
 │ search        │ (preview bar)                             │ agent model  │
-│ domain chips  │   [Research]→[Plan]→[Build ]→[Review]→…   │ effort budget│
-│ entries       │                    [Tests ]               │ retries      │
-│               │ 7 steps · 2 conditional routes · 1 gate · │ gate sandbox │
-│               │ est. $15.80 ceiling per task              │ needs/produc.│
-├───────────────┴──────────────────────────────────────────┴──────────────┤
+│ domain chips  │                    [Build ]               │ effort budget│
+│ entries       │   [Research]→[Plan]→[Tests ]→[Review]→…   │ retries      │
+│               │                    [Threat model]         │ gate sandbox │
+│               │ 7 steps · 2 conditional routes · 1 gate · │ needs/produc.│
+│               │ est. $15.80 ceiling per task              │              │
+├───────────────┴───────────────────────────────────────────┴──────────────┤
 │ VALIDATION STRIP  won't save — 1 problem                                 │
 ├──────────────────────────────────────────────────────────────────────────┤
 │ 17 flows · 5 authors · 3 tasks still running on v4      del · esc        │
@@ -35,7 +36,7 @@ Columns are 300 px · flexible · 272 px. Below 1100 px wide the inspector hides
 |---|---|---|---|
 | 1 | **Version chip** | Name, `@author vN`, and `adopted <date>` or `edited — saving makes v(n+1)` or `preview` | *"Which recipe, whose, which version, and whether you've changed it."* Turns amber when edited. |
 | 2 | **Library** | Header with flow count, search, domain chips, grouped entries | See [[Flow Library]] |
-| 3 | **Canvas** | Grid background, steps as 140 × 56 boxes, SVG edges, hint *"drag a step to move it · click to edit it"*, preview bar, canvas bar | *"Drag to arrange, click to edit, and read the routes off the edges."* |
+| 3 | **Canvas** | Grid background, steps as boxes 140 px wide (height follows the content; edges assume 56 px), SVG edges, hint *"drag a step to move it · click to edit it"*, preview bar, canvas bar | *"Drag to arrange, click to edit, and read the routes off the edges."* |
 | 4 | **Inspector** | Header `STEP <id>`; fields; needs/produces; problem count; **Delete this step** | *"Everything about the selected step, including what it needs and makes."* |
 | 5 | **Validation strip** | Green check, or amber header with one button per problem | *"Green when the recipe holds together; amber, and Save is disabled, when it doesn't."* |
 | 6 | **Status bar** | `N flows in the library · N authors · N tasks still running on vN — they keep it until they finish`, key hints | *"Library totals, and how many tasks are still running on the version you're editing."* |
@@ -80,10 +81,10 @@ The mockup **opens** on *Software delivery @core v4* with `review` selected, the
 
 ## Design system
 
-Light only, zero radius, IBM Plex Mono and Sans, hairlines not shadows. Colour roles: petrol `--run` for pass and primary actions, amber `--wait` for problems and edits, red `--fail` for fail routes and delete. The drawio *Harness architecture* page lists the target stack: *"shadcn/ui + Tailwind (light, zero radius, IBM Plex) · xyflow for the designer"*.
+Light only, zero radius, IBM Plex Mono and Sans, hairlines not shadows. PRD §13 says *"Dark-first, dense, keyboard-friendly"* instead — [[Flow Design Open Questions]] #34. Colour roles: petrol `--run` for pass and primary actions, amber `--wait` for problems and edits, red `--fail` for fail routes and delete. The drawio *Harness architecture* page lists the target stack: *"shadcn/ui + Tailwind (light, zero radius, IBM Plex) · xyflow for the designer"*.
 
 > [!warning] Two designs of the editor
-> PRD §13 and the drawio *Flow editor* card accept *"A vertical list of steps with an 'add step' button and a connections panel"* for v1; the mockup is a canvas. See [[Flow Design Open Questions]] #27.
+> PRD §13 accepts *"A vertical list of steps with an "add step" button and a connections panel"* for v1, and the drawio *Flow editor* card (page *FlowBoard ideation*) reads *"Vertical step list + connections panel"*. The mockup is a canvas, and so is the drawio *Harness architecture* page's *Flow designer* card: *"xyflow canvas; live requires / produces check"*. See [[Flow Design Open Questions]] #27.
 
 ## Related
 

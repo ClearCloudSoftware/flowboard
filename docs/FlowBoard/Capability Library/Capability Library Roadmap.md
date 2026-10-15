@@ -35,7 +35,7 @@ Prerequisite already found the hard way: `--plugin-dir`, not `--add-dir`, regist
 
 - **A shared, governed library** — teammates publish flows, agents and skills the whole team draws from, with an owner who controls who can change the "golden" recipes.
 - **Team guardrails vs personal defaults** — team-pinned rules nobody can quietly lift, separate from personal preferences.
-- **Role starter packs** — a bundle per function (UX/UI, business analyst, cloud/DevOps, QA, marketing…). See [[Bundle Packs]].
+- **Role starter packs** — a seed flow plus toolbox per function (UX/UI, business analyst, cloud/DevOps, QA, marketing…). Whether each one is a bundle pack is open: [[Flow Design Open Questions]] #35. See [[Bundle Packs]].
 - **Permissions** — the teams foundation names *install skills* as one of the actions roles gate.
 - **Agent/skill memory** — a memory scope per agent or skill: what that role has picked up across runs.
 

@@ -18,7 +18,7 @@ The flow-designer guide: *"Each field is a guardrail — the things that decide 
 | Tools | `allowed_tools` (JSON; null = unrestricted) | — | Allowed tool list | — |
 | Attempts | `max_attempts` (default 3) | **Retries** (0–5) | *"How many attempts before the step gives up and fails the task."* (guide) | *"Set high on a step that fails deterministically and you pay for the same failure several times."* |
 | Approval | `advance_mode` | **Approval** | See [[Approval Gates]] | *"No gate on the last step before a merge means nothing human ever sees the result."* |
-| Sandbox | — (setting; backlog adds optional `step_defs.sandbox_profile`) | **Sandbox** | *"How locked down the run is: none, a container, or a sealed container with no network."* | *"**none** on an unattended step is an agent with your machine and your keys, reading untrusted content."* |
+| Sandbox | no column; `settings.sandbox_profile` is *"overridable per step"* (§11.1). Backlog 1.1 adds optional `step_defs.sandbox_profile` | **Sandbox** | *"How locked down the run is: none, a container, or a sealed container with no network."* | *"**none** on an unattended step is an agent with your machine and your keys, reading untrusted content."* |
 | Permission mode | `permission_mode` (default `bypassPermissions`) | — | The agent CLI's permission mode | — |
 
 ## Logical caps, physical backstops
@@ -41,7 +41,7 @@ Backlog decision D7: *"Container + egress allowlist; `host` only for non-bypass 
 The mockup inspector argues with one combination: no approval gate **and** sandbox `none` shows a chip, *unattended and unsandboxed*. The guide: *"The inspector flags it rather than blocking it — but in the real product that's the combination the sandbox rule refuses outright."*
 
 > [!warning] Two different rules
-> The PRD rule pairs **permission mode** with the sandbox tier. The mockup pairs **advance mode** (gate) with the sandbox. A step can have an approval gate and still run `bypassPermissions` on the host. See [[Flow Design Open Questions]] #13.
+> The PRD rule pairs **permission mode** with the sandbox tier. The mockup pairs **advance mode** (gate) with the sandbox. The mockup's chip would not flag a gated step on the host running `bypassPermissions`, which the PRD rule refuses (§11.1). See [[Flow Design Open Questions]] #13.
 
 ### Proposal: sandbox value mapping
 
@@ -55,7 +55,7 @@ The mockup inspector argues with one combination: no approval gate **and** sandb
 
 ## Retries versus `max_attempts`
 
-The mockup's **Retries** (default 2) and the PRD's `max_attempts` (default 3, total runs) likely describe the same budget counted differently. **Proposal:** Retries = `max_attempts − 1`. The guide says the step *"fails the task"* at the limit; PRD §8 and decision D3 say *"escalate to a gate, never auto-fail"*. Also, the counter is spent by the rework **target**, not the failing step. See [[Flow Design Open Questions]] #11 and [[Branching Joining And Loops]].
+The mockup's **Retries** (default 2) and the PRD's `max_attempts` (default 3, total runs) likely describe the same budget counted differently. **Proposal:** Retries = `max_attempts − 1`. The guide says the step *"fails the task"* at the limit; PRD §8 says *"Escalate, don't fail, when a loop is spent or stuck."* Decision D3: *"escalate to a gate, never auto-fail"*. Also, the counter is spent by the rework **target**, not the failing step. See [[Flow Design Open Questions]] #11 and [[Branching Joining And Loops]].
 
 ## Ceiling per task
 

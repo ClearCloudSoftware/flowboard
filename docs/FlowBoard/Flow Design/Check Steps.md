@@ -7,7 +7,7 @@ module: Flow Design
 
 > **Check steps** — A step can also run a plain command, like your linter and test suite, with no AI involved. If the command succeeds, the step passed. If it fails, the step failed, and the error output goes to the next attempt word for word. This is how FlowBoard knows the code works instead of taking an agent's word for it. — feature map §2
 
-In the schema a check step is `kind='shell'`. The feature map, the drawio and the mockups call it a *check*; the PRD and architecture call it a *shell step*.
+In the schema a check step is `kind='shell'`. The feature map and the drawio call it a *check*; the PRD and architecture call it a *shell step*, though the PRD also says *"shell check step"* in places (§5 `projects.check_command`, §14 M5). No mockup has one.
 
 ## The rules
 

@@ -34,7 +34,7 @@ The Delivery pack is *"the starter set. Everything the built-in software pipelin
 
 ## Role starter packs
 
-The feature map extends bundle packs into **role starter packs**: one per function (business analyst, UX/UI, cloud/DevOps, QA, marketing…), each carrying that role's flow already wired plus the **skills, tools and design system** the role reaches for, with default models and guardrails.
+The feature map describes **role starter packs**, and reading them as an extension of bundle packs is an inference: the feature map never links the two ([[Flow Design Open Questions]] #35). There is one per function (business analyst, UX/UI, cloud/DevOps, QA, marketing…), each carrying that role's flow already wired plus the **skills, tools and design system** the role reaches for, with default models and guardrails.
 
 - Packs are **seed flows, not screenshots** — versioned and editable once adopted.
 - The arrows *between* roles are handoffs; one role's output becomes the next role's inbox item.

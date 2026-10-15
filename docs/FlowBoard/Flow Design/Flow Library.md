@@ -8,7 +8,7 @@ module: Flow Design
 The left rail of the designer: *"Every flow you can start from, filtered by domain, grouped when names collide."* (flow-designer guide, anatomy item 2)
 
 > [!note] Designed in the mockup, not in the PRD
-> The PRD has one flow per project and no library. The backlog has a *"Reuse… picker (steps or whole flow from other projects, key uniquified)"* and *"Start from flow type"* (Story 8.2). The feature map's ideas add *"A shared, governed library"* (§16) and *"A shareable recipe library"* (parking lot). The mockup designs the library in full. Where it lives and who owns it is [[Flow Design Open Questions]] #1–#3.
+> The PRD allows several flows per project (`UNIQUE (project_id, name, version)`) with one default (`projects.default_flow_id`), and has no library. The backlog has a *"Reuse… picker (steps or whole flow from other projects, key uniquified)"* and *"Start from flow type"* (Story 8.2). The feature map's ideas add *"A shared, governed library"* (§16) and *"A shareable recipe library"* (parking lot). The mockup designs the library in full. Where it lives and who owns it is [[Flow Design Open Questions]] #1–#3.
 
 ## The same-name problem
 
@@ -23,13 +23,13 @@ Groups sort by number of variants, then by name.
 ## A variant card
 
 ```
-@team-sec v2                                   
-6 steps · 2 gates · ~$1.18/task · 97 runs · 3d ago
-forked from @core v5            (when it is a fork)
-Adds threat-model and secret-scan. Slower and ~3× the cost — required for payment paths.
+@alex v3
+2 steps · 1 gate · ~$0.19/task · 64 runs · yesterday
+forked from @core v5            (only when it is a fork)
+Single pass, no security sweep. Fine for docs, wrong for anything that ships.
 ```
 
-Marks: `★ org default` for the golden variant; `open now` for the one on your canvas.
+Marks: `★ org default` for the golden variant; `open now` for the one on your canvas, which also gets a dark left border. `★ org default` takes precedence, so in the sample data `open now` never shows: the open entry, *Software delivery @core*, is also golden. **Use this flow** does not move the mark.
 
 ## What to compare, in what order
 
@@ -62,7 +62,7 @@ In the mockup the shape is a stored field. **Proposal:** derive it from the grap
 
 > **Filtering is by domain, not by folder.** The chips come from FlowBoard's role starter packs — Analysis, PO/PM, SDLC, QA, Platform, Design, Marketing — so a flow is filed by the job it does, not by who wrote it. Search matches names, authors and descriptions together, which is how you find "everything @team-sec published" in one go. — flow-designer guide
 
-Chips: All, Analysis, PO / PM, SDLC, QA, Platform, Design, Marketing, each with a count. See [[Role Starter Flows]].
+Chips: All, Analysis, PO / PM, SDLC, QA, Platform, Design, Marketing, each with a count. See [[Role Starter Flows]]. The guide's seven domains do not match the feature map's six role packs, which keep *Business analyst / Product owner* as one — [[Flow Design Open Questions]] #35.
 
 ## Sample library
 

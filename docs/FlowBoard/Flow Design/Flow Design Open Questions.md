@@ -11,7 +11,7 @@ Places where the sources disagree or leave a gap. Each needs a decision before b
 
 ### 1. Per project, or one shared library?
 
-The PRD makes a flow belong to a project: `flows.project_id`, the route `/p/[slug]/flow`, and *"Editing a project's flow never moves an in-flight task"* (§4). Backlog Story 8.2 adds a *"Reuse… picker (steps or whole flow from other projects, key uniquified)"*. Story 1.3 creates flow v1 from a flow type when a project is made. The flow-designer mockup instead shows one shared, multi-author library (`@core`, `@alex`, `@team-sec`, `@pm-guild`, `@growth`) that a project *adopts* from. The capability-library mockup ships flows inside bundle packs. The monitor mockup runs one `v4` flow across tasks from five repos. See [[Flow Library]] and [[Flows And Flow Versions]].
+The PRD makes a flow belong to a project: `flows.project_id`, the route `/p/[slug]/flow`, and *"Editing a project's flow never moves an in-flight task"* (§4). Backlog Story 8.2 adds a *"Reuse… picker (steps or whole flow from other projects, key uniquified)"*. Story 1.3 creates flow v1 from a flow type when a project is made. The flow-designer mockup instead shows one shared, multi-author library (`@core`, `@alex`, `@team-sec`, `@pm-guild`, `@growth`) that a project *adopts* from. The capability-library mockup ships flows inside bundle packs. The monitor mockup runs one `v4` flow across tasks from six repos (`flowboard/api`, `core`, `docs`, `providers`, `runner`, `web`). See [[Flow Library]] and [[Flows And Flow Versions]].
 
 ### 2. What is an author, and what identifies a flow?
 
@@ -41,9 +41,9 @@ In the mockup, dragging a step marks the recipe unsaved (*"any change — even d
 - PRD §5, `tasks.flow_id`: *"null while in backlog, pinned on promotion"*.
 - PRD §12: `POST /api/tasks/:id/promote -- backlog -> todo, pin flow, create worktree`.
 - Backlog Story 2.1: *"Pin `tasks.flow_id` at promotion"*.
-- Drawio *Functional components*: *Start task · pin flow version*. The architecture README also says start.
+- Drawio *Functional components*: *Start task · pin flow version*. The architecture README: *"a task pins its version at start"*.
 
-Decision **D1** makes promote and Start separate actions, so the two moments differ. See [[Version Pinning]].
+Promotion: PRD §5 and §12, backlog 2.1. Start: PRD §4, the drawio, the architecture README. Decision **D1** recommends separate promote and Start actions (*"Explicit Start button on card + sheet; promote stays cheap"*), which would make these two moments differ. D1 is only a default recommendation, not decided (D3 is marked *"Decided 2026-10-15"*), and Story 2.1 still says *"decide auto‑start on promote vs explicit Start"*. See [[Version Pinning]].
 
 ### 8. Can a saved version fail validation?
 
@@ -61,7 +61,7 @@ The PRD and the backlog give a step a `kind` (`skill | agent | shell | manual`) 
 
 ### 11. Retries versus `max_attempts`, and what happens at the cap
 
-The mockup's **Retries** field (0–5, default 2) is *"How many attempts before the step gives up and fails the task."* The PRD's `max_attempts` (default 3) *"counts total runs of the step, first try included"*. Its counter lives on the rework **target**, and at the cap FlowBoard escalates instead of failing (§8, decision **D3**, decided 2026-10-15). **Proposal:** Retries = `max_attempts − 1`. The monitor and task-detail guides still say *"Retries are capped, then the task fails"*, and backlog Story 10.1 still says *"three failures fail the task"*. See [[Step Guardrails]].
+The mockup's **Retries** field (0–5, default 2) is *"How many attempts before the step gives up and fails the task."* The PRD's `max_attempts` (default 3) *"counts total runs of the step, first try included"*. Its counter lives on the rework **target**, and at the cap FlowBoard escalates instead of failing (§8, decision **D3**, decided 2026-10-15). **Proposal:** Retries = `max_attempts − 1`. Several sources still fail the task at the cap: the monitor guide (*"Retries are capped, then the task fails"*, `monitor-guide.html:691`), the task-detail guide (*"Retries are capped. After the limit the engine gives up and fails the task"*, `task-detail-guide.html:567`), PRD §16 itself (*"three failed attempts fail the task"*, `PRD.MD:651`), backlog Story 10.1 (*"three failures fail the task"*) and the drawio card *D3 · max_attempts = attempts allowed* (*"Fail on the 4th (default 3)"*, page *FlowBoard ideation*). See [[Step Guardrails]].
 
 ### 12. Is the per-task cost ceiling really a ceiling?
 
@@ -75,11 +75,11 @@ Sandbox values differ by source:
 - PRD §13 settings: `host / container / microVM`
 - `08-sandboxing.md`, `01-ports.md`: `host | container | gvisor | microvm`
 
-Backlog Story 1.1 adds an optional `step_defs.sandbox_profile` override; the PRD has no step column for it. The mockup flags a step with no gate and no sandbox as *unattended and unsandboxed*, and the guide says the real product *"refuses outright"*. The PRD rule is narrower: *"`bypassPermissions` is only allowed when the step runs in a sandbox tier"* (§11.1). The mockup has no `permission_mode` field. **Proposal** mapping in [[Step Guardrails]].
+Backlog Story 1.1 adds an optional `step_defs.sandbox_profile` override. PRD §11.1 says the settings `sandbox_profile` is *"overridable per step"* (`PRD.MD:502`) but has no step column for it. The mockup flags a step with no gate and no sandbox as *unattended and unsandboxed*, and the guide says the real product *"refuses outright"*. The PRD rule is narrower: *"`bypassPermissions` is only allowed when the step runs in a sandbox tier"* (§11.1). The mockup has no `permission_mode` field. **Proposal** mapping in [[Step Guardrails]].
 
 ### 14. Per-step egress edits made outside the designer
 
-The monitor and the inbox offer **Allow host & retry**, which *"adds api.stripe.com to this step's egress allowlist"* so that *"the next task down this flow will not pay the same toll"*. That changes a step definition from outside the designer. Does it create a flow version? The PRD keeps the allowlist in `settings.sandbox_profile`, not on the step.
+The monitor and the inbox offer **Allow host & retry**, which *"adds api.stripe.com to this step's egress allowlist"* so that *"the next task down this flow will not pay the same toll"*. That changes a step definition from outside the designer. Does it create a flow version? Partly answered: the PRD keeps the allowlist in `settings.sandbox_profile` (*"tier, image, egress allowlist, limits"*), *"overridable per step"* (§11.1, `PRD.MD:502`), so a per-step allowlist is expected. Whether that override lives on the flow version is still open.
 
 ### 15. Model ids and effort values
 
@@ -127,7 +127,7 @@ The PRD uses type keys (`research_brief`, `plan`, `check_output`) stored as `NN-
 
 ### 25. Which artifact types are seeded?
 
-PRD §6 seeds ten: `research_brief`, `questions`, `answers`, `plan`, `explainer`, `implementation_notes`, `test_notes`, `check_output`, `review`, `summary`. Backlog Story 1.1: *"the nine PRD types + `sources`, `grounding_report`"*. The backlog count predates `check_output`.
+PRD §6 seeds ten: `research_brief`, `questions`, `answers`, `plan`, `explainer`, `implementation_notes`, `test_notes`, `check_output`, `review`, `summary`. Backlog Story 1.1: *"the nine PRD types + `sources`, `grounding_report`"*. PRD §6 lists ten and the backlog says nine, so the backlog count probably predates `check_output`.
 
 ### 26. Provider-match severity
 
@@ -137,7 +137,7 @@ The capability-library mockup and guide say the flow editor refuses to save a st
 
 ### 27. List editor or canvas?
 
-PRD §13: *"A node graph is nice but not required for v1. A vertical list of steps with an 'add step' button and a connections panel is acceptable."* The drawio *Flow editor* card and the original design brief agree (*"Propose the cheapest thing that communicates branching honestly"*). The flow-designer mockup, the drawio *Harness architecture* page (*xyflow canvas*) and backlog Story 8.2 (*React Flow canvas*) design a canvas. The feature map wants both: *"on a canvas … or as a simple list"*.
+PRD §13: *"A node graph is nice but not required for v1. A vertical list of steps with an 'add step' button and a connections panel is acceptable."* The drawio *Flow editor* card agrees (*"A node graph is nice, not required for v1."*). The original design brief is in between: *"a pure vertical list understates the structure. But a full node-graph editor is expensive to build. Propose the cheapest thing that communicates branching honestly"*. The flow-designer mockup, the drawio *Harness architecture* page (*"xyflow canvas"*) and backlog Story 8.2 (*React Flow canvas*) design a canvas. The feature map wants both: *"on a canvas … or as a simple list"*.
 
 ### 28. Draft mode: global switch or designer toggle?
 
@@ -145,7 +145,7 @@ PRD §13 and feature map §19 make draft mode a global setting. The mockup puts 
 
 ### 29. The seeded flow
 
-PRD §15 seeds nine steps (research, grill, plan, explain, implement, tests, check, review, summarize), with gates on `explain` and `review`. Backlog Story 1.2 agrees: *"`software-development` (the 9‑step table…)"*. The old design handoff shows `standard-flow · 8 steps` and *"Plan needs approval"*. The mockups use *Software delivery @core v4*: six steps (research, plan, build, tests, review, summarize), only `review` gated, and no check step. See [[Seeded Flows]].
+PRD §15 seeds nine steps (research, grill, plan, explain, implement, tests, check, review, summarize), with gates on `explain` and `review`. Backlog Story 1.2 agrees: *"`software-development` (the 9‑step table…)"*. The old design handoff shows `standard-flow · 8 steps` and *"Plan needs approval"*. The mockups use *Software delivery @core v4*: six steps (research, plan, build, tests, review, summarize), only `review` gated, and no check step. That is the library row and the monitor. The flow-designer canvas opens it with seven, adding the borrowed `threat-model` step. See [[Seeded Flows]].
 
 ### 30. API for the library
 
@@ -164,6 +164,16 @@ Backlog Story 1.2 gives only *"scope → web research → summarize → groundin
 ### 33. Dependencies the contract cannot see
 
 The seeded `check` step requires nothing but must run after `implement` and `tests`: it reads the worktree, not an artifact. A validator that only checks `requires` cannot tell whether a check step is wired after the code it checks. Should a check step implicitly require the code-producing steps, or should validation ignore this? See [[Check Steps]].
+
+## Look and packaging
+
+### 34. Light or dark?
+
+PRD §13: *"Dark-first, dense, keyboard-friendly."* (`PRD.MD:557`). The old design handoff (`docs/old/design/README.md`) draws dark artboards (e.g. header background `#0c0c0e`) and adds *"1f — Light mode"* as a variant. Every mockup is light only (`color-scheme:light`), as is the drawio *Harness architecture* tech card (*"shadcn/ui + Tailwind (light, zero radius, IBM Plex)"*). Backlog 9.1 says *"light default"*, and Story 8.3 and feature map §19 offer a light / dark / system switch. Does the flow designer ship light only, or light by default with a dark theme?
+
+### 35. Are role starter packs bundle packs?
+
+The feature map's role starter packs bundle *"the skills, tools, and design system that role reaches for"* with a seed flow (§2 ideas, appendix). It never links them to the capability library's bundle packs (*"skills + agents + flows as one unit"*, drawio). [[Bundle Packs]] used to read them as an extension of bundle packs; that is an inference. The counts differ too: the feature map has six packs, with business analyst and product owner combined, while the flow-designer guide has seven domains (*"Analysis, PO/PM, SDLC, QA, Platform, Design, Marketing"*). See [[Role Starter Flows]].
 
 ## Related
 
