@@ -17,6 +17,8 @@ module: Sandboxing
 | `ask.sock` | socket | `/run/fb/ask.sock` | PRD §9; drawio (*"socket: ask.sock"*) |
 | `tmpfs` scratch | read-write, in memory | `/tmp` | `08`; drawio (*"read-only root + tmpfs /tmp"*) |
 
+PRD §11.1 says *"the only other mounts are the step's plugin dirs, read-only"*, yet PRD §9 bind-mounts the broker socket and `08` adds *"the declared artifact dir"*. See [[Sandboxing Open Questions]] #23.
+
 The type allows more: `mounts?: Array<{ source: string; target: string; readOnly?: boolean }>`, *"Extra mounts beyond the task worktree. Never mount host secrets or the Docker socket."* (`exec-host.ts`)
 
 ## What is never mounted
@@ -28,7 +30,7 @@ The type allows more: `mounts?: Array<{ source: string; target: string; readOnly
 | The host SQLite DB (`flowboard.db`) | *"the only shared state: opened by apps/web and apps/worker only, never from a sandbox"* (drawio *SQLite* card) |
 | The Docker socket (`docker.sock`) | `08`, PRD §11.1, `01-ports.md` (*"never host secrets / docker.sock"*) |
 
-Drawio *Mounts* card: *"never : ~/.ssh, cloud credentials, flowboard.db, docker.sock"*.
+Drawio *Mounts* card: *"never: ~/.ssh, cloud credentials, flowboard.db, docker.sock"*.
 
 ## Plugin mounts
 
@@ -43,7 +45,11 @@ The drawio still shows the older design: *"ro: skills/ → /skills"*, which moun
 
 ## Side effect: the worktree collision
 
-`07-ports-in-practice.md`: a `containerWorkspace` adapter *"removes the shared-worktree collision (PRD §11) and needs no engine change."* Backlog Story 3.5 says the same. How it does so while the worktree is bind-mounted read-write into every parallel step of the task is not explained. See [[Sandboxing Open Questions]].
+`07-ports-in-practice.md`: a `containerWorkspace` adapter *"removes the shared-worktree collision (PRD §11) and needs no engine change."* Backlog Story 3.5 says the same. How it does so while the worktree is bind-mounted read-write into every parallel step of the task is not explained. See [[Sandboxing Open Questions]] #21; [[Workspaces Open Questions]] #22 raises the same doubt.
+
+## Paths inside the box
+
+The worktree is `/work` inside the container (drawio), but `cwd(task)` returns the host path, and no source says the prompt's absolute artifact paths or `{{worktree}}` are rewritten. See [[Sandboxing Open Questions]] #40.
 
 ## Related
 
@@ -52,3 +58,4 @@ The drawio still shows the older design: *"ro: skills/ → /skills"*, which moun
 - [[Sandboxing Storage]]
 - [[Capability Runtime Mounting]]
 - [[Task Workspace]]
+- [[Shared Worktree Within A Task]]

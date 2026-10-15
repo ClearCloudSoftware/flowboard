@@ -11,7 +11,7 @@ Sandboxing is the FlowBoard platform component that runs each agent step inside 
 > **`bypassPermissions` and a sandbox are one package.** FlowBoard runs agents headless with no approval on each tool call, and those agents read untrusted content. The control that still holds is the **egress allowlist**, because *"prompt injection can change what the agent asks for, but it cannot change what the firewall permits"* (`08-sandboxing.md`). See [[Sandbox Threat Model]] and [[Permission Gate]].
 
 > [!note] A platform component, not a screen
-> No mockup is dedicated to sandboxing. It shows up as a field in the flow designer, a posture line in two status bars, and a failure card in the inbox. See [[Sandboxing In The UI]].
+> No mockup is dedicated to sandboxing. It shows up as a field in the flow designer, a posture line in two status bars, a failure card in the inbox and the monitor, a wasted-spend note in task detail, and an amber tool warning in the capability library. See [[Sandboxing In The UI]].
 
 ## Start here
 
@@ -63,3 +63,7 @@ Sandboxing is the FlowBoard platform component that runs each agent step inside 
 - [[Component Documentation Tracker]]
 - [[Run Guardrails At Launch]]
 - [[Capability Tools And Egress]]
+- [[ExecHost Seam]]
+- [[Sandbox Profile Setting]]
+- [[Providers And Sandboxing]]
+- [[Repository Trust And Sandboxing]]

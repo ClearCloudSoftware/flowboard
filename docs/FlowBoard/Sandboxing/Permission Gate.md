@@ -20,13 +20,14 @@ flowchart TD
   P -->|"yes"| D["Refuse, downgrade to an approval mode,<br/>or fail with a readable reason<br/>(sources differ)"]
   G -->|"yes"| F["Do not run"]
   G -->|"no"| H["Launch on the host"]
+  D -->|"if downgraded"| G
 ```
 
 ## Rules that make up the gate
 
 | Rule | Source wording |
 |---|---|
-| No bypass outside a sandbox | *"the runner refuses `permission_mode='bypassPermissions'` unless the tier is a sandbox (`container`/`gvisor`/`microvm`)"* (`01-ports.md`) |
+| No bypass outside a sandbox | *"the runner refuses `permission_mode='bypassPermissions'` unless the tier is a sandbox (`container`/`gvisor`/`microvm`)"* (`01-ports.md`); *"`bypassPermissions` requires a sandbox tier."* (`05` §11) |
 | Non-root required | `nonRoot?: boolean; // default true; bypassPermissions requires it` (`01-ports.md`) |
 | No Docker | *"Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`."* (PRD §11.1) |
 | Git plugins on the host | *"On the host tier, a step that mounts a git-installed plugin does not run: that plugin's hooks and MCP servers would execute as me, with no egress wall. Seed plugins still run there."* (PRD §11.1; Capability Library D15) |
@@ -45,7 +46,7 @@ Drawio *Permission gate* card: *"bypassPermissions only when the tier is contain
 > | Refuse, or downgrade | PRD §11.1 |
 > | Downgrade | `03-execution-substrate.md` §6; drawio |
 > | Downgrade, or fail the step | `08`; backlog Story 3.5 (tagged **NEW/DEC**) |
-> | Fall back to host, disable bypass, *"or warn"* | `08` *Recommendation* #4 |
+> | No Docker: fall back to host and disable bypass, *"(or warn)"* | `08` *Recommendation* #4; PRD §11.1 and backlog 0.1 have no *or warn* |
 >
 > Also tracked as [[Execution Open Questions]] #53.
 

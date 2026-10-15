@@ -38,7 +38,7 @@ The drawio tier card: *"container (default when autonomous)"*.
 | Hooks | always written per run | PRD §7 |
 
 > [!warning] Off by default, or on by default?
-> PRD §11.1 is titled *"Sandboxed execution (optional, recommended for headless runs)"*; `08` says *"Optional, off by default for trusted local repos"*. But every step defaults to `bypassPermissions` (PRD §5), and bypass needs a sandbox. So with the sandbox off, every seeded step trips the [[Permission Gate]]. The architecture README lists the default tier as open decision 3, and feature map §10 asks *"❓ How strong a box to use by default"*. See [[Sandboxing Open Questions]].
+> PRD §11.1 is titled *"Sandboxed execution (optional, recommended for headless runs)"*; `08` says *"Optional, off by default for trusted local repos"*. But every step defaults to `bypassPermissions` (PRD §5), and bypass needs a sandbox. So with the sandbox off, every seeded step trips the [[Permission Gate]]. The pitch says the opposite of *off by default*: *"FlowBoard makes the safe path the default: each step runs in a **sandbox**"*, and *"**Zero autonomous runs happen unsandboxed**"* (`docs/pitch.md`). The architecture README lists the default tier as open decision 3, and feature map §10 asks *"❓ How strong a box to use by default"*. See [[Sandboxing Open Questions]].
 
 ## Seeded behaviour that depends on egress
 
@@ -60,3 +60,4 @@ The drawio tier card: *"container (default when autonomous)"*.
 - [[Isolation Tiers]]
 - [[Seeded Flows]]
 - [[Seeded Capabilities]]
+- [[Settings Defaults]]

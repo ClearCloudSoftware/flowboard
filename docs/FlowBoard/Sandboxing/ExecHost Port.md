@@ -62,6 +62,11 @@ flowchart LR
 | *"The runner … gets the `ExecHost` from `workspace.execHost(task)` and passes it in the `RunSpec`; the provider adapter spawns through it."* | `08` |
 | Shell steps run *"through the same `ExecHost`, so it is sandboxed like any agent."* | `03` §6 |
 
+`01-ports.md` says the runner *"passes it in `RunSpec.exec`"*, but its `RunSpec` sketch has no `exec` field; only `agent-provider.ts` declares `exec?: ExecHost`.
+
+> [!question] Per task, but the profile is per step
+> `execHost(task)` takes only the task, while the profile is *"overridable per step"* (PRD §11.1) through *"an optional `step_defs.sandbox_profile` override"* (backlog 1.1). A per-step tier has no path through this call. See [[Sandboxing Open Questions]] #39 and [[Workspaces Open Questions]] #25.
+
 ## Adapters
 
 | Adapter | Source |
@@ -79,7 +84,7 @@ flowchart LR
 Dependency rule (architecture README): *"`core/` and `runner/` must never import from `adapters/` — only from `core/ports/`."* PRD §3 places the port: `ports/  # AgentProvider, ExecHost, MemoryStore, Notifier, TaskSource interfaces`.
 
 > [!note] Not in the five-port table
-> The architecture README's *"five ports that carry the whole program"* do not list ExecHost; it hangs off Workspace. PRD §3 lists it among the core ports. The reference `README.md` file tree omits `exec-host.ts`, though the file exists.
+> The architecture README's *"five ports that carry the whole program"* do not list ExecHost; it hangs off Workspace. PRD §3 lists it among the core ports, with no Workspace port ([[Workspaces Open Questions]] #26). The reference `README.md` file tree omits `exec-host.ts`, though the file exists.
 
 ## Related
 
@@ -88,3 +93,5 @@ Dependency rule (architecture README): *"`core/` and `runner/` must never import
 - [[Sandboxing Runtime]]
 - [[Agent Launch Contract]]
 - [[Task Workspace]]
+- [[ExecHost Seam]]
+- [[Providers And Sandboxing]]

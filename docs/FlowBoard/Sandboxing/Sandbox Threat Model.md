@@ -11,7 +11,7 @@ module: Sandboxing
 
 > FlowBoard runs agents **headless** with `permission_mode='bypassPermissions'` by default (PRD §5) — no human reviews each tool call. Those agents then read **untrusted content**: repo files, web pages, the backlog markdown, issue/PR text, prior artifacts. Any of it can carry a **prompt injection** that redirects the agent to exfiltrate secrets, corrupt the repo, or run arbitrary commands. On the host the blast radius *is* the host: the whole filesystem, every network destination, and the user's credentials.
 
-PRD §11.1 says the same in fewer words: *"Running that directly on the host is the dangerous configuration."*
+PRD §11.1 says the same in fewer words: *"Running that directly on the host is the dangerous configuration."* The pitch puts it as today's problem: *"there is **no network boundary, no audit trail, and no sandbox** to contain it"* (`docs/pitch.md`).
 
 | Ingredient | Source |
 |---|---|
@@ -27,6 +27,8 @@ PRD §11.1 says the same in fewer words: *"Running that directly on the host is 
 *"A default-deny egress allowlist holds even when tool-approval is bypassed — exactly FlowBoard's default posture."* (`08`). Hence the conclusion: *"So **`bypassPermissions` and a sandbox are one package.** Fully-autonomous agents without one is the dangerous configuration."* See [[Egress Allowlist]] and [[Permission Gate]].
 
 ## What each control answers
+
+The pairing below is this vault's reading of `08`'s security profile; no source tabulates threats against controls.
 
 | Threat | Control | Note |
 |---|---|---|
@@ -51,7 +53,8 @@ Other limits the sources name:
 
 - **Shared kernel.** *"Plain containers share the host kernel — a kernel exploit in agent-run code escapes the container."* (`08`)
 - **Memory is a new trust channel.** *"A prompt injection can still poison *what a run proposes to remember*"* (`08`).
-- **Allowlisted hosts are reachable.** Anything on the list, including package registries, is a possible destination.
+- **Allowlisted hosts are reachable.** *"to whatever the allowlist permits"* (`08`): anything on the list, including package registries, is a possible destination.
+- **The host tier has no wall.** A `host`-tier agent runs as the user, and the API has no auth (PRD §2); the hooks deny writes and destructive commands, not calls to the local API. Raised in [[Settings And Plumbing Open Questions]] #25.
 
 The backlog wants the residual risk documented: *"README/security: sandbox tiers and the egress allowlist; the caveat that `bypassPermissions` + sandbox still can't stop exfiltration *within* the sandbox — trusted repos only, no host-secret mounts"* (Story 10.2).
 

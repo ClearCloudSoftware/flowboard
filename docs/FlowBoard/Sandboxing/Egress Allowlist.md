@@ -27,7 +27,7 @@ Feature map §10: *"By default the agent can't reach the internet at all, except
 | npm / PyPI | drawio *Egress proxy* card, *Package registries* node |
 | **Not** the git remote | everywhere: `08`, PRD §11.1, backlog 3.5, drawio (*"no git remote"*) |
 | **Not** the memory store | *"memory adds nothing to the egress allowlist"* (`08`); PRD §16 checklist |
-| `[]` | *"fully offline"* (`08`, `01-ports.md`) |
+| `[]` | *"fully offline"* (`08`, `exec-host.ts`; `01-ports.md` says *"offline"*) |
 
 Field: `egressAllow: string[]`, *"Domains reachable from inside; default-deny everything else."* (`exec-host.ts`)
 
@@ -65,7 +65,7 @@ Where the per-step list is stored is not settled. PRD §11.1 keeps the allowlist
 
 ## When a call is blocked
 
-The sandbox refuses the connection and the step fails. The mockups show the cost and offer **Allow host & retry**. See [[Egress Denials]].
+The architecture and PRD say only that egress is default-deny. In the mockups the sandbox refuses the call and the attempt fails; they show the cost and offer **Allow host & retry**. See [[Egress Denials]].
 
 ## Related
 

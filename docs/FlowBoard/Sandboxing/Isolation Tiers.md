@@ -40,7 +40,7 @@ Two details only the drawio gives:
 
 *"Codex additionally has its *own* OS sandbox — Seatbelt on macOS, Landlock+seccomp on Linux, network off by default — so Codex at `host` tier still isn't unsandboxed; a container tier is defense-in-depth."* (`08`)
 
-## Five vocabularies
+## Six vocabularies
 
 The sources do not name the tiers the same way.
 
@@ -50,15 +50,20 @@ The sources do not name the tiers the same way.
 | PRD §13 settings section | *"host / container / microVM"* (no gVisor) |
 | PRD §3 code layout | `adapters/exec/  # host, docker` |
 | drawio *Workspace manager* card | *"ExecHost per tier: host · docker · gVisor"* (no microVM) |
-| `01-ports.md` `Workspace.id` | `'worktree' \| 'container' \| 'microvm' \| 'remote'` (an adapter id, not a tier) |
+| `01-ports.md` `Workspace.id` | `'worktree' \| 'container' \| 'microvm' \| 'remote'` (an adapter id, not a tier; `workspace.ts` types it as plain `string`) |
 | flow-designer mockup `SANDBOX` | `'none'` · `'container'` · `'sealed container'` |
 
+Partial lists elsewhere: `03` §6 names only *"(container/microVM)"* as sandbox tiers, the architecture README's open decision 3 frames the default as *"host vs container"*, and feature map §10 says *"no box"*.
+
 > [!question] Proposal: one mapping
-> Reading across, `none` = `host`, and `docker` = `container`. *Sealed container* is defined only as *"a sealed container with no network"* (flow-designer guide). It could be a `container` with `egressAllow: []` (*"`[]` = fully offline"*, `01-ports.md`), or a stronger tier, as [[Step Guardrails]] proposes. Neither is stated. See [[Sandboxing Open Questions]].
+> Reading across, `none` = `host`, and `docker` = `container`. *Sealed container* is defined only as *"a sealed container with no network"* (flow-designer guide). It could be a `container` with `egressAllow: []` (*"`[]` = fully offline"*, `exec-host.ts`, `08`), or a stronger tier, as [[Step Guardrails]] proposes. Neither is stated. See [[Sandboxing Open Questions]].
 
 ## A `remote` tier, later
 
 *"Managed sandbox platforms — E2B and Daytona (Firecracker / container microVMs, ~90–150ms cold start), Modal (gVisor): the cloud version of this, if FlowBoard ever grows a `remote` tier."* (`08`). The drawio's *Container workspace* adapter reads *"devcontainer · Docker sandbox · remote host"*, dashed (not in v1).
+
+> [!note] Same title in Workspaces
+> The Workspaces set has its own note called *Isolation Tiers* (`Workspaces/Isolation Tiers.md`), on the tier as a property of the workspace. [[ExecHost Seam]] links to it.
 
 ## Related
 

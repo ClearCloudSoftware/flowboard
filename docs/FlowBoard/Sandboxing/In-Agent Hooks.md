@@ -43,7 +43,7 @@ flowchart LR
 
 ## On every tier
 
-The hooks do not depend on the sandbox. On the `host` tier they are the only mechanical gate besides the [[Permission Gate]].
+Inferred: PRD §7 writes the hooks file for every run, and `03` §6 writes it *"alongside `mcp.json` (which points at the `ask_user` shim on every tier)"*, so the hooks do not depend on the sandbox. On the `host` tier they are the only mechanical gate besides the [[Permission Gate]]. They deny writes and destructive commands, not calls to the local API ([[Settings And Plumbing Open Questions]] #25).
 
 ## Providers without hooks
 
@@ -51,7 +51,7 @@ The hooks do not depend on the sandbox. On the `host` tier they are the only mec
 
 ## Keeping the operator's hooks out
 
-The first build leaked: *"global `~/.claude` hooks apply to headless runs"* (backlog, *What went wrong*, item 6). Backlog D5: *"Hook isolation for headless runs"*, default *"Empty `--settings` file per run"*. Story 0.1: *"Decide how to isolate headless runs from `~/.claude` hooks/settings (e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`)."*
+The first build leaked: *"global `~/.claude` hooks apply to headless runs"* (backlog, *What went wrong*, item 6). Backlog D5: *"Hook isolation for headless runs"*, default *"Empty `--settings` file per run"*. The drawio *D5* card: *"Empty --settings file per headless run."* Story 0.1: *"Decide how to isolate headless runs from `~/.claude` hooks/settings (e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`)."*
 
 > [!warning] Empty, or holding the hooks?
 > D5 predates the hooks gate. The per-run file is no longer empty: it carries FlowBoard's `PreToolUse` hooks. D5's aim, keeping the global hooks out, still holds. Same as [[Execution Open Questions]] #52.

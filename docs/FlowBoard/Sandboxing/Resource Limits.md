@@ -33,9 +33,11 @@ PRD §7 classes *"budget or turn cap hit"* as non-transient: the task goes to `b
 
 The drawio *Hardening* card says *"wall-clock kill"*.
 
+A shell step's non-zero exit is an outcome, not a failure (PRD §7), so an out-of-memory kill of a check would loop as `fail` ([[Execution Open Questions]] #41).
+
 ## Why it matters without a budget
 
-The flow-designer guide on the **Budget** field: *"No ceiling means a looping agent has no financial brake — only the sandbox's time limit."* `max_budget_usd` is nullable and the seed flow sets none (PRD §5, §15), so the wall-clock limit is the only brake on the seeded flow when the sandbox is on.
+The flow-designer guide on the **Budget** field: *"No ceiling means a looping agent has no financial brake — only the sandbox's time limit."* `max_budget_usd` and `max_turns` are nullable (PRD §5), and the PRD §15 seed table gives no budget or turn values. So (inference) the wall-clock limit would be the only per-run brake on the seeded flow when the sandbox is on.
 
 ## Defaults
 

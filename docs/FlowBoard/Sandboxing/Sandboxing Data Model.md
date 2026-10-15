@@ -17,7 +17,7 @@ module: Sandboxing
 | `tasks.non_goals` | tasks | *"what the agents must not touch or attempt"*; the source of the hooks' non-goal path rules | PRD §5, §7 | Yes |
 
 > [!warning] Two columns only in prose
-> `runs.sandbox` and `step_defs.sandbox_profile` are named in PRD §11.1 and backlog Story 1.1 but missing from the PRD §5 schema. `runs.model` and `runs.effort` have the same gap ([[Cost And Control Open Questions]]). See [[Sandboxing Open Questions]].
+> `runs.sandbox` is named in PRD §11.1 and backlog Stories 1.1 and 3.5; `step_defs.sandbox_profile` only in backlog Story 1.1 (PRD §11.1 says just *"overridable per step"*). Neither is in the PRD §5 schema ([[Settings And Plumbing Open Questions]] #22). `runs.model` and `runs.effort` have the same gap ([[Cost And Control Open Questions]]). See [[Sandboxing Open Questions]].
 
 ## In code
 

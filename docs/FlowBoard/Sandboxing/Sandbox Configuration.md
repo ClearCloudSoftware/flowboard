@@ -24,7 +24,7 @@ PRD §13: *"Add a **sandbox** section in settings too: the default isolation tie
 
 Feature map §19: *"**Sandbox defaults** — How locked-down agents should run by default"*. `08` *Recommendation* #2: egress allowlist *"editable in settings."* The drawio *Library · Costs · Settings* node lists *"sandbox tier"*.
 
-Backlog Story 8.3 (Settings) lists draft mode, theme and escalation threshold, but not the sandbox section.
+Backlog Story 8.3 (Settings) lists draft mode, theme and escalation threshold, but not the sandbox section. `06` §15's list of what `settings` holds (draft mode, escalation threshold, theme, a memory block) has none either, though `08` names settings (15) among the components sandboxing touches. See [[Sandbox Profile Setting]].
 
 ## Per step
 
@@ -36,11 +36,11 @@ Backlog Story 8.3 (Settings) lists draft mode, theme and escalation threshold, b
 | flow-designer guide | *"How locked down the run is: none, a container, or a sealed container with no network."* |
 | mockups (library, inbox, monitor, task detail) | *"this step's allowlist"*, *"that step's egress allowlist"* |
 
-PRD §7 *Sandboxed runs* reads the tier from the step: *"When the step's sandbox tier is not `host`"*.
+PRD §7 *Sandboxed runs* reads the tier from the step: *"When the step's sandbox tier is not `host`"*. But the port call `execHost(task)` sees only the task ([[Sandboxing Open Questions]] #39).
 
 ## Trusted-repo opt-out
 
-`08` *Recommendation* #1: *"**`host`** only for non-bypass steps or an explicit trusted-repo opt-out."* Backlog D7 says the same. Where the opt-out is set (project, step, settings) is not stated.
+`08` *Recommendation* #1: *"**`host`** only for non-bypass steps or an explicit trusted-repo opt-out."* Backlog D7 says the same. Where the opt-out is set (project, step, settings) is not stated. [[Projects Open Questions]] #16 proposes a per-project profile.
 
 ## What each run records
 
@@ -53,3 +53,4 @@ PRD §7 *Sandboxed runs* reads the tier from the step: *"When the step's sandbox
 - [[Step Guardrails]]
 - [[Sandboxing In The UI]]
 - [[Permission Gate]]
+- [[Sandbox Profile Setting]]

@@ -34,9 +34,13 @@ The `SandboxProfile.env` comment in `01-ports.md`: *"run-scoped; never a real cr
 
 ## Verify before building
 
-PRD §0 makes this an empirical check, the third thing to verify before writing the runner:
+PRD §0 makes this an empirical check, the third item in a list it introduces as *"Two things you must verify empirically rather than assume"*:
 
 > *"**That the CLI works through a credential-injecting proxy.** Run the probe above with `ANTHROPIC_BASE_URL` pointing at a local proxy that adds the real credential, and a dummy key in the environment (§11.1). If the CLI refuses, stop and tell me; the fallback is a short-lived, run-scoped token."*
+
+## Where the real key lives
+
+No source says where the proxy gets the real credential on the host. Raised in [[Settings And Plumbing Open Questions]] #24; listed as [[Sandboxing Open Questions]] #41.
 
 ## On the host tier too
 
@@ -44,7 +48,7 @@ PRD §0 makes this an empirical check, the third thing to verify before writing 
 
 ## Other providers
 
-The drawio lists `api.openai.com (later)` on the allowlist for the Codex adapter. `ANTHROPIC_BASE_URL` is Claude-specific; how the proxy injects a key for Codex is not described.
+The drawio lists `api.openai.com (later)` on the allowlist for the Codex adapter. `ANTHROPIC_BASE_URL` is Claude-specific; how the proxy injects a key for Codex is not described. Same as [[Agent Providers Open Questions]] #23.
 
 ## Related
 

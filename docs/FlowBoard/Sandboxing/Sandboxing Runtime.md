@@ -36,6 +36,8 @@ flowchart TB
   SB -->|"G stream-json"| Worker
 ```
 
+The drawio draws the *Docker Desktop* and *Agent sandbox* boxes dashed, which its legend reads as *"optional or later"*.
+
 ## Components
 
 | Component | What it is (source wording) | Source |

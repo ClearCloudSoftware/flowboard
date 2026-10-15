@@ -25,7 +25,7 @@ PRD §17: *"**Sandboxing agent execution** in a container/microVM (§11.1) is in
 | README security caveat | backlog 10.2 |
 
 > [!warning] No milestone
-> PRD §14's build order (M1–M9) never mentions the sandbox. The backlog puts it in Epic 3 (*Runner and worker*, M3) as Story 3.5, tagged **NEW**. The drawio's *Logical components* page draws the container workspace adapter dashed: *"dashed = not in v1"*. The ideation page's scope card lists *"Not building / … Docker …"*, which means deploying FlowBoard in Docker (PRD §17), not the sandbox. See [[Sandboxing Open Questions]].
+> PRD §14's build order (M1–M9) never mentions the sandbox. The backlog puts it in Epic 3 (*Runner and worker*, M3) as Story 3.5, tagged **NEW**. The drawio's *Logical components* page draws the container workspace adapter dashed: *"dashed = not in v1"*; the *Harness architecture* page draws the agent sandbox dashed, *"optional or later"*. The pitch counts *"the cost/sandbox views"* among *"its eight build milestones"*. The ideation page's scope card reads *"Not building / Auth, accounts, roles, deployment, Docker, multi-machine, plugin marketplace."*: it names *Docker* apart from *deployment*, while PRD §17 limits the Docker exclusion to *"shipping or *deploying* FlowBoard itself in a container"*. Reading the card as deployment only is an inference. See [[Sandboxing Open Questions]] #33 and #38.
 
 ## Designed beyond the PRD
 
@@ -43,7 +43,7 @@ PRD §17: *"**Sandboxing agent execution** in a container/microVM (§11.1) is in
 - **A `remote` tier** on a managed sandbox platform (E2B, Daytona, Modal) (`08` *Prior art*).
 - **Run agents in the cloud** (feature map *Parking lot*: *"so a big job doesn't tie up your machine"*).
 - **Injection scan**: *"LLM Guard over artifacts before the next step or memory trusts them"* (drawio, dashed); *"Check for hidden manipulation"* (feature map *Parking lot*).
-- **Deterministic gates**: *"semgrep · gitleaks · trivy · eslint / ruff as extra shell steps"* (drawio, dashed). They run as shell steps, so inside the sandbox.
+- **Deterministic gates**: *"semgrep · gitleaks · trivy · eslint / ruff as extra shell steps"* (drawio, dashed). As shell steps they would inherit the sandbox (inferred from PRD §7).
 - **Team guardrails**: *"the team can pin rules nobody can quietly lift"* (feature map §16 ideas, quoted in [[Step Guardrails]]).
 - Feature map §10 *💡 Ideas* and *Across everything → Safety & trust* are empty slots.
 

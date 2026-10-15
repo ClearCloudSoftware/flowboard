@@ -38,15 +38,15 @@ The drawio *Hardening* card condenses it: *"non-root user · --cap-drop ALL · n
 >   -e ANTHROPIC_BASE_URL=<proxy> -e ANTHROPIC_API_KEY=<dummy> \
 >   flowboard-runner claude -p …
 > ```
-> `--rm`, the env var name for the dummy key, and the plugin mount target are assumptions. Listed in [[Sandboxing Open Questions]].
+> `--rm`; `--user`, `--read-only` and `--tmpfs /tmp` as the spellings of *non-root* and *read-only root + tmpfs*; the env var name for the dummy key; and the plugin mount target are assumptions. The sketch leaves out the `seccomp` profile and the wall-clock timeout, which is not a `docker run` flag. Listed in [[Sandboxing Open Questions]] #29.
 
 ## Where it lives in code
 
-`SandboxProfile` in `exec-host.ts` carries `tier`, `image`, `egressAllow`, `limits`, `mounts`, `env` and `nonRoot`. Capability drops, seccomp, read-only root and `no-new-privileges` are **not fields**: they are fixed behaviour of the container `ExecHost`. See [[Sandboxing Data Model]].
+`SandboxProfile` in `exec-host.ts` carries `tier`, `image`, `egressAllow`, `limits`, `mounts`, `env` and `nonRoot`. Capability drops, seccomp, read-only root and `no-new-privileges` are **not fields**. No source makes them configurable, so they read as fixed behaviour of the container `ExecHost` (inference; `07` says its `execHost` *"applies the security profile (egress allowlist, non-root, caps, limits"*). See [[Sandboxing Data Model]].
 
 ## Which tiers apply it
 
-The profile applies to `container`, `gvisor` and `microvm`. *"Absent for the `host` tier; present for sandboxed tiers."* (`exec-host.ts`, on `ExecHost.profile`). The `host` tier has none of these protections; only the [[In-Agent Hooks]] still apply there.
+The profile applies to `container`, `gvisor` and `microvm`. *"Absent for the `host` tier; present for sandboxed tiers."* (`exec-host.ts`, on `ExecHost.profile`). The `host` tier has none of these protections; the [[In-Agent Hooks]] and the [[Permission Gate]] still apply there. Whether host runs go through the egress proxy is open ([[Sandboxing Open Questions]] #27).
 
 ## Related
 

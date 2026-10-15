@@ -21,6 +21,8 @@ Feature map §10 lists what the user gets:
 | Your keys stay outside the box | *"The agent never holds a real API key."* |
 | Rules inside the agent too | *"The box limits what *can* happen; these checks block what *shouldn't*."* |
 
+The pitch is stronger than *"optional"*: *"FlowBoard makes the safe path the default: each step runs in a **sandbox**"*, with the success metric *"**Zero autonomous runs happen unsandboxed**"* (`docs/pitch.md`). See [[Sandboxing Open Questions]] #3.
+
 ## Place in the system
 
 Sandboxing is cross-cutting. `08-sandboxing.md` says it *"touches Workspace (11), AgentProvider (5), the runner (6), settings (15), and the HITL protocol (9)"*. It has no component number of its own in the architecture README's component index. It *"rides on the Workspace port via an `ExecHost` seam"* (architecture README).
@@ -63,7 +65,7 @@ What the sandbox is **not**:
 ## Design principles
 
 1. **Egress is the load-bearing control.** *"enforced below the agent's reasoning"* (`08-sandboxing.md`). See [[Egress Allowlist]].
-2. **Two gates, inside and outside.** *"The sandbox limits what *can* happen; the hooks block what *shouldn't*."* (`03-execution-substrate.md` §6, PRD §7). See [[In-Agent Hooks]].
+2. **Two gates, inside and outside.** *"The sandbox limits what *can* happen; the hooks block what *shouldn't*."* (`03-execution-substrate.md` §6; PRD §7 has *"the sandbox limits what *can* happen, and the hooks block what *shouldn't*"*). See [[In-Agent Hooks]].
 3. **One seam, any provider.** *"This keeps the matrix **2×N instead of N×M — any provider × any tier for free.**"* (`08-sandboxing.md`). See [[ExecHost Port]].
 4. **Nothing worth stealing inside.** *"A prompt-injected agent can read its own environment, so the environment holds nothing worth stealing."* (PRD §11.1). See [[Credential Injecting Proxy]].
 5. **The sealed process talks only to the host.** Questions and memory are brokered on the host, so neither adds to the allowlist. See [[Host-Side Brokers]].

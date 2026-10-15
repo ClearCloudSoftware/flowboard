@@ -6,7 +6,7 @@ module: Sandboxing
 # Sandboxing API And Routes
 
 > [!note] No sandbox endpoints in the sources
-> PRD §12 lists the whole API surface. None of it is about the sandbox. There is no settings endpoint at all, though PRD §13 asks for a settings sandbox section.
+> PRD §12 lists the whole API surface. None of it is about the sandbox. There is no settings endpoint at all, though PRD §13 asks for a settings sandbox section ([[Settings And Plumbing Open Questions]] #2).
 
 ## What exists
 

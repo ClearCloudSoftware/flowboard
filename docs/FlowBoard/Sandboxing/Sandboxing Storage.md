@@ -26,6 +26,7 @@ Files and paths a sandboxed run touches.
 > - Whether `args.json` records the `docker run` wrapper or only the CLI args.
 > - Where the CLI's session state lives between a parked run and its resume, when each run gets a fresh container.
 > - Where proxy logs (the record of denied hosts) are kept.
+> - Where the real model credential the proxy injects is kept ([[Settings And Plumbing Open Questions]] #24).
 >
 > See [[Sandboxing Open Questions]].
 

@@ -55,7 +55,7 @@ PRD §7 *Sandboxed runs*: *"When the step's sandbox tier is not `host`, the runn
 | *"inside the task's container"* | PRD §7 |
 
 > [!question] Per run or per task?
-> Only PRD §7 says *"the task's container"*, which reads as one container per task. Every other source says one per run. See [[Sandboxing Open Questions]].
+> Only PRD §7 says *"the task's container"*, which reads as one container per task. Every other source says one per run. See [[Sandboxing Open Questions]] #17; [[Execution Open Questions]] #61.
 
 ## Parking and resuming
 
@@ -65,7 +65,7 @@ A run parked after 20 minutes ends its process (PRD §9). The resume is a new `s
 
 *"A `kind='shell'` step runs no model. The runner executes `step.command` (or the project's `check_command`) in the task's worktree through the same execution host, so it inherits the sandbox."* (PRD §7). `03` §6: *"so it is sandboxed like any agent."*
 
-Drawio *Check container*: *"same image and mounts, no model, no API key: runs check_command and exits with its code"*. *Shell executor* card: *"runs check_command in a fresh sandbox"*. Whether a check gets egress (to install packages, for example) is not stated. See [[Shell Step Execution]].
+Drawio *Check container*: *"same image and mounts, no model, no API key: runs check_command and exits with its code"*. *Shell executor* card: *"runs check_command in a fresh sandbox"*. Whether a check gets egress (to install packages, for example) is not stated. Whether the check runs in the task's host or a fresh container is [[Execution Open Questions]] #40. See [[Shell Step Execution]].
 
 ## Stop
 

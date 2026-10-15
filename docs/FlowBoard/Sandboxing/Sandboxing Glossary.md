@@ -9,8 +9,10 @@ module: Sandboxing
 |---|---|
 | **Sandbox** | The security boundary a step's process runs in: a container or microVM. Every tier except `host` (`08-sandboxing.md`). |
 | **Isolation tier** | `IsolationTier = 'host' \| 'container' \| 'gvisor' \| 'microvm'` (`exec-host.ts`). How strong the boundary is. See [[Isolation Tiers]]. |
+| **gVisor** (`gvisor`) | A user-space kernel that intercepts syscalls; the drawio names its runtime `runsc` and limits it to Linux hosts (`08`, drawio). |
+| **microVM** (`microvm`) | A dedicated kernel in KVM: Firecracker or Kata (`08`); the drawio also lists Docker Desktop's `docker sandbox`. |
 | **Sandbox tier** | Any tier other than `host`. The only tiers on which `bypassPermissions` is allowed. |
-| **Isolation ladder** | The tiers ordered weakest to strongest: `host` → `container` → `gvisor` → `microvm` (`05-environment-and-registry.md` §11). |
+| **Isolation ladder** | The tiers ordered weakest to strongest: `host` → `container` → `gvisor` → `microvm` (`08-sandboxing.md` *The isolation ladder*; `05-environment-and-registry.md` §11). |
 | **ExecHost** | The port that decides *where* a process runs: host `child_process`, a container, or a microVM. See [[ExecHost Port]]. |
 | **SandboxProfile** | The security knobs an `ExecHost` applies: tier, image, egress allowlist, limits, mounts, env, non-root (`exec-host.ts`). |
 | **`sandbox_profile`** | The settings entry that holds the global profile (*"tier, image, egress allowlist, limits"*), *"overridable per step"* (PRD §11.1). |
@@ -18,7 +20,7 @@ module: Sandboxing
 | **`bypassPermissions`** | The agent CLI's fully autonomous permission mode: no approval on each tool call. The default `step_defs.permission_mode` (PRD §5). |
 | **Permission gate** | The runner rule that refuses `bypassPermissions` unless the tier is a sandbox. See [[Permission Gate]]. |
 | **Egress** | Outbound network traffic from inside the sandbox. |
-| **Egress allowlist** | The hosts the sandbox may reach. Default-deny; `[]` = fully offline (`01-ports.md`). Field `egressAllow`. |
+| **Egress allowlist** | The hosts the sandbox may reach. Default-deny; `[]` = fully offline (`exec-host.ts`, `08`). Field `egressAllow`. |
 | **Egress proxy** | Squid or tinyproxy on an internal-only Docker network: the only route out, and the place the real API key is added (PRD §11.1). |
 | **Credential-injecting proxy** | The same proxy, named for its second job. See [[Credential Injecting Proxy]]. |
 | **Dummy key** | The fake API key the CLI holds inside the box (PRD §11.1). |
@@ -29,10 +31,12 @@ module: Sandboxing
 | **In-agent hooks** | Claude Code `PreToolUse` hooks in a per-run `settings.json` that deny out-of-scope tool calls. See [[In-Agent Hooks]]. |
 | **`tool_hooks`** | The provider capability flag meaning the provider supports such hooks (`01-ports.md`, PRD §7). |
 | **Dual encoding** | Drawio harness concept 5: the prompt states the rules, and two gates (hooks inside, box outside) enforce them. |
-| **Host-side broker** | A worker process that talks to the database or memory store on behalf of the sealed agent. See [[Host-Side Brokers]]. |
+| **Host-side broker** | Work the worker does on the sealed agent's behalf, so the agent never reaches the database or the memory store: the `ask_user` broker for questions, the runner's recall and commit for memory. See [[Host-Side Brokers]]. |
+| **MCP shim** | `apps/mcp-shim`, the stdio MCP server the CLI launches; it forwards tool calls over `ask.sock` to the broker and *"never opens the database and needs no network"* (PRD §9). |
 | **`ask.sock`** | The per-run unix socket, `data/sock/<run_id>.sock` on the host, bind-mounted as `/run/fb/ask.sock` (PRD §9). |
 | **Check container** | The container a shell step runs in: *"same image and mounts, no model, no API key"* (drawio). |
 | **Container workspace** | The Workspace adapter whose `execHost` returns a container `ExecHost` (`07-ports-in-practice.md`). |
+| **Trusted-repo opt-out** | The one case where `08` and backlog D7 allow `host` for a bypassing step; no field holds it. |
 | **Docker probe** | The startup check for Docker; if absent, fall back to `host` and disable `bypassPermissions` (PRD §11.1). |
 | **Allow host & retry** | The inbox and monitor action that adds a blocked host to a step's allowlist and re-queues the run. See [[Egress Denials]]. |
 | **Sealed container** | Flow-designer mockup value: *"a sealed container with no network"*. Not a term in the PRD or architecture. |
