@@ -18,7 +18,7 @@ Switching tabs scrolls the page back to the top. The screen opens on **Story** w
 
 ## Story
 
-One row per step, in flow order. The row head shows the run icon, step name, `agent · model · effort`, duration (or `waiting 5m`, or `not started`), cost (with `+$0.48 wasted` under it), and `↺ n`. Clicking a row toggles it. Several rows can be open at once.
+One row per step, in flow order. The row head shows the run icon, step name, `agent · model · effort`, duration (or `waiting 5m 00s`, ticking, or `not started`), cost (with `+$0.48 wasted` under it), and `↺ n`. Clicking a row toggles it. Several rows can be open at once.
 
 An expanded row shows, in order:
 

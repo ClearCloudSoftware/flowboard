@@ -19,7 +19,7 @@ The task-detail guide's callout: *"**Everything is a real file.** Each step decl
 
 1. The step declares `produces` (artifact type keys). See [[Artifact Contract]].
 2. The prompt tells the agent *"The exact output path the step should write, one per `produces` entry."* (PRD §7, part 3).
-3. After a run completes, *"the runner scans `<worktree>/.vibe/task-<id>/` for files created or modified during the run and registers any that match the step's declared `produces` types."* (PRD §6). The scan is *"mtime ≥ run start, matched to `produces`"* (backlog Story 3.2, `03` §6).
+3. After a run completes, *"the runner scans `<worktree>/.vibe/task-<id>/` for files created or modified during the run and registers any that match the step's declared `produces` types."* (PRD §6). The scan is *"mtime ≥ run start, matched to `produces`"* (`03` §6); backlog Story 3.2: *"Artifact scan (mtime ≥ run start) matched to `produces`"*.
 4. *"The agent may also register one explicitly via the `declare_artifact` MCP tool. Do both — scanning catches the case where the agent forgets to call the tool."* (PRD §6)
 5. An outcome is read from the produced JSON: *"`{"outcome":…}` read from produced JSON"* (backlog Story 3.2).
 
@@ -34,7 +34,7 @@ PRD §6 seeds ten types: `research_brief`, `questions`, `answers`, `plan`, `expl
 | Source | Directory | File names |
 |---|---|---|
 | PRD §6 | `<worktree>/.vibe/task-<task-id>/` | `01-research_brief.md`, `02-questions.json`, `03-plan.md`, `07-review.md`, `08-summary.md` |
-| `07-ports-in-practice.md` disk adapter | `join(worktreeOf(t), '.vibe', task-${t.id})` | scan parses `NN-<type>.<ext>`; `resolve` returns `${type}.md`, with no number |
+| `07-ports-in-practice.md` disk adapter | `` join(worktreeOf(t), '.vibe', `task-${t.id}`) `` | scan parses `NN-<type>.<ext>`; `resolve` returns `${type}.md`, with no number |
 | Drawio *Harness architecture* | `.vibe/task-<id>/*.md \| *.json` | *"committed alongside the code"* |
 | Task-detail mockup | `.flowboard/auth-refactor/` | `brief.md`, `plan.md`, `changes.patch`, `test-report.md`, `review.md`, `summary.md` |
 

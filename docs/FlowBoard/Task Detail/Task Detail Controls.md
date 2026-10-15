@@ -13,12 +13,15 @@ Every control on the screen, from the mockup's markup and handlers and the guide
 |---|---|---|---|---|
 | **Approve** | `a` | *"Clears the gate. The next step queues immediately and the task finishes without you."* | *"Free — nothing is re-run, nothing is wasted."* | yes |
 | **Send back** | `r` | *"Opens a reason box. Review is discarded, build re-queues as the next attempt carrying your reason, and tests are left alone."* | *"The build's kept spend moves to wasted."* | yes |
-| Reason field | — | placeholder *"Why — this goes to the next build attempt"*; autofocused when opened | — | yes |
+| Reason field | — | placeholder *"Why — this goes to the next build attempt"*, prefilled; autofocused when opened | — | partly (see below) |
 | **Send back to build** | `Enter` (form submit) | submits the reason; empty becomes *"needs another pass"* | — | yes |
-| **Cancel** (reason box) | `Esc` | closes the reason box | — | yes |
+| **Cancel** (reason box) | `Esc` | closes the reason box | — | button yes; `Esc` partly (see below) |
 | **Compare plan vs built** | — | *"Jumps to the tab you should read before deciding either way."* | — | yes |
 
 The gate buttons hide while the reason box is open.
+
+> [!warning] The mockup's reason box can't be edited
+> A 1 s timer (`setInterval(() => { if (gateStep() && !ticker) render(); }, 1000)`) redraws the gate banner while a gate is open, and the reason box with it. Each redraw rebuilds the `<input>` with its prefilled value, so typed text and focus are lost within a second, and a submit nearly always sends the prefilled reason. `Esc` is ignored while focus is in the field, so it only works once a redraw has taken focus away. See [[Task Detail Open Questions]] #32.
 
 ## On the task
 
@@ -49,18 +52,18 @@ None of these asks for confirmation in the mockup. Cancel is styled as a danger 
 |---|---|---|
 | `a` | Approve the open gate | a gate is open |
 | `r` | Send it back, opening the reason box | a gate is open |
-| `Esc` | Cancel the reason box | the reason box is open |
+| `Esc` | Cancel the reason box | the reason box is open and focus is not in the field |
 | `1` – `4` | Switch tab: story, plan, files, cost | — |
-| `←` `→` | Step through the walkthrough | guide page only |
+| `←` `→` | Step through the walkthrough | guide page, with focus inside the walkthrough |
 
 Keys are ignored while focus is in an input, textarea or select, and when ⌘ or Ctrl is held. The status bar shows `a approve · r send back` only while a gate is open.
 
 > [!note] Consistent with the other screens
-> The monitor and inbox use the same `a` / `r` for approve and send back. The board and inbox use `j` / `k`. Task detail has no row navigation keys, so story rows, plan rows and spine segments are reached by Tab and mouse. Backlog Story 2.2 makes `Enter` open the focused board card (*"Card focus model + `Enter` opens the sheet"*). Feature map, *Across everything*: *"fully usable from the keyboard, and friendly to screen readers."*
+> The monitor and inbox use the same `a` / `r` for approve and send back. The monitor and inbox use `j` / `k`. No board mockup exists; backlog Story 2.2 gives the board `h` / `l`, `[` / `]`, `Enter` and `a`. Task detail has no row navigation keys, so story rows, plan rows and spine segments are reached by Tab and mouse. Backlog Story 2.2 makes `Enter` open the focused board card (*"Card focus model + `Enter` opens the sheet"*). Feature map, *Across everything*: *"fully usable from the keyboard, and friendly to screen readers."*
 
 ## Accessibility in the mockup
 
-- Every interactive element is a `<button>`, with `aria-expanded` on story and plan rows and `aria-selected` on tabs.
+- Every interactive element except the reason `<input>` is a `<button>`, with `aria-expanded` on story and plan rows and `aria-selected` on tabs.
 - `:focus-visible` draws a 2 px petrol outline.
 - The waiting segment is hatched *"so it reads as blocked without relying on colour"*.
 - Icons are `aria-hidden`. Their meaning is repeated in text: the pill wording, the row meta.

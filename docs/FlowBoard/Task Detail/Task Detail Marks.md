@@ -25,7 +25,7 @@ A row of bars under the header, one per step in the pinned flow, each with the s
 The label under a segment reads the duration, `waiting` for a gate, `—` for pending, and a red `↺n` when the step took more than one attempt.
 
 > [!note] The spine is a line, the flow is a graph
-> The spine lists steps in a single order. It cannot show that Build and Tests ran in parallel, which the monitor's bar draws as `done,done,done:done,…` with a join. The PRD's board puts a split card *"in the column of the split point"* with a split badge (PRD §4). No source says how task detail shows branches.
+> The spine lists steps in a single order. It cannot show that Build and Tests ran in parallel, which the monitor guide's walkthrough beats draw as `done,done,done:done,…` with a join. The PRD's board puts a split card *"in the column of the split point"* with a split badge (PRD §4). No source says how task detail shows branches.
 
 ## 2. Story icons — the state of each run
 
@@ -60,7 +60,7 @@ Meanings in [[Plan Versus Built]].
 
 | Pill | Means | What you can do (guide) |
 |---|---|---|
-| `● build running` (petrol) | running | *"Watch, or stop the run from the story row if it is clearly lost."* |
+| `● build running` (petrol; guide wording — in the mockup only Summarize can run, so it reads `summarize running`) | running | *"Watch, or stop the run from the story row if it is clearly lost."* |
 | `‖ waiting on you` (ochre) | waiting | *"The gate banner is showing. Approve or send back — nothing else advances it."* |
 | `✓ done` (stone) | done | *"Read the summary, then clean up the workspace when you no longer need the branch."* |
 | `in progress` (plain) | anything else | mockup only, not in the guide |

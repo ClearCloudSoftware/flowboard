@@ -21,7 +21,7 @@ The mockup shows only case 1: Review is gated and *"passed with 2 notes"*.
 
 Present only while a step is gated. In the mockup:
 
-- **Head strip** (ochre): `NEEDS YOU` · *"review passed with 2 notes"* · *"waited 5m"* (ticks every second).
+- **Head strip** (ochre): `NEEDS YOU` · *"review passed with 2 notes"* · `waited 5m 00s` (ticks every second).
 - **Question** (prose): *"The reviewer passed the change but flagged two things: plan item 2 deviated — it revokes one token rather than the family — and item 3 was never built. Approve anyway, or send it back with a reason?"*
 - **Buttons**: `a` **Approve** (primary), `r` **Send back** (danger), **Compare plan vs built** (switches to that tab).
 
@@ -36,7 +36,7 @@ The text is the reviewer's finding, not a generic prompt: *"it says what the rev
 | Money | *"Free — nothing is re-run, nothing is wasted."* |
 | Engine | *"Approve overrides the agent's `fail` outcome (human wins)"* (backlog Story 5.2 **FIX**). For a no-outcome gate, *"approve means pass"* (PRD §8). |
 | API | `POST /api/step-instances/:id/approve` |
-| Mockup | Review → done; 0.5 s later Summarize runs (a ×24 demo clock), bills, writes `summary.md`, and the task shows **done** |
+| Mockup | Review → done; 0.5 s later Summarize runs for 7 s of wall time, bills at ×24, writes `summary.md`, and the task shows **done** |
 
 ## Send back
 
@@ -47,7 +47,7 @@ The text is the reviewer's finding, not a generic prompt: *"it says what the rev
 | Money | *"The build's kept spend moves to wasted."* |
 | Engine | *"reject sets `fail` + reason; reject with no `on_fail` edge fails the task"* (backlog Story 5.2). *"a rejection carries your reason into the next attempt"* (feature map §4). |
 | API | `POST /api/step-instances/:id/reject` |
-| Mockup | The reason field placeholder reads *"Why — this goes to the next build attempt"*, prefilled *"Finish item 2: revoke the whole token family, not just the presented token."* An empty submit becomes *"needs another pass"*. The button reads **Send back to build**. |
+| Mockup | The reason field placeholder reads *"Why — this goes to the next build attempt"*, prefilled *"Finish item 2: revoke the whole token family, not just the presented token."* An empty submit becomes *"needs another pass"*. The button reads **Send back to build**. A 1 s timer redraws the banner, so typed edits are lost and the prefilled reason is what gets sent (see [[Task Detail Controls]]). |
 
 Backlog Story 2.3 records that the old build never sent a reason: *"**Reject asks for a reason** (API accepts it, board renders it, UI never sends it). **BUG**"*.
 
@@ -80,6 +80,9 @@ The guide's centrepiece, *"a decision rather than a tour"* (mockups README). Sev
 |---|---|---|
 | 8 | You send it back | Build re-queues as attempt 3 with your reason. *"**The money moves, it does not come back.**"* Bill stays $2.61, wasted jumps to $1.60. |
 | 9 | Back where you were, poorer | Kept $1.01, wasted $1.60, bill $2.61, *"61% of this task's spend is now on work that was thrown away"*. *"a gate you keep re-opening is usually a sign the plan was unclear, not the agent."* |
+
+> [!warning] Three versions of the send-back money
+> The figures above are the guide's: kept $1.01, wasted $1.60, bill $2.61. The mockup's `sendBack()` zeroes Review's $0.16 instead of moving it, so its bill falls to $2.45. Backlog Story 5.2's rule (*"downstream runs `wasted=1`"*) gives kept $0.85, wasted $1.76, bill $2.61. See [[Attempts And Send Back]].
 
 ## Reading order the guide teaches
 

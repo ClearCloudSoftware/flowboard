@@ -15,13 +15,15 @@ The distinctive part of task detail. The design brief calls it *"The payoff of t
 
 ## Two designs in the sources
 
-| | PRD / backlog / brief / drawio | Task-detail mockup |
+| | PRD / backlog / brief / drawio (*ideation* and *functional* pages) | Task-detail mockup |
 |---|---|---|
 | Left side | `plan.md` | `plan.md`'s numbered items, each with *"accepts when:"* |
 | Right side | `summary.md` | *"what landed in the workspace"*: files changed, with +/− line counts |
 | Method | a text diff of two documents: *"A diff view between `plan.md` and `summary.md` when both exist"* (PRD §13); *"side‑by‑side two‑document diff"* (backlog Story 2.3) | a per-item **verdict**, expandable to the diff hunk |
 | When available | once both exist, so after Summarize | before approving, at the review gate |
 | Header | — | `plan.md vs the working tree` |
+
+The drawio *Harness architecture* page says only *"plan vs built diff"* and names no file.
 
 The two answer different questions. The PRD's version compares what the plan said with what the **summary says** was built. The design brief says the same: *"what the planning step said would be built, next to what the summary step says was actually built."* The mockup compares the plan with what the **working tree contains**, and says outright that the agent's account is not the evidence. The PRD acceptance item *"The task detail sheet diffs `plan.md` against `summary.md`"* tests the first. See [[Task Detail Open Questions]].
 

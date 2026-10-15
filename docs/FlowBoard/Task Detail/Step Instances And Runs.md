@@ -34,7 +34,7 @@ PRD §5 `step_instances.state`:
 | `awaiting_approval` | an approval gate, a missing outcome, or a spent/stuck loop (PRD §8) |
 | `done` | finished, outcome recorded |
 | `failed` | — |
-| `skipped` | rework resets downstream `done` instances to `skipped` *"so they re-instantiate"* (backlog Story 5.2, `02` §3) |
+| `skipped` | rework resets downstream `done` instances to `skipped` *"so they re-instantiate"* (backlog Story 5.2, `02` §3); Cancel also marks instances skipped (backlog Story 2.1) |
 
 Each instance also carries `attempts` and `outcome` (`pass` / `fail` / null). Backlog Story 1.1 and `02` §1 add `step_instances.reason`: *"rejection/failure text shown on the card"*.
 
@@ -62,7 +62,7 @@ The mockup's `TASK.steps[]` is one row per **step**, with per-step `state`, `ms`
 | `ask` | a question asked during the run (see [[Questions Within A Task]]) |
 | `agent`, `model`, `effort` | the step definition, or what actually ran (`runs.model`, `runs.effort`) |
 
-Backlog Story 2.3 asks for the timeline to show *"state, attempts, cost, duration, **model/effort** per step"*, the last flagged **GAP**. The design brief asks for *"model and effort used"*. That is the run's actual values, which can differ from the step definition under draft mode (*"the *actual* model/effort recorded on the run"*, `03` §6).
+Backlog Story 2.3 asks for the timeline to show *"state, attempts, cost, duration, **model/effort** per step"*, a line tagged **PRD/GAP**. The design brief asks for *"model and effort used"*. That is the run's actual values, which can differ from the step definition under draft mode (*"the *actual* model/effort recorded on the run"*, `03` §6).
 
 > [!question] One row per step or per run?
 > The mockup shows one row per step, with a `↺ 2` count and the failed attempt as a red band inside it. Earlier runs' logs are not listed separately. The guide calls the rows *"every run"*. See [[Task Detail Open Questions]].

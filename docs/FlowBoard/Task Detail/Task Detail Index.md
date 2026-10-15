@@ -26,7 +26,7 @@ Task Detail is the FlowBoard view of **one task's whole story**: every step and 
 ## Behaviour and rules
 
 - [[Task Lifecycle]] — statuses, what moves a task, when it is done or failed
-- [[Task Actions]] — Pause, Send to backlog, Cancel, Clean up, Retry, Fail task
+- [[Task Actions]] — Pause, Send to backlog, Cancel, Clean up, Retry, Fail task, stopping a run
 - [[Deciding At A Gate]] — why a task stops, Approve, Send back, the walkthrough
 - [[Plan Versus Built]] — the four verdicts, and the two competing designs
 - [[Attempts And Send Back]] — rework rules, `↺` marks, what send back does to the money
@@ -52,7 +52,7 @@ Task Detail is the FlowBoard view of **one task's whole story**: every step and 
 
 - [[Sample Task Auth Refactor]] — the mockup's task, step by step
 - [[Task Detail Roadmap]] — v1 scope, designed beyond the PRD, ideas, out of scope
-- [[Task Detail Open Questions]] — 31 places the sources disagree or leave a gap
+- [[Task Detail Open Questions]] — 33 places the sources disagree or leave a gap
 - [[Task Detail Sources]] — where every fact in these notes comes from
 
 ## Related

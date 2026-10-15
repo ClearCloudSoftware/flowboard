@@ -11,7 +11,7 @@ A **task** is *"The individual pieces of work — a feature, a bug, a question �
 
 From PRD §5 `tasks`:
 
-| Column | Meaning (PRD wording) | Shown on task detail |
+| Column | Meaning (PRD §5 comment where quoted) | Shown on task detail |
 |---|---|---|
 | `id` | primary key | Topbar id, e.g. `auth-refactor` |
 | `project_id` | owning project | Implied by repo |
@@ -35,7 +35,7 @@ The mockup's aside also shows **owner** (`you`) and **started** (`today 09:21`).
 
 How the sources use them:
 
-- **Prompt.** Part 1 of every prompt names *"the task, its title and body, its acceptance criteria ('the task is done when…') and its non-goals ('do not touch…')"* (PRD §7). Placeholders `{{acceptance_criteria}}` and `{{non_goals}}` are available to prompt templates.
+- **Prompt.** Part 1 of every prompt names *"the task, its title and body, its acceptance criteria ("the task is done when…") and its non-goals ("do not touch…")"* (PRD §7). Placeholders `{{acceptance_criteria}}` and `{{non_goals}}` are available to prompt templates.
 - **Hooks.** The per-run `PreToolUse` hook denies *"any path matching a line of the task's `non_goals` that is written as a path or glob"* (PRD §7).
 - **Review.** The seeded `/code-review` skill *"reviews the diff against the task's acceptance criteria and non-goals and against the raw `check_output`"* (PRD §15).
 - **Import.** The `backlog-importer` fills both from *"Acceptance criteria" / "Non-goals"* sub-sections when present (PRD §15).

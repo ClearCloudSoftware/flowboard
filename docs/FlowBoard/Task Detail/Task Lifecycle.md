@@ -38,6 +38,8 @@ stateDiagram-v2
   running --> blocked: question parked, loop spent or stuck, infra failure
   blocked --> running: answer / Retry
   blocked --> failed: Fail task
+  running --> failed: reject with no on_fail edge, missing row
+  backlog --> cancelled: cancel
   running --> done: no active instances and no reachable pending targets
   running --> cancelled: cancel
   todo --> cancelled: cancel
@@ -47,7 +49,7 @@ stateDiagram-v2
   cancelled --> [*]
 ```
 
-Assembled from PRD §5, §8, §11, §12, backlog Stories 2.1, 4.2 and 5.2, and `02` §3. A task whose step is `awaiting_approval` because of a plain approval gate keeps status `running` in the PRD. Only a spent or stuck loop sets `blocked` (*"Set the target step instance to `awaiting_approval` and the task to `blocked`"*, PRD §8). Backlog Story 4.2 sets the task `blocked` when a run parks on questions. The edges into `cancelled` are an inference from *"they can happen from anywhere"*.
+Assembled from PRD §5, §8, §11, §12, backlog Stories 2.1, 4.2 and 5.2, and `02` §3. A task whose step is `awaiting_approval` because of a plain approval gate or a missing outcome keeps status `running` in the PRD. Of the `awaiting_approval` cases, only a spent or stuck loop sets `blocked` (*"Set the target step instance to `awaiting_approval` and the task to `blocked`"*, PRD §8). Backlog Story 4.2 sets the task `blocked` when a run parks on questions. The edges into `cancelled` are an inference from *"they can happen from anywhere"*.
 
 ## Mapping the vocabularies
 
@@ -81,8 +83,9 @@ The sources disagree on whether the engine fails a task by itself when attempts 
 | Monitor guide: *"Retries are capped, then the task fails."* | Feature map §4: *"it stops and hands the task to you with the last error … You either give it one more try with a note, or fail the task."* |
 | Drawio card D3: *"Fail on the 4th (default 3)."* | `02` §3, drawio *Loop guard*: *"gate: Retry + note / Fail task"* |
 | PRD §16: *"three failed attempts fail the task"* | |
+| Backlog Story 10.1: *"Reject → attempt 2; three failures fail the task."* | |
 
-D3 is the latest decision. Under it, *failed* is reached only through **Fail task** at an escalation gate, through a reject with no `on_fail` edge (*"reject with no `on_fail` edge fails the task"*, backlog Story 5.2), or through a missing row (*"fails the task cleanly"*, `02` §3). See [[Attempts And Send Back]].
+The drawio disagrees with itself: its D3 card fails the task, its *Loop guard* node escalates. Backlog D3 is the latest decision. Under it, *failed* is reached only through **Fail task** at an escalation gate, through a reject with no `on_fail` edge (*"reject with no `on_fail` edge fails the task"*, backlog Story 5.2), or through a missing row (*"fails the task cleanly"*, `02` §3). See [[Attempts And Send Back]].
 
 ## Related
 

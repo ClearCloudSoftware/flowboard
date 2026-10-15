@@ -16,7 +16,7 @@ How retries show up on one task, and what sending work back does to the attempts
 | What counts | *"`max_attempts` counts total runs of the step, first try included (infra retries excluded). The default of 3 means one try and two automatic redos."* (PRD §8) |
 | Rework sees the evidence | *"The new run's 'read these first' list (prompt part 2) also gets the artifacts the failing step produced, so a rework sees the raw `check_output` or `review`, not a summary of it."* (PRD §8) |
 | Your reason travels | *"a rejection carries your reason into the next attempt"* (feature map §4) |
-| Escalate when spent | *"Escalate, don't fail, when a loop is spent or stuck."* (PRD §8, backlog D3) |
+| Escalate when spent | *"Escalate, don't fail, when a loop is spent or stuck."* (PRD §8); backlog D3: *"escalate to a gate, never auto-fail"* |
 | Hiccups don't count | *"A rate limit, network blip or crash is retried automatically after a short wait. It doesn't use up a try, but it still shows up in wasted spend."* (feature map §4) |
 | Task memory | the `task` memory scope holds *"why attempt 1 failed"* so attempt 2 starts warm (`09-memory.md`) |
 
@@ -27,12 +27,12 @@ Full design-side treatment: [[Branching Joining And Loops]].
 | Where | Mark |
 |---|---|
 | Spine segment | red `↺2` after the duration when attempts > 1 |
-| Story row | `↺ 2` in the fourth meta column |
+| Story row | `↺ 2` in the last (third) meta column |
 | Story row, expanded | a red band: *"✕ attempt 1 — egress denied: registry.npmjs.org was not in the step allowlist — $0.48 spent on that attempt and thrown away."* |
 | Header | **retries** = Σ (attempts − 1) across steps |
 | Cost tab | the red portion of a step's bar |
 
-The guide's watch-for on retries: *"One retry is ordinary; three is a signal. A step that keeps retrying is usually blocked by the environment, not confused by the task."*
+The guide's retries row counts *"Extra attempts across all steps. One retry is ordinary; three is a signal."* and warns *"A step that keeps retrying is usually blocked by the environment, not confused by the task."*
 
 ## Send back, step by step
 
@@ -45,24 +45,26 @@ sequenceDiagram
   participant Build
   participant Tests
   You->>Review: Send back + reason
-  Review-->>Review: discarded (pending, $0 kept)
+  Review-->>Review: discarded (pending; its spend → wasted)
   Review->>Build: on_fail, attempts 2 → 3
   Note over Build: kept $1.12 → wasted<br/>queued with your reason
   Note over Tests: untouched — "that result still stands"
   Build->>Review: lands, review re-runs, gate re-opens
 ```
 
-| Figure | Before | After (guide) |
-|---|---|---|
-| kept | $2.13 | $1.01 |
-| wasted | $0.48 | $1.60 |
-| bill | $2.61 | $2.61 |
-| Build attempts | 2 | 3 (queued) |
+| Figure | Before | After (guide) | After (mockup code) | After (backlog 5.2 rule) |
+|---|---|---|---|---|
+| kept | $2.13 | $1.01 | $0.85 | $0.85 |
+| wasted | $0.48 | $1.60 | $1.60 | $1.76 |
+| bill | $2.61 | $2.61 | $2.45 | $2.61 |
+| Build attempts | 2 | 3 (queued) | 3 (queued) | 3 |
 
 ## Problems the sources leave
 
 > [!warning] The mockup's send back shrinks the bill
 > `sendBack()` moves Build's kept cost to wasted, but sets Review's `cost` to 0 without moving it. So the mockup's bill drops by $0.16 to $2.45, against the guide's *"the bill stays $2.61"*. The guide's own kept figure ($1.01) still includes Review's $0.16, though Review is *"discarded"*. The monitor README records the same class of bug on the monitor screen: *"sending a step back made the topbar's **today** total *shrink*"*.
+>
+> Backlog Story 5.2 settles where the $0.16 belongs: rework marks *"downstream runs `wasted=1`"*. Review is downstream of Build, so the correct figures are kept **$0.85**, wasted **$1.76**, bill **$2.61**. The mockup and the guide are both wrong, in different ways.
 
 > [!question] Tests are not re-run after a new build
 > Guide: *"Tests are not re-run — they already passed and that result still stands."* The monitor guide: *"Tests already passed and that result still holds, so the engine doesn't spend on it twice."* But the PRD's seeded flow joins `implement` and `tests` into `check`, and rework *"downstream `done` → `skipped` so they re-instantiate"* (`02` §3). Tests are a sibling branch, not downstream of Build, so they stay done. But a **check** step would re-run. The mockup's flow has no check step. See [[Task Detail Open Questions]].

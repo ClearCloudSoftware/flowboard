@@ -57,7 +57,7 @@ All the team ideas rest on *"identities for the people involved"* (feature map, 
 
 ## Out of scope
 
-*"Do not build: authentication, user accounts, roles, deployment config, multi-machine support, a plugin marketplace"* (PRD §17). So an **owner** other than *you* is out of v1.
+*"Do not build: authentication, user accounts, roles, deployment config, multi-machine support, a plugin marketplace, …"* (PRD §17). So an **owner** other than *you* is out of v1.
 
 ## Related
 

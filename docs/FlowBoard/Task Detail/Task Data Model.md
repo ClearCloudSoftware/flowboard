@@ -68,15 +68,38 @@ All of these are **proposals**, listed in [[Task Detail Open Questions]]:
 
 No `Task`, `StepInstance`, `Run` or `CostEntry` type exists in `docs/old/reference/`. The nearest are:
 
+| Concept | Nearest type | File |
+|---|---|---|
+| Task | `TaskRef { id }`; `ParsedTask { import_key, title, body? }` (import only) | `workspace.ts`, `task-source.ts` |
+| Run | `RunResult { usage, exitCode, outcome?, error? }`; `AgentRun` (a live handle: `sessionId`, `pid`, `events`, `result`, `stop()`) | `agent-provider.ts` |
+| Run cost | `Usage` | `events.ts` |
+
 ```ts
 // docs/old/reference/core/ports/events.ts
-interface Usage {
-  input: number; output: number; cacheRead: number; cacheWrite: number;
-  numTurns: number; costUsd?: number;   // absent -> PricingService fills it
+export interface Usage {
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+  numTurns: number;
+  /** Absent when the provider lacks `native_cost`; PricingService fills it from tokens. */
+  costUsd?: number;
 }
 ```
 
-and an informal shape in `docs/old/design/README.md`:
+```ts
+// docs/old/reference/core/ports/agent-provider.ts
+export interface RunResult {
+  usage: Usage;
+  exitCode: number;
+  /** Drives conditional edges; read from the produced JSON or set_outcome. Unset is NOT 'pass': the engine parks the step at a human gate. */
+  outcome?: 'pass' | 'fail';
+  /** stderr tail on failure. */
+  error?: string;
+}
+```
+
+And an informal shape in `docs/old/design/README.md`:
 
 ```text
 StepRun = { stepDefId, state: 'running'|'awaiting_answers'|'awaiting_approval'|'failed'|'done',

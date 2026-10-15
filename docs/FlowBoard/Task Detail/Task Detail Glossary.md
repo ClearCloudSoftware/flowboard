@@ -6,12 +6,12 @@ module: Task Detail
 # Task Detail Glossary
 
 > [!warning] Overloaded words
-> **attempt**, **retry**, **send back**, **waiting**, **done**, **failed**, **story** and **workspace** each mean more than one thing in the sources. Each one is flagged ⚠ below.
+> **acceptance criteria**, **attempt**, **retry**, **send back**, **waiting**, **done**, **failed**, **escalation**, **story** and **workspace** each mean more than one thing in the sources. Each one is flagged ⚠ below.
 
 | Term | Meaning | Source |
 |---|---|---|
 | **Task** | *"The individual pieces of work — a feature, a bug, a question — that move through a recipe."* | feature map §3 |
-| **Task detail** | The view of one task's whole story. A **sheet** in the PRD and backlog, a **page** (`/t/[id]`) in the drawio and the mockup. | PRD §13, drawio |
+| **Task detail** | The view of one task's whole story. A **sheet** in the PRD, the backlog and the drawio *ideation* page; a **page** in the mockup; the route `/t/[id]` on the drawio *Harness architecture* page. | PRD §13, drawio |
 | **Acceptance criteria** | ⚠ On the task: *"the exact conditions that close the task"*. On a plan item: the *"accepts when"* line written by the Plan step. | PRD §5; mockup |
 | **Non-goals** | *"what the agents must not touch or attempt"*; also enforced by the hook on path-shaped lines | PRD §5, §7 |
 | **Step instance** | *"one task's occupancy of one step definition. Has state and artifacts."* | PRD §4 |
@@ -22,7 +22,7 @@ module: Task Detail
 | **Reject** | The PRD and API word for **send back** at a gate. | PRD §12 |
 | **Gate** | A step instance in `awaiting_approval`. See [[Deciding At A Gate]] | PRD §8 |
 | **Waiting** | ⚠ The guide's task state *"waiting · on you · $0/min"*: a gate or a question. Not a PRD status; maps to `running` or `blocked`. Also *queued*, waiting for a worker. | guide |
-| **Blocked** | A PRD task status: a spent or stuck loop, a parked question, or a non-transient infra failure. Not shown as such on the screen. | PRD §5, §7, §8 |
+| **Blocked** | A PRD task status: a spent or stuck loop, a parked question, or a non-transient infra failure. Not shown as such on the screen. | PRD §5, §7, §8; backlog Story 4.2 |
 | **Queued** | A step ready to run, *"waiting for a free worker"*. Not a PRD step state. | guide |
 | **Pending** | A step *"Not started, and it can't be — something upstream is unfinished."* PRD `pending` also covers created-but-not-started. | guide; PRD §5 |
 | **Done** | ⚠ A step done, or the whole task done. | — |
@@ -32,7 +32,7 @@ module: Task Detail
 | **Workspace** | ⚠ The task's git worktree (the feature map's *"private copy of the code"*). Also the **Workspace port**, which can be a container. Not the per-run sandbox container. | feature map §14; `01` |
 | **Worktree** | The git mechanism behind a v1 workspace: `git worktree add … -b <branch>` | PRD §11 |
 | **Spine** | The header's row of one segment per step | mockup |
-| **Story** | ⚠ The first tab: every step and its runs. Also the guide's *"One task's whole story"*, meaning the screen. | mockup; tracker |
+| **Story** | ⚠ The first tab: every step and its runs. Also the tracker's *"One task's whole story"* (mockups README: *"the whole story of one task"*), meaning the screen. | mockup; tracker |
 | **Plan vs built** | The tab lining up `plan.md` items against the working tree | mockup |
 | **Verdict** | One of *as planned*, *deviated*, *not built*, *unplanned*, on a plan item | guide |
 | **Deviated** | *"Something was built for this item, but not what was asked."* | guide |

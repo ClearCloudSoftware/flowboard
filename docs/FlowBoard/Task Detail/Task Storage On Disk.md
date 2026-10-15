@@ -26,10 +26,10 @@ data/
       …
       08-summary.md
     <the project's files, edited on the task's branch>
-  .flowboard/skills/<plugin>/<commit>/   # capability store, gitignored (D5), mounted read-only
+  .flowboard/skills/<plugin>/<commit>/   # capability store, gitignored (Capability Library D5), mounted read-only
 ```
 
-Paths from PRD §6, §7, §9 and §11 and the drawio *Harness architecture* page. See [[Task Workspace]] for the three competing worktree schemes and [[Task Artifacts]] for artifact naming.
+Paths from PRD §6, §7, §9, §11 and §13, the drawio *Harness architecture* page, and [[Capability Library Decisions]] D5 (the skills store). *Mounted read-only* is from PRD §11.1. See [[Task Workspace]] for the three competing worktree schemes and [[Task Artifacts]] for artifact naming.
 
 ## What lives where
 

@@ -29,7 +29,7 @@ The aside's **carried in from memory** block shows what the task started with. T
 - **The `agent` scope is missing** from the mockup's three tags.
 - **When memory is off**, no source says whether the block is hidden or shows an empty state.
 - **The `task` line is mid-task.** *"Attempt 1 died on an egress denial"* was written during this task, so it was not *carried in*. It is task-scope memory created by attempt 1 and recalled into attempt 2.
-- **The allowlist claim.** *"npmjs.org is now on this step's allowlist"* implies someone changed the step's egress allowlist mid-task. Under [[Version Pinning]], a running task keeps its flow version, so a step-level change would not reach it. The inbox's **Allow host & retry** suggests a per-task or per-run override. See [[Task Detail Open Questions]].
+- **The allowlist claim.** *"npmjs.org is now on this step's allowlist"* implies someone changed the step's egress allowlist mid-task. Under [[Version Pinning]], a running task keeps its flow version, so a step-level change should not reach it. Yet the inbox and monitor guides say **Allow host & retry** *"adds the blocked host to that step's allowlist, then re-queues the run"*: a step-definition edit that does reach the running task. Whether that makes a new flow version is open; see [[Task Detail Open Questions]] #12 and [[Flow Design Open Questions]].
 
 ## Related
 

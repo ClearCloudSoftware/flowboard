@@ -22,7 +22,7 @@ The mockup opens on the sample task `auth-refactor`, held at its review gate. Se
 │ BILL $2.61   AGENT TIME 22m 00s   WAITING ON YOU 5m   RETRIES 1         │
 │ ▬▬▬ ▬▬▬ ▬▬▬ ▬▬▬ ▨▨▨ ░░░   ← the spine, one segment per step             │
 ├ gate banner (only when something is blocked on you) ────────────────────┤
-│ NEEDS YOU · review passed with 2 notes · waited 5m                      │
+│ NEEDS YOU · review passed with 2 notes · waited 5m 00s                      │
 │ The reviewer passed the change but flagged two things…  [a Approve] [r Send back] [Compare plan vs built] │
 ├ tabs ───────────────────────────────────────────────────────────────────┤
 │ STORY 6 · PLAN VS BUILT 4 · FILES 9 · COST                              │
@@ -44,7 +44,7 @@ The guide numbers six regions:
 | 1 | **Topbar** | *"Where the task stands, and the three things you can do to the task itself rather than to a step."* | `‹ Board` back link, task id, status pill, task actions (see [[Task Actions]]) |
 | 2 | **Header & spine** | *"The four numbers that matter, then every step as a bar. Click any segment to jump to it."* | Title, description (prose, IBM Plex Sans), four header numbers, the spine |
 | 3 | **Gate banner** | *"Only present when something is blocked on you, and it says what the reviewer actually flagged."* | `needs you` strip, the question, Approve / Send back / Compare plan vs built, the reason form |
-| 4 | **Tabs** | *"Four ways to read the same task — the story, the plan comparison, the files, the money."* | Story, Plan vs built, Files, Cost, each with a count. See [[Task Detail Tabs]] |
+| 4 | **Tabs** | *"Four ways to read the same task — the story, the plan comparison, the files, the money."* | Story, Plan vs built, Files, Cost; the first three carry a count. See [[Task Detail Tabs]] |
 | 5 | **Aside** | *"The facts that don't change: where the code lives, which flow version is pinned, what memory it started with."* | owner, repo & branch, workspace, flow, carried in from memory, you were asked, timeline |
 | 6 | **Status bar** | *"The one-line version, including the sandbox posture everything ran under."* | id · steps done · billed · state · `sandbox container, egress default-deny` · key hints |
 
@@ -106,7 +106,7 @@ No source designs a loading, error, or "task not found" state for this screen. B
 From the mockup's CSS:
 
 - Below 980 px the aside drops under the main column, and the plan-vs-built two-column grid becomes one column, with the "built" side indented behind a left rule.
-- Below 600 px a story row hides its fourth meta column.
+- Below 600 px a story row hides its **cost** column. The rule hides the row's fourth child: icon, name, duration, cost, attempts.
 - `prefers-reduced-motion` cuts animations and transitions to near zero. The running spine segment's sweep is an animation.
 
 ## Design language
@@ -114,7 +114,7 @@ From the mockup's CSS:
 The house rules in `docs/mockups/README.md` apply: light only, zero radius, hairlines not shadows, IBM Plex Mono as the primary voice and Plex Sans for prose. Three signal colours: petrol `#0E6E74` *alive*, ochre `#A35A00` *wants you*, brick `#B0231B` *broken*. *"Done is drained to stone grey on purpose — it's most of the screen, and colouring it would drown the part that needs you."*
 
 > [!warning] Sheet or page?
-> The PRD (§13) and backlog Story 2.3 describe a **task detail sheet** opened from a board card. The drawio *Harness architecture* page has a route, **`Task detail /t/[id]`**. The mockup is a full page with a `‹ Board` back link. See [[Task Detail Open Questions]].
+> The PRD (§13) and backlog Story 2.3 describe a **task detail sheet** opened from a board card. The drawio has both: a **Task detail sheet** card on its *FlowBoard ideation* page, and a route, **`Task detail /t/[id]`**, on its *Harness architecture* page. The mockup is a full page with a `‹ Board` back link. See [[Task Detail Open Questions]].
 
 ## Related
 

@@ -35,20 +35,20 @@ From PRD §12, the ones task detail uses:
 | `GET` | `/api/runs/:id/stream` | SSE; *"replays existing `run_events` for the run, then streams new ones. Reconnect with `Last-Event-ID`."* | a live running row |
 | `GET` | `/api/costs?project=&from=&to=` | rollups | the recipe average |
 
-Backlog Story 2.1 adds `GET /api/tasks/:id` and `POST /api/tasks`. The backlog intro records an unlisted `POST /api/tasks/:id/start` that the first build added.
+Backlog Story 2.1 adds `GET /api/tasks/:id` (and re-lists `POST /api/tasks`). The backlog intro records an unlisted `POST /api/tasks/:id/start` that the first build added.
 
 *"All handlers are thin: validate with zod, call a function in `packages/core`, return JSON."* (PRD §12). *"Every port is called from `src/lib/`, **never from a route**"* (`06` §15).
 
 ## Gaps: proposed endpoints
 
 > [!warning] Proposals
-> Nothing below is in any source. It is the smallest set that would back the screen's controls. Each is listed in [[Task Detail Open Questions]].
+> Two paths below are in the backlog with no response shape or rules: `GET /api/tasks/:id` (Story 2.1) and `POST /api/tasks/:id/start` (intro, item 3). The rest are in no source. Together they are the smallest set that would back the screen's controls. Each is listed in [[Task Detail Open Questions]].
 
 | Method | Path | For |
 |---|---|---|
-| `GET` | `/api/tasks/:id` | the whole screen: task, instances with their runs, artifacts, questions, pinned flow, totals (shape in [[Task Data Model]]) |
+| `GET` | `/api/tasks/:id` | path from backlog 2.1; the shape is proposed. The whole screen: task, instances with their runs, artifacts, questions, pinned flow, totals (shape in [[Task Data Model]]) |
 | `GET` | `/api/tasks/:id/stream` | SSE for state, cost and gate changes on one task |
-| `POST` | `/api/tasks/:id/start` | Start (if D1 keeps it separate from promote) |
+| `POST` | `/api/tasks/:id/start` | Start, if backlog D1 keeps it separate from promote (path from the backlog intro) |
 | `POST` | `/api/tasks/:id/demote` | Send to backlog |
 | `POST` | `/api/tasks/:id/pause` | Pause (needs a status, see [[Task Actions]]) |
 | `POST` | `/api/tasks/:id/fail` | Fail task at an escalation gate |

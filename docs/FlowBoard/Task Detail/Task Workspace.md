@@ -45,13 +45,14 @@ Three schemes. See [[Task Detail Open Questions]].
 | Backlog Story 2.1, `05` §11, `workspace.ts` | *"done/cancelled/failed"* |
 | Task-detail mockup | **Clean up workspace** shows only when every step is done |
 
-The guide says the action *"Removes the branch and the folder."* The reference port `destroy(task, opts?: { force?: boolean })` runs `git worktree remove [--force]` (`07`). Nothing in the sources says the branch is deleted.
+The guide says the action *"Removes the branch and the folder."* The reference port `destroy(task, opts?: { force?: boolean })` runs `git worktree remove [--force]` (`07`). Only the guide says the branch is deleted; no backend source (PRD §11, `07`, `workspace.ts`) does.
 
 ## The Workspace port
 
-The architecture splits storage into two ports, Workspace and ArtifactStore (`05` §11, component #11). The Workspace is *"create/destroy/cwd + `execHost`. Isolation lifecycle, and where processes run against it."* From `docs/old/reference/core/ports/workspace.ts`:
+The architecture splits storage into two ports, Workspace and ArtifactStore (`05` §11, component #11). The Workspace is *"create/destroy/cwd + `execHost`. Isolation lifecycle, and where processes run against it."* From `docs/old/reference/core/ports/workspace.ts` (abridged):
 
 ```ts
+// … TaskRef and the doc comments elided
 export interface WorkspaceHandle {
   /** Absolute path used as the run's cwd. */
   path: string;

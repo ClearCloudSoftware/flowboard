@@ -5,7 +5,7 @@ module: Task Detail
 
 # Sample Task Auth Refactor
 
-The task the task-detail mockup opens on. It is *"Seeded at the review gate — the same task the monitor shows waiting"* (mockup comment), and the same task the inbox and monitor guides walk through. It is sample data, not seed data: the PRD's seed (§15) is one project, one flow and *"sample tasks"* (drawio *Seed data*) with no content given.
+The task the task-detail mockup opens on. It is *"Seeded at the review gate — the same task the monitor shows waiting"* (mockup comment), the task the monitor guide walks through, and one of the cards in the inbox guide's opening beat. It is sample data, not seed data: the PRD's seed (§15) is one project, one flow and *"sample tasks"* (drawio *Seed data*) with no content given.
 
 ## The task
 
@@ -37,7 +37,7 @@ Totals: kept **$2.13**, wasted **$0.48**, bill **$2.61**, agent time **22m 00s**
 ## The story in the logs
 
 1. **Research** reads `src/auth/session.ts`, `src/auth/jwt.ts` and `docs/security/session-audit-sep.md`, then writes the brief: *"6 findings, 2 open questions"*.
-2. **Plan** asks *"Rotate on every use, or only when the refresh token is near expiry?"* You answer **Every use** after 2m 14s. It writes `plan.md` with *"3 work items with acceptance criteria"*.
+2. **Plan** asks *"Rotate on every use, or only when the refresh token is near expiry?"* You answer **Every use** after 2m 14s. It writes `plan.md` with *"3 work items with acceptance criteria"*. Its log says *"asked you 2 questions"*, but the data holds one (see [[Questions Within A Task]]).
 3. **Build** attempt 1: *"egress denied: registry.npmjs.org was not in the step allowlist"*, so $0.48 wasted. Attempt 2 edits `jwt.ts`, `family.ts` and `metrics.ts`, gets `✓ 34 passed (2.1s)`, and logs *"⋯ item 3 skipped — no migration tooling in this workspace"*.
 4. **Tests** writes `tests/auth/rotate.test.ts`, gets *"41 passed, coverage 88% on src/auth"*, and flags *"◆ no test covers the token-family case — plan item 2"*.
 5. **Review** flags *"item 2 deviates from the plan — revokes one token, not the family"* and *"item 3 not implemented"*, then gives the verdict *"passed with 2 notes"*. The gate opens.
@@ -47,13 +47,13 @@ Plan versus built for this task: [[Plan Versus Built]]. Memory lines: [[Memory C
 
 ## After approval (mockup)
 
-Summarize runs for 7 s of demo time on haiku and writes `summary.md` 1.8 kB: *"✓ summary written — the task is done"*. The guide's beat puts the final bill at **$2.63**.
+Summarize runs for 7 s of wall time on haiku, with its cost billed at ×24 (as if it ran 2m 48s), and writes `summary.md` 1.8 kB: *"✓ summary written — the task is done"*. The guide's beat puts the final bill at **$2.63**.
 
 ## The same task in other mockups
 
 | Mockup | Differences |
 |---|---|
-| `monitor.html` | Step runs at different scale (`research 22`, `plan 20.4`, `build 16.2`…). Build and Tests run in parallel. |
+| `monitor.html` | Steps are seeded as `run(step, state, startMin, durMin)`: `22`, `20.4`, `16.2`… are start offsets in minutes ago. The durations (1.6, 4.2, 8.0, 5.1, 3.2 min) roughly match task detail. Build and Tests start together, so they run in parallel. |
 | `monitor-guide.html` | Bill **$1.96 → $1.98** at done, *"none of it wasted"*. Send back puts Build on **attempt 2**, with $1.12 moved to wasted. |
 | `inbox.html` | The review gate card, waiting 5 min: *"Review passed with 2 notes — approve, or send it back?"* Its hint: *"Sending back re-queues build and moves everything the last attempt spent into wasted."* |
 | `capability-library-guide.html` | Cites *"the failure that burned $0.48 on the build in the task detail screen"* to explain amber tool chips and the egress allowlist. |
