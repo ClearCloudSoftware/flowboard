@@ -83,7 +83,7 @@ Undefined. The backlog records *"non‑JSON error bodies"* (1.3) and asks for *"
 `data/flowboard.db` (PRD §3, drawio) or `data/vibe.db` (backlog header); env vars `VIBE_*`; `.vibe/`, `.vibe-worktrees/`, `mcp__vibe__*` (PRD) against `.flowboard/worktrees/` and `fb/task-<id>` (drawio). Pick one prefix. Worktree paths: [[Execution Open Questions]] #3, [[Workspaces Open Questions]] #6. → [[Environment And Configuration]]
 
 ### 20. Does the MCP process open the database?
-PRD §3, §9: never. `02` §1 and backlog 1.1: the DB path env exists so *"worker and MCP"* open the same file. See [[Execution Open Questions]] #54. → [[Process Topology]]
+PRD §3, §9: never. `02` §1 and backlog 1.1: the DB path env exists so *"worker and MCP"* open the same file. See [[Execution Open Questions]] #54 and [[Human In The Loop Open Questions]] #37. → [[Process Topology]]
 
 ### 21. How many tables?
 *"14 tables"* (`02` §1, backlog 1.1); PRD §5 has 15 since `plugins` was added; memory adds `memories` and `run_memories`. Same as [[Projects Open Questions]] #20. → [[Domain Schema]]
