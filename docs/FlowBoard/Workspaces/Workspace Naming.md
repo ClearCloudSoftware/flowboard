@@ -9,9 +9,11 @@ Where a task's worktree lives and what its branch is called. The sources give th
 
 | Source | Worktree path | Branch | Artifacts folder |
 |---|---|---|---|
-| PRD §11, backlog 2.1, `07`, `05` §11 | `<repo_path>/.vibe-worktrees/task-<id>` | `vibe/task-<id>` | `<worktree>/.vibe/task-<id>/` |
+| PRD §11, backlog 2.1, `07` (artifacts folder: PRD §6, `05` §11) | `<repo_path>/.vibe-worktrees/task-<id>` | `vibe/task-<id>` | `<worktree>/.vibe/task-<id>/` |
 | Drawio *Harness architecture* | `<repo>/.flowboard/worktrees/task-<id>` | `fb/task-<id>` | `.vibe/task-<id>/*.md \| *.json` |
 | Task-detail mockup (sample data) | `~/.flowboard/ws/auth-refactor` | `flowboard/auth-refactor` | — |
+
+`05` §11 gives no worktree path or branch name. It names only the `.vibe-worktrees/` folder (in its exclude line) and the artifacts folder.
 
 The mockup's `TASK` object: `repo:'flowboard/api', branch:'flowboard/auth-refactor', workspace:'~/.flowboard/ws/auth-refactor'`. It uses a task slug, not an id, and puts the folder in the home directory, outside the repo.
 

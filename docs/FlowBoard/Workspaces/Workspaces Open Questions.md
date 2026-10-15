@@ -83,7 +83,7 @@ No merge or PR mechanism. The feature map appendix and flow-designer mockup imag
 ## Runs and isolation
 
 ### 22. Does a container workspace remove the collision?
-Five sources say so (`01-ports.md`, `05` §11, `07`, `workspace.ts`, backlog 3.5). The same sources make the container per run with the same worktree bind-mounted read-write. Backlog 3.5's cross-reference *"(2.2)"* points at the board projection story, not at the constraint. **Proposal:** a worktree per parallel branch, merged at the join. → [[Shared Worktree Within A Task]], [[Execution Open Questions]] #48, [[Sandboxing Open Questions]] #21
+Five sources say so (`01-ports.md`, `05` §11, `07`, `workspace.ts`, backlog 3.5). Yet the container is per run (backlog 3.5, PRD §11.1, `08`), with the same task worktree bind-mounted read-write. Backlog 3.5's cross-reference *"(2.2)"* points at the board projection story, not at the constraint. **Proposal:** a worktree per parallel branch, merged at the join. → [[Shared Worktree Within A Task]], [[Execution Open Questions]] #48, [[Sandboxing Open Questions]] #21
 
 ### 23. Container per task or per run
 PRD §7 *"inside the task's container"*; PRD §11.1, `08`, backlog 3.5, the drawio: one per run. → [[Workspace Isolation Tiers]], [[Execution Open Questions]] #61, [[Sandboxing Open Questions]] #17
