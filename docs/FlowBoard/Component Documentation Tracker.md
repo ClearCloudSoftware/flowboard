@@ -15,7 +15,7 @@ Siblings of the Capability Library on the drawio *Functional components* page.
 | Status | Component | Scope | Mockup + guide | Feature map | Architecture |
 |---|---|---|---|---|---|
 | ✅ | [[Capability Library Index\|Capability Library]] | Skills, agents, bundle packs, provider packs, install, update, remove | `capability-library` | §16 The library | #13 Skill/Agent registry → Capability packs |
-| ⬜ | Flow Design | Versioned DAG, step editor, artifact contract, flow library | `flow-designer` | §2 Flows | #2 Flow definition & validation |
+| ✅ | [[Flow Design Index\|Flow Design]] | Versioned DAG, step editor, artifact contract, flow library | `flow-designer` | §2 Flows | #2 Flow definition & validation |
 | ⬜ | Human In The Loop | Questions, batches, approvals, the inbox | `inbox` | §11 Questions, §12 The inbox | #9 Human-in-the-loop protocol |
 | ⬜ | Monitor | Status at a glance, needs-you, live run viewer | `monitor` | §5 The board, §9 Live run viewer | #4 Board projection, #8 Event stream & live viewer |
 | ⬜ | Task Detail | One task's whole story: timeline, artifacts, cost | `task-detail` | §3 Tasks, §15 Artifacts | #11 Artifact store & workspace |

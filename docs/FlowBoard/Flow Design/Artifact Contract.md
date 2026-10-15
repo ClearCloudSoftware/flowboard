@@ -1,0 +1,61 @@
+---
+tags: [flowboard, flow-design, concept, artifacts, contract]
+module: Flow Design
+---
+
+# Artifact Contract
+
+> **Each step declares what it needs and what it makes** — So FlowBoard can check the whole recipe hangs together before you save it, and warn you if a step needs something no earlier step produces. — feature map §2
+
+## The contract
+
+Every step lists two arrays:
+
+- **`requires`** (mockup: **needs**) — artifact types the step must be given. *"files an earlier step must write"* (inspector hint).
+- **`produces`** — artifact types the step writes. *"they're the promise this step makes to whatever comes next"* (flow-designer guide).
+
+> **Artifact types are declared, and the declaration is checked.** Each step definition lists `requires` and `produces` as arrays of artifact type keys. When saving a flow, validate that every `requires` entry is produced by some ancestor step in the DAG. Reject the save with a clear error if not. This turns a whole class of runtime failures into design-time errors, and lets the flow editor grey out invalid connections. — PRD §6
+
+The flow-designer guide explains why it matters: *"Those declarations are what let steps hand off without a shared conversation: `plan` writes `plan.md`, and `build` reads it. They're also what the validator checks."*
+
+## Why files, not messages
+
+The architecture README: *"**Artifacts flow along the edges.** … the graph is valid only if every `requires` is produced by an ancestor (checked at design time — component 2). It is a *dataflow* graph, not a call sequence."* Each step gets a fresh context (drawio concept 7), so artifacts are the only hand-off.
+
+## What the contract drives
+
+| Consumer | Use | Source |
+|---|---|---|
+| Validator | Every `requires` produced by an ancestor; reject otherwise | PRD §6; [[Flow Validation]] |
+| Prompt builder | Part 2: *"input artifacts with their absolute paths, one per `requires` entry, phrased as 'read these first'"*. Part 3: *"The exact output path the step should write, one per `produces` entry."* | PRD §7 |
+| Artifact scanner | After a run, registers files created or modified during it *"that match the step's declared `produces` types"* | PRD §6 |
+| Park / resume | *"Resume prompt must repeat the requires/produces paths, not only the answers."* (BUG) | backlog Story 3.2 |
+| Questions | Questions can be an artifact type: the engine watches the `produces:questions` path | `04-hitl-and-notify.md` §9 |
+| Task detail | Files tab: *"what each step produced — the contract the next step reads"* | task-detail mockup |
+
+## How the inspector shows it
+
+| Mark | Meaning |
+|---|---|
+| Plain chip under **needs** | Some earlier step writes that file |
+| Amber chip under **needs** | Nothing upstream writes it |
+| Petrol chip under **produces** | An output |
+| `nothing — it can start cold` | No needs |
+| `×` on a need | Drop the requirement |
+
+## Rework inputs
+
+On a rework loop, *"The new run's 'read these first' list (prompt part 2) also gets the artifacts the failing step produced, so a rework sees the raw `check_output` or `review`, not a summary of it."* (PRD §8). These inputs are not declared in `requires`. Whether a back-edge counts as ancestry for validation is open — [[Flow Design Open Questions]] #22.
+
+## Type keys versus filenames
+
+The PRD uses **type keys**: `research_brief`, `questions`, `answers`, `plan`, `explainer`, `implementation_notes`, `test_notes`, `check_output`, `review`, `summary` (§6 seed list). Files land at `<worktree>/.vibe/task-<task-id>/NN-<type>.<ext>`, e.g. `03-plan.md`. The mockups use **filenames** (`brief.md`, `plan.md`, `changes.patch`, `test-report.md`, `review.md`, `summary.md`). See [[Flow Design Open Questions]] #24 and #25.
+
+Contract validation is store-agnostic: *"it checks the artifact **type graph** (does an ancestor produce what this step requires?), never the bytes."* (`05` §11; `artifact-store.ts` header).
+
+## Related
+
+- [[Flow Validation]]
+- [[Step Definitions]]
+- [[Adopting And Adapting A Flow]]
+- [[Check Steps]]
