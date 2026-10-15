@@ -82,10 +82,10 @@ On the rework target, with the failing step's artifact (PRD §8). No mockup draw
 Under PRD §7 it is not a work verdict, so it is not an attempt. Whether it is transient is unclear: the list includes *"network error"*. If not transient, it blocks the task. Task-detail and inbox mockups count it as an attempt. Same as [[Monitor Open Questions]] #11. Whether a denial ends the run at all, or only fails one tool call, is not stated either ([[Sandboxing Open Questions]] #14). → [[Infra Retries]]
 
 ### 23. Retry as-is for transient failures
-Monitor guide offers it for *"a rate limit, a transient error"*; PRD §7 retries those automatically. ([[Monitor Open Questions]] #37)
+Monitor guide offers it for *"a rate limit, a transient error"*; PRD §7 retries those automatically. ([[Monitor Open Questions]] #37; same as [[Human In The Loop Open Questions]] #25)
 
 ### 24. Allow host & retry
-Writes to *"this step's egress allowlist"*. Flows are immutable versions (PRD §4); which version it edits, and whether the running task sees it, are not stated. Whether the retry counts against `max_attempts` is not stated. Same as [[Sandboxing Open Questions]] #11.
+Writes to *"this step's egress allowlist"*. Flows are immutable versions (PRD §4); which version it edits, and whether the running task sees it, are not stated. It does count: the monitor guide re-queues the run *"as the next attempt"*. What is open is a retry past the cap: the inbox card offers it on *"Attempt 3 of 3 failed"*, and no source says whether that attempt is allowed, escalates (PRD §8) or fails the task. Same as [[Sandboxing Open Questions]] #11 and [[Human In The Loop Open Questions]] #26.
 
 ### 25. How the runner classifies a failure
 No source lists the exit codes, stderr patterns or events that mean "transient".
@@ -126,7 +126,7 @@ No source specifies `payload`. **Proposal** in [[Job Queue]].
 Not given. The monitor mockup uses 4. Whether shell runs take a slot is not stated. ([[Monitor Open Questions]] #20) Whether the cap is an env var or a setting is not stated. **Inferred:** non-run jobs (`advance_task`, `escalate_question`, `import_backlog`) take no slot, though `import_backlog` may run an agent (backlog 7.3).
 
 ### 37. `resume_step` job kind
-Backlog 1.1 (**DEC**). PRD §9 resumes with a `start_run`.
+Backlog 1.1 (**DEC**). PRD §9 resumes with a `start_run`. Same as [[Human In The Loop Open Questions]] #7.
 
 ### 38. `args.json` or `spec.json`
 PRD §7: `data/runs/<id>/args.json`. `03` §6 and the drawio: `spec.json` (+ raw stream). → [[Runner Pipeline]]
@@ -185,7 +185,7 @@ Backlog D5 and the drawio D5 card: *"Empty `--settings` file per run"*. PRD §7 
 Refuse (PRD §7, `01-ports.md`), refuse or downgrade (PRD §11.1), downgrade (`03` §6, drawio), or downgrade or fail the step (`08`, backlog 3.5 tagged **DEC**). Feature map §10 sides with refuse (*"otherwise FlowBoard refuses it"*). With no Docker, `08` adds *"(or warn)"* to disabling `bypassPermissions`. Same as [[Sandboxing Open Questions]] #1. Which tiers count also differs: `03` §6 names only *"(container/microVM)"*; `01-ports.md`, `08` and the drawio include gVisor ([[Sandboxing Open Questions]] #2). → [[Run Guardrails At Launch]]
 
 ### 54. Does the MCP process open the database?
-Yes per `02` §1 and backlog 1.1 (*"so worker and MCP … hit the same file"*); never per PRD §3, §9 and the drawio *SQLite* card. Same as [[Settings And Plumbing Open Questions]] #20. → [[Worker Lifecycle]]
+Yes per `02` §1 and backlog 1.1 (*"so worker and MCP … hit the same file"*); never per PRD §3, §9 and the drawio *SQLite* card. Same as [[Settings And Plumbing Open Questions]] #20 and [[Human In The Loop Open Questions]] #37. → [[Worker Lifecycle]]
 
 ### 55. Would a Stop be retried automatically?
 PRD §7 lists *"process killed by a signal"* as transient. Stop and graceful shutdown are SIGTERMs; the replay adapter's `stop()` settles with `exitCode: 130`. Same as [[Monitor Open Questions]] #35. Same as [[Agent Providers Open Questions]] #22. → [[Stopping And Cancelling]]
@@ -200,7 +200,7 @@ PRD §7's completion rule: non-zero → `failed`. Its shell paragraph: *"a resul
 Downstream steps are re-instantiated on rework (`02` §3), so the previous failed `check` run sits on an earlier instance. How the fingerprint lookup crosses instances is not stated. → [[Stuck Detection And Fingerprints]]
 
 ### 59. Escalation delay: 5 or 10 minutes
-PRD §10, the drawio and backlog 6.1 (`settings.escalation_threshold_ms`, default 5 min): 5 minutes. The inbox mockup: *"escalation after 10m"*. Same as [[Settings And Plumbing Open Questions]] #6. → [[Job Queue]]
+PRD §10, the drawio and backlog 6.1 (`settings.escalation_threshold_ms`, default 5 min): 5 minutes. The inbox mockup: *"escalation after 10m"*. Same as [[Settings And Plumbing Open Questions]] #6 and [[Human In The Loop Open Questions]] #18. → [[Job Queue]]
 
 ### 60. Cleanup after failure
 PRD §11 offers cleanup once `done` or `cancelled`; feature map §14 and the task-detail guide say *"finished or cancelled"*. Backlog 2.1, `05` §11 and `workspace.ts` add `failed`. The task-detail mockup draws the button only once every step is done. Same as [[Workspaces Open Questions]] #11 and [[Task Detail Open Questions]] #13. → [[Execution Storage]], [[Cleaning Up A Workspace]]
