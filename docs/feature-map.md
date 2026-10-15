@@ -46,6 +46,7 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 
 - **Steps** — Each step is one job for one agent: what to do, which AI model to use, how hard to think, how much it may spend, and whether it should pause for your approval.
   - *Skill or agent* — A step can run a saved **skill** (a packaged instruction, like a slash-command) or a defined **agent** (a role with its own personality and instructions).
+  - *Check steps* — A step can also run a plain command, like your linter and test suite, with no AI involved. If the command succeeds, the step passed. If it fails, the step failed, and the error output goes to the next attempt word for word. This is how FlowBoard knows the code works instead of taking an agent's word for it.
   - *Guardrails* — A spending cap, a limit on back-and-forth turns, which tools it's allowed, and how many times it may retry before giving up.
   - *Auto or approval* — Some steps move on by themselves when done; others stop and wait for your go-ahead.
 - **Connections between steps** — Steps are wired together ("after this, do that"). A connection can always fire, or only when the previous step passed, or only when it failed.
@@ -55,7 +56,7 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **Each step declares what it needs and what it makes** — So FlowBoard can check the whole recipe hangs together before you save it, and warn you if a step needs something no earlier step produces.
 - **Versions** — Editing a recipe creates a new version instead of changing the old one, and any task already running keeps the version it started on — so edits never disrupt work in progress.
 - **A visual editor** — Build and rewire recipes on a canvas (drag steps, draw connections) or as a simple list, with a live warning if the recipe doesn't hold together.
-- **Ready-made recipes** — Ships with a couple of complete ones (a full software-development pipeline and a research pipeline) so you're not starting from a blank page.
+- **Ready-made recipes** — Ships with a couple of complete ones (a full software-development pipeline and a research pipeline) so you're not starting from a blank page. The development pipeline runs your tests before code review, so the reviewer never looks at code that doesn't pass.
 
 **💡 Ideas:**
 
@@ -66,6 +67,7 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 *The individual pieces of work — a feature, a bug, a question — that move through a recipe.*
 
 - **Create and track work** — Add a task with a title and description; it moves through states from "backlog" to "in progress" to "done" (or "blocked" / "failed" if something goes wrong).
+- **Say what "done" means** — Each task can carry *acceptance criteria* (what has to be true to close it) and *non-goals* (what agents must leave alone). Every step sees both, and the review checks against them, so an agent can't quietly swap in an easier job and call it finished.
 - **Start a task** — Kicking off a task gives it a clean, private copy of the code to work in and locks in the recipe it will follow.
 - **Pause, send back, or cancel** — Send a task back to the backlog (keeping its workspace), or cancel it — which stops any running agents and tidies up.
 - **A detail view per task** — Open a task to see its whole story: each step, how long it took, what it cost, whether it needed approval, links to everything it produced, and a side-by-side "what we planned vs what got built."
@@ -82,10 +84,13 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 
 - **Decide the next step** — When a step finishes, the engine reads the recipe and starts whatever comes next.
 - **Follow pass/fail paths** — If a step reports success or failure, the engine takes the matching route (a passed review moves on; a failed one loops back).
+- **Silence isn't success** — If an agent finishes without saying whether it passed, the engine doesn't assume it did. The step stops and asks you.
 - **Run branches in parallel and wait for them** — It starts several branches at once when the recipe fans out, and holds a later step until every branch it depends on is done.
-- **Retry loops with a safety limit** — When work loops back to be redone, the engine counts the attempts and gives up cleanly after a set number instead of looping forever.
+- **Retry loops with a safety limit** — When work loops back to be redone, the engine counts the attempts. After a set number, it stops and hands the task to you with the last error, instead of looping forever. You either give it one more try with a note, or fail the task.
+  - *Three tries by default* — The first attempt plus two redos. Every loop that sends work back to the same step draws from the same three, whether the tests failed or the review did.
+  - *Stops early when stuck* — If the tests fail with exactly the same error twice in a row, it doesn't spend a third try. It asks you right away.
+  - *Hiccups don't count* — A rate limit, network blip or crash is retried automatically after a short wait. It doesn't use up a try, but it still shows up in wasted spend.
 - **Your call wins** — If you approve or reject a step, your decision overrides whatever the agent concluded, and a rejection carries your reason into the next attempt.
-- ❓ Exactly how many retries before we declare a task failed.
 
 **💡 Ideas:**
 
@@ -116,7 +121,7 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **Know each tool's abilities** — Tools differ in what they support (thinking effort, resuming a session, reporting cost). FlowBoard checks what each can do and adapts, hiding options a tool can't handle.
 - **One shared format for results** — Whatever tool runs, its output (messages, tool calls, results, cost) is translated into one common format the rest of the app understands.
 - **A test stand-in** — A fake provider that replays a recorded session, so the whole system can be tested without spending real money.
-- ❓ Try FlowBoard against a second real tool (Codex) early, to be sure the "swap the AI" design actually holds.
+- ❓ Try FlowBoard against a second real tool (Codex) early, to be sure the "swap the AI" design actually holds — and check first whether an open standard for driving coding tools (the Agent Client Protocol) could do the translating for us.
 
 **💡 Ideas:** _(add ideas)_
 
@@ -158,6 +163,8 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **Least privilege** — It runs as a limited user, can't gain new powers, gets a throwaway filesystem, and only ever sees the one task's files — never your keys or your other projects.
 - **Hard limits** — Ceilings on memory, processing, and time, so a runaway agent is stopped by the box, not just by its spending budget.
 - **The safety rule** — Fully-autonomous mode (no approval on each action) is only allowed when the agent is inside a box; otherwise FlowBoard refuses it.
+- **Your keys stay outside the box** — The agent never holds a real API key. Its requests go through FlowBoard's network gatekeeper, which adds the key on the way out. A tricked agent that dumps its settings finds nothing worth stealing.
+- **Rules inside the agent too** — Besides the box, the agent's own tool calls are checked before they run: no writing outside the task's folder, no touching what the task lists as off-limits, no pushing code or destructive commands. The box limits what *can* happen; these checks block what *shouldn't*.
 - ❓ How strong a box to use by default, and how an agent asks you questions from inside a sealed box.
 
 **💡 Ideas:** _(add ideas)_
@@ -288,10 +295,11 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 ### 21. Memory
 *What FlowBoard carries from one task to the next, so agents stop starting from scratch every time.* → [deep dive](./old/architecture/09-memory.md)
 
-- **Start warm, not cold** — Before a step runs, FlowBoard hands the agent the relevant things it has already learned: your standing preferences, this project's conventions, what worked (and what didn't) on earlier tasks. So it isn't re-discovering the same facts run after run.
+- **Start warm, not cold** — Before a step runs, FlowBoard hands the agent the relevant things it has already learned: your standing preferences, this project's conventions, what worked (and what didn't) on earlier tasks. So it isn't re-discovering the same facts run after run. It hands over only the most relevant few, up to a fixed size, so remembering more never means a longer prompt.
 - **Remember your answers** — When you answer a question in the inbox, or reject a step with a reason, FlowBoard remembers it. The next task doesn't ask you the same thing again — the screen you live in gets quieter over time.
 - **Four kinds of memory** — About *you* (how you like things done), about a *project* (its quirks and layout), about an *agent or skill* (what that role has picked up), and within a *task* (so attempt 2 knows why attempt 1 failed).
-- **It sorts itself out** — A new fact that contradicts an old one replaces it ("now uses vitest, not jest") instead of piling up, so the memory stays true without you curating it. This is a drop-in memory layer (Mem0) doing that work, not something FlowBoard hand-rolls.
+- **Starts simple** — The first version keeps memories in FlowBoard's own database and finds them by keyword, newest first: nothing extra to install or pay for.
+- **It sorts itself out (later)** — Once memory has proven it earns its keep, a drop-in memory layer (Mem0) takes over: a new fact that contradicts an old one replaces it ("now uses vitest, not jest") instead of piling up, so the memory stays true without you curating it.
 - **Yours, on your machine** — Memory is self-hosted by default, right next to your repos and keys — nothing about how you work leaves your laptop. (A hosted option exists for a future shared setup, but that's a later, separate choice.)
 - **Off until you want it** — It's an add-on, not a requirement: every flow runs exactly as before with memory switched off. Turn it on and runs get cheaper (less re-deriving) and the inbox gets lighter — and both show up on the cost view and the inbox, so you can tell whether it's earning its keep.
 - ❓ Which memory to switch on first — just *your* preferences (the cheapest win), or project memory too?
@@ -331,7 +339,7 @@ Whole new components that don't exist yet. Seeded with a few starters — add yo
 - **💡 Auto-pick the AI per step** — let FlowBoard choose the best or cheapest model for each step instead of you setting it by hand.
 - **💡 A shareable recipe library** — export a recipe and reuse it across projects, or share it with other people.
 - **💡 Kick off work from outside** — start a task straight from a GitHub issue, a Slack message, or on a schedule.
-- **💡 Steps that aren't AI** — a step could run a plain command, call a service, or be a simple human checklist, not only an agent. → [note](./old/architecture/02-core-and-engine.md#3-flow-execution-engine-write-model)
+- **💡 More steps that aren't AI** — plain commands are now in scope (see *Check steps* under [Flows](#2-flows)). A step could also call a service or be a simple human checklist. → [note](./old/architecture/02-core-and-engine.md#3-flow-execution-engine-write-model)
 - **💡 A trends dashboard** — throughput over time, how fast questions get answered, cost per feature.
 - **💡 Replay any past run** — step through exactly what happened, to debug it after the fact.
 - **💡 Check for hidden manipulation** — scan the files agents produce (and the untrusted things they read) for prompt-injection before the next step trusts them.

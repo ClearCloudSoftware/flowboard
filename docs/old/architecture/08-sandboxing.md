@@ -50,10 +50,11 @@ user's own repos, a hardened container with egress control is a reasonable defau
 The knobs a container/microVM `ExecHost` applies. All are provider-independent — they wrap the process, not
 the CLI.
 
-- **Egress allowlist (load-bearing).** Default-deny outbound; allow only the model/CLI endpoint, the package
-  registries the step needs, and the project's git remote. Implement with an in-container firewall
-  (`NET_ADMIN`+`NET_RAW`, an `init-firewall` script like Claude's [cc-devcontainer]) or an egress proxy the
-  container is forced through [egress-audit]. `[]` = fully offline.
+- **Egress allowlist (load-bearing).** Default-deny outbound; allow only the model/CLI endpoint and the package
+  registries the step needs. **Not the git remote**: the host does all git work. Implement as an egress proxy
+  (Squid / tinyproxy) on an internal-only Docker network, so the container has no other route out
+  [egress-audit]; an in-container firewall (`init-firewall`, [cc-devcontainer]) is the alternative.
+  `[]` = fully offline.
 - **Non-root.** Run as an unprivileged user; Claude Code even *rejects* `--dangerously-skip-permissions` when
   launched as root. [cc-devcontainer]
 - **Drop capabilities:** `--cap-drop ALL`, add back only what a build needs. [docker]
@@ -64,8 +65,12 @@ the CLI.
 - **Resource limits:** `--memory`, `--cpus`, `--pids-limit`, and a wall-clock timeout — the *physical* backstop
   to the *logical* `max_turns` / `max_budget_usd` caps. A runaway or looping agent is contained at the OS level,
   not only at the token level.
-- **Secrets at runtime, run-scoped.** Pass model/CLI auth via env at launch; never bake into the image; prefer
-  short-lived tokens. [cc-devcontainer]
+- **No real credential inside.** The CLI gets `ANTHROPIC_BASE_URL` pointing at the egress proxy and a dummy key;
+  the proxy injects the real credential, only toward the model endpoint. A prompt-injected agent can read its
+  environment, so the environment holds nothing worth stealing. Fallback if a CLI refuses: a short-lived,
+  run-scoped token, never baked into the image. [cc-devcontainer]
+- **In-agent hooks.** `PreToolUse` hooks (per-run `--settings`) deny writes outside the worktree, non-goal
+  paths and destructive git/shell commands. The box limits what *can* happen; the hooks block what *shouldn't*.
 - **Ephemeral.** One container per run/attempt, destroyed on completion — clean state, no cross-run
   contamination. [northflank]
 
@@ -91,15 +96,11 @@ defense-in-depth.)
 - **The gate:** the runner refuses `bypassPermissions` unless the resolved tier is `container`/`gvisor`/`microvm`.
   On `host` tier it downgrades to an approval/auto mode, or fails the step with a readable reason. A correctness
   rule, not a suggestion.
-- **HITL in a sandbox** ([9](./04-hitl-and-notify.md#9-human-in-the-loop-protocol)): the `ask_user` MCP server
-  currently opens the host SQLite file — which a sealed sandbox (no host mounts, egress denied) cannot reach.
-  Two answers, both already in the design:
-  1. **Artifact-file park/resume** (preferred for strong isolation): the agent writes `questions.json` into the
-     bind-mounted worktree and parks; the host watches the produced path; no DB or network access from inside.
-     This is *why* the HITL primitive is the file exchange and MCP is only an optimization.
-  2. **Host-side broker:** run the `ask_user` server on the host and expose it to the container over a
-     bind-mounted unix socket (or an internal-only network) — the container talks to a scoped broker, never the
-     DB directly.
+- **HITL in a sandbox** ([9](./04-hitl-and-notify.md#9-human-in-the-loop-protocol)): **decided, host-side broker
+  on every tier.** The CLI launches a stdio `ask_user` shim; the shim forwards over a bind-mounted unix socket to
+  a broker in the worker, which alone writes `questions`. No DB file or network inside the box, and host runs use
+  the same path, so there is one path to test. The artifact-file park/resume exchange stays as the fallback for
+  providers without MCP.
 - **Cost/limits** ([12](./06-cost-and-platform.md#12-cost--usage-ledger--pricingservice)): the sandbox's
   physical limits complement the budget caps; `runs.sandbox` records the tier for audit alongside
   `runs.model`/`runs.effort`.
@@ -134,8 +135,8 @@ Single-user, local-first, mostly the user's own repos:
 
 1. **Default tier = `container`** whenever a step's `permission_mode` is `bypassPermissions`; **`host`** only for
    non-bypass steps or an explicit trusted-repo opt-out.
-2. **Egress allowlist on** by default (the `claude` CLI's model endpoint + npm/pnpm + the project git remote);
-   editable in settings.
+2. **Egress allowlist on** by default (the model endpoint via the credential-injecting proxy + npm/pnpm; no git
+   remote); editable in settings.
 3. **Docker as the baseline runtime**; `gvisor`/`microvm` opt-in for untrusted repos, behind the same `ExecHost`
    port.
 4. **Probe Docker at startup**; if absent, fall back to `host` and disable `bypassPermissions` (or warn). See

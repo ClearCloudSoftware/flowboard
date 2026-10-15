@@ -82,8 +82,8 @@ Full interface sketches: [`01-ports.md`](./01-ports.md).
 `ExecHost` seam (any provider × any isolation tier), and is the recommended default whenever `bypassPermissions`
 is on. Threat model and design: [08 — sandboxing](./08-sandboxing.md).
 
-**Agentic memory** — a **sixth, additive port, `MemoryStore`** ([Mem0](https://github.com/mem0ai/mem0) as the
-first adapter, self-hosted by default) — gives runs memory *across* tasks: the operator's standing decisions, a
+**Agentic memory** — a **sixth, additive port, `MemoryStore`** (a `local` SQLite adapter first,
+[Mem0](https://github.com/mem0ai/mem0) later, self-hosted) — gives runs memory *across* tasks: the operator's standing decisions, a
 project's conventions, what an agent has learned. It is **not** load-bearing — a flow runs unchanged with it off
 — but it turns "start cold, re-learn, re-ask" into "start warm", which is a **wasted-spend** control (§12) as
 much as a quality gain. The runner brokers it host-side (recall before a run, commit after), so it stays off the
@@ -139,19 +139,20 @@ Each component is documented as **Role · Seam · Genericize · Composes with ·
 
 ## Open decisions (raised, not resolved)
 
-1. **StepExecutor generalization** (component 3): make `step_defs.kind` an executor interface so a step can
-   be an AI invocation *or* a shell command, HTTP call, pure transform, or human task — turning FlowBoard
+1. **StepExecutor generalization** (component 3): `shell` steps are now in scope (they are the mechanical
+   check behind every pass/fail). Still open: make `step_defs.kind` an executor interface so a step can
+   also be an HTTP call, pure transform, or human task — turning FlowBoard
    into a general workflow engine that *ships* AI executors. Widens the engine's core interface. Documented
    as optional in [02](./02-core-and-engine.md#3-flow-execution-engine-write-model).
-2. **Codex adapter spike before the port hardens.** The AgentProvider interface is only as good as its second
-   implementation; validate it against Codex's real CLI (session/resume, cost reporting, MCP exposure) before
-   committing the shape. See [01](./01-ports.md#validating-the-port).
+2. **ACP + Codex spike before the port hardens.** First: could the AgentProvider port *be* the Agent Client
+   Protocol (ACP), with Claude Code and Codex adapters, instead of a parser per vendor? Then validate against
+   Codex's real CLI (session/resume, cost reporting, MCP exposure) before committing the shape. See [01](./01-ports.md#validating-the-port).
 3. **Sandbox posture** ([08](./08-sandboxing.md)): default isolation tier (host vs container), container vs
-   gVisor/microVM strength, and HITL-in-sandbox (artifact-file vs host broker). Recommendation: container +
+   gVisor/microVM strength, and ~~HITL-in-sandbox~~ (decided: host-side broker on every tier, see [08](./08-sandboxing.md)). Recommendation: container +
    egress allowlist whenever `bypassPermissions` is on. Tracked as D7–D9 in the backlog.
 4. **Memory posture** ([09](./09-memory.md)): self-hosted Mem0 (keeps it local-first) vs the managed platform
    (the shared/remote tier); which scopes are on by default; and the cross-run trust boundary — recalled
    memories are context, not instructions, and writes come only from declared artifacts/answers. Recommendation:
-   self-host, additive/off by default, `user` scope first. Off the egress allowlist because the runner brokers it.
+   `local` adapter first, Mem0 self-hosted only once memory pays off; additive/off by default, `user` scope first. Off the egress allowlist because the runner brokers it.
 5. Plus the spec's own open items (`docs/REBUILD-BACKLOG.md` §"Decisions to close"): auto-start vs explicit
-   Start, undo window, `max_attempts` semantics, hook isolation, import parser shape.
+   Start, undo window, hook isolation, import parser shape. (`max_attempts` semantics: decided, PRD §8.)

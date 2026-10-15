@@ -19,7 +19,7 @@ The centerpiece. Turns "run an agent" into a normalized contract so Claude Code,
 ```ts
 type Capability =
   | 'effort' | 'sessions' | 'resume_fork' | 'mcp_tools' | 'plugins'
-  | 'allowed_tools' | 'permission_modes' | 'native_cost' | 'partial_stream' | 'budget_cap';
+  | 'allowed_tools' | 'permission_modes' | 'native_cost' | 'partial_stream' | 'budget_cap' | 'tool_hooks';
 
 interface RunSpec {
   prompt: PromptParts;               // normalized 6-part prompt (PRD §7)
@@ -58,6 +58,7 @@ The universal seam — already half-present in `run_events.type`. Each adapter p
 ledger, and engine never see provider JSON.
 
 ```ts
+// every event also carries `v: 1`, the schema version (see below)
 type NormalizedEvent =
   | { type: 'assistant_text'; text: string }
   | { type: 'thinking'; text: string }
@@ -75,6 +76,11 @@ interface Usage {
 
 Persist the raw line alongside the normalized event (the schema already has `run_events.raw`) so a new
 provider's parser can be debugged against real captures without re-spending.
+
+**Versioned, standard names.** This is the most-read contract in the system, so it carries a schema version
+(`v`, stored as `run_events.v`); readers handle the versions they know and fall back to `raw`. Field names follow
+the OpenTelemetry GenAI semantic conventions where one exists (model, token usage, tool name), so tracing
+(Langfuse or any OTel backend) plugs in through a plain exporter later, with no custom bridge.
 
 ### Capability negotiation
 
@@ -104,8 +110,12 @@ and cost test runs deterministic and zero-spend.
 
 ### Validating the port
 
-The interface is only as good as its second implementation. Before hardening, spike the **Codex adapter**
-against three risk points: (a) session/resume semantics vs Claude's `--resume --fork-session`; (b) cost —
+The interface is only as good as its second implementation. **First ask whether the port should *be* the
+Agent Client Protocol (ACP)**, the open protocol for driving coding agents, which has adapters for Claude Code
+and Codex. If ACP covers session/resume, streaming, permission requests, MCP passthrough and cost, the
+`AgentProvider` becomes one ACP client plus capability flags, instead of a hand-written parser per vendor. If it
+doesn't, keep this port and record what ACP lacks. Check its maturity at spike time. Either way, spike the
+**Codex adapter** against three risk points: (a) session/resume semantics vs Claude's `--resume --fork-session`; (b) cost —
 Codex reports tokens, not dollars, so `native_cost` is absent and PricingService is on the critical path;
 (c) MCP tool exposure — confirm `ask_user` can be injected, else the artifact-file HITL fallback is mandatory,
 not optional.
@@ -164,10 +174,10 @@ importing `child_process`.
 interface SandboxProfile {
   tier: IsolationTier;
   image?: string;
-  egressAllow: string[];   // default-deny; allow model endpoint + registries + git remote. [] = offline
+  egressAllow: string[];   // default-deny; model endpoint (via the credential-injecting proxy) + registries; no git remote. [] = offline
   limits?: { memoryMb?: number; cpus?: number; pids?: number; wallClockMs?: number };
   mounts?: Array<{ source: string; target: string; readOnly?: boolean }>;  // never host secrets / docker.sock
-  env?: Record<string, string>;   // run-scoped; never bake secrets into the image
+  env?: Record<string, string>;   // run-scoped; never a real credential (the proxy injects it), never baked into the image
   nonRoot?: boolean;              // default true; bypassPermissions requires it
 }
 
@@ -220,8 +230,8 @@ Idempotent upsert on `(project_id, import_key)`: re-import twice = 0 created, N 
 ## MemoryStore (additive)
 
 The sixth port, and the only optional one — cross-task memory so runs start warm instead of cold.
-[Mem0](https://github.com/mem0ai/mem0) is the first adapter (self-hosted by default; managed cloud is the remote
-tier), with a `local` SQLite adapter and a `none` no-op. Two calls, brokered by the runner **on the host** so the
+Adapters in build order: `none` (default), a `local` SQLite FTS5 adapter (the first real one, no extra
+container), then [Mem0](https://github.com/mem0ai/mem0), self-hosted, once memory has proven it pays off. Two calls, brokered by the runner **on the host** so the
 sandboxed agent never talks to the memory store (and it stays off the egress allowlist). Full design, scopes, and
 the trust boundary: [09 — memory](./09-memory.md).
 

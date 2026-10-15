@@ -29,7 +29,9 @@ primitive** — which is also what makes HITL provider-agnostic.
      when the agent writes it and exits, that *is* the batch. Park/resume makes this natural: no MCP? Then
      questions are just an artifact type the engine already knows how to watch.
 
-  So HITL genericizes to **"MCP where available, file protocol universal."**
+  So HITL genericizes to **"MCP where available, file protocol universal."** The MCP side is the same on every
+  tier: a stdio shim the CLI launches, forwarding over a unix socket to a broker in the worker, which is the only
+  writer of `questions` (PRD §9). Host and sandbox runs take one path.
 - **Composes with:** blocks a run ([03 §6](./03-execution-substrate.md#6-runner--execution-host)), fills the
   inbox, and triggers escalation (10). The **race fix** (backlog): an answer that arrives while the process is
   still exiting must not be lost — completion re-checks "answers arrived after last poll" and resumes instead

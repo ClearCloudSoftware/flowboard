@@ -144,7 +144,7 @@ export interface RunSpec {
 export interface RunResult {
   usage: Usage;
   exitCode: number;
-  /** Drives conditional edges; read from the produced JSON or set_outcome. Defaults to 'pass'. */
+  /** Drives conditional edges; read from the produced JSON or set_outcome. Unset is NOT 'pass': the engine parks the step at a human gate. */
   outcome?: 'pass' | 'fail';
   /** stderr tail on failure. */
   error?: string;
