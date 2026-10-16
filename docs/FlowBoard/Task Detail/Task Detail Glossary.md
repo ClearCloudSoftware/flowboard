@@ -46,7 +46,7 @@ module: Task Detail
 | **Recipe average** | Cost per task on the same flow version | mockup; PRD §13 |
 | **Pinned** | The flow version and capability commits a task keeps until it finishes | PRD §4, §5 |
 | **Park** | A run that ended its turn to wait for answers; resumed with `--resume … --fork-session` | PRD §9 |
-| **Escalation** | ⚠ (1) A loop spent or stuck, handed to you as a gate. (2) A question posted to Slack after 5 minutes. | PRD §8, §10 |
+| **Escalation** | ⚠ (1) A loop spent or stuck, handed to you as a gate. (2) A question posted to Slack after 5 minutes. PRD §10 escalates only questions; the guide's *waiting on you* and the drawio *Human escalation* concept send gates to chat too ([[Monitor Open Questions]] #10) | PRD §8, §10; guide; drawio |
 | **Recipe** | The feature map's plain word for a flow | feature map §2 |
 | **Promote** | Backlog → Todo: pin the flow, create the worktree | PRD §11, §12 |
 | **Demote** | Todo → Backlog, keeping the worktree. Not the same as **Send to backlog**, which the guide allows *"from anywhere"* | backlog Story 2.1; guide |

@@ -31,6 +31,8 @@ From the guide's *The numbers, and what they don't say*:
 | **waiting on you** | *"How long the current gate or question has been open, ticking."* | *"Anything past your escalation window should already have reached you in chat."* |
 | **retries** | *"Extra attempts across all steps. One retry is ordinary; three is a signal."* | *"A step that keeps retrying is usually blocked by the environment, not confused by the task."* |
 
+The *waiting on you* hint covers gates as well as questions, but PRD §10 escalates only questions (`escalate_question`). Same as [[Monitor Open Questions]] #10 and [[Escalation And Notifications Open Questions]] #3.
+
 ### Agent time is not wall-clock
 
 *"This task shows 22m of agent time, but it has been open far longer. The gap is time nobody paid for: 2m 14s while Plan waited on your answer, and the 5m and counting since the review gate opened. A run that asks you a question saves its place and stops billing, so a slow answer costs you calendar time and nothing else."* (guide)

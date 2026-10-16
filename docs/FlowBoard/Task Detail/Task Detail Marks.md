@@ -11,7 +11,7 @@ The status pill is a fourth mark, for the task as a whole.
 
 ## 1. The spine — one segment per step
 
-A row of bars under the header, one per step in the pinned flow, each with the step name and a duration. Clicking a segment jumps to that step in the Story tab and expands it.
+A row of bars under the header, one per step in the flow (the pinned version, by inference; see [[Pinned Flow On A Task]]), each with the step name and a duration. Clicking a segment jumps to that step in the Story tab and expands it.
 
 | Segment | State | Means (guide) |
 |---|---|---|

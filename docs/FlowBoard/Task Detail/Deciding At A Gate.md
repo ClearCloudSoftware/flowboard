@@ -82,7 +82,7 @@ The guide's centrepiece, *"a decision rather than a tour"* (mockups README). Sev
 | 9 | Back where you were, poorer | Kept $1.01, wasted $1.60, bill $2.61, *"61% of this task's spend is now on work that was thrown away"*. *"a gate you keep re-opening is usually a sign the plan was unclear, not the agent."* |
 
 > [!warning] Three versions of the send-back money
-> The figures above are the guide's: kept $1.01, wasted $1.60, bill $2.61. The mockup's `sendBack()` zeroes Review's $0.16 instead of moving it, so its bill falls to $2.45. Backlog Story 5.2's rule (*"downstream runs `wasted=1`"*) gives kept $0.85, wasted $1.76, bill $2.61. See [[Attempts And Send Back]].
+> The figures above are the guide's: kept $1.01, wasted $1.60, bill $2.61. The mockup's `sendBack()` zeroes Review's $0.16 instead of moving it, so its bill falls to $2.45. Backlog Story 5.2's rule (*"downstream runs `wasted=1`"*) gives kept $0.85, wasted $1.76, bill $2.61. The monitor guide counts *"a review you sent back"* as wasted. Nothing ranks these; see [[Task Detail Open Questions]] #15 and [[Attempts And Send Back]].
 
 ## Reading order the guide teaches
 

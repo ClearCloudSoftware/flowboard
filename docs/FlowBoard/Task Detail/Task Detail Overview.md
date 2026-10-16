@@ -67,7 +67,7 @@ The architecture catalogues the storage side as component **#11 Artifact store &
 
 ## What it is not
 
-- **Not the live run viewer.** Streaming a session token by token is `/runs/[id]` (feature map §9, PRD §13). Task detail shows each run's log after the fact. No source designs a link from it to the viewer (see [[Task Detail Open Questions]] #6).
+- **Not the live run viewer.** The viewer at `/runs/[id]` *"Streams the normalised event summaries as they arrive"* (PRD §13; feature map §9: *"Messages and actions appear as the agent produces them"*). Task detail shows a summary log per run, live while a step runs (the mockup re-renders a running row's log and cost every 250 ms). No source designs a link from it to the viewer (see [[Task Detail Open Questions]] #6).
 - **Not the engine.** Task detail asks for approve, send back, retry and cancel. What the engine does next belongs to Execution. See [[Attempts And Send Back]].
 - **Not the inbox.** The inbox is the queue of everything waiting on you. Task detail is one task, in depth. The same gate can be decided from either.
 - **Not the cost dashboard.** `/costs` rolls spend up across projects. Task detail shows one task's bill against its recipe's average.

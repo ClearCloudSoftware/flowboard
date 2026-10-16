@@ -25,9 +25,9 @@ Every fact in these notes comes from the files below (paths relative to the repo
 
 | File | What it contributes |
 |---|---|
-| `docs/old/REBUILD-BACKLOG.md` | Intro (items 1, 3 and 7: $0 running cost, the unlisted Start route, the uncommitted sheet Start button); Story 1.1 `step_instances.reason`, `runs.model/effort`, `runs.sandbox`, `step_defs.sandbox_profile`, artifact types (*"the nine PRD types"*); 2.1 task lifecycle, promote, demote, Start, cancel, cleanup; 2.2 `Enter` opens the sheet, board keys; **2.3 Task detail sheet**; 3.2 artifact scan, completion (*"task blocked"*); 3.3 restart, graceful shutdown; 3.4 viewer, Stop; 4.2 park sets task blocked; 5.2 rework, downstream attempts (**DEC**), approve/reject, task-done bug; 9.1 markdown theme bug; 10.1 acceptance; decisions D1–D9 (D1 and D3 used here) |
+| `docs/old/REBUILD-BACKLOG.md` | Intro (items 1, 3 and 7: $0 running cost, the unlisted Start route, the uncommitted sheet Start button); Story 1.1 `step_instances.reason`, `runs.model/effort`, `runs.sandbox`, `step_defs.sandbox_profile`, artifact types (*"the nine PRD types"*); 2.1 task lifecycle, promote, demote, Start, cancel, cleanup; 2.2 `Enter` opens the sheet, board keys; **2.3 Task detail sheet**; 3.2 artifact scan, completion (*"task blocked"*); 3.3 restart, graceful shutdown; 3.4 viewer, Stop; 4.2 park sets task blocked; 5.2 rework, downstream attempts (**DEC**), approve/reject, task-done bug; 9.1 markdown theme bug; 10.1 acceptance; decisions D1–D9 (D1, D3 and D5 used here) |
 | `docs/old/architecture/README.md` | Ports table (Workspace, ArtifactStore adapters); component index #11; *"a task pins its version at start"*; open decision 5 |
-| `docs/old/architecture/01-ports.md` | `Workspace`, `ArtifactStore`, `NormalizedEvent`, `Usage`, `RunResult` (the variants that disagree with the reference) |
+| `docs/old/architecture/01-ports.md` | `Workspace` and `ArtifactStore` (variants that disagree with the reference); `NormalizedEvent`, `Usage`, `RunResult` (match the reference) |
 | `docs/old/architecture/02-core-and-engine.md` | §1 `runs` as an append-only journal, `step_instances.reason`, `runs.provider`; §3 rework, escalation, task-done rule, approve/reject |
 | `docs/old/architecture/03-execution-substrate.md` | §6 artifact scan, infra retries, actual model/effort; §7 restart and graceful shutdown; §8 viewer, Stop, running cost estimate |
 | `docs/old/architecture/04-hitl-and-notify.md` | §9 park/resume with `questions` and `answers` artifacts, cancel pending questions on failure |
@@ -51,7 +51,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 |---|---|
 | `docs/mockups/README.md` | Descriptions of task-detail and its guide; house design rules; the monitor's shrinking-total bug |
 | `docs/mockups/monitor.html` | `auth-refactor` seeded at the review gate with `run(step, state, startMin, durMin)`, Build ∥ Tests; `↵` expands a row in place; `j`/`k` |
-| `docs/mockups/monitor-guide.html` | `auth-refactor` walkthrough: beat 2 *"You promote it"* queues the first step; the plan question; send back to attempt 2, tests untouched; *"Retries are capped, then the task fails"*; $1.98 at done; the `done,done,done:done` bar strings; stop *"recorded as failed"*; **Allow host & retry** re-queues *"as the next attempt"* |
+| `docs/mockups/monitor-guide.html` | `auth-refactor` walkthrough: beat 2 *"You promote it"* queues the first step; the plan question; send back to attempt 2, tests untouched; *"Retries are capped, then the task fails"*; $1.98 at done; the `done,done,done:done` bar strings; stop *"recorded as failed"*; **Allow host & retry** re-queues *"as the next attempt"*; wasted spend counts *"a review you sent back"* |
 | `docs/mockups/flow-designer-guide.html` | The *Retries* setting: *"How many attempts before the step gives up and fails the task."* |
 | `docs/mockups/flow-designer.html` | The flow identity `Software delivery @core v4` (name + author + version), and its $2.14 a task over 182 runs |
 | `docs/mockups/inbox.html` | The `auth-refactor` gate card with **Open the task**; send-back hint; **Allow host & retry** for an egress failure, and its hint (*"The failed attempt's spend stays wasted either way."*) |
@@ -65,7 +65,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 Overlapping notes in the sets written since (their links resolve once those branches merge): [[Workspace Naming]], [[Cleaning Up A Workspace]], [[Demote And Re-Promote]], [[Git Inside A Workspace]], [[Workspaces Open Questions]], [[Promoting A Task]], [[Seed Data]], [[Intake And Import Open Questions]], [[Memory In The UI]], [[Task Memory Scope]], [[Memory Open Questions]], [[Sandboxing In The UI]], [[Egress Denials]], [[Sandboxing Open Questions]].
 
 > [!warning] Decision numbers collide
-> The backlog numbers its decisions D1–D9 (D1 = Start, D3 = attempt cap, D5 = hook isolation). The drawio cards carry D1–D6 with the same meanings, plus **D10** (memory hosting), which has no backlog row. [[Capability Library Decisions]] reuses D1–D31 for different decisions (D1 = Claude-only, D5 = skills store, D10 = tasks pin capabilities). These notes prefix every id with its source: *backlog D3*, *drawio D10*, *Capability Library D10*.
+> The backlog numbers its decisions D1–D9 (D1 = Start, D3 = attempt cap, D5 = hook isolation). The drawio cards carry D1–D6 on the same topics (drawio D3's content differs, see [[Task Detail Open Questions]] #11), plus **D10** (memory hosting), which has no backlog row. [[Capability Library Decisions]] reuses D1–D31 for different decisions (D1 = Claude-only, D5 = skills store, D10 = tasks pin capabilities). These notes prefix every id with its source: *backlog D3*, *drawio D10*, *Capability Library D10*.
 
 ## Related
 

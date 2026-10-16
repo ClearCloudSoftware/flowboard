@@ -24,7 +24,7 @@ The design-side rule, the promote-or-start disagreement and the edge cases are i
 
 - The **newer version notice** is the only place the screen tells you the recipe has moved on. It is ochre (*wants you*) though nothing is asked of you.
 - The **recipe average** on the Cost tab is per pinned version (*"across 182 tasks on v4"*). See [[Task Cost And Wasted Spend]].
-- The spine is drawn from the **pinned** version's steps, not the project's active flow. The board takes its columns from *"the project's active flow"* (PRD §13).
+- The spine should be drawn from the **pinned** version's steps, not the project's active flow (inference from PRD §4 pinning; the mockup hard-codes its steps and no source says how the spine is sourced). The board takes its columns from *"the project's active flow"* (PRD §13).
 
 ## Gaps
 

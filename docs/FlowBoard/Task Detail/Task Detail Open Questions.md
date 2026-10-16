@@ -77,7 +77,7 @@ Artifacts live inside the worktree. After cleanup, `artifacts.path` points at no
 | Mockup `sendBack()` | $0.85 | $1.60 | **$2.45** |
 | Backlog Story 5.2 rule | $0.85 | $1.76 | $2.61 |
 
-The mockup zeroes Review's $0.16 instead of moving it, so the bill shrinks, against *"It never goes down"*. The guide keeps Review's $0.16 as **kept**, though Review was *"discarded"*. Backlog Story 5.2 settles it: rework marks *"downstream runs `wasted=1`"* (and `02` §3: *"superseded runs `wasted=1`"*). Review is downstream of Build, so its spend is wasted. **The mockup and the guide both need fixing.** The monitor mockup has the same class of bug ([[Cost And Control Open Questions]] #19). See [[Attempts And Send Back]].
+The mockup zeroes Review's $0.16 instead of moving it, so the bill shrinks, against *"It never goes down"*. That is a mockup bug. Where Review's $0.16 belongs is open, because the sources disagree and nothing ranks them. The guide keeps it as **kept**, though Review was *"discarded"*. Backlog Story 5.2 marks *"downstream runs `wasted=1`"*, and Review is downstream of Build, so that rule makes it wasted. The monitor guide counts *"a review you sent back"* as wasted. PRD §8 and `02` §3 say only *"superseded runs"*, which leaves Review's run unclassified. Is the rejected review's spend kept or wasted? Same as [[Cost And Control Open Questions]] #1, [[Monitor Open Questions]] #17 and [[Execution Open Questions]] #17. The monitor mockup has the same class of bug ([[Cost And Control Open Questions]] #19). See [[Attempts And Send Back]].
 
 ### 16. Are tests re-run after a send back?
 
@@ -159,7 +159,7 @@ A 1 s timer redraws the gate banner while a gate is open, and the reason box wit
 
 ### 33. Decision numbers collide across documents
 
-The backlog decisions (D1–D9: D1 Start, D3 attempt cap, D5 hook isolation), the drawio decision cards (D1–D6 with the same meanings, and D10 memory hosting, which has no backlog row) and [[Capability Library Decisions]] (D1 Claude-only, D3 no bundle packs, D5 skills store, D10 tasks pin capabilities) share one numbering. An unqualified "D3" or "D10" is ambiguous. These notes prefix every id with its source. Renumbering one set, e.g. `CL-D10`, would remove the clash. Same as [[Memory Open Questions]] #27. See [[Task Detail Sources]].
+The backlog decisions (D1–D9: D1 Start, D3 attempt cap, D5 hook isolation), the drawio decision cards (D1–D6 on the same topics, though drawio D3 *"Fail on the 4th"* contradicts backlog D3 *"never auto-fail"*, see #11; and D10 memory hosting, which has no backlog row) and [[Capability Library Decisions]] (D1 Claude-only, D3 no bundle packs, D5 skills store, D10 tasks pin capabilities) share one numbering. An unqualified "D3" or "D10" is ambiguous. These notes prefix every id with its source. Renumbering one set, e.g. `CL-D10`, would remove the clash. Same as [[Memory Open Questions]] #27. See [[Task Detail Sources]].
 
 ### 34. Task status at an ordinary approval gate
 
