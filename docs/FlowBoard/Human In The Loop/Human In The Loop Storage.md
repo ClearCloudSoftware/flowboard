@@ -7,7 +7,7 @@ module: Human In The Loop
 
 ## In SQLite
 
-`data/flowboard.db` (WAL, `busy_timeout 5000`) holds the `questions` rows. The index `questions_pending ON questions(state, created_at)` serves the pending feed in creation order (PRD §5). The broker writes questions; `apps/web` writes answers, approvals and rejections. The drawio's DB card: *"the only shared state: opened by apps/web and apps/worker only, never from a sandbox"*.
+`data/flowboard.db` (WAL, `busy_timeout = 5000`, PRD §3) holds the `questions` rows. The index `questions_pending ON questions(state, created_at)` (PRD §5) presumably serves the pending feed in creation order (inferred from its columns). The broker inserts questions (*"the only writer of the `questions` table"*, PRD §9). Answers arrive through `apps/web` endpoints (§12), so either web writes the answer columns or it hands them to the broker; the PRD doesn't say which ([[Human In The Loop Open Questions]] #36, same as [[Escalation And Notifications Open Questions]] #16). Approvals and rejections go to `step_instances` through `apps/web`. The drawio's DB card: *"the only shared state: opened by apps/web and apps/worker only, never from a sandbox"*.
 
 | Data | Where |
 |---|---|
@@ -20,13 +20,14 @@ module: Human In The Loop
 
 ## On disk
 
-Artifacts live in the task's worktree, `<worktree>/.vibe/task-<task-id>/`. The PRD's example includes the question exchange:
+Artifacts live in the task's worktree, `<worktree>/.vibe/task-<task-id>/`. The PRD's example (excerpt) includes the question exchange:
 
 ```
 01-research_brief.md
 02-questions.json
 02-answers.json
 03-plan.md
+…
 ```
 
 `questions` and `answers` are seeded artifact types (PRD §6). The seeded `grill` step produces both (PRD §15). The artifact-file fallback watches *"the `produces:questions` path"* (`04` §9).
@@ -51,3 +52,5 @@ The drawio harness: *"Run records / data/runs/<id>/spec.json + raw stream, repla
 - [[Human In The Loop Data Model]]
 - [[Ask User MCP Server]]
 - [[Flow Storage]]
+- [[Escalation Storage]]
+- [[Execution Storage]]

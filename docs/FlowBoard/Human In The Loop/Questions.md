@@ -9,18 +9,25 @@ module: Human In The Loop
 
 ## What a question is
 
-A question is one thing a running agent needs you to decide. The agent asks through the `ask_user` or `ask_user_batch` MCP tool. On that path each question becomes a row in `questions`, and the broker is the only process that writes those rows (PRD §9). Without MCP, the agent writes a `questions` artifact and exits, and *"that **is** the batch"* (`04` §9). No source says whether fallback questions also become rows ([[Human In The Loop Open Questions]] #8).
+A question is one thing a running agent needs you to decide. The agent asks through the `ask_user` or `ask_user_batch` MCP tool. On that path each question becomes a row in `questions`, and the broker is the only process that writes those rows (PRD §9). Without MCP, the agent writes a `questions` artifact and exits, and "that *is* the batch" (`04` §9). No source says whether fallback questions also become rows ([[Human In The Loop Open Questions]] #8).
+
+PRD §9 calls the broker *"the only writer of the `questions` table"*, yet answers land in that table's `answer`, `answered_at`, `answered_via` and `state` columns through `apps/web` endpoints (§12). Which process writes them is open: [[Human In The Loop Open Questions]] #36.
 
 ## The one schema
 
 > [!quote] `04-hitl-and-notify.md` §9
-> *"the `questions` artifact **is** the schema. One JSON shape — `{ id, prompt, help?, kind, options?, required? }` per question, five `kind`s (`yes_no|single_select|multi_select|text|number`) — drives three renderers with zero divergence: the MCP tool return, the `/inbox` controls, and the Slack/Discord blocks (10). Define it once in `core/hitl`."*
+> "the `questions` artifact *is* the schema. One JSON shape — `{ id, prompt, help?, kind, options?, required? }` per question, five `kind`s (`yes_no|single_select|multi_select|text|number`) — drives three renderers with zero divergence: the MCP tool return, the `/inbox` controls, and the Slack/Discord blocks (10). Define it once in `core/hitl`."
 
 The reference type (`docs/old/reference/core/hitl/question.ts`):
 
 ```ts
 export type QuestionKind = 'yes_no' | 'single_select' | 'multi_select' | 'text' | 'number';
-export interface QuestionOption { value: string; label: string; }
+
+export interface QuestionOption {
+  value: string;
+  label: string;
+}
+
 export interface Question {
   id: string;
   prompt: string;
@@ -63,7 +70,7 @@ The guide puts the burden on whoever wrote the skill:
 - A good pick-one *"includes an option that hands the choice back — 'you decide' — so a non-expert is never stuck."*
 - A number comes *"with a unit and a sensible default already filled in, so accepting it is the fast path."*
 
-The prompt's closing part makes asking mandatory: *"this is a headless run, there is no terminal to ask into — use the `ask_user` MCP tool for any question. … A headless agent that ends with 'let me know if you also want tests' is a stuck run."* (PRD §7).
+The prompt's closing part makes asking mandatory: *"this is a headless run, there is no terminal to ask into — use the `ask_user` MCP tool for any question. … A headless agent that ends with 'let me know if you also want tests' is a stuck run."* (PRD §7). The feature map's version: the prompt carries *"a reminder that it's running unattended (so it asks questions the right way instead of stalling)"* (§7).
 
 ## Questions are not artifacts' contents
 

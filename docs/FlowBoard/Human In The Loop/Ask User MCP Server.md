@@ -17,7 +17,10 @@ The agent-facing half of HITL: how a headless CLI session asks a question, decla
 | **Broker** | Inside the worker | *"the only writer of the `questions` table. For each run it opens a unix socket, `data/sock/<run_id>.sock`, which is bind-mounted into a sandbox as `/run/fb/ask.sock`."* |
 | **Shim** | `apps/mcp-shim`, launched by the CLI | *"a tiny stdio MCP server … The runner writes a per-run `mcp.json` pointing at it and passes `RUN_ID` and the socket path as environment variables. The shim forwards each tool call over the socket and relays the reply. It never opens the database and needs no network."* |
 
-*"So a host run and a sandboxed run behave identically, and there is one path to test."* (PRD §9). `08-sandboxing.md`: *"decided, host-side broker on every tier."* The architecture README strikes HITL-in-sandbox out of its open decisions: *"~~HITL-in-sandbox~~ (decided: host-side broker on every tier …)"*.
+*"So a host run and a sandboxed run behave identically, and there is one path to test."* (PRD §9). `08-sandboxing.md`: *"decided, host-side broker on every tier."* PRD §11.1: *"the `ask_user` MCP server cannot open the host SQLite file. It doesn't need to: the shim talks to the host broker over the mounted socket (§9), never to the database or the network."* The architecture README strikes HITL-in-sandbox out of its open decisions: *"~~HITL-in-sandbox~~ (decided: host-side broker on every tier …)"*. The sandbox side is in [[Host-Side Brokers]] and [[Sandbox Mounts]].
+
+> [!warning] Does the MCP side open the database?
+> `02` §1 opens the DB *"via `VIBE_DB_PATH` so worker and MCP (foreign cwd) hit the same file"*, and backlog Story 1.1 says the same. That is the first build's design, and it contradicts PRD §3, §9 and `08`. See [[Human In The Loop Open Questions]] #37.
 
 ```mermaid
 flowchart LR
@@ -43,13 +46,14 @@ Backlog Story 4.1 adds the environment: *"env `TASK_ID`, `STEP_INSTANCE_ID`, `RU
 
 ## Keeping the tool reachable
 
-- *"When `--allowedTools` is set, always append `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`."* (PRD §7; **D28** in [[Capability Library Decisions]])
+- *"When `--allowedTools` is set, always append `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`."* (PRD §7; Capability Library **D28**, [[Capability Library Decisions]]). Backlog Story 3.2 carries it as **PRD/FIX**. `03` §5 puts it in the Claude adapter (*"Always append `mcp__vibe__*` to `--allowedTools` so a restrictive list can't lock out `ask_user`"*); `agent-provider.ts` gives it to the runner (*"The runner always appends the ask-user tools so a restrictive list can't lock out HITL"*).
+- Backlog Story 3.2 (**FIX**): *"Per‑run `mcp.json` pointing at `mcp/ask-user.ts` via `tsx --tsconfig …` (path aliases break when spawned from the worktree cwd)"*.
 - `--strict-mcp-config` stops personal MCP config leaking into runs (PRD §7).
 - The prompt's sixth part tells the agent to use `ask_user` (PRD §7). The drawio *Dual encoding* concept: *"The prompt says 'stay in scope, ask through ask_user'"*.
 
 ## The fallback: questions as a file
 
-Without the `mcp_tools` capability, *"HITL uses the artifact-file fallback (agent writes questions.json, exits)"* (`agent-provider.ts`). `04` §9: *"the engine watches the `produces:questions` path; when the agent writes it and exits, that **is** the batch. … So HITL genericizes to 'MCP where available, file protocol universal.'"*
+Without the `mcp_tools` capability, *"HITL uses the artifact-file fallback (agent writes questions.json, exits)"* (`agent-provider.ts`). `04` §9: "the engine watches the `produces:questions` path; when the agent writes it and exits, that *is* the batch. … So HITL genericizes to **"MCP where available, file protocol universal."**"
 
 Under Capability Library **D1** (v1 is Claude-only) every v1 run has MCP. The fallback matters for a second provider: `01-ports.md` says that if Codex can't take an injected `ask_user`, *"the artifact-file HITL fallback is mandatory, not optional."*
 

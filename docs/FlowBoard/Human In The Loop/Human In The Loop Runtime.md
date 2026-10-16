@@ -13,7 +13,7 @@ Where each HITL responsibility lives in the two-process design.
 |---|---|---|
 | Question schema, reconciliation rules | `packages/core` → `core/hitl` (*"question protocol, park/resume"*) | architecture README module layout; `notifier.ts` (PRD §3's `core` lists no `hitl/`) |
 | Advancement: gates, no-outcome, escalation | `packages/core/engine` | PRD §3, `02` §3 |
-| Notifier interface | `core/ports` | PRD §3, `01-ports.md` |
+| Notifier interface | `core/ports` | PRD §3, architecture README module layout; the interface sketch is in `01-ports.md` |
 | Slack adapter | `packages/adapters/notify` (`notify/slack/`) | PRD §3, architecture README |
 | `ask_user` broker, escalation timer | `apps/worker` (*"job loop, runner, ask_user broker, escalation timer"*) | PRD §3 |
 | MCP shim | `apps/mcp-shim` | PRD §3, §9 |
@@ -51,13 +51,15 @@ flowchart TB
   ENGINE -- resume start_run --> J
 ```
 
+Two arrows are inferred: PRD §10 names no actor for enqueuing `escalate_question` (the broker inserts the rows and shares the worker with the timer, §3), and PRD §9 names none for the resume `start_run`. Answers written by `apps/web` into `questions` sit uneasily with the broker being *"the only writer"*: [[Human In The Loop Open Questions]] #36.
+
 ## The jobs
 
 | Job | Enqueued when | Does | Source |
 |---|---|---|---|
 | `escalate_question` | A question is inserted, `run_after = now + threshold` | Posts it if still pending and not already posted | PRD §10, `04` §10 |
 | `start_run` (resume) | The last required answer arrives for a parked run | `--resume <session> --fork-session` + the answers | PRD §9 |
-| `advance_task` | Approve, or a step done | Resolves outgoing edges | PRD §8 |
+| `advance_task` | A step done (*"Otherwise mark it `done` and enqueue `advance_task`"*). After Approve the step *"advances"*; that this also goes through `advance_task` is inferred | Resolves outgoing edges | PRD §8 |
 
 ## Escalation call site
 
@@ -82,18 +84,24 @@ async function onAnswered(notifier: Notifier, q: Question, by: string) {
 |---|---|---|
 | Answer arriving while the process exits must resume, not be lost | **BUG** | backlog Story 4.2 |
 | Resume prompt repeats requires/produces paths | **BUG** | backlog Story 3.2 |
-| Cancel a step's pending questions on run failure | **BUG** | backlog Story 3.2, `04` §9 |
+| Cancel a step's pending questions on run failure | **PRD/BUG** | backlog Story 3.2, `04` §9 |
+| `--allowedTools` always gets `mcp__vibe__*` | **PRD/FIX** | backlog Story 3.2 |
+| Per-run `mcp.json` pointed at `mcp/ask-user.ts` via `tsx`, because path aliases break from the worktree cwd | **FIX** | backlog Story 3.2 |
 | Return only when every required answer is present; ignore null values | **FIX** | backlog Story 4.1 |
+| `questions.state='expired'` is never set | **BUG** | backlog Story 1.1 |
+| The `a` chip on awaiting-approval cards does nothing | **BUG** | backlog Story 2.2 |
+| Reject never sends a reason | **BUG** | backlog Story 2.3 |
+| `a` approves the focused gate (*"handoff promise"*) | **GAP** | backlog Story 4.3 |
 | Undo delay lived inside the MCP tool | lesson | backlog *What went wrong*, item 5 |
 | Three overlapping pollers → one stream | **BUG (perf)** | backlog Story 4.3 |
-| Restart recovery: re-attach by pid | **BUG** | backlog Story 3.3 |
-| Slack never run against a real workspace | **GAP** | backlog Story 6.3 |
+| Restart recovery: re-attach by pid | **BUG** | backlog Story 3.3; feature map §8 *"Survive a restart"* |
+| Slack never run against a real workspace | **GAP** | backlog Story 6.3; *What went wrong* item 1 (*"keyboard nav … and Slack were never exercised live"*) |
 
 ## Testing
 
-- *"Verify end to end with a trivial skill that asks three questions of different kinds."* (PRD §14 M4). That skill is `ask-three`, a test fixture (Capability Library **D30**).
+- *"Verify end to end with a trivial skill that asks three questions of different kinds."* (PRD §14 M4). That skill is `ask-three`, *"a test fixture loaded by the test setup, not a seed"* (PRD §15; backlog Story 1.2; Capability Library **D30**).
 - `ReplayProvider`: *"Every engine, park/resume, and cost test runs deterministic and zero-spend."* (`01-ports.md`)
-- Backlog Story 0.2: a fake-`claude` integration lane *"so runner/park/resume can be tested without spend"*, and a Playwright lane including *"inbox keyboard"*.
+- Backlog Story 0.2 (**GAP**): a fake-`claude` integration lane *"so runner/park/resume can be tested without spend"*, and a Playwright lane including *"inbox keyboard"*.
 - Backlog Story 6.3: *"Unit tests (signature, shapes, idempotency, modal) exist; run once against a real workspace — never done."*
 
 ## Related
@@ -102,3 +110,6 @@ async function onAnswered(notifier: Notifier, q: Question, by: string) {
 - [[Ask Park And Resume]]
 - [[Escalation To Chat]]
 - [[Human In The Loop API And Routes]]
+- [[Escalation Runtime]]
+- [[Job Queue]]
+- [[Worker Lifecycle]]

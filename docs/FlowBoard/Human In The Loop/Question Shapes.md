@@ -12,7 +12,7 @@ module: Human In The Loop
 
 ## The five shapes
 
-| `kind` (PRD) | Guide label | Mockup `type` | For (inbox guide) | Keyboard (inbox guide) |
+| `kind` (PRD) | Guide label | Mockup `type` | For (inbox guide) | Keyboard (paraphrase of the inbox guide) |
 |---|---|---|---|---|
 | `yes_no` | yes / no | `yesno` | *"A decision with exactly two outcomes. The cheapest possible question and the one agents should reach for first."* | `1` Yes, `2` No |
 | `single_select` | pick one | `one` | *"Several mutually exclusive routes. A well-written one includes an option that hands the choice back — 'you decide' — so a non-expert is never stuck."* | `1`–`9` select and replace |
@@ -50,7 +50,7 @@ From the mockup's `answered()`:
 | `number` | A value is present, or the pre-filled default is left in place (*"accepting it is the fast path"*, inbox guide) |
 | `yes_no`, `single_select` | An option is picked |
 
-The guide: *"Free text counts as answered even when empty, because 'nothing to add' is a real answer. Every other shape has to be given a value before Submit lights up."* The PRD makes `required` a per-question flag instead. See [[Answering Rules]] and Open Questions #11 and #13.
+The guide: *"Free text counts as answered even when empty, because 'nothing to add' is a real answer. Every other shape has to be given a value before Submit lights up."* Its callout is titled *"'5 of 5 answered' can include a blank."*, and walkthrough beat 5 repeats it: *"The fifth answer was blank, and that counted."* The PRD makes `required` a per-question flag instead. See [[Answering Rules]] and Open Questions #11 and #13.
 
 ## Fields the shapes need
 

@@ -26,14 +26,14 @@ The inbox at `flowboard/inbox` (route `/inbox`, PRD §10, §13). Sources: `docs/
 └──────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-The sketch follows the guide's anatomy schematic. The live mockup's status bar reads `5 open · 4 on you` until dana's chat answer, because *open* counts every card, including ones waiting on someone else.
+The sketch follows the guide's anatomy schematic, with the mockup's `show` label and the *escalated* marks from walkthrough beat 1 added (the schematic shows only `42m`, `12m`, `9m`, `5m`). The live mockup's status bar reads `5 open · 4 on you` until dana's chat answer, because *open* counts every card, including ones waiting on someone else.
 
 | # | Region | Guide wording |
 |---|---|---|
 | 1 | **Count** | *"Amber while anything waits, green when it doesn't. The filter switches between what's on you and what's on the team."* |
 | 2 | **Queue** | *"Oldest first, exactly one card open. Answering it closes the card and opens the next."* |
-| 3 | **Context** | *"What's still running, what it's costing, and roughly when the next decision lands — so you know whether to stay."* (fixed 292 px column) |
-| 4 | **Status bar** | *"The escalation window, and the reminder that answers sync both ways with chat."* Plus the key legend |
+| 3 | **Context** | *"What's still running, what it's costing, and roughly when the next decision lands — so you know whether to stay."* (fixed 292 px column; at 900 px or narrower it moves below the queue) |
+| 4 | **Status bar** | *"The escalation window, and the reminder that answers sync both ways with chat."* Plus the key legend, which lists only `j k`, `1-9`, `← →`, `↵` and `a` (no `r`, no `esc`) |
 
 ## The topbar
 
@@ -47,23 +47,25 @@ Closed: icon (`✕` failure, `‖` gate, `?` question or batch), `task · step`,
 
 ## The context panel — *while you're here*
 
+Feature map §12: *"**A context panel** — What's running right now, what it's costing, and roughly when the next decision will land."*
+
 | Block | Sample (mockup) |
 |---|---|
 | running now | `sandbox-egress` build opus; `mem0-adapter` build opus; `mem0-adapter` tests sonnet; `docs-pass` research haiku. `mem0-adapter` appears once per branch, as the old handoff specifies: *"Parallel branches appear as two rows with the same task title and different steps."* |
 | costing you | `$20.28 /hr` (the per-minute rates of running runs × 60); today `$19.46`; wasted `$2.55` |
 | next decision | *"In about 4 minutes, when sandbox-egress reaches its review gate."* |
-| answered today | questions `11`; median reply `3m 20s`; from chat `3 of 11` |
+| answered today | questions `11`; median reply `3m 20s`; from chat `3 of 11`. After dana's chat answer, `12` and `4 of 12` (*from chat* is the slack rows plus a fixed 2); the guide shows *"answered today 12 · from chat 4 of 12"* |
 | recently answered | `task`, a `web`/`slack` tag, and *question → answer · when*: e.g. *flow-versioning · Pin to the flow version, or the latest? → Pin to the version · 14m ago* |
 
-The old handoff's right rail (320 px) had *Running now* with live cost and `model · effort · elapsed`, *Next checkpoints* (*"label/ETA pairs"*) and the shortcut legend. Backlog Story 4.3: *"Right rail: running steps with live cost estimate, next checkpoints (median ETA), shortcut legend."* How the figures are derived is not specified: [[Human In The Loop Open Questions]] #32.
+The old handoff's right rail (320 px) had *Running now* with live cost and *step · `model · effort` · elapsed*, *Next checkpoints* (*"label/ETA pairs"*) and the shortcut legend. Its queue footer already showed figures: `answered today: 34 · median response 41s · escalation threshold 5m`. Backlog Story 4.3: *"Right rail: running steps with live cost estimate, next checkpoints (median ETA), shortcut legend."* How the figures are derived is not specified: [[Human In The Loop Open Questions]] #32.
 
 ## States
 
 | State | What shows | Source |
 |---|---|---|
 | **Working** | Queue with one open card | inbox mockup |
-| **Clear** | ✓ *"Nothing is waiting on you"*, *"Four agents are still working. The next decision should land in about four minutes — you'll be nudged in chat if you're not here."* | inbox mockup |
-| **Answered elsewhere** | The card closes; a dark toast with a `slack` tag: *"dana answered pdf-import · plan in chat — it's closed here too"* (about 5 s) | inbox mockup |
+| **Clear** | ✓ *"Nothing is waiting on you"*, *"Four agents are still working. The next decision should land in about four minutes — you'll be nudged in chat if you're not here."* The old handoff's (1d): *"Nothing waiting on you. Four steps are running."*, the running steps, and `next checkpoint ~4m · questioning step usually asks 5–8 · 34 answered today`. Backlog Story 9.3 still lists *"empty‑state "usually asks N""* as a **GAP** | inbox mockup; old handoff 1d |
+| **Answered elsewhere** | The card closes; a dark toast with a `slack` tag: *"dana answered pdf-import · plan in chat — it's closed here too"* (about 5 s). Under the default *Waiting on me* filter dana's card was never shown, yet the toast still says *"closed here too"*. In the guide's walkthrough the teammate answers `provider-codex`, a card that is on you | inbox mockup, guide |
 | **Reject open** | The gate's buttons give way to the reason form; the 1 s re-render pauses while it is open | inbox mockup |
 | **Loading** | Skeletons in the shape of a batch; footer *"connecting to orchestrator…"* | old handoff 1d |
 | **Error** | A `stale` badge, then a *"Lost the orchestrator"* card: *"Answers you submit now will not reach the running steps"*, the raw cause, `Retry now` / `Open logs`. *"The stale queue stays visible below at opacity .45 … never blanked."* | old handoff 1d; backlog Story 4.3 |
@@ -73,18 +75,20 @@ The old handoff's right rail (320 px) had *Running now* with live cost and `mode
 
 ## The guide's walkthrough
 
-*"Four cards to zero"*: five common beats, then a choice of two endings.
+The guide's *Clearing it, start to empty* section, *"four cards to zero"*: five common beats, then a choice of two endings (**Answer here** or **…in chat**).
 
 1. **Four waiting, two overdue**: the oldest card is already open.
 2. **Clear the failure first**: Allow host & retry.
 3. **The batch opens itself**: *"You never chose what to work on next."*
 4. **Five shapes, one keyboard.**
 5. **Submit all five**: *"One submission, one resume."*
-6. *Answer here*: **You answer the escalated one here**, followed by **Then the gate, and empty**. *Or in chat*: **A teammate answers it in chat** (*"your cursor did not move"*), then **The record says where it came from**.
+6. *Answer here*: **You answer the escalated one here**, followed by **Then the gate, and empty**. *…in chat*: **A teammate answers it in chat** (*"your cursor did not move"*), then **The record says where it came from**.
 
 ## Look
 
-Light only, zero radius, IBM Plex Mono and Sans, hairlines rather than shadows (mockup CSS). The amber *wait* colour marks anything waiting on you, red *fail* marks failures, and teal *run* marks clear and chat. The PRD says *"Dark-first"* (§13). See Open Questions #34.
+Light only, zero radius, IBM Plex Mono and Sans, hairlines rather than shadows (mockup CSS). The amber *wait* colour marks anything waiting on you, red *fail* marks failures, and teal *run* marks clear and chat. The PRD says *"Dark-first"* (§13), and the feature map asks for *"a consistent, readable design in light and dark, fully usable from the keyboard, and friendly to screen readers"* (*Across everything*). See Open Questions #34.
+
+The drawio *FlowBoard ideation* cards set the same goals: *"Most-used screen. Latency here costs money."*, *"Elapsed time legible at a glance without becoming the loudest thing on screen."*, *"Cards resolve calmly when answered from Slack."* and *"Empty state shows what's running / Not a shrug illustration."*
 
 ## Related
 
@@ -92,3 +96,4 @@ Light only, zero radius, IBM Plex Mono and Sans, hairlines rather than shadows (
 - [[Inbox Card Kinds]]
 - [[Inbox Order And Filters]]
 - [[Decisions Outside The Inbox]]
+- [[Escalation In The UI]]

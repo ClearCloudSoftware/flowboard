@@ -7,7 +7,7 @@ module: Human In The Loop
 
 > **Your call wins** — If you approve or reject a step, your decision overrides whatever the agent concluded, and a rejection carries your reason into the next attempt. — feature map §4
 
-Which steps gate is set in the flow (see [[Approval Gates]]). This note covers what happens when you act on one.
+Which steps gate is set in the flow (see [[Approval Gates]]). In the flow designer's inspector that is an *Approval* checkbox, *"waits for you"*; a step with no gate and no sandbox gets the chip *"unattended and unsandboxed"*. Its guide: *"Each gate is a place the flow stops and waits for a human. More gates, more of your time, fewer surprises."* This note covers what happens when you act on one.
 
 ## Why a step is waiting
 
@@ -21,17 +21,20 @@ A step instance enters `awaiting_approval` in three ways (PRD §8):
 
 ## Approve
 
-- Clears the gate and marks the step passed. *"Approve overrides the agent's `fail` outcome (human wins)"* (backlog Story 5.2, `02` §3).
+- Clears the gate and marks the step passed. *"Approve overrides the agent's `fail` outcome (human wins)"* (backlog Story 5.2, `02` §3). The backlog tags it **FIX** and lists it among the README *"deviations"* from the PRD (Story 10.2); see [[Execution Open Questions]] #64.
+- On an approval step the approval check comes first: *"After a run succeeds"* PRD §8 checks `advance_mode='approval'` before unanswered required questions, and the no-outcome gate only arises later, in `advance_task`. Read that way (as [[Advancement Rules]] does), a silent `review` waits at an ordinary gate, never at *"no outcome reported"*, and an approval step with unanswered required questions stops at `awaiting_approval` without reaching `awaiting_answers`. Whether that is intended is open ([[Execution Open Questions]] #5; [[Human In The Loop Open Questions]] #40).
 - *"Clears an approval gate. The next step queues immediately."* (inbox guide actions)
-- *"Approving costs nothing and wastes nothing."* (inbox mockup hint). The monitor guide: *"the only decision on this screen that costs nothing at all."*
+- *"Approving costs nothing and wastes nothing."* (inbox mockup hint). The monitor guide: *"approving is the only decision on this screen that costs nothing at all"*. The task-detail guide: *"The only free decision on this screen is approving."*
 - API: `POST /api/step-instances/:id/approve` (PRD §12).
 
 ## Send back (reject)
 
 - *"reject sets `fail` + reason; reject with no `on_fail` edge fails the task."* (backlog Story 5.2)
-- The reason is *"handed to the next attempt"* (inbox guide). Backlog Story 2.3 makes the reason prompt mandatory UI: *"Reject asks for a reason (API accepts it, board renders it, UI never sends it)."* It is stored on `step_instances.reason` (backlog Story 1.1).
+- The reason is *"handed to the next attempt"* (inbox guide). Backlog Story 2.3 (**BUG**): *"Reject asks for a reason (API accepts it, board renders it, UI never sends it)."* Whether the reason is required is open (#27). It is stored on `step_instances.reason` (backlog Story 1.1).
 - The `on_fail` edge decides where the work goes. In the mockups `review` fails back to `build`: *"Sending back re-queues **build** and moves everything the last attempt spent into **wasted**."* (inbox mockup)
 - The monitor guide spells out a send-back: *"On submit the review is discarded, `build` re-queues as the next attempt, and your reason is handed to it. Tests are not re-run."*
+- The reworked run also reads the failing step's artifact, not a summary: *"The new run's "read these first" list (prompt part 2) also gets the artifacts the failing step produced, so a rework sees the raw `check_output` or `review`"* (PRD §8). In the seeded flow *"a failed `check` and a failed `review` both spend `implement`'s attempts"*.
+- Engine detail: [[Rework Loop]] and [[Advancement Rules]]. The task-detail side: [[Deciding At A Gate]] and [[Attempts And Send Back]]. Open in sibling sets: which runs are wasted on a send-back ([[Execution Open Questions]] #17, [[Task Detail Open Questions]] #15), where the reason or Retry note goes in the prompt ([[Execution Open Questions]] #21), and where the gate banner's text comes from ([[Task Detail Open Questions]] #29).
 - API: `POST /api/step-instances/:id/reject` (PRD §12).
 
 ```mermaid
@@ -54,7 +57,7 @@ sequenceDiagram
 
 ## The reason box
 
-The inbox, the monitor and task detail all open a one-line form with the placeholder *"Why — this goes to the next build attempt"*, a **Send back** button (task detail: **Send back to build**) and **Cancel**. `Esc` cancels (inbox). In the inbox and task-detail mockups the box opens prefilled with a sample reason: *"Finish item 2: revoke the whole token family, not just the presented token."* If the reason is blank, the inbox mockup sends `needs another pass`. Whether a reason is required is open: [[Human In The Loop Open Questions]] #27.
+The inbox, the monitor and task detail all open a one-line form with the placeholder *"Why — this goes to the next build attempt"*, a **Send back** button (task detail: **Send back to build**) and **Cancel**. `Esc` cancels in the inbox; in the monitor it can't reach the focused field ([[Monitor Open Questions]] #46), and in task detail it works only after a redraw takes focus ([[Task Detail Open Questions]] #32). In the inbox and task-detail mockups the box opens prefilled with a sample reason: *"Finish item 2: revoke the whole token family, not just the presented token."* The monitor's opens empty. If the reason is blank, all three mockups send `needs another pass`. Whether a reason is required is open: [[Human In The Loop Open Questions]] #27.
 
 ## The sample gate
 
@@ -73,3 +76,5 @@ The inbox, the monitor and task detail all open a one-line form with the placeho
 - [[Inbox Card Kinds]]
 - [[Failures And Escalated Loops]]
 - [[Decisions Outside The Inbox]]
+- [[Deciding At A Gate]]
+- [[Rework Loop]]

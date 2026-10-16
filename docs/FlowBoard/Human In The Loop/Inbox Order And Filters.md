@@ -22,7 +22,7 @@ The other sources word the order differently:
 | Feature map §12 | *"Everything waiting, most-urgent first"* |
 | Inbox mockup, guide, monitor | Oldest first |
 
-*Newest-blocking-first* can be read two ways: the most recently blocked first, or the one that has blocked longest. See [[Human In The Loop Open Questions]] #2.
+*Newest-blocking-first* can be read two ways (our reading): the most recently blocked first, or the one that has blocked longest. See [[Human In The Loop Open Questions]] #2.
 
 The monitor's *needs you first* sort *"ranks failed above waiting above running"*. In the inbox the failure card happens to be oldest, so it is first either way.
 
@@ -36,6 +36,7 @@ The monitor's *needs you first* sort *"ranks failed above waiting above running"
 | Backlog Story 4.3 | *"One card per batch"* |
 | Old design handoff | Batches grouped by `(taskId, stepRunId)`; *"a batch renders as one card"* |
 | Inbox mockup | One card per batch, per lone question, per gate and per failure. Two items from one task would be two cards |
+| Monitor mockup | One band item per task (its first blocking run in flow order); a batch is not shown as one ([[Monitor Open Questions]] #5) |
 
 See Open Questions #3.
 
@@ -53,7 +54,7 @@ The rule the keyboard rests on: *"there is only ever one open card, so a key nev
 A card for someone else carries *waiting on dana* in its header. The status bar counts `5 open · 4 on you`.
 
 > [!warning] Who is "me"?
-> The PRD has *"No auth, no multi-tenancy, no user table"* (§2), and `questions` has no assignee. The filter needs identities, which the feature map calls *"the one genuinely new foundation the team ideas need"*. See Open Questions #4.
+> The PRD has *"No auth, no multi-tenancy, no user table"* (§2), and `questions` has no assignee. The filter needs identities, which the feature map calls *"the one genuinely new foundation the team ideas need"*. Its *Across everything* 💡 suggests *"Local-collab first — named people, assignees, and per-person routing need no accounts server"*. See Open Questions #4.
 
 ## Ideas
 
