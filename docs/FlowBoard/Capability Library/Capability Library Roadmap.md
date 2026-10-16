@@ -9,12 +9,12 @@ module: Capability Library
 
 From the feature map (§16 *The library*), the PRD milestone **M7 — Library and import**, and backlog **Epic 7**:
 
-- [ ] **Install skills** from a GitHub URL; FlowBoard reads the description and makes the skill available in steps
+- [ ] **Install skills** — feature map: *"Add a skill from a public repository; FlowBoard reads its description and makes it available to use in steps"*; M7: *"Skills install from GitHub"*
 - [ ] Update and remove (with confirm)
-- [ ] **Define agents** — CRUD form; builtin agents read-only
+- [ ] **Define agents** — CRUD form; builtin agents read-only, with Duplicate to edit (backlog Story 7.2)
 - [ ] **A starter set** of skills and agents so sample recipes work
 - [ ] Loading and empty states (backlog BUG)
-- [ ] Show stored frontmatter or stop storing it (backlog GAP)
+- [ ] Stop storing frontmatter: read `SKILL.md` from the plugin dir when shown (backlog GAP)
 - [ ] One error-handling style for agent create and update (backlog BUG)
 
 Settled on 2026-10-15 ([[Capability Library Decisions]]), v1 also takes on:
@@ -49,7 +49,9 @@ Of these, v1 builds the single screen, preview-before-install, amber marks, upda
 - **Team guardrails vs personal defaults** — team-pinned rules nobody can quietly lift, separate from personal preferences.
 - **Role starter packs** — a seed flow plus toolbox per function (UX/UI, business analyst, cloud/DevOps, QA, marketing…). Whether each one is a bundle pack is open: [[Flow Design Open Questions]] #35. See [[Bundle Packs]].
 - **Permissions** — the teams foundation names *install skills* as one of the actions roles gate.
-- **Agent/skill memory** — a memory scope per agent or skill: what that role has picked up across runs.
+- **Agent/skill memory** — a memory scope per agent or skill: what that role has picked up across runs (feature map §21, PRD §11.2, M9). See [[Agent Memory Scope]].
+- **Team contributions** — the pitch's investment model: *"engineers contribute flows, agents, and skills (the seeded library shows the shape)"* (emphasis dropped).
+- **Reuse across projects** — flows *"exportable across projects"* (`02` §2), the backlog's *Reuse…* picker (Story 8.2) and the feature map's *shareable recipe library*. With a per-project store this needs a rule for missing plugins and agents: [[Capability Library Open Questions]] #20.
 
 ## Adding a second provider
 
@@ -57,7 +59,7 @@ To run flows on Codex (`06-cost-and-platform.md`), one of four steps is: *Codex-
 
 ## Out of scope (v1)
 
-The PRD and the drawio *Out of scope (v1)* box both exclude a **plugin marketplace**. Install is from a pasted GitHub URL only.
+The PRD (§17) and the drawio *Out of scope (v1)* box both exclude a **plugin marketplace**. Install is from a pasted git URL only: GitHub or `file://` (D7).
 
 ## Adjacent direction: knowledge assets
 
@@ -69,3 +71,4 @@ The harness diagram shows *Knowledge assets (later)* next to the capability libr
 - [[Capability Library Overview]]
 - [[Capability Library Open Questions]]
 - [[Seeded Capabilities]]
+- [[Memory Roadmap]]

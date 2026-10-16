@@ -17,12 +17,15 @@ The ones that can reach outside the workspace are marked **amber**, because they
 
 In the mockup this set is `NET_TOOLS = {'WebFetch', 'WebSearch', 'Bash'}`.
 
-**v1 also marks a plugin amber when it ships `.mcp.json` or `hooks/`** ([[Capability Library Decisions|D9]]). Plugin contents are mounted as-is (D8), and an MCP server's tool names are only known once it starts, so the tool list alone would miss a plugin that reaches the network that way. The check is a file-exists test at install time (`plugins.has_mcp`, `plugins.has_hooks`).
+**v1 also marks a plugin amber when it ships `.mcp.json` or `hooks/`** ([[Capability Library Decisions|D9]]; PRD §13: *"Mark plugins that ship `.mcp.json` or `hooks/`, and skills that ask for `Bash`, `WebFetch` or `WebSearch`, as network-capable."*). Plugin contents are mounted as-is (D8), and an MCP server's tool names are only known once it starts, so the tool list alone would miss a plugin that reaches the network that way. The check is a file-exists test at install time (`plugins.has_mcp`, `plugins.has_hooks`).
 
 ## Installing does not open the wall
 
 > [!important]
 > **Egress is default-deny at the step, not the capability.** A skill that asks for `WebFetch` still fails closed until the host it needs is on that **step's** allowlist.
+
+> [!warning] Whose allowlist?
+> The mockups and guides always say *this step's* allowlist. PRD §11.1 keeps one allowlist in `settings.sandbox_profile`, *"overridable per step"*, and no column holds a per-step list. [[Capability Library Open Questions]] #23; [[Sandboxing Open Questions]] #10. See [[Egress Allowlist]].
 
 So the amber chip is **not** a warning that something is unsafe. It is a note that *this capability will not work until someone also changes a step's allowlist* — and that you should know which host before you approve that change.
 
@@ -36,7 +39,7 @@ Wiring a network-capable capability is therefore a **two-part job**:
 The sibling mockups show the failure this prevents:
 
 - **Task detail** — `$0.48` wasted on a build attempt the sandbox killed for reaching `registry.npmjs.org`, which was not on that step's allowlist.
-- **Inbox** — *"Attempt 3 of 3 failed — egress denied"*: `api.stripe.com` was not on the step's allowlist; `$1.44` spent and thrown away. The card offers **Allow host & retry**, which adds the blocked host to the step's allowlist and re-queues the run.
+- **Inbox** — *"Attempt 3 of 3 failed — egress denied"*: `api.stripe.com` was not on the step's allowlist; `$1.44` spent and thrown away. The card offers **Allow host & retry**, which *"adds the blocked host to that step's allowlist, then re-queues the run"* (inbox guide). What that edits is open ([[Sandboxing Open Questions]] #11). The monitor mockup shows the same failure on `billing-webhook` (`wasted:1.442`).
 
 ## The sandbox it interacts with
 
@@ -67,3 +70,5 @@ A second layer sits inside the agent: PreToolUse **hooks** (PRD §7, `03-executi
 - [[Capability Runtime Mounting]]
 - [[Skill Capabilities]]
 - [[Capability Library Open Questions]]
+- [[Egress Allowlist]]
+- [[Egress Denials]]

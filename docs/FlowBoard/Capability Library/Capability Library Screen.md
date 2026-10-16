@@ -5,16 +5,16 @@ module: Capability Library
 
 # Capability Library Screen
 
-The `flowboard/library` screen. Mockup: `docs/mockups/capability-library.html`; field guide: `docs/mockups/capability-library-guide.html`. House design: light only, zero border-radius, IBM Plex Mono/Sans, hairlines instead of shadows.
+The `flowboard/library` screen of the mockup; PRD §13 and backlog Stories 7.1 and 7.2 route it at `/p/[slug]/library`. Mockup: `docs/mockups/capability-library.html`; field guide: `docs/mockups/capability-library-guide.html`. House design: light only, zero border-radius, IBM Plex Mono/Sans, hairlines instead of shadows. PRD §13 says *"Dark-first"* instead: [[Capability Library Open Questions]] #24.
 
 > [!check] v1 differences from the mockup
 > - **Scoped to the current project** — the store is per project ([[Capability Library Decisions|D5]]).
 > - **Removed:** the `pack` kind and its chip (D3); the provider filter, the *packs — one packaging per provider* block, the coverage callout, and *codex packs for N of M* in the status bar (D1).
-> - **Topbar:** **+ Install from git** (any git URL, D7) and **Check for updates** (D13), beside **+ Define agent** (D21).
+> - **Topbar:** **+ Install from git** (any git URL, D7; the label is proposed, open question 25) and **Check for updates** (D13), beside **+ Define agent** (D21).
 > - **Amber** also marks plugins that ship `.mcp.json` or `hooks/` (D9).
 > - **Source** shows the plugin a skill belongs to; Update and Remove act on the whole plugin (D4).
 > - **Update** opens a preview listing skills added and removed (D19); **Remove** asks for confirmation (D18).
-> - **Status bar** store path reads `<project>/.flowboard/skills`.
+> - **Status bar** store path reads `<project>/.flowboard/skills` (proposed wording, open question 25).
 
 ## Layout
 

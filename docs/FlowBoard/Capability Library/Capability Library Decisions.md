@@ -43,16 +43,16 @@ The v1 design, settled in a grilling session on 2026-10-15 that worked through [
 
 | # | Decision | Resolves |
 |---|---|---|
-| D14 | **A run mounts only what the step names**: the plugin of the step's skill, plus the step's `extra_plugin_ids`. A step without a skill mounts only its extras. Mounts are read-only into the container. PRD §7 mounts every installed plugin into every run; this overrides it. | OQ15 |
+| D14 | **A run mounts only what the step names**: the plugin of the step's skill, plus the step's `extra_plugin_ids`. A step without a skill mounts only its extras. Mounts are read-only into the container. PRD §7 mounted every installed plugin into every run; this overrides it, and PRD §7 now follows. | OQ15 |
 | D15 | **Host tier fails closed for git-sourced plugins.** Without Docker, a step whose plugins (skill or extras) came from a git URL does not run. Seeds still run on the host tier. | — |
-| D16 | **Skills are invoked fully qualified**: `/<plugin>:<slug>`, which is how Claude Code namespaces plugin skills. Two plugins may both ship `code-review`. Backlog Story 0.1 (probe the CLI) confirms the qualified form invokes reliably in headless `-p` mode — open question 19. | — |
+| D16 | **Skills are invoked fully qualified**: `/<plugin>:<slug>`, which is how Claude Code namespaces plugin skills. Two plugins may both ship `code-review`. Backlog Story 0.1 (probe the CLI) is to confirm that the qualified form invokes reliably in headless `-p` mode (**DEC**) — open question 19. | — |
 
 ## Removal and usage
 
 | # | Decision | Resolves |
 |---|---|---|
 | D17 | **"Used by" counts** each flow's latest version, plus any flow version pinned by a non-terminal task. Old, unpinned flow versions do not block removal. `extra_plugin_ids` count as uses. | — |
-| D18 | **Remove asks for confirmation** (PRD), and stays disabled while anything uses the plugin. | — |
+| D18 | **Remove asks for confirmation** (backlog Story 7.1: *"remove with confirm"*; PRD §13 now follows), and stays disabled while anything uses the plugin. | — |
 | D19 | **An update that drops an in-use skill is refused.** The update preview lists added and removed skills; if a removed skill is in use (D17), the update is blocked, same rule as Remove. | — |
 
 ## Agents and seeds
@@ -79,7 +79,7 @@ Settled in a second grilling session on 2026-10-15, working through open questio
 
 ## Schema
 
-D23 — as written in [[Capability Data Model#v1 schema (decided)]]: `plugins`, `skills` (child of a plugin), `agents` scoped by project, `step_defs.extra_plugin_ids`, `tasks.capability_pins`. `install_path` and `frontmatter` are dropped: the dir is derived and the disk is the source of truth. Resolves OQ2 and the backlog's *"show stored frontmatter or stop storing it"*.
+D23 — as written in [[Capability Data Model#v1 schema (decided)]]: `plugins`, `skills` (child of a plugin), `agents` scoped by project, `step_defs.extra_plugin_ids`, `tasks.capability_pins`. `install_path` and `frontmatter` are dropped: the dir is derived and the disk is the source of truth. Resolves OQ2 and the backlog's *"show stored frontmatter or stop storing it"* (Story 7.1 now reads *"Stop storing frontmatter"*).
 
 ## API
 
@@ -90,7 +90,7 @@ D24 — derived from the decisions above; see [[Capability Library API And Route
 - **A second provider** (Codex): provider packs, the coverage counter, the provider filter, the provider-match check and its block-vs-warn severity. See [[Provider Coverage And Portability]].
 - **Bundle packs** and role starter packs. See [[Bundle Packs]].
 - **ACP** (OQ16): re-check pack mounting if the `AgentProvider` port becomes the Agent Client Protocol.
-- The roadmap ideas: governed shared library, team guardrails, install permissions, agent/skill memory.
+- The roadmap ideas: governed shared library, team guardrails, install permissions, agent/skill memory ([[Agent Memory Scope]]), reuse across projects (OQ20).
 
 ## Source docs to fix
 
@@ -107,7 +107,7 @@ The source documents were brought in line with these decisions on 2026-10-15:
 Still open:
 
 - *(Resolved)* The seed decisions D25–D31 were applied to PRD §4, §5, §7, §13, §15 and backlog Stories 1.2 and 8.2 the same day.
-- Drift from OQ17 that the decisions do not touch: the drawio *Prompt builder* memory order, and `tool_hooks` missing from `agent-provider.ts`. The `--add-dir`, eight-step and git-remote drift was fixed in commits `198e7de` and `c4b01fd`.
+- Drift from OQ17 that the decisions do not touch: where recalled memory (prompt part 7) goes — before the closing instruction in PRD §7 and `09-memory.md`, at the end in PRD §11.2, `03` §6 and the drawio *Prompt builder* card; `tool_hooks` missing from `agent-provider.ts`; `PromptParts` still documenting part 4 as `/grill-me`; and PRD §13's *"running task"* against D17's non-terminal task. The `--add-dir`, eight-step and git-remote drift was fixed in commits `198e7de` and `c4b01fd`.
 
 ## Related
 

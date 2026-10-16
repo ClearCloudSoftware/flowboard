@@ -7,7 +7,7 @@ module: Capability Library
 
 FlowBoard ships with a starter set so the sample recipes work out of the box (feature map: *"A starter set — comes with a handful of ready skills and agents"*). Seeded items are authored by `@flowboard/core` and marked *ships with FlowBoard*.
 
-The sources give **two different starter sets**. The PRD/backlog set is what v1 was specified to seed; the mockup set is the newer design's catalogue.
+The sources gave **two different starter sets**: the PRD/backlog set v1 was first specified to seed, and the mockup's catalogue. The decided set below reconciles them, and PRD §15 and backlog Story 1.2 now carry it.
 
 ## v1 seed set (decided)
 
@@ -27,11 +27,11 @@ The seed flow is **Software delivery**: the PRD's nine steps with the mockup's r
 | `review` | `reviewer` | `/code-review` | **approval** | adds `reviewer` |
 | `summarize` | `scribe` | — | auto | `summarizer` → `scribe` |
 
-Models, efforts, `requires` and `produces` stay as in the PRD table below; an agent's defaults only prefill the step editor.
+Models and efforts stay as in the PRD table below; `requires` and `produces` stay as in PRD §15's table, which this note does not copy. The mockup gives the same agents different defaults (`scout` haiku/low against `research` sonnet/medium, for example). That an agent's defaults only prefill the step editor is a proposal: [[Capability Library Open Questions]] #21.
 
 | Kind | Seeds | Notes |
 |---|---|---|
-| agent | `scout`, `architect`, `developer`, `tester`, `reviewer`, `scribe` | `scout` gets `Read, Grep` only — it researches the repo, so step one never fails closed on egress (D29). `tester` **writes** tests for the acceptance criteria; the `check` step runs them (D28) |
+| agent | `scout`, `architect`, `developer`, `tester`, `reviewer`, `scribe` | `scout` gets `Read, Grep` only — it researches the repo, so step one never fails closed on egress (D29). `tester` **writes** tests for the acceptance criteria *"without touching the implementation"*; the `check` step runs them (D28, PRD §15). PRD §11 keeps it apart from `implement`, which shares the worktree, by scoping it to `tests/` *"via its prompt and `allowedTools`"* |
 | skill | `grill-me` | Contract: uses `ask_user_batch`, honours `no_answer_yet` |
 | skill | `plan-implementation`, `explain-simply`, `ponytail` | The how of `plan`, `explain` and `implement` |
 | skill | `code-review` | Contract: must call `set_outcome` |
@@ -40,7 +40,7 @@ Not seeds:
 
 - **`backlog-importer`** — internal to markdown import (Story 7.3); never shown in the library or the step picker, so it cannot be removed out from under import (D30).
 - **`ask-three`** — the M4 smoke test; a test fixture loaded by the test setup (D30).
-- **The `researcher` flow template** and its agents (`web-researcher`, `research-summarizer`, `fact-checker`) — out of v1 until open-web research has an egress answer, such as a search-API host on the allowlist (D31).
+- **The `researcher` flow template** and its agents (`web-researcher`, `research-summarizer`, `fact-checker`) — out of v1 until open-web research has an egress answer, such as a search-API host on the allowlist (D31). Feature map §2 still promises *"a couple of complete ones (a full software-development pipeline and a research pipeline)"*.
 
 How seeds are delivered:
 
@@ -48,7 +48,7 @@ How seeds are delivered:
 - A FlowBoard upgrade stages new seed commits as *update available*; nothing changes until you click (D12).
 - Seeds are invoked fully qualified like any plugin skill, e.g. `/grill-me:grill-me` (D16).
 - Seeds run on the host tier; git-installed plugins do not (D15).
-- Seeded agents are read-only, with **Duplicate to edit** (D21).
+- Seeded agents are read-only, with **Duplicate to edit** (D21). `agents.project_id` is `NOT NULL`, so each project needs its own seed agent rows; no source says they are inserted at registration ([[Projects Open Questions]] #8).
 
 ## Original v1 seed (PRD §15, backlog Story 1.2)
 
@@ -117,3 +117,5 @@ This mapping is an interpretation by role, not stated in the sources. D22 adopte
 - [[Skill Capabilities]]
 - [[Agent Capabilities]]
 - [[Bundle Packs]]
+- [[Seeded Flows]]
+- [[Seeded Project]]

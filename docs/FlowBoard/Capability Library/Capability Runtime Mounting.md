@@ -30,8 +30,8 @@ From PRD §7 and the backlog:
 - **Skills** — one `--plugin-dir <commit dir>` per plugin **the step names** (D14). Earlier drafts of the PRD and backlog Story 3.2 passed one per *installed* skill to every run; v1 does not, because plugin hooks and MCP servers are mounted as-is (D8) and should only run where a step asked for them. `--add-dir` **does not register skills**; backlog Story 0.1 found this, and the PRD was corrected to match.
 - **Agents** — `--append-system-prompt <agent.system_prompt>` whenever the step names an agent; a step with both an agent and a skill gets this *and* the slash invocation (D27).
 - **Tools** — `--allowedTools <agent ∩ skill, narrowed by the step>` (D28), always with `mcp__vibe__*` appended so a restrictive list cannot lock out `ask_user` (PRD §7, backlog Story 3.2).
-- **Hooks** — `--settings <generated per-run settings.json with PreToolUse hooks>` (PRD §7): an in-agent gate that blocks writes outside the worktree, non-goal paths and destructive commands. Needs the `tool_hooks` capability flag.
-- **Reproducibility** — `--strict-mcp-config` keeps personal MCP config out of runs (PRD §7); the args are snapshotted to `data/runs/<id>/args.json` (PRD §7, backlog Story 3.2).
+- **Hooks** — `--settings <generated per-run settings.json with PreToolUse hooks>` (PRD §7): an in-agent gate that blocks writes outside the worktree, non-goal paths and destructive commands. Needs the `tool_hooks` capability flag. Backlog D5 recommends an *"Empty `--settings` file per run"* instead, and the drawio *D5 · Hook isolation* card an *"Empty --settings file per headless run."* ([[Execution Open Questions]] #52).
+- **Reproducibility** — `--strict-mcp-config` keeps personal MCP config out of runs (PRD §7); the args are snapshotted to `data/runs/<id>/args.json` (PRD §7, backlog Story 3.2). `03` §6 and the drawio *Run records* card snapshot the resolved `RunSpec` to `data/runs/<id>/spec.json` instead.
 
 ## The prompt
 
@@ -40,22 +40,25 @@ The prompt builder assembles, in order:
 1. Task, acceptance criteria, non-goals
 2. Input artifacts — "read these first"
 3. Output paths
-4. **When the step names a skill: the slash invocation, fully qualified — e.g. `/grill-me:grill-me`** (D16; earlier PRD drafts wrote bare `/grill-me`)
+4. **When the step names a skill: the slash invocation, fully qualified — e.g. `/grill-me:grill-me`** (D16; earlier PRD drafts wrote bare `/grill-me`, and `agent-provider.ts` still documents part 4 as `Slash invocation for kind='skill', e.g. "/grill-me".`)
 5. The step's `prompt_template`, with placeholders substituted
 6. Headless instruction: use the `ask_user` MCP tool for questions
 
-With memory on, a **seventh part** — recalled memory, scoped by user, project, **agent/skill** and task — is inserted just before the closing instruction (part 6), capped at `settings.memory.max_recall_chars` (default 6,000). It never grows the other six parts. PRD §7 and `09-memory.md` place it there; the drawio *Prompt builder* label lists it after part 6.
+With memory on, a **seventh part** is added: recalled memory scoped by *"user + project + agent + task"* (PRD §7; PRD §11.2 says the step's *"agent/skill"*), capped at `settings.memory.max_recall_chars` (default 6,000). *"It never grows the other six parts."*
+
+> [!warning] Before part 6 or after it?
+> PRD §7 (*"inserted just before the closing instruction"*) and `09-memory.md` (*"just before the closing headless instruction"*) put part 7 ahead of part 6. PRD §11.2 (*"append them to the prompt as a final part"*), `03` §6 (*"append the hits as a **7th prompt part**"*) and the drawio *Prompt builder* card (*"6 headless: use ask_user · +7 recalled memory"*) put it at the end. `PromptParts` in `agent-provider.ts` has six fields and no slot for it. [[Capability Library Open Questions]] #17; also [[Execution Open Questions]] #51 and [[Memory Open Questions]] #6. See [[Recalled Memory In The Prompt]].
 
 ## Inside the sandbox
 
 From the harness-architecture diagram:
 
 - **Mounts:** `rw` task worktree → `/work` · **`ro` `skills/` → `/skills`** · socket `ask.sock`
-- **v1:** only the step's pinned plugin commit dirs are mounted read-only, not the whole store (D14).
+- **v1:** only the step's pinned plugin commit dirs are mounted read-only, not the whole store (D14). No source gives their mount target inside the container ([[Sandboxing Open Questions]] #22; [[Sandbox Mounts]]).
 - **Never mounted:** `~/.ssh`, cloud credentials, `flowboard.db`, `docker.sock`
 - Skill installs happen on the host (`git clone` from GitHub); the sandbox only reads them.
 
-`08-sandboxing.md` says *mount only the worktree (and the declared artifact dir)* and lists no skills mount. **Resolved (D14):** `claude` runs inside the task's container (PRD §7 *Sandboxed runs*), so it needs the plugin dirs; `08-sandboxing.md` now lists the read-only plugin mounts.
+`08-sandboxing.md` used to say *mount only the worktree (and the declared artifact dir)*, with no skills mount. **Resolved (D14):** `claude` runs inside the task's container (PRD §7 *Sandboxed runs*), so it needs the plugin dirs. `08` now reads *"Mount only the worktree (and the declared artifact dir), plus the plugin dirs the step names, read-only — the agent CLI runs inside the box and needs them to register skills"*, and PRD §11.1 says *"the only other mounts are the step's plugin dirs, read-only"*.
 
 ## Host tier
 
@@ -63,12 +66,12 @@ Without Docker, runs fall back to the host tier (PRD §11.1). A step whose plugi
 
 ## Graceful degradation
 
-| Provider lacks | Effect |
-|---|---|
-| `plugins` | Pack must use `system_prompt` or `native` mount |
-| `allowed_tools` | Tool policy becomes advisory / prompt-level |
-| `effort` | Adapter drops it; editor greys the field |
-| `tool_hooks` | No in-agent gate; the sandbox alone enforces, and the flow editor says so |
+| Provider lacks | Effect | Source |
+|---|---|---|
+| `plugins` | Pack must use `system_prompt` or `native` mount | `agent-provider.ts` (`CapabilityPack` comment: *"provider without plugins"*) |
+| `allowed_tools` | Tool policy becomes advisory / prompt-level | `01-ports.md`, `agent-provider.ts` |
+| `effort` | Adapter drops it; editor greys the field | `01-ports.md`, `agent-provider.ts` |
+| `tool_hooks` | No in-agent gate; the sandbox alone enforces, and the flow editor says so | PRD §7 (the flag is in `01-ports.md`, not in `agent-provider.ts`) |
 
 ## Testing without GitHub
 
@@ -82,3 +85,6 @@ Seed skills are real local plugin dirs, so the question loop and flow engine are
 - [[Capability Tools And Egress]]
 - [[Skill Capabilities]]
 - [[Agent Capabilities]]
+- [[Recalled Memory In The Prompt]]
+- [[Claude Code Adapter]]
+- [[Sandbox Mounts]]

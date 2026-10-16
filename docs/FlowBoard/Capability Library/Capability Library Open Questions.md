@@ -5,7 +5,7 @@ module: Capability Library
 
 # Capability Library Open Questions
 
-Places where the sources disagree or leave a gap. All were worked through on 2026-10-15; each carries its outcome, and the decisions live in [[Capability Library Decisions]]. The original question text is kept below each outcome.
+Places where the sources disagree or leave a gap. Questions 1–18 were worked through on 2026-10-15; each carries its outcome, and the decisions live in [[Capability Library Decisions]]. The original question text is kept below each outcome. Question 19 needs a probe; 20–26 came out of the second grounding pass and are open.
 
 ## 1. Where does the capability store live?
 
@@ -35,7 +35,7 @@ Today: no — an update reaches every flow on its next run, and the UI warns ins
 
 > [!check] **Moot in v1 — D1.** Claude-only, so agents have no pack records.
 
-The mockup gives agents versionless packs, but unevenly: four agents have Claude and Codex packs, three are Claude-only. The architecture says agents are provider-neutral once their default model is a logical id (the PRD still stores a native one). Does an agent need a pack record at all, or only a model-resolution check?
+The mockup gives agents versionless packs, but unevenly: four agents have Claude and Codex packs, three are Claude-only. The architecture says agents are provider-neutral once their default model is a logical id (the PRD stores a Claude alias, `sonnet`, which it now calls *"used as the logical model id"*; see [[Logical Model Ids]]). Does an agent need a pack record at all, or only a model-resolution check?
 
 ## 6. How does the pack/step provider check reach the flow editor?
 
@@ -69,7 +69,7 @@ The mockup's **+ Define agent** button only selects `architect` and switches the
 
 ## 11. Seed set
 
-> [!check] **Resolved — D22.** Mockup names with the PRD's contract skills kept; `implement` stays `/ponytail`.
+> [!check] **Resolved — D22, superseded in part by D27 and D30.** Mockup names with the PRD's contract skills kept. `implement` is `developer` + `/ponytail` (D27); `ask-three` is a test fixture, not a seed (D30).
 
 PRD seeds (`researcher`, `planner`, `ponytail`, `explain-simply`…), plus backlog Story 1.2's research agents, differ from the mockup's Delivery pack (`scout`, `architect`, `developer`, `scribe`…). Which is canonical? See [[Seeded Capabilities]].
 
@@ -93,7 +93,7 @@ The capability-library mockup and guide say the flow editor refuses to save a st
 
 ## 15. Is the skills directory mounted into the sandbox?
 
-> [!check] **Resolved — D14.** Yes. `claude` runs inside the task's container (PRD §7 *Sandboxed runs*), so the step's plugin dirs are mounted read-only. `08-sandboxing.md` needs the mount added.
+> [!check] **Resolved — D14.** Yes. `claude` runs inside the task's container (PRD §7 *Sandboxed runs*), so the step's plugin dirs are mounted read-only. `08-sandboxing.md` and PRD §11.1 now list the mount. The mount target is still unstated ([[Sandboxing Open Questions]] #22).
 
 The harness diagram mounts `ro skills/ → /skills`. `08-sandboxing.md` says *mount only the worktree (and the declared artifact dir)* and lists no skills mount. If the agent CLI runs inside the sandbox, it needs the plugin dirs. See [[Capability Runtime Mounting]].
 
@@ -105,10 +105,12 @@ The harness diagram mounts `ro skills/ → /skills`. `08-sandboxing.md` says *mo
 
 ## 17. Source documents drift from each other
 
-> [!check] **Mostly resolved.** The source docs were fixed on 2026-10-15; two drift items remain. See [[Capability Library Decisions#Source docs to fix]].
+> [!question] **Partly resolved.** The source docs were fixed on 2026-10-15; the drift below remains. See [[Capability Library Decisions#Source docs to fix]].
 
-- The drawio *Prompt builder* puts recalled memory after the headless instruction; PRD §7 and `09-memory.md` put it before.
-- `01-ports.md` adds the `tool_hooks` flag; `agent-provider.ts` lacks it.
+- **Where recalled memory (prompt part 7) goes.** Before the closing headless instruction: PRD §7 (*"inserted just before the closing instruction"*) and `09-memory.md` (*"just before the closing headless instruction"*). At the end: PRD §11.2 (*"append them to the prompt as a final part"*), `03` §6 (*"append the hits as a **7th prompt part**"*) and the drawio *Prompt builder* card, which lists *"+7 recalled memory"* after *"6 headless: use ask_user"*. `PromptParts` in `agent-provider.ts` has six fields and no slot for part 7. Same as [[Execution Open Questions]] #51 and [[Memory Open Questions]] #6.
+- `01-ports.md` adds the `tool_hooks` flag; `agent-provider.ts` lacks it. Same as [[Agent Providers Open Questions]] #1.
+- `agent-provider.ts` still documents prompt part 4 as `Slash invocation for kind='skill', e.g. "/grill-me".`; PRD §7 now invokes `/<plugin>:<slug>` for any step that names a skill (D16, D27).
+- PRD §13 blocks Remove for *"any version a running task pins"*; D17 counts versions pinned by any **non-terminal** task, which includes blocked and parked ones.
 
 ## 18. Which seeds does D22 leave out?
 
@@ -120,13 +122,61 @@ D22 settles the seed set as mockup names with the PRD's contract skills, but fou
 - `backlog-importer`: the builtin agent behind markdown backlog import (Story 7.3). It is needed whatever the library decides, so the only question is its name and whether it is a seed like the others.
 - `web-researcher`, `research-summarizer`, `fact-checker`: the agents of backlog Story 1.2's second flow template. Rename them to fit the mockup roles (`scout`, `scribe`…), or keep them as their own roles?
 
-Until this is decided, the PRD seed flow (§15) and backlog Story 1.2 keep their original names. See [[Seeded Capabilities]].
+The PRD seed flow (§15) and backlog Story 1.2 now carry the decided names. See [[Seeded Capabilities]].
 
 ## 19. Does `/<plugin>:<slug>` invoke reliably in headless mode?
 
 > [!question] **Open — needs a probe, not a decision.** Tracked in backlog Story 0.1.
 
-D16 invokes every plugin skill fully qualified, because Claude Code namespaces plugin skills and two plugins may ship the same slug. Nothing yet confirms that `claude -p` with `--plugin-dir` resolves `/<plugin>:<slug>` in the prompt the way interactive mode does. If it doesn't, the fallback is D16's rejected option: bare `/slug`, with slugs unique per project and colliding installs refused. That would put a `UNIQUE (project_id, slug)` constraint back on `skills`. See [[Capability Runtime Mounting]].
+D16 invokes every plugin skill fully qualified, because Claude Code namespaces plugin skills and two plugins may ship the same slug. Nothing yet confirms that `claude -p` with `--plugin-dir` resolves `/<plugin>:<slug>` in the prompt the way interactive mode does. If it doesn't, one possible fallback (a proposal; D16 records no alternative) is bare `/slug`, with slugs unique per project and colliding installs refused. That would put a `UNIQUE (project_id, slug)` constraint back on `skills`. See [[Capability Runtime Mounting]].
+
+## 20. Can a step or flow travel to another project?
+
+> [!question] **Open.**
+
+Plugins, skills and agents belong to one project (D5, D23), and a step's `skill_id`, `agent_id` and `extra_plugin_ids` point at that project's rows. Yet `02-core-and-engine.md` §2 wants flows *"exportable across projects"*, backlog Story 8.2 asks for a *"Reuse… picker (steps or whole flow from other projects, key uniquified)"* (**NEW**), and the feature map's parking lot has *"A shareable recipe library — export a recipe and reuse it across projects"*. No source says what happens to a reused step whose plugin or agent the target project lacks: map by plugin name and agent slug, offer to install, or refuse the save. The rule in [[Capabilities In Flows]] that validation rejects an extra plugin not installed in the project is a proposal that only covers the simplest case.
+
+## 21. What do an agent's default model and effort do?
+
+> [!question] **Open.**
+
+PRD §4 calls an agent *"a system prompt and defaults"* and PRD §5 gives it `default_model` and `default_effort`. But `step_defs.model` and `step_defs.effort` are `NOT NULL` with their own defaults (`'sonnet'`, `'medium'`), and PRD §7 builds `--model <step.model> --effort <step.effort>`, so an agent's defaults never reach a run unless something copies them into the step. The mockup's agent defaults also differ from the PRD §15 steps those agents serve: `scout` haiku/low vs `research` sonnet/medium, `reviewer` sonnet/medium vs `review` opus/high, `tester` sonnet/medium vs `tests` sonnet/high, `scribe` haiku/low vs `summarize` sonnet/medium (only `architect` and `developer` match). **Proposal:** picking an agent prefills the step editor's model and effort, and each seeded agent carries the values of the seed step it serves. See [[Agent Capabilities]] and [[Seeded Capabilities]].
+
+## 22. Do agents shipped inside a plugin become library agents?
+
+> [!question] **Open.**
+
+D8 mounts a plugin as-is, *"hooks, agents, commands and `.mcp.json` included"*, so a plugin's own agent definitions reach Claude Code. The library's agents are `agents` rows (PRD §5), defined in the form (D21) or seeded (D12). Install parses `skills/*/SKILL.md` (backlog Story 7.1: *"parse every `skills/*/SKILL.md`"*; PRD §12: *"clone to staging, parse, return what was found"*) and takes the plugin name from `plugin.json` (PRD §5: *"plugin.json name, else the repo name"*). No source says it reads a plugin's agent definitions, so nothing says whether a plugin's agents are listed, become rows a step can name, or stay invisible. In the mockup, agents arrived inside bundle packs, which are deferred (D3). See [[Agent Capabilities]].
+
+## 23. Whose allowlist does an amber mark point at?
+
+> [!question] **Open.**
+
+The library mockup and guide say a network-capable capability *"still needs the host on its allowlist"* and that egress is *"default-deny at the step"*; the inbox's **Allow host & retry** *"adds the blocked host to that step's allowlist"*. PRD §11.1 keeps one allowlist in `settings.sandbox_profile`, *"overridable per step"*, with no per-step column. Same as [[Sandboxing Open Questions]] #10; what **Allow host & retry** edits is #11 there. See [[Capability Tools And Egress]].
+
+## 24. Light or dark?
+
+> [!question] **Open.**
+
+PRD §13: *"Dark-first, dense, keyboard-friendly. Use shadcn defaults; do not build a design system."* The library mockup and guide are light only (`color-scheme:light`), as is the drawio *Harness architecture* tech card (*"light, zero radius, IBM Plex"*); backlog Story 9.1 says *"light default"*. The old design handoff (`docs/old/design/README.md`) is dark — *"Dark (the designed default)"* — with a *"1f — Light mode"* variant. Feature map §19 offers *"Light, dark, or follow the system"* and backlog Story 8.3 *"theme light/dark/system"*. Same as [[Flow Design Open Questions]] #34 and [[Settings And Plumbing Open Questions]] #7. See [[Capability Library Screen]].
+
+## 25. Proposals in these notes that no source or decision states
+
+> [!question] **Open.** Listed so they are not mistaken for sourced facts.
+
+- **Check for updates** runs `git ls-remote` against each plugin's remote ([[Updating And Removing Capabilities]]). D13 says only that the check is manual and per project.
+- **Open on GitHub** shows only for plugins with a remote web URL, so not for seeds (`repo_url` is null) or `file://` installs ([[Capability Library Controls]]).
+- The step editor's picker lists skills as `plugin:slug` ([[Capabilities In Flows]]), following D16.
+- Validation rejects an extra plugin that is not installed in the project ([[Capabilities In Flows]]); see #20.
+- An agent's defaults prefill the step editor ([[Seeded Capabilities]]); see #21.
+- The install button reads **+ Install from git** ([[Installing A Capability From GitHub]], [[Capability Library Controls]], [[Capability Library Screen]]). D7 says what install accepts, not the label; the mockup reads *"+ Install from GitHub"*.
+- The status bar's store path reads `<project>/.flowboard/skills` ([[Capability Library Screen]]). D5 places the store, not the label; the mockup reads *"store ~/.flowboard/capabilities"*.
+
+## 26. Where does a plugin's author come from?
+
+> [!question] **Open.**
+
+The mockup's rail shows an author on every row (`@flowboard/core`, `@team-sec`), and search *"Matches name, author and description together. Type an author to see everything they published."* The v1 `plugins` table has `name`, `source`, `repo_url` and `commit_sha` but no author (PRD §5). Derive it from the repository owner, read it from `plugin.json`, or drop author search? See [[Capability Library Controls]].
 
 ## Related
 
@@ -134,3 +184,5 @@ D16 invokes every plugin skill fully qualified, because Claude Code namespaces p
 - [[Seeded Capabilities]]
 - [[Capability Library Index]]
 - [[Capability Library Roadmap]]
+- [[Recalled Memory In The Prompt]]
+- [[Sandboxing Open Questions]]

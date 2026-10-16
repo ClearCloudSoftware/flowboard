@@ -13,7 +13,7 @@ The library holds three kinds of capability. The rail groups by kind, and the ki
 | Kind | Is | Carries | Reach for it when |
 |---|---|---|---|
 | `skill` | A packaged instruction, invoked like a slash command | A `SKILL.md` declaring what it does, what it produces, and the tools it may use | A step needs a repeatable **procedure** — review this diff, scan for secrets, write a plan |
-| `agent` | A named role | A prompt, default model and effort, and an allowed-tools list. Meant to be provider-neutral apart from the model id, which should be a logical id the adapter maps (the PRD still stores a native one) | A step needs a **who** rather than a **how** — the reviewer, the architect, the scout |
+| `agent` | A named role | A prompt, default model and effort, and an allowed-tools list. Provider-neutral apart from the model id, *"which is logical and mapped by the adapter"* (guide). In v1 that logical id is a Claude alias such as `sonnet` (PRD §5, D20; see [[Logical Model Ids]]) | A step needs a **who** rather than a **how** — the reviewer, the architect, the scout |
 | `pack` | A bundle | Skills, agents and flows bundled as one installable unit | You want a whole way of working at once — the delivery starter set, or the security team's expectations |
 
 ## Visual identity

@@ -17,14 +17,14 @@ The Claude pack of a skill is a **plugin directory**:
   skills/<slug>/SKILL.md
 ```
 
-It is mounted with `--plugin-dir <dir>` and invoked as `/<slug>`.
+It is mounted with `--plugin-dir <dir>` and invoked as `/<slug>` (`05-environment-and-registry.md` §13; v1 qualifies the invocation, below).
 
 > [!check] v1: the plugin is the unit, skills are qualified
 > A skill belongs to a **plugin** — the repository it was installed from — and is installed, updated and removed with it ([[Capability Library Decisions|D4]]). A plugin may ship several skills under `skills/`. Skills are invoked fully qualified, `/<plugin>:<slug>`, which is how Claude Code namespaces plugin skills, so two plugins may ship the same slug (D16). Hooks, agents, commands and `.mcp.json` in the plugin are mounted as-is (D8). The rebuild backlog records a hard lesson here: **`--add-dir` does not register skills; `--plugin-dir` does** (backlog Story 0.1, a FIX item; the backlog intro lists the same lesson under "Environment leaks"). Install adds `.claude-plugin/plugin.json` when a repository lacks one.
 
 ## The SKILL.md manifest
 
-Frontmatter fields seen across the mockup and PRD:
+Frontmatter fields seen across the mockup and PRD. The PRD reads only `allowed-tools` from `SKILL.md` (§5, `skills.allowed_tools`); the drawio and the first PRD parse its frontmatter for the name and description. `version`, `invokes`, `honours` and `produces` appear only in the mockup.
 
 | Field | Meaning | Example |
 |---|---|---|
@@ -51,7 +51,7 @@ allowed-tools: Read, Bash, WebFetch
 
 ## How a step uses a skill
 
-In the run's prompt, slot 4 of the prompt builder is the slash invocation (`/grill-me:grill-me` in v1; earlier PRD drafts wrote `/grill-me`). The step's `prompt_template` follows in slot 5. See [[Capability Runtime Mounting]].
+In the run's prompt, slot 4 of the prompt builder is the slash invocation (`/grill-me:grill-me` in v1; earlier PRD drafts and `agent-provider.ts` write `/grill-me`). The step's `prompt_template` follows in slot 5. See [[Capability Runtime Mounting]].
 
 ## Detail pane
 

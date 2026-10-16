@@ -9,14 +9,17 @@ module: Capability Library
 
 | Source | Route(s) | Content |
 |---|---|---|
-| PRD §13 / drawio *FlowBoard ideation* | `/skills`, `/agents` | Two pages: skills (list, install from GitHub, update, remove); agents (form) |
-| Mockup | `flowboard/library` | One screen covering skills, agents and packs |
+| drawio *FlowBoard ideation* (and the earlier PRD §13) | `/skills`, `/agents` | Two pages: skills (install from GitHub URL, update, remove); agents (form) |
+| Mockup | `flowboard/library` (the topbar brand) | One screen covering skills, agents and packs |
+| PRD §13; backlog Stories 7.1, 7.2 | `/p/[slug]/library` | *"One screen per project"*: plugins and agents |
 
-The drawio *Logical components* page names the area *Skills & agents — install, edit, list*, without routes. The mockup consolidates the two PRD pages into one library screen. The harness-architecture diagram groups it as *"Library · Costs · Settings — skills & agents"* in the browser front end.
+The drawio *Logical components* page names the area *Skills & agents — install, edit, list*, without routes. The harness-architecture diagram's browser box *Library · Costs · Settings* lists *"skills & agents"* among its contents.
 
-v1 keeps the single library screen, scoped to the current project, because the store is per project ([[Capability Library Decisions|D5]]).
+v1 keeps the single library screen, scoped to the current project, because the store is per project ([[Capability Library Decisions|D5]]); the PRD and backlog now give it the project route. See [[Projects Open Questions]] #21 (resolved by D5) for the route conflict from the project side.
 
-## HTTP API (PRD §12)
+## HTTP API (earlier PRD §12)
+
+The PRD first listed four endpoints:
 
 ```
 GET    /api/skills                          POST /api/skills/install    -- from github url
@@ -25,7 +28,7 @@ GET    /api/agents                          POST /api/agents
 
 ## v1 API (decided)
 
-Derived from the decisions (D24). Everything is project-scoped except actions on one plugin or agent.
+Derived from the decisions (D24); PRD §12 now lists the same routes. Everything is project-scoped except actions on one plugin or agent. The `_staging/<uuid>` directory and the `403` for a seeded agent come from D24 and D21; PRD §12 says only *"clone to staging"* and does not give the `403`. Also not in PRD §12, and inferred here from the decisions: the amber flag in the library response (D9), the update preview's contents (D19), and the `409` on agent delete (D17).
 
 | Method | Path | For | Decision |
 |---|---|---|---|
@@ -50,3 +53,4 @@ Derived from the decisions (D24). Everything is project-scoped except actions on
 - [[Capability Data Model]]
 - [[Installing A Capability From GitHub]]
 - [[Capability Library Screen]]
+- [[Projects API And Routes]]

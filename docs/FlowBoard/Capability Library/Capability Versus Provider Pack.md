@@ -73,7 +73,7 @@ See [[Provider Coverage And Portability]].
 
 ## Agents are nearly provider-neutral already
 
-An agent is a prompt plus defaults. The only provider-specific part is the default model id. The architecture wants that to be a **logical** id (`reasoning-high`, `fast-cheap`, `default`) resolved through `resolveModel()`; the PRD still stores a native one (`sonnet`). For v1 the Claude aliases (`opus` / `sonnet` / `haiku`) serve as the logical ids ([[Capability Library Decisions|D20]]). See [[Agent Capabilities]].
+An agent is a prompt plus defaults. The only provider-specific part is the default model id. The architecture wants that to be a **logical** id (`reasoning-high`, `fast-cheap`, `default`) resolved through `resolveModel()`. PRD §5 stores a Claude alias, `DEFAULT 'sonnet'`, commented *"a Claude alias, used as the logical model id"*: an alias the CLI resolves, not a native id (the stream sample reports `claude-fable-5-1`). So for v1 the Claude aliases (`opus` / `sonnet` / `haiku`) serve as the logical ids ([[Capability Library Decisions|D20]]). See [[Agent Capabilities]] and [[Logical Model Ids]].
 
 ## Related
 
@@ -82,3 +82,4 @@ An agent is a prompt plus defaults. The only provider-specific part is the defau
 - [[Capability Runtime Mounting]]
 - [[Capability Data Model]]
 - [[Capability Library Glossary]]
+- [[Logical Model Ids]]

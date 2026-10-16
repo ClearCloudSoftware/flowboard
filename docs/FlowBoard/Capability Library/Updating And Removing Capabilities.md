@@ -44,7 +44,7 @@ Update `secret-scan` from 1.3 to 1.5 and every *new* task uses 1.5. A task alrea
 
 ### Finding updates
 
-- **Manual only** (D13). One **Check for updates** action per project runs `git ls-remote` against each git-sourced plugin. Nothing polls, and opening the screen fetches nothing.
+- **Manual only** (D13). One **Check for updates** action per project checks each git-sourced plugin against its remote (running `git ls-remote` is a proposal, [[Capability Library Open Questions]] #25). Nothing polls, and opening the screen fetches nothing.
 - **Seeds** (D12): upgrading FlowBoard stages the new seed commit into the store and marks the seed *update available*. Nothing changes until you click Update.
 
 ### Taking an update
@@ -56,11 +56,11 @@ Update `secret-scan` from 1.3 to 1.5 and every *new* task uses 1.5. A task alrea
 
 ## Removing is blocked while anything uses it
 
-**Used by** counts the steps in each flow's **latest version**, plus any flow version **pinned by a non-terminal task** (D17). A step uses a plugin if its skill belongs to it or its `extra_plugin_ids` list it. Old flow versions nothing is running do not block removal.
+**Used by** counts the steps in each flow's **latest version**, plus any flow version **pinned by a non-terminal task** (D17; PRD §13 says *"any version a running task pins"*, [[Capability Library Open Questions]] #17). A step uses a plugin if its skill belongs to it or its `extra_plugin_ids` list it. Old flow versions nothing is running do not block removal.
 
 - The **Remove** button is disabled, with *"in use by N steps — can't be removed"* beside it.
 - A plugin nothing uses shows a **hollow dot** and a callout: *"Nothing uses this. No step in any flow references it, so removing it is safe — and leaving it installed is just clutter in the step editor's picker."*
-- **Remove asks for confirmation** (D18; the PRD and backlog asked for it, the mockup deleted on first click).
+- **Remove asks for confirmation** (D18; backlog Story 7.1 asked for it — *"remove with confirm"* — and PRD §13 now follows; the mockup deleted on first click).
 - A running task is safe either way: it runs from its own pinned commit dir.
 
 > [!note] The only destructive action

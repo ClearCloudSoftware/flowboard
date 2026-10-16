@@ -36,7 +36,7 @@ CREATE TABLE skills (
 --   UNIQUE (project_id, slug); default_model holds a Claude alias (opus|sonnet|haiku)
 
 -- step_defs: kind becomes 'ai' | 'shell' | 'manual'; an 'ai' step sets agent_id, skill_id or both (D27)
---             + extra_plugin_ids TEXT   -- JSON array of plugins.id, mounted alongside the skill's plugin
+--             + extra_plugin_ids TEXT NOT NULL DEFAULT '[]'   -- JSON array of plugins.id, mounted alongside the skill's plugin
 -- tasks:     + capability_pins  TEXT   -- JSON {plugins: {id: sha}, agents: {id: <agent row>}}, set at task start
 ```
 
@@ -96,11 +96,11 @@ CREATE TABLE step_defs (
 );
 ```
 
-Backlog gap (Story 7.1): *"Show stored frontmatter or stop storing it."*
+Backlog gap (Story 7.1), first worded *"Show stored frontmatter or stop storing it"*; it now reads *"Stop storing frontmatter: read `SKILL.md` from the plugin dir when shown."* (**GAP**)
 
 ## Architecture generalisation
 
-`02-core-and-engine.md`: **`skills` gains `provider` + `format`** — a Claude plugin dir is one packaging of a capability. Packs are passed to the provider in `RunSpec.capabilities`:
+`02-core-and-engine.md` §1: **`skills` gains `provider` + `format`** — a Claude plugin dir is *one packaging* of a capability. Packs are passed to the provider in `RunSpec.capabilities` (`CapabilityPack` from `agent-provider.ts`; `RunSpec` abridged from `01-ports.md`, which `agent-provider.ts` repeats with doc comments):
 
 ```ts
 export interface CapabilityPack {
@@ -174,7 +174,7 @@ The install dialog's candidate (`CANDIDATE`) has the same shape plus `url`, the 
 | Network tool | `tools ∩ {WebFetch, WebSearch, Bash}` |
 
 > [!note] `used` is derived in a real system
-> The mockup stores `used` on the record. In a real implementation it is a query over step definitions in every flow version that references the capability — it should not be stored.
+> The mockup stores `used` on the record. In v1 it is a query, never stored: over each flow's latest version plus any version a non-terminal task pins, not every flow version (D17; see *v1 schema* above).
 
 ## Related
 

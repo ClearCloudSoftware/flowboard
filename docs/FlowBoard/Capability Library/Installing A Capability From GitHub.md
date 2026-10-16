@@ -8,7 +8,7 @@ module: Capability Library
 **+ Install from GitHub** is one of the two ways anything enters the library (the other is [[Agent Capabilities|+ Define agent]]). It takes a repository URL and nothing else.
 
 > [!check] v1: any git URL, one plugin per install
-> Install accepts **any git URL**, including `file:///…` for a skill you are writing yourself ([[Capability Library Decisions|D7]]); the button reads **+ Install from git**. What gets installed is the **plugin** — every skill in the repository, as one unit (D4). The clone lands in the project's store under its commit (D5). Plugin contents are installed as-is, hooks and MCP servers included (D8); a plugin that ships `.mcp.json` or `hooks/` is marked amber (D9). There is no providers check in v1 (D1).
+> Install accepts **any git URL**, including `file:///…` for a skill you are writing yourself ([[Capability Library Decisions|D7]]); the button reads **+ Install from git** (proposed wording, [[Capability Library Open Questions]] #25). What gets installed is the **plugin** — every skill in the repository, as one unit (D4). The clone lands in the project's store under its commit (D5). Plugin contents are installed as-is, hooks and MCP servers included (D8); a plugin that ships `.mcp.json` or `hooks/` is marked amber (D9). There is no providers check in v1 (D1).
 
 ## Principles
 
@@ -78,8 +78,9 @@ Then it branches on the provider of the step you add it to:
 
 ## Backend notes
 
-- PRD: clone **or sparse-checkout** into `./skills/<slug>`; parse `SKILL.md` frontmatter for name and description.
-- Backlog Story 7.1: install into `./skills/<slug>` *as a plugin dir* — add `.claude-plugin/plugin.json` when missing.
+- drawio *FlowBoard ideation* (and the earlier PRD §13): clone **or sparse-checkout** into `./skills/<slug>`, *"parse SKILL.md frontmatter"*.
+- PRD §12: preview first (*"{url}: clone to staging, parse, return what was found"*), then confirm (*"{previewId}: confirm the install"*).
+- Backlog Story 7.1: *"Install a plugin from any git URL into `<repo_path>/.flowboard/skills/<plugin>/<commit>/` (add `.claude-plugin/plugin.json` when missing), parse every `skills/*/SKILL.md`"*.
 - Architecture: installing "from a GitHub URL" becomes a **provider-tagged** operation. In v1 every plugin is implicitly `claude`; no provider is stored (D1).
 - The git remote is reached by `git clone` on the host (harness-architecture diagram), not from inside the sandbox.
 - Installs go to `<project>/.flowboard/skills/<plugin>/<commit>/` (D5); earlier PRD and Story 7.1 drafts said `./skills/<slug>`.
