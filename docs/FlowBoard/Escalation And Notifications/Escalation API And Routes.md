@@ -25,7 +25,7 @@ module: Escalation And Notifications
 | `chat.update` | Web answer (PRD §10); Slack answer and undo (backlog 6.2, 4.4; `04` §10) | PRD §10, backlog 4.4, 6.2, `04` §10 |
 | A modal with `plain_text_input` | A `text` or `number` question's button is pressed | PRD §10 |
 
-The PRD names only `chat.postMessage` and `chat.update`. Opening a modal needs one more Slack call, which no source names.
+The PRD names only `chat.postMessage` and `chat.update`. Opening a modal needs one more Slack call, which no source names (Slack API knowledge, not in the sources).
 
 ## Proposed
 

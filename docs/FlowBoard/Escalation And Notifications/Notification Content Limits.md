@@ -5,7 +5,7 @@ module: Escalation And Notifications
 
 # Notification Content Limits
 
-A chat message leaves the machine. FlowBoard is local-first (*"Single user, runs on my machine"*, PRD §1), but task content already goes to the model provider on every run (the sandbox egress allowlist holds *"the model endpoint"*, PRD §11.1). The chat message is a second third party, and the only one a human reads.
+A chat message leaves the machine. FlowBoard is local-first (*"Single user, runs on my machine"*, PRD §1), but task content already goes to the model provider on every run (the sandbox egress allowlist holds *"the model endpoint"*, PRD §11.1). Inference, not in the sources: the chat message is a second third party, and the only one a human reads.
 
 ## The rule
 

@@ -9,16 +9,16 @@ What each source contributed. There is no mockup for this component.
 
 | Source | Contributed |
 |---|---|
-| `docs/FlowBoard/Component Documentation Tracker.md` | Scope (*"Slack escalation, signed inbound, resolve everywhere"*), feature map §13, architecture #10 Notifier port, no mockup, the suggested merge into Human In The Loop |
+| `docs/FlowBoard/Component Documentation Tracker.md` | Scope (*"Slack escalation, the Notifier port and channels, signed inbound, first write wins, resolve everywhere"*), feature map §13, architecture #10 Notifier port, no mockup, the suggested merge into Human In The Loop |
 | `docs/feature-map.md` §13 | The three features (*Escalate after a wait*, *Answer from anywhere*, *More than one channel*) and both ideas (*Nudge the right person*, *An escalation ladder*) |
 | `docs/feature-map.md` §11, §12, §18, §19, §20, *Across everything*, parking lot | Undo ❓; *One shared question format*; *Live updates* (§20); *Stays in sync*; *"my inbox"* filter; *A team budget* (the one non-question alert); **Nudge timing**; *Keeping the pieces swappable* (*"the chat channel"*); Teams & collaboration (*"a who stamped on every … answer"*); *Kick off work from outside*; trends dashboard |
 | `docs/old/PRD.MD` §1, §2 | Single user, no auth, no user table |
 | `docs/old/PRD.MD` §3 | `ports/` holds `Notifier`; `adapters/notify/ # slack`; worker holds the *"escalation timer"*; only web and worker open the DB |
 | `docs/old/PRD.MD` §5 | `questions.answered_via`, `escalated_at`, `slack_channel`, `slack_ts`; `jobs.kind = 'escalate_question'`; `settings` |
 | `docs/old/PRD.MD` §7, §8, §9 | Job leasing and stale-lease reclaim; loop escalation (the other meaning); broker as only writer, 2 s poll, 20-min park |
-| `docs/old/PRD.MD` §11.1 | The egress allowlist's *"the model endpoint"*: task content already leaves the machine on every run; Slack is not on the allowlist; *"Never mount host secrets"* |
+| `docs/old/PRD.MD` §11.1 | The egress allowlist's *"the model endpoint"*: task content already leaves the machine on every run; the allowlist names only the model endpoint and package registries (Slack's absence is an inference; see [[Escalation Storage]]); *"Never mount host secrets"* |
 | `docs/old/PRD.MD` §10 | The whole Slack spec: timer, Block Kit per kind, interactions endpoint, idempotent answers, reconciliation, env config, content rule |
-| `docs/old/PRD.MD` §12, §14, §16, §17 | `POST /api/slack/interactions`, `POST /api/questions/:id/answer`; M6; acceptance line; out of scope |
+| `docs/old/PRD.MD` §12, §13, §14, §16, §17 | `POST /api/slack/interactions`, `POST /api/questions/:id/answer`; §13's settings list (no threshold); M6; acceptance line; out of scope |
 | `docs/old/REBUILD-BACKLOG.md` | Preamble items 1 and 5; Story 1.1 (`expired` never set); 2.1 (cancel pending questions); 3.2 (failed runs keep escalating); 4.1 (`VIBE_ASK_TIMEOUT_MS`); 4.2 (resume race); 4.3 (SSE snapshot, 2-min window, pollers); 4.4 (undo, `unanswer`, `chat.update`); Epic 6 stories 6.1–6.3; 8.3 (threshold in minutes); 10.1; decision D2 |
 | `docs/old/architecture/04-hitl-and-notify.md` §9, §10 | Component #10's role, seam, genericisation, `escalation_threshold_ms`, idempotent reconciliation, security in the adapter, `link_only`, content rule; one schema three renderers; cancel on run failure |
 | `docs/old/architecture/01-ports.md` | The `Notifier` sketch (second variant); `inline_answer` vs `link_only` |
@@ -40,7 +40,7 @@ What each source contributed. There is no mockup for this component.
 | `docs/mockups/README.md` | The inbox mockup's ten-minute crossing and the answered-in-chat moment, told in the opposite order to the script |
 | `docs/old/design/brief.md`, `README.md`, `Vibe Kanban.dc.html` | *"After five minutes a question escalates to Slack"*; *"Design the state where a card resolves under me"*; the colour ramp; `→ Slack in 0m 48s`; collapsed escalated batch; the answered-from-Slack sequence (1e); `answeredVia: 'ui' \| 'slack'`; footer figures; threshold as a tweak |
 | `docs/old/reference/README.md` | `notifier.ts # escalation channel port`; `question.ts` *"the one question schema (MCP / inbox / Slack)"* |
-| Sibling vault sets | [[Escalation To Chat]], [[Answering Rules]], [[Question Lifecycle]], [[Human In The Loop Data Model]], [[Human In The Loop Open Questions]] #4, #16, #18–#23; [[Waiting And Escalation]], [[Monitor Open Questions]] #8–#10; [[Cost API And Routes]]. New sets: [[Nudge Timing Setting]], [[Settings And Plumbing API And Routes]], [[Settings Data Model]], [[Settings And Plumbing Open Questions]] #2, #6 (Settings And Plumbing); [[Egress Allowlist]], [[Host-Side Brokers]], [[Sandbox Mounts]] (Sandboxing); [[Future Task Sources]] (Intake And Import) |
+| Sibling vault sets | [[Escalation To Chat]], [[Answering Rules]], [[Question Lifecycle]], [[Human In The Loop Data Model]], [[Human In The Loop Open Questions]] #4, #5, #16, #17, #18–#23, #32, #36; [[Waiting And Escalation]], [[Monitor Open Questions]] #8–#10; [[Cost API And Routes]]. New sets: [[Nudge Timing Setting]], [[Settings And Plumbing API And Routes]], [[Settings Data Model]], [[Settings And Plumbing Open Questions]] #2, #6 (Settings And Plumbing); [[Egress Allowlist]], [[Host-Side Brokers]], [[Sandbox Mounts]] (Sandboxing); [[Future Task Sources]] (Intake And Import) |
 
 ## Not found
 

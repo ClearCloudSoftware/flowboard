@@ -18,9 +18,10 @@ How long a question waits before it is posted to chat. The feature map calls it 
 | backlog Story 8.3 | *"escalation threshold in minutes"* (**PRD/NEW**) |
 | old design handoff | *"Escalation threshold is a setting (default 5 minutes); the prototype exposes it as a tweak."* |
 | old design prototype | `escalationMinutes ?? 5`; the tweak is an int in minutes, *"default":5,"min":1,"max":30* (`Vibe Kanban.dc.html`) |
+| PRD §13 | Lists the settings it wants: *"a global **draft mode** toggle in settings"*, *"a **sandbox** section in settings"*, *"a **memory** section in settings"*. No threshold. |
 | drawio *Harness architecture* | Not a setting: the SQLite card lists *"settings (memory, sandbox_profile)"* only, and every page fixes it at 5 minutes |
 
-So the threshold is a stored setting only in `04` §10, `06` §15 and backlog 6.1 and 8.3. The feature map (§19) and the old handoff call it a setting without naming a key. PRD §10 fixes it.
+So the threshold is a stored setting only in `04` §10, `06` §15 and backlog 6.1 and 8.3. The feature map (§19) and the old handoff call it a setting without naming a key. PRD §10 fixes it, and PRD §13's list of settings leaves it out.
 
 ## The default
 

@@ -27,7 +27,7 @@ There is no mockup for escalation itself, and no mockup of the chat message. Thi
 > [!note] The mockups README tells it in a different order
 > *"one card crosses the ten-minute threshold while you watch; a few seconds later a teammate answers one in chat"* (`docs/mockups/README.md`). In the script the chat answer comes first (9 s) and the crossing second (18 s).
 
-The `slack` tag uses the run colour (`.via.slack{border-color:var(--run);color:var(--run)…}`). The `escalated` chip uses the wait colour (`.esc{color:var(--wait);border:1px solid var(--wait)…}`); the countdown chip is grey (`.esc.soon{color:var(--ink-3);border-color:var(--line-2)}`). Both rules are in `inbox.html`; `monitor.html` repeats the first.
+The `slack` tag uses the run colour (`.via.slack{border-color:var(--run);color:var(--run)…}`). The `escalated` chip uses the wait colour (`.esc{color:var(--wait);border:1px solid var(--wait)…}`); the countdown chip is grey (`.esc.soon{color:var(--ink-3);border-color:var(--line-2)}`). All three rules are in `inbox.html`; `monitor.html` repeats only the `.esc` chip rule (`monitor.html:137`).
 
 ### The guide's walkthrough
 
