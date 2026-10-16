@@ -48,7 +48,7 @@ PRD §3: *"Only `apps/web` and `apps/worker` open the SQLite file; the MCP shim 
 *"`pnpm test` = `tsx --test --test-concurrency=1` on a throwaway `VIBE_DB_PATH`; concurrency 1 because tests share one SQLite file."* — **FIX** (backlog 0.2). The drawio test lane names vitest instead. See [[Execution Testing]].
 
 > [!warning] Which file name?
-> PRD §3 and the drawio say `data/flowboard.db`. The backlog's header cites *"the live `data/vibe.db"`*, and its env vars are `VIBE_*`. `.gitignore` covers both (`data/*.db*`). See [[Settings And Plumbing Open Questions]] #19.
+> PRD §3 and the drawio say `data/flowboard.db`. The backlog's header cites *"the live `data/vibe.db`"*, and its env vars are `VIBE_*`. `.gitignore` covers both (`data/*.db*`). See [[Settings And Plumbing Open Questions]] #19.
 
 ## Related
 

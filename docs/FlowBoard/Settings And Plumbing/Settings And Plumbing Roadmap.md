@@ -57,7 +57,7 @@ Acceptance (PRD §16):
 | Append-only usage journal | `02` §1 |
 | Provider-neutral schema renames (`agent_session_id`, `runs.provider`) | `02` §1 |
 | Connection states and the lost-orchestrator card | old design handoff |
-| Server actions alongside REST routes; no client state store | drawio *Harness architecture* |
+| No client state store (server actions are not drawio-only: PRD §3 already lists them in `web/`) | drawio *Harness architecture* |
 | Lint rule enforcing `core/` → `core/ports` only | architecture `README.md` |
 
 ## Ideas

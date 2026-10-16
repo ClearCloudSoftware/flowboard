@@ -19,7 +19,7 @@ Draft mode is the best-known global switch. This note covers only where the sett
 | Effect | *"overrides every step to `--model haiku --effort low`"* (PRD §13). `06` §15's sketch sets the logical id `fast-cheap` instead ([[Flow Design Open Questions]] #15) |
 | Applied by | The runner, as a `SpecTransform` *"applied before `launch()`"* (`06` §15, `03` §6) |
 | Recorded | `runs.model`, `runs.effort` (`02` §1, backlog 3.2) |
-| Acceptance | *"Draft mode forces every step to haiku/low"* (PRD §16, backlog 10.1) |
+| Acceptance | *"Draft mode forces every step to haiku/low"* (PRD §16); *"Draft mode forces haiku/low."* (backlog 10.1) |
 | Milestone | None in PRD §14. Backlog places it in Epic 8, Story 8.3: *"Draft mode toggle"* |
 
 ## Where the toggle appears

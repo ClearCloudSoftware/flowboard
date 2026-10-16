@@ -65,7 +65,7 @@ erDiagram
 | `skills` gains `provider` + `format` | a plugin dir is one packaging | `02` §1 | superseded by Capability Library D1 (Claude-only v1) |
 | `jobs.kind` includes `resume_step` | park and resume | backlog 1.1 (**DEC**) | **no** ([[Execution Open Questions]] #37) |
 
-Backlog 1.1 calls the first three *"the three columns that proved necessary"*. See [[Settings And Plumbing Open Questions]] #22.
+Backlog 1.1 calls `runs.model`, `runs.effort` and `step_instances.reason` *"the three columns that proved necessary"*. The `agent_session_id` rename and `runs.provider` come from `02` §1, not the backlog. See [[Settings And Plumbing Open Questions]] #22.
 
 ## Invariants
 

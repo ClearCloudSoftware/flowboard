@@ -36,7 +36,7 @@ flowchart LR
 | Settings never edit a flow | *"Draft mode isn't a version … never makes a new version and never shows as unsaved"* (flow-designer guide) |
 | Other readers | *"the flow editor and board read settings for display toggles"* (`06` §15) |
 
-The drawio *Runner* card lists the same steps in order: *"builds the RunSpec · draft-mode transform · writes per-run mcp.json + settings.json (hooks) · records model, effort, tier"*.
+The drawio *Runner* card has the draft-mode transform and the recording step, but no sandbox-profile transform (that is backlog 3.5) and no permission gate (a separate *Permission gate* card): *"builds the RunSpec · draft-mode transform · writes per-run mcp.json + settings.json (hooks) · records model, effort, tier"*.
 
 ## Precedence
 

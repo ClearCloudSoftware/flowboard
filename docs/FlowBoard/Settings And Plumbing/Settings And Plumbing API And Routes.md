@@ -26,7 +26,7 @@ The whole API surface in one place. Each functional set documents its own endpoi
 | `GET /api/projects/:id/library` and the plugin and agent routes | The capability library | [[Capability Library API And Routes]] |
 | `POST /api/import/backlog` | *"md file -> tasks"* | [[Intake API And Routes]] |
 | `GET /api/costs?project=&from=&to=` | Rollups | [[Cost API And Routes]] |
-| `POST /api/slack/interactions` | Inbound Slack | [[Escalation API And Routes]] |
+| `POST /api/slack/interactions` | Inbound Slack. The drawio uses Socket Mode instead (*"so no public URL"*); see [[Escalation And Notifications Open Questions]] #6 | [[Escalation API And Routes]] |
 
 *"The SSE endpoint replays existing `run_events` for the run, then streams new ones. Reconnect with `Last-Event-ID`."* (PRD §12)
 

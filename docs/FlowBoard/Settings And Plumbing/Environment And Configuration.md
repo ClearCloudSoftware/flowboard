@@ -15,7 +15,7 @@ Configuration that lives outside the `settings` table: environment variables, `.
 | `VIBE_DB_PATH` | the SQLite file; set so *"worker and MCP (spawned with a foreign cwd) open the same file"*; a throwaway path for tests | backlog 0.2, 1.1; `02` §1 |
 | `VIBE_MAX_RUNS` | concurrency cap for the worker | backlog 3.1; `03` §7; drawio |
 | `VIBE_ASK_TIMEOUT_MS` | overrides the 20-minute ask timeout, for tests | backlog 4.1 (**PRD/FIX**) |
-| `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_CHANNEL_ID` | Slack; *"lives in `.env.local`. If the token is absent, log the escalation and carry on — Slack is optional."* | PRD §10 |
+| `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_CHANNEL_ID` | Slack; *"lives in `.env.local`. If the token is absent, log the escalation and carry on — Slack is optional."* The signing secret assumes inbound HTTP; the drawio uses Socket Mode ([[Escalation And Notifications Open Questions]] #6) | PRD §10 |
 | `ANTHROPIC_BASE_URL` | points the CLI at the egress proxy; the container holds *"a dummy key"* | PRD §0, §11.1 |
 | `RUN_ID`, socket path | passed to the MCP shim per run | PRD §9 |
 | `TASK_ID`, `STEP_INSTANCE_ID`, `RUN_ID` | the first build's MCP env | backlog 4.1 |

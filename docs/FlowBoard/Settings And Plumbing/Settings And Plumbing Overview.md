@@ -37,7 +37,7 @@ flowchart TB
   DB -- settings --> XF --> JOBS
 ```
 
-Drawn from the drawio *Harness architecture* page: *"API routes + server actions / zod-validated input → write rows → enqueue a job → return"*, *"SSE endpoints / tail run_events by seq, questions and task state from SQLite (works across processes; catches up on reconnect)"*, and the front-end tech card's *"EventSource for live updates · no client state store: the server is the source of truth"*.
+Drawn from the drawio *Harness architecture* page, except the sandbox-profile transform, which comes from backlog 3.5 (*"draft mode and the sandbox profile compose as `RunSpec` transformers"*): *"API routes + server actions / zod-validated input → write rows → enqueue a job → return"*, *"SSE endpoints / tail run_events by seq, questions and task state from SQLite (works across processes; catches up on reconnect)"*, and the front-end tech card's *"EventSource for live updates · no client state store: the server is the source of truth"*.
 
 ## What the layer does
 

@@ -19,7 +19,7 @@ The values a fresh install starts with, and the platform constants beside them. 
 | Egress allowlist | model endpoint (via the proxy) + npm/pnpm; no git remote | `08` recommendation 2; drawio adds PyPI and *"api.openai.com (later)"* | Recommendation |
 | Resource limits | none given | — | **Gap** |
 | Memory adapter | `none` | PRD §11.2, §13; `06` §15 | Decided |
-| Memory scopes | `user` first | `09` recommendation 2; architecture `README.md` open decision 4 | Recommendation; feature map §21 leaves it open ([[Memory Open Questions]] #3) |
+| Memory scopes | **Recommendation, not a stated default:** `user` first | `09` recommendation 2; architecture `README.md` open decision 4 | Recommendation; feature map §21 leaves it open ([[Memory Open Questions]] #3). Block shape owned by [[Memory Settings]] |
 | Recall limit | none given | — | **Gap** |
 | `max_recall_chars` | 6,000 | PRD §7, `09` | Decided |
 
@@ -48,3 +48,4 @@ Not settings, but defaults the plumbing depends on. See [[Environment And Config
 - [[Settings Data Model]]
 - [[Environment And Configuration]]
 - [[Settings And Plumbing Open Questions]]
+- [[Memory Settings]]

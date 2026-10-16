@@ -43,7 +43,7 @@ Drawio *Life of one step*, beats A–B: *"You press Start, or the engine advance
 
 - **Testable headless.** *"so the whole system stays testable headless"* (`06` §15). Tests call the core functions directly ([[Execution Testing]]).
 - **Provider-blind.** Adding Codex needs *"Zero changes to: engine, board projection, HITL protocol, notifier, cost rollups, viewer, API."* (`06`, *Where a new provider actually touches the codebase*).
-- **One exception: Stop.** *"Stop: SIGTERM by pid from the route (same machine), finalise as cancelled"* (backlog 3.4; `03` §8). This is the one route that acts on a process, and it relies on web and worker sharing a machine.
+- **The exception: Stop and Cancel.** *"Stop: SIGTERM by pid from the route (same machine), finalise as cancelled"* (backlog 3.4; `03` §8). Cancel (`POST /api/tasks/:id/cancel`, PRD §12) does the same: *"Cancel: SIGTERM live runs, cancel pending questions, mark instances skipped."* (backlog 2.1, **FIX**). Both act on a process from the route, and both rely on web and worker sharing a machine.
 
 ## Errors
 

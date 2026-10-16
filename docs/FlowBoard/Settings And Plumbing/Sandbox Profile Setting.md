@@ -23,7 +23,7 @@ PRD §13: *"Add a **sandbox** section in settings too: the default isolation tie
 The port type also has `mounts`, `env` and `nonRoot`. No source makes those user-editable.
 
 > [!warning] Global allowlist or per-step allowlist?
-> PRD §11.1 keeps one allowlist in `settings.sandbox_profile`, overridable per step. The mockups speak only of a per-step list: *"this step's allowlist"* (`inbox.html`), *"not in the step allowlist"* (`monitor.html`, `task-detail.html`), and **Allow host & retry**, which *"Adds the blocked host to this step's egress allowlist"* (`monitor-guide.html`; also the inbox guide and the capability library). The flow-designer mockup also gives each step a **Sandbox** select with three levels, `none`, `container`, `sealed container` (default `sealed container`), names that match no `IsolationTier`. See [[Sandboxing Open Questions]] #6, #7 and #10.
+> PRD §11.1 keeps one allowlist in `settings.sandbox_profile`, overridable per step. The mockups speak only of a per-step list: *"this step's egress allowlist"* (`inbox.html`), *"this step's allowlist"* (`inbox-guide.html`), *"not in the step allowlist"* (`monitor.html`, `task-detail.html`), and **Allow host & retry**, which *"Adds the blocked host to this step's egress allowlist"* (`monitor-guide.html`; also the inbox guide and the capability library). The flow-designer mockup also gives each step a **Sandbox** select with three levels, `none`, `container`, `sealed container` (default `sealed container`). `container` is an `IsolationTier`; `none` and `sealed container` match none. See [[Sandboxing Open Questions]] #6, #7 and #10.
 
 ## Layers
 

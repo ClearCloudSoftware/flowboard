@@ -27,7 +27,7 @@ That is the whole schema. No source lists the keys, their types or their encodin
 | escalation threshold (minutes) | minutes | `06` §15, backlog 8.3 |
 | theme | `light` / `dark` / `system` | `06` §15, backlog 8.3 |
 | `sandbox_profile` | *"tier, image, egress allowlist, limits"* | PRD §11.1, backlog 1.1; drawio *"settings (memory, sandbox_profile)"* |
-| `memory` block | *"adapter id, endpoint / key ref, enabled scopes, recall limit, `max_recall_chars`"* | PRD §11.2 (`09` has the same list); drawio |
+| `memory` block | *"adapter id, endpoint / key ref, enabled scopes, recall limit, `max_recall_chars`"*. Field names and shape: [[Memory Settings]] | PRD §11.2 (`09` has the same list); drawio |
 | `settings.memory.max_recall_chars` | integer, default 6,000 | PRD §7 |
 
 `settings.memory.max_recall_chars` is a dotted path into a block, so at least the memory block is structured, not a flat scalar.
@@ -71,7 +71,7 @@ interface MemoryStore {
 > });
 > ```
 >
-> The 1–30 minute range comes only from the old design prototype's `escalationMinutes` tweak (`min:1, max:30`). Storing milliseconds and showing minutes follows [[Escalation And Notifications Open Questions]] #2. The draft-mode default and the theme default are not stated anywhere. The sandbox and memory blocks reuse the shapes their own sets propose ([[Sandboxing Data Model]], [[Memory Settings]]) rather than a second one here. Listed in [[Settings And Plumbing Open Questions]] #5.
+> The 1–30 minute range comes only from the old design prototype's `escalationMinutes` tweak (`min:1, max:30`). Storing milliseconds and showing minutes follows [[Escalation And Notifications Open Questions]] #2. No source states the draft-mode default. The theme default conflicts across sources ([[Appearance And Theme]]). The sandbox and memory blocks reuse the shapes their own sets propose rather than a second one here: [[Sandboxing Data Model]] owns `sandbox_profile`, and [[Memory Settings]] owns the memory block's field names and shape. This note proposes no memory field names; the *Keys the sources name* table above only quotes PRD §11.2's list. Listed in [[Settings And Plumbing Open Questions]] #5.
 
 ## What the run records
 
@@ -93,3 +93,5 @@ There is no settings history. Nothing records who changed a setting or when. See
 - [[Settings And Plumbing Storage]]
 - [[Domain Schema]]
 - [[Settings And Plumbing API And Routes]]
+- [[Memory Settings]]
+- [[Sandboxing Data Model]]

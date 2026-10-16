@@ -28,7 +28,7 @@ Where the toggle lives, `haiku` or a logical id, effort, budget, scope, shell st
 5 minutes as a default (`04` §10, backlog 6.1, old handoff; PRD §10 and the drawio fix it at 5 with no setting) or 10 (mockups); stored as `escalation_threshold_ms` (`04` §10, backlog 6.1) but described in minutes (`06` §15, backlog 8.3). See [[Escalation And Notifications Open Questions]] #1, #2. → [[Nudge Timing Setting]]
 
 ### 7. Theme: which default, and is there a dark theme?
-PRD §13 dark-first; old handoff dark with a light variant; backlog 9.1 light default; mockups light only; feature map §19 and backlog 8.3 a light/dark/system switch. Also: a theme stored in SQLite needs a server read to set the class *"before first paint"* (backlog 8.3). Same as [[Flow Design Open Questions]] #34, [[Human In The Loop Open Questions]] #34, [[Monitor Open Questions]] #27. → [[Appearance And Theme]]
+PRD §13 dark-first; old handoff dark with a light variant; backlog 9.1 light default; mockups light only; feature map §19 and backlog 8.3 a light/dark/system switch. Also (**inference, not in a source**): a theme stored in SQLite would need a server read to set the class *"before first paint"*, which backlog 8.3 asks for. Same as [[Flow Design Open Questions]] #34, [[Human In The Loop Open Questions]] #34, [[Monitor Open Questions]] #27. → [[Appearance And Theme]]
 
 ### 8. Sandbox defaults
 - PRD §13 offers *"host / container / microVM"*; the port type and `08` add `gvisor`.
@@ -114,7 +114,7 @@ No auth (PRD §2), and no source says the server binds to `127.0.0.1`. A `host`-
 Found when these notes were checked against the sources a second time.
 
 ### 29. Empty `--settings`, or the hooks file?
-Backlog 0.1 (**DEC**) and D5 isolate headless runs with *"Empty `--settings` file per run"* (also the drawio's D5 card). PRD §7 passes `--settings <generated per-run settings.json with PreToolUse hooks>`, so the file is not empty. Which one keeps `~/.claude` hooks out is unstated. See [[Agent Providers Open Questions]] #24 and [[Sandboxing Open Questions]] #24. → [[Environment And Configuration]]
+Backlog 0.1 leaves it open (**DEC**: *"e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`"*); D5 recommends *"Empty `--settings` file per run"* (also the drawio's D5 card). PRD §7 passes `--settings <generated per-run settings.json with PreToolUse hooks>`, so the file is not empty. Which one keeps `~/.claude` hooks out is unstated. See [[Agent Providers Open Questions]] #24 and [[Sandboxing Open Questions]] #24. → [[Environment And Configuration]]
 
 ### 30. Is Docker out of scope?
 The drawio *Out of scope (v1)* card lists *"Auth, accounts, roles, deployment, Docker, multi-machine, plugin marketplace."* PRD §17 scopes out only *"shipping or *deploying* FlowBoard itself in a container"* and keeps sandboxing agents in containers in scope; the drawio's own *Harness architecture* runs *"one throwaway Docker container per run"*. Probably the card means deploying FlowBoard, but it does not say. → [[Settings And Plumbing Roadmap]]

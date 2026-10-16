@@ -25,7 +25,7 @@ module: Settings And Plumbing
 | **Tier** | `host`, `container`, `gvisor`, `microvm` | `08`, `IsolationTier` |
 | **Docker probe** | The startup check that falls back to `host` when Docker is missing | PRD §11.1 |
 | **Memory block** | The memory section of settings: adapter, endpoint/key ref, scopes, recall limit, `max_recall_chars` | PRD §11.2 |
-| **Key ref** | A pointer to a secret, stored instead of the secret | PRD §11.2, `09` |
+| **Key ref** | Named but not defined by the sources. **Inference:** presumably a pointer to a secret, stored instead of the secret. See [[Settings And Plumbing Open Questions]] #9 | PRD §11.2, `09` |
 | **Nudge timing** | Feature-map name for the escalation threshold | feature map §19 |
 | **Escalation threshold** | How long a question waits before it is posted to chat | `04` §10 |
 | **Appearance / theme** | Light, dark or system | feature map §19 |
@@ -33,7 +33,7 @@ module: Settings And Plumbing
 | **Thin handler** | A route that validates with zod, calls one function, returns JSON | PRD §12, `06` §15 |
 | **Three-liner** | `06` §15's name for a thin handler: *"validate → lib → JSON"* | `06` §15 |
 | **zod** | The validation library every handler uses | PRD §12 |
-| **Server action** | A Next.js server function the UI calls directly; PRD §3 lists them in `apps/web`, and the drawio uses one where PRD §12 uses a route | PRD §3, drawio |
+| **Server action** | A Next.js server function the UI calls directly; PRD §3 lists them in `apps/web`, and the drawio uses one for Start, which PRD §12 has no route for (the first build added `/start` itself, backlog intro item 3) | PRD §3, drawio |
 | **SSE** | Server-Sent Events, the one-way live transport | PRD §2 |
 | **EventSource** | The browser API that consumes SSE | drawio |
 | **Tail by `seq`** | Read new rows after the last sequence number seen | PRD §7 |
