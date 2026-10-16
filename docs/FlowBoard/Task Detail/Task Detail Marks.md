@@ -11,7 +11,7 @@ The status pill is a fourth mark, for the task as a whole.
 
 ## 1. The spine — one segment per step
 
-A row of bars under the header, one per step in the pinned flow, each with the step name and a duration. Clicking a segment jumps to that step in the Story tab and expands it.
+A row of bars under the header, one per step in the flow (the pinned version, by inference; see [[Pinned Flow On A Task]]), each with the step name and a duration. Clicking a segment jumps to that step in the Story tab and expands it.
 
 | Segment | State | Means (guide) |
 |---|---|---|
@@ -22,7 +22,7 @@ A row of bars under the header, one per step in the pinned flow, each with the s
 | pale fill | pending | *"Not started, and it can't be — something upstream is unfinished."* |
 | solid brick | failed | *"Out of retries. Whatever it spent is now wasted."* |
 
-The label under a segment reads the duration, `waiting` for a gate, `—` for pending, and a red `↺n` when the step took more than one attempt.
+In the mockup the label under a segment reads the duration, `waiting` for a gate, `—` for pending, and a red `↺n` when the step took more than one attempt. A queued or failed segment also shows its duration (`0s` for Build after a send back). The guide's samples label them *in queue* and *failed* instead.
 
 > [!note] The spine is a line, the flow is a graph
 > The spine lists steps in a single order. It cannot show that Build and Tests ran in parallel, which the monitor guide's walkthrough beats draw as `done,done,done:done,…` with a join. The PRD's board puts a split card *"in the column of the split point"* with a split badge (PRD §4). No source says how task detail shows branches.

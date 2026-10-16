@@ -11,7 +11,7 @@ The feature map (§3 *Tasks*) promises *"A detail view per task — Open a task 
 
 The task-detail field guide narrows that to one decision: *"This screen exists for one moment: an agent has finished work and wants your go-ahead."* Its title is *"One task, and the evidence for deciding about it."*
 
-The tracker scopes the component as *"One task's whole story: timeline, artifacts, cost"*. It covers:
+The tracker scopes the component as *"One task's whole story: timeline, plan vs built, artifacts, cost, the gate decision and task actions"*. It covers:
 
 - the **task record**: title, description, acceptance criteria, non-goals, owner ([[Task Record]])
 - what happened to it: **step instances and runs**, their attempts and logs ([[Step Instances And Runs]])
@@ -42,9 +42,9 @@ On the drawio *Functional components* page the component is spread over three gr
 | Observability | Read the step timeline | *state, attempts, cost, duration* |
 | Observability | Open artifacts | *plan.md vs summary.md diff* |
 | Human in the loop | Approve / reject a step | — |
-| Execution (dashed = not in v1) | Start task | *pin flow version* |
+| Execution | Start task | *pin flow version* |
 | Execution | Stop | *kill the process* |
-| Execution | Isolate the workspace (dashed) | *worktree per task today; devcontainer / Docker sandbox / remote host later* |
+| Execution | Isolate the workspace (dashed: the group's legend reads *"dashed = not in v1"*) | *worktree per task today; devcontainer / Docker sandbox / remote host later* |
 
 On the *Harness architecture* page it is a front-end route: **`Task detail /t/[id]`** — *"step timeline, attempts, artifacts, plan vs built diff"*. The *FlowBoard ideation* page has a **Task detail sheet** card in the Board group: *"Step timeline (state, attempts, cost, duration), artifact links, Approve / Reject, plan.md vs summary.md diff."*
 
@@ -67,7 +67,7 @@ The architecture catalogues the storage side as component **#11 Artifact store &
 
 ## What it is not
 
-- **Not the live run viewer.** Streaming a session token by token is `/runs/[id]` (feature map §9, PRD §13). Task detail shows each run's log after the fact. No source designs a link from it to the viewer (see [[Task Detail Open Questions]] #6).
+- **Not the live run viewer.** The viewer at `/runs/[id]` *"Streams the normalised event summaries as they arrive"* (PRD §13; feature map §9: *"Messages and actions appear as the agent produces them"*). Task detail shows a summary log per run, live while a step runs (the mockup re-renders a running row's log and cost every 250 ms). No source designs a link from it to the viewer (see [[Task Detail Open Questions]] #6).
 - **Not the engine.** Task detail asks for approve, send back, retry and cancel. What the engine does next belongs to Execution. See [[Attempts And Send Back]].
 - **Not the inbox.** The inbox is the queue of everything waiting on you. Task detail is one task, in depth. The same gate can be decided from either.
 - **Not the cost dashboard.** `/costs` rolls spend up across projects. Task detail shows one task's bill against its recipe's average.

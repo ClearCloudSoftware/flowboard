@@ -27,7 +27,7 @@ The gate buttons hide while the reason box is open.
 
 | Control | Shown when | What it does (guide) | Money (guide) | Wired |
 |---|---|---|---|---|
-| **‹ Board** | always | back to the board | — | no |
+| **‹ Board** | always | back to the board (mockup; not in the guide's tables) | — | no |
 | **Pause** | not done | *"Stops after the current run rather than mid-flight. The workspace stays."* | *"Stops future spend only."* | no |
 | **Send to backlog** | not done | *"Returns the task to the backlog, keeping its workspace and everything it produced."* | *"Same."* | no |
 | **Cancel task** | not done | *"Stops any running agents and tidies up. The workspace survives until you clean it up."* | *"Anything in flight becomes wasted."* | no |
@@ -41,7 +41,7 @@ None of these asks for confirmation in the mockup. Cancel is styled as a danger 
 | Control | What it does (guide) | Wired |
 |---|---|---|
 | A spine segment | *"Jumps to that step in the Story tab and expands it."* Scrolls it to centre. | yes |
-| A tab | switches tab, scrolls to top | yes |
+| A tab | switches tab, scrolls to top (mockup; the guide's *Reading* table has no tab row) | yes |
 | A story row | *"Expands the run: its log, the question you answered, the failed attempt, the artifact it wrote."* | yes |
 | A plan row | *"Expands the diff hunk behind that verdict."* | yes |
 | An artifact chip | *"Opens the file in a formatted viewer. Everything is an ordinary file on the task's branch."* | no |
@@ -59,7 +59,7 @@ None of these asks for confirmation in the mockup. Cancel is styled as a danger 
 Keys are ignored while focus is in an input, textarea or select, and when ⌘ or Ctrl is held. The status bar shows `a approve · r send back` only while a gate is open.
 
 > [!note] Consistent with the other screens
-> The monitor and inbox use the same `a` / `r` for approve and send back. The monitor and inbox use `j` / `k`. No board mockup exists; backlog Story 2.2 gives the board `h` / `l`, `[` / `]`, `Enter` and `a`. Task detail has no row navigation keys, so story rows, plan rows and spine segments are reached by Tab and mouse. Backlog Story 2.2 makes `Enter` open the focused board card (*"Card focus model + `Enter` opens the sheet"*). Feature map, *Across everything*: *"fully usable from the keyboard, and friendly to screen readers."*
+> The monitor and inbox use the same `a` / `r` for approve and send back. The monitor and inbox use `j` / `k`. No board mockup exists. Backlog Story 2.2 gives the board's flow strip `h` / `l` (pan) and `[` / `]` (jump), asks for `Enter` to open a card (**GAP**), and says to *"Either implement the `a` (approve) shortcut or remove the chip"* (**BUG**). Task detail has no row navigation keys, so story rows, plan rows and spine segments are reached by Tab and mouse. Backlog Story 2.2 makes `Enter` open the focused board card (*"Card focus model + `Enter` opens the sheet"*). Feature map, *Across everything*: *"fully usable from the keyboard, and friendly to screen readers."*
 
 ## Accessibility in the mockup
 

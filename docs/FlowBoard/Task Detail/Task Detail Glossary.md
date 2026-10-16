@@ -24,7 +24,7 @@ module: Task Detail
 | **Waiting** | ⚠ The guide's task state *"waiting · on you · $0/min"*: a gate or a question. Not a PRD status; maps to `running` or `blocked`. Also *queued*, waiting for a worker. | guide |
 | **Blocked** | A PRD task status: a spent or stuck loop, a parked question, or a non-transient infra failure. Not shown as such on the screen. | PRD §5, §7, §8; backlog Story 4.2 |
 | **Queued** | A step ready to run, *"waiting for a free worker"*. Not a PRD step state. | guide |
-| **Pending** | A step *"Not started, and it can't be — something upstream is unfinished."* PRD `pending` also covers created-but-not-started. | guide; PRD §5 |
+| **Pending** | A step *"Not started, and it can't be — something upstream is unfinished."* PRD §5 lists `pending` as an instance state without defining it. | guide; PRD §5 |
 | **Done** | ⚠ A step done, or the whole task done. | — |
 | **Failed** | ⚠ A run failed (infra), a step instance failed, or the task failed. Only the last means the task is over. | PRD §5 |
 | **Outcome** | `pass` / `fail` on a step instance, set by a shell exit code, `set_outcome`, or `{"outcome":…}` in an artifact. *"A missing outcome is never a pass."* | PRD §8 |
@@ -46,8 +46,12 @@ module: Task Detail
 | **Recipe average** | Cost per task on the same flow version | mockup; PRD §13 |
 | **Pinned** | The flow version and capability commits a task keeps until it finishes | PRD §4, §5 |
 | **Park** | A run that ended its turn to wait for answers; resumed with `--resume … --fork-session` | PRD §9 |
-| **Escalation** | ⚠ (1) A loop spent or stuck, handed to you as a gate. (2) A question posted to Slack after 5 minutes. | PRD §8, §10 |
+| **Escalation** | ⚠ (1) A loop spent or stuck, handed to you as a gate. (2) A question posted to Slack after 5 minutes. PRD §10 escalates only questions; the guide's *waiting on you* and the drawio *Human escalation* concept send gates to chat too ([[Monitor Open Questions]] #10) | PRD §8, §10; guide; drawio |
 | **Recipe** | The feature map's plain word for a flow | feature map §2 |
+| **Promote** | Backlog → Todo: pin the flow, create the worktree | PRD §11, §12 |
+| **Demote** | Todo → Backlog, keeping the worktree. Not the same as **Send to backlog**, which the guide allows *"from anywhere"* | backlog Story 2.1; guide |
+| **Start** | Todo → running. A separate action under backlog D1 (a default, not decided); the guide's *you promote it* goes straight to running | backlog Story 2.1, D1; guide |
+| **Pause** | *"Stops after the current run rather than mid-flight."* No PRD status | guide |
 
 ## Related
 

@@ -24,7 +24,7 @@ The task-detail aside calls it *"its own copy of the repo — kept until you cle
 
 ## When it is created
 
-PRD §11: *"On promotion from Backlog to Todo"*, with `git -C <repo_path> worktree add <repo_path>/.vibe-worktrees/task-<id> -b vibe/task-<id>`. PRD §12: `POST /api/tasks/:id/promote -- backlog -> todo, pin flow, create worktree`. The feature map says *"created when the task starts"*. The task-detail guide's lifecycle labels backlog *"no workspace yet"*. See [[Task Lifecycle]] and [[Task Detail Open Questions]].
+PRD §11: *"On promotion from Backlog to Todo"*, with `git -C <repo_path> worktree add <repo_path>/.vibe-worktrees/task-<id> -b vibe/task-<id>`. PRD §12: `POST /api/tasks/:id/promote -- backlog -> todo, pin flow, create worktree`. Backlog Story 2.1 also pre-creates `.vibe/task-<id>` inside it. The feature map says *"created when the task starts"* (§14), and *"Kicking off a task gives it a clean, private copy of the code"* (§3). The task-detail guide's lifecycle labels backlog *"no workspace yet"* and goes straight to running on *you promote it*; the monitor guide's promoted task *"has a private copy of the repo waiting for it"*. See [[Task Lifecycle]], [[Creating A Workspace]] and [[Task Detail Open Questions]] #10.
 
 ## Path and branch
 
@@ -34,7 +34,7 @@ PRD §11: *"On promotion from Backlog to Todo"*, with `git -C <repo_path> worktr
 | Drawio *Harness architecture* | `<repo>/.flowboard/worktrees/task-<id>` | `fb/task-<id>` |
 | Task-detail mockup | `~/.flowboard/ws/auth-refactor` | `flowboard/auth-refactor` |
 
-Three schemes. See [[Task Detail Open Questions]].
+Three schemes. See [[Workspace Naming]] and [[Task Detail Open Questions]] #20.
 
 ## When it can be cleaned up
 
@@ -45,7 +45,7 @@ Three schemes. See [[Task Detail Open Questions]].
 | Backlog Story 2.1, `05` §11, `workspace.ts` | *"done/cancelled/failed"* |
 | Task-detail mockup | **Clean up workspace** shows only when every step is done |
 
-The guide says the action *"Removes the branch and the folder."* The reference port `destroy(task, opts?: { force?: boolean })` runs `git worktree remove [--force]` (`07`). Only the guide says the branch is deleted; no backend source (PRD §11, `07`, `workspace.ts`) does.
+The guide says the action *"Removes the branch and the folder."* Its pill table agrees (*"clean up the workspace when you no longer need the branch"*), and so does its done beat (*"its branch is still there until you clean it up"*). The reference port `destroy(task, opts?: { force?: boolean })`, as `07`'s adapter implements it, runs `git worktree remove [--force]` and leaves the branch. Only the guide says the branch is deleted; no backend source (PRD §11, `07`, `workspace.ts`) does. When `--force` is used is not stated. See [[Cleaning Up A Workspace]].
 
 ## The Workspace port
 
@@ -68,7 +68,7 @@ export interface Workspace {
 }
 ```
 
-Its doc comment: *"Cleanup is explicit only — never automatic, and only when the task is done/cancelled/failed."* Adapters: git worktree in v1; devcontainer, Docker sandbox and remote later (architecture README ports table; drawio *Logical components*, *Container workspace* dashed).
+Its doc comment: *"Cleanup is explicit only — never automatic, and only when the task is done/cancelled/failed."* Adapters: git worktree in v1; devcontainer, Docker sandbox and remote later (architecture README ports table; drawio *Logical components*, *Container workspace* dashed). `05` §11 describes the same move as an isolation ladder, `host` (worktree) → `container` → `gvisor` → `microvm`. See [[Workspace Port]].
 
 ## Shared by parallel steps
 
@@ -76,7 +76,7 @@ Its doc comment: *"Cleanup is explicit only — never automatic, and only when t
 
 ## Sandbox posture
 
-The status bar shows `sandbox container, egress default-deny`. A container is *"One container per run/attempt, destroyed on completion"* (`08-sandboxing.md`), and *"the only writable bind-mount is the task worktree"*. So the **worktree** lives for the task and a **container** lives for a run. `runs.sandbox` records the tier that actually ran (PRD §11.1). The screen shows one posture for the whole task, but the tier can be overridden per step (`step_defs.sandbox_profile`, backlog Story 1.1). See [[Step Guardrails]].
+The status bar shows `sandbox container, egress default-deny`. A container is *"One container per run/attempt, destroyed on completion"* (`08-sandboxing.md`), and *"the only writable bind-mount is the task worktree"*. So the **worktree** lives for the task and a **container** lives for a run. `runs.sandbox` records the tier that actually ran (PRD §11.1). The screen shows one posture for the whole task, but the tier is *"overridable per step"* (PRD §11.1; `step_defs.sandbox_profile`, backlog Story 1.1). See [[Step Guardrails]], [[Sandboxing In The UI]] and [[Sandboxing Open Questions]] #35.
 
 ## Related
 
@@ -84,3 +84,4 @@ The status bar shows `sandbox container, egress default-deny`. A container is *"
 - [[Task Artifacts]]
 - [[Task Storage On Disk]]
 - [[Task Actions]]
+- [[Workspaces Index]]

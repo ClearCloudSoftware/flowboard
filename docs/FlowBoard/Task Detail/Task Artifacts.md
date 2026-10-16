@@ -27,7 +27,7 @@ The drawio *Harness architecture* page names the worker part **Artifact scanner*
 
 ## Artifact types
 
-PRD §6 seeds ten types: `research_brief`, `questions`, `answers`, `plan`, `explainer`, `implementation_notes`, `test_notes`, `check_output`, `review`, `summary`. Backlog Story 1.1 adds `sources` and `grounding_report`.
+PRD §6 seeds ten types: `research_brief`, `questions`, `answers`, `plan`, `explainer`, `implementation_notes`, `test_notes`, `check_output`, `review`, `summary`. Backlog Story 1.1 adds `sources` and `grounding_report` to *"the nine PRD types"*, a count that does not match PRD §6's ten. See [[Flow Design Open Questions]] #25.
 
 ## File naming
 
@@ -38,7 +38,7 @@ PRD §6 seeds ten types: `research_brief`, `questions`, `answers`, `plan`, `expl
 | Drawio *Harness architecture* | `.vibe/task-<id>/*.md \| *.json` | *"committed alongside the code"* |
 | Task-detail mockup | `.flowboard/auth-refactor/` | `brief.md`, `plan.md`, `changes.patch`, `test-report.md`, `review.md`, `summary.md` |
 
-The mockup's names are neither type keys nor numbered. It also has a `changes.patch` artifact that no PRD type covers (the nearest is `implementation_notes`). See [[Task Detail Open Questions]].
+The mockup's names are neither type keys nor numbered. It also has a `changes.patch` artifact that no PRD type covers (the nearest is `implementation_notes`). See [[Task Detail Open Questions]] #20 and [[Flow Design Open Questions]] #24.
 
 ## The mockup's artifacts
 

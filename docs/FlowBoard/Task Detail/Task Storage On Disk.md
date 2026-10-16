@@ -29,7 +29,7 @@ data/
   .flowboard/skills/<plugin>/<commit>/   # capability store, gitignored (Capability Library D5), mounted read-only
 ```
 
-Paths from PRD §6, §7, §9, §11 and §13, the drawio *Harness architecture* page, and [[Capability Library Decisions]] D5 (the skills store). *Mounted read-only* is from PRD §11.1. See [[Task Workspace]] for the three competing worktree schemes and [[Task Artifacts]] for artifact naming.
+Paths from PRD §3 (`data/flowboard.db`), §6, §7, §9 and §11, the drawio *Harness architecture* page, and for the skills store PRD §13 (*"gitignored, one dir per commit"*) and [[Capability Library Decisions]] D5. *Mounted read-only* is from PRD §11.1. See [[Task Workspace]] for the three competing worktree schemes and [[Task Artifacts]] for artifact naming.
 
 ## What lives where
 
@@ -45,7 +45,7 @@ Paths from PRD §6, §7, §9, §11 and §13, the drawio *Harness architecture* p
 
 | Thing | Lives until | Source |
 |---|---|---|
-| Worktree and branch | you clean up | PRD §11 |
+| Worktree and branch | you clean up (the branch too, by the guide's account) | PRD §11; guide |
 | Artifacts | the worktree goes (they are inside it) | PRD §6 |
 | Sandbox container | the end of the run | *"One container per run/attempt, destroyed on completion"* (`08`) |
 | DB rows | the task row is deleted (`ON DELETE CASCADE`) | PRD §5 |

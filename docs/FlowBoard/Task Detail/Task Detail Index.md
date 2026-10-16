@@ -52,7 +52,7 @@ Task Detail is the FlowBoard view of **one task's whole story**: every step and 
 
 - [[Sample Task Auth Refactor]] — the mockup's task, step by step
 - [[Task Detail Roadmap]] — v1 scope, designed beyond the PRD, ideas, out of scope
-- [[Task Detail Open Questions]] — 33 places the sources disagree or leave a gap
+- [[Task Detail Open Questions]] — 36 places the sources disagree or leave a gap
 - [[Task Detail Sources]] — where every fact in these notes comes from
 
 ## Related

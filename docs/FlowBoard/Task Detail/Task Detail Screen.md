@@ -19,7 +19,7 @@ The mockup opens on the sample task `auth-refactor`, held at its review gate. Se
 ├ header ─────────────────────────────────────────────────────────────────┤
 │ Rotate refresh tokens on every use                                      │
 │ Every refresh should hand back a new token pair…                        │
-│ BILL $2.61   AGENT TIME 22m 00s   WAITING ON YOU 5m   RETRIES 1         │
+│ BILL $2.61   AGENT TIME 22m 00s   WAITING ON YOU 5m 00s   RETRIES 1     │
 │ ▬▬▬ ▬▬▬ ▬▬▬ ▬▬▬ ▨▨▨ ░░░   ← the spine, one segment per step             │
 ├ gate banner (only when something is blocked on you) ────────────────────┤
 │ NEEDS YOU · review passed with 2 notes · waited 5m 00s                      │
@@ -45,7 +45,7 @@ The guide numbers six regions:
 | 2 | **Header & spine** | *"The four numbers that matter, then every step as a bar. Click any segment to jump to it."* | Title, description (prose, IBM Plex Sans), four header numbers, the spine |
 | 3 | **Gate banner** | *"Only present when something is blocked on you, and it says what the reviewer actually flagged."* | `needs you` strip, the question, Approve / Send back / Compare plan vs built, the reason form |
 | 4 | **Tabs** | *"Four ways to read the same task — the story, the plan comparison, the files, the money."* | Story, Plan vs built, Files, Cost; the first three carry a count. See [[Task Detail Tabs]] |
-| 5 | **Aside** | *"The facts that don't change: where the code lives, which flow version is pinned, what memory it started with."* | owner, repo & branch, workspace, flow, carried in from memory, you were asked, timeline |
+| 5 | **Aside** | *"The facts that don't change: where the code lives, which flow version is pinned, what memory it started with."* | owner, repo & branch, workspace, flow, carried in from memory, you were asked, timeline. The guide's anatomy sketch lists all but *you were asked* |
 | 6 | **Status bar** | *"The one-line version, including the sandbox posture everything ran under."* | id · steps done · billed · state · `sandbox container, egress default-deny` · key hints |
 
 ### Header numbers
@@ -73,7 +73,7 @@ What each number does and does not count: [[Task Cost And Wasted Spend]].
 
 ### Status bar
 
-`<id> · <done>/<total> steps done · $<bill> billed · <state> · sandbox container, egress default-deny`, then key hints. The state reads `blocked on you`, `<step> running`, `finished`, or `in progress`. While a gate is open the hints add `a approve · r send back`; `1-4 switch tab` is always there.
+`<id> · <done>/<total> steps done · $<bill> billed · <state> · sandbox container, egress default-deny`, then key hints. The state reads `blocked on you`, `<step> running`, `finished`, or `in progress`. *Blocked on you* appears at an ordinary approval gate, where the PRD never says the task is `blocked` (see [[Task Detail Open Questions]] #34). The sandbox posture is one value for the whole task, though the tier can differ per step (see [[Task Workspace]] and [[Sandboxing In The UI]]). While a gate is open the hints add `a approve · r send back`; `1-4 switch tab` is always there.
 
 ## States of the screen
 
@@ -94,6 +94,7 @@ The guide's pill table lists only the first three. The fourth, plain `in progres
 |---|---|
 | Story row with no artifact | *"Nothing written yet."* |
 | Story row, not started | meta reads `not started`, cost `—` |
+| Story row, queued (Build after a send back) | meta reads `0s`, cost `—` with `+$1.60 wasted` under it |
 | Plan item with no file | the item's `why`, or *"No file in the workspace corresponds to this item."* |
 | Unplanned row | *"Nothing in the plan asked for this."* |
 | Waiting on you with no gate | `—` / `nothing pending` |

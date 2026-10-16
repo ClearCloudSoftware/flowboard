@@ -5,7 +5,7 @@ module: Task Detail
 
 # Sample Task Auth Refactor
 
-The task the task-detail mockup opens on. It is *"Seeded at the review gate — the same task the monitor shows waiting"* (mockup comment), the task the monitor guide walks through, and one of the cards in the inbox guide's opening beat. It is sample data, not seed data: the PRD's seed (§15) is one project, one flow and *"sample tasks"* (drawio *Seed data*) with no content given.
+The task the task-detail mockup opens on. It is *"Seeded at the review gate — the same task the monitor shows waiting"* (mockup comment), the task the monitor guide walks through, and one of the cards in the inbox guide's opening beat. It is sample data, not seed data. PRD §15 seeds one project and one flow and no tasks. The drawio *Seed data* card adds *"sample tasks"*, with no content given (see [[Seed Data]]).
 
 ## The task
 
