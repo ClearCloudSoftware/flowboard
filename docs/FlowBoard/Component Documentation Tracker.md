@@ -15,7 +15,7 @@ Siblings of the Capability Library on the drawio *Functional components* page.
 | Status | Component | Scope | Mockup + guide | Feature map | Architecture |
 |---|---|---|---|---|---|
 | ✅ | [[Capability Library Index\|Capability Library]] | Plugins and their skills, agents, seeds, install from git, update, remove, task capability pins, run-time mounting; bundle and provider packs (deferred) | `capability-library` | §16 The library (also §2, appendix) | #13 Skill/Agent registry → Capability packs |
-| ✅ | [[Flow Design Index\|Flow Design]] | Versioned DAG, step editor, artifact contract, flow library | `flow-designer` | §2 Flows | #2 Flow definition & validation |
+| ✅ | [[Flow Design Index\|Flow Design]] | Versioned DAG, step editor, artifact contract, version pinning, flow library | `flow-designer` (also `capability-library`, `monitor`, `task-detail`) | §2 Flows (also §1, §3, §4, §5, §19) | #2 Flow definition & validation (also #3, #4) |
 | ✅ | [[Human In The Loop Index\|Human In The Loop]] | Questions, batches, approvals, the inbox | `inbox` | §11 Questions, §12 The inbox | #9 Human-in-the-loop protocol |
 | ✅ | [[Monitor Index\|Monitor]] | Status at a glance, needs-you, worker slots, burn / today / wasted, pulse, timeline and pipeline views, live run viewer | `monitor` (the live run viewer has no mockup) | §5 The board, §9 Live run viewer (also §8, §13, §18) | #4 Board projection, #8 Event stream & live viewer (also #7, #12) |
 | ✅ | [[Task Detail Index\|Task Detail]] | One task's whole story: timeline, artifacts, cost | `task-detail` | §3 Tasks, §15 Artifacts | #11 Artifact store & workspace |

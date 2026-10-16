@@ -44,7 +44,7 @@ Old versions can be archived (`flows.is_archived`, PRD §5); no source describes
 
 ## Adopted version
 
-A project points at one version, the one new tasks start on. The PRD stores it as `projects.default_flow_id` (*"A default recipe per project — Each project remembers which recipe to use"*, feature map §1). The mockup shows it in the version chip: `Software delivery  @core v4  adopted 12 Sep`. Saving *"writes a new version and points the project at it"* (guide, *Every control*).
+A project points at one version, the one new tasks start on. The feature map: *"A default recipe per project — Each project remembers which recipe to use"* (§1). Reading that as the PRD's `projects.default_flow_id`, and as the board's *"active flow"* (PRD §13), is an inference: the column has no comment, and the PRD never says what moves it. The mockup shows it in the version chip: `Software delivery  @core v4  adopted 12 Sep`. Saving *"Writes a new version and points the project at it"* (guide, *Every control*). The PRD stores no adoption date ([[Flow Design Open Questions]] #36). How a project gets its first flow (*"choose which recipe new tasks should follow (or start empty)"*, feature map §1; backlog Story 1.3) is in [[Project Default Flow]] and [[Creating A Project]].
 
 ## Why versions matter beyond safety
 

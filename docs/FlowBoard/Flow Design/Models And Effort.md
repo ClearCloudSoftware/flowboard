@@ -20,7 +20,7 @@ Agents carry a `default_model` and `default_effort` (PRD §5 `agents`); the step
 
 > Step defs reference logical ids (`reasoning-high`, `fast-cheap`, `default`) resolved per provider via `resolveModel`. A flow authored for Claude runs on Codex unchanged; only the resolution table differs. — `01-ports.md`, *Logical model ids*
 
-`RunSpec.model` is documented as *"Logical model id (e.g. 'reasoning-high'); the adapter resolves it via resolveModel()"* (`agent-provider.ts`). The PRD and the mockups still use native Claude ids. See [[Flow Design Open Questions]] #15.
+`RunSpec.model` is documented as *"Logical model id (e.g. 'reasoning-high'); the adapter resolves it via resolveModel()"* (`agent-provider.ts`). The PRD and every mockup use `haiku`, `sonnet` and `opus`. These are Claude **aliases**, not native ids: PRD §5 comments `agents.default_model` as *"a Claude alias, used as the logical model id"*, and the CLI in `docs/old/stream-sample.jsonl` reports a native id like `claude-fable-5-1`. For v1, [[Capability Library Decisions|D20]] treats the aliases as the logical ids, and `resolveModel` passes them through for Claude. The abstract names (`reasoning-high` …) return with a second provider. See [[Logical Model Ids]] and [[Flow Design Open Questions]] #15.
 
 ## Capability negotiation
 
@@ -32,13 +32,16 @@ Agents carry a `default_model` and `default_effort` (PRD §5 `agents`); the step
 
 | Source | What it does |
 |---|---|
-| PRD §13 | *"a global **draft mode** toggle in settings that overrides every step to `--model haiku --effort low`, for when I am iterating on the flow itself rather than on code."* |
+| PRD §13 | *"a global **draft mode** toggle in settings that overrides every step to `--model haiku --effort low`, for when I am iterating on the flow itself rather than on code."* PRD §16: *"Draft mode forces every step to haiku/low"* |
+| Feature map §19 *Settings* | *"Force everything onto cheap, fast AI while you iterate on recipes."* |
+| Drawio | *FlowBoard ideation*, group *Costs & settings*: card *Draft mode toggle* (*"Overrides every step to --model haiku --effort low while iterating on the flow itself."*). *Logical components*: *Costs /costs* — *"rollups and draft-mode toggle"*. *Harness architecture*: *Library · Costs · Settings* lists *"draft mode"* |
+| `docs/pitch.md` | *"a global **draft mode** forces the cheapest models while iterating"* |
 | `06` §15 | A spec transform: `const draftMode: SpecTransform = s => ({ ...s, model: 'fast-cheap', effort: 'low' });` |
 | Backlog Story 3.2 | *"override to haiku/low and record actual model/effort on the run"* — so draft runs don't corrupt cost views (Story 1.1 adds `runs.model`, `runs.effort`) |
 | Flow-designer mockup | A **draft mode** toggle in the topbar. Every node's model chip shows `haiku`, the ceiling drops to `$0.05` per step, and the bar adds *"draft mode — every step forced to haiku"* |
 | Flow-designer guide | *"**Draft mode isn't a version.** … It's a switch on how runs execute, not an edit to the flow, so it never makes a new version and never shows as unsaved."* |
 
-Whether the designer toggle is the global setting is open — [[Flow Design Open Questions]] #28.
+Whether the designer toggle is the global setting is open — [[Flow Design Open Questions]] #28. The setting itself is in [[Draft Mode Setting]] and [[Draft Mode]].
 
 ## Cost views that read these fields
 
@@ -55,3 +58,4 @@ Whether the designer toggle is the global setting is open — [[Flow Design Open
 - [[Step Definitions]]
 - [[Step Guardrails]]
 - [[Provider Coverage And Portability]]
+- [[Logical Model Ids]]

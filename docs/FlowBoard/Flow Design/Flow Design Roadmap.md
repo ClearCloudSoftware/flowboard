@@ -21,7 +21,7 @@ From M5 and backlog **Epic 5**:
 From M8 and backlog **Story 8.2 Flow editor**:
 
 - [ ] Canvas: *"nodes = steps, drag‑to‑connect, edge label cycles `always → on_pass → on_fail`, Backspace deletes, dagre auto‑layout"* — or the PRD's acceptable fallback, a vertical list with a connections panel
-- [ ] Inspector: *"kind, skill/agent, model, effort, advance mode, entry, requires, produces, limits, permission mode, allowed tools, prompt template"*
+- [ ] Inspector: *"kind (`ai`/`shell`/`manual`), agent and/or skill, model, effort, advance mode, entry, requires, produces, limits, permission mode, allowed tools, prompt template"*
 - [ ] *"Live validation banner (debounced)"*
 - [ ] *"Reuse… picker (steps or whole flow from other projects, key uniquified)"*
 - [ ] *"Start from flow type"*
@@ -30,9 +30,9 @@ From M8 and backlog **Story 8.2 Flow editor**:
 
 From elsewhere:
 
-- [ ] Flow template as JSON: *Software delivery* (`software-development`) (Story 1.2). `researcher` is out of v1 (D31).
+- [ ] Flow template as JSON: *Software delivery*, *"the 9‑step table, exact agent/skill pairs, models/efforts/gates/edges"* (Story 1.2). `researcher` is out of v1 (D31).
 - [ ] New-project dialog with a flow-type select, *"Empty"* allowed (Story 1.3)
-- [ ] Pin `tasks.flow_id` (Story 2.1)
+- [ ] Pin `tasks.flow_id` *"at promotion"* (Story 2.1); whether that is promote or Start is [[Flow Design Open Questions]] #7
 - [ ] Draft mode toggle (Story 8.3)
 - [ ] Acceptance: *"Saving a flow whose step requires an artifact nobody produces is rejected with a readable error"* (PRD §16; Story 10.1)
 

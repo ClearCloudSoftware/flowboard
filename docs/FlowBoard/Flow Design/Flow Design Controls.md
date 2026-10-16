@@ -12,7 +12,7 @@ Every control on the [[Flow Design Screen]]. *What it does* quotes the flow-desi
 | Control | What it does | Effect |
 |---|---|---|
 | **draft mode** toggle | *"Forces every step onto the cheapest model while you iterate on the recipe. The cost ceiling in the canvas bar drops to match."* | Not an edit — makes no version |
-| **+ Step** | *"Adds a new step wired off `review` on the passed route, selected and ready to edit."* Disabled in preview. | Marks unsaved |
+| **+ Step** | *"Adds a new step wired off `review` on the passed route, selected and ready to edit."* Disabled in preview. (The guide files it under *On the canvas*; the mockup puts the button in the topbar.) | Marks unsaved |
 | **Save as v*n*** | *"Writes a new version and points the project at it. Disabled while the recipe has problems, while previewing, and when nothing has changed."* | Creates a version |
 
 PRD §13 has draft mode as a global settings toggle that overrides every step to `--model haiku --effort low`; the mockup's topbar toggle forces only the model. See [[Flow Design Open Questions]] #28.
@@ -38,7 +38,7 @@ PRD §13 has draft mode as a global settings toggle that overrides every step to
 | **Click a step** | *"Selects it and opens it in the inspector."* | — |
 | **Drag a step** | *"Moves it on a snapped grid. Arrangement only — it never changes what runs when."* Snaps to 10 px. | Marks unsaved |
 
-Steps are focusable (`tabindex=0`, `role=button`). No control draws, selects or deletes a route — see [[Flow Design Open Questions]] #17.
+Steps are focusable (`tabindex=0`, `role=button`), but selection happens on `pointerdown` only: `Enter` or `Space` on a focused step does nothing, so the keyboard cannot open a step in the inspector (a mockup gap). No control draws, selects or deletes a route — see [[Flow Design Open Questions]] #17.
 
 ## In the inspector
 
@@ -52,7 +52,7 @@ Steps are focusable (`tabindex=0`, `role=button`). No control draws, selects or 
 | **Approval** | Checkbox | *waits for you* |
 | **Sandbox** | Select | `none`, `container`, `sealed container` |
 | **×** on a need | Button | *Remove this requirement* |
-| **Delete this step** | Button (danger) | *"Removes the step and every route into or out of it."* Marks unsaved. |
+| **Delete this step** | Button (danger) | *"Removes the step and every route into or out of it."* Marks unsaved. (Filed under *On the canvas* in the guide.) |
 
 The ranges are the mockup's. The PRD allows effort `low | medium | high | xhigh | max`, counts `max_attempts` (default 3) rather than retries, and names sandbox tiers `host / container / microVM` — [[Flow Design Open Questions]] #15, #11, #13.
 

@@ -20,7 +20,7 @@ Flow Design is the FlowBoard module where you define the **recipe** a task follo
 - [[Flows And Flow Versions]] — the versioned DAG, immutability, adopting a version
 - [[Version Pinning]] — why running tasks keep the version they started on
 - [[Step Definitions]] — every field on a step
-- [[Step Kinds]] — skill, agent, shell (check), manual, and the StepExecutor idea
+- [[Step Kinds]] — `ai` (agent, skill or both), shell (check), manual, and the StepExecutor idea
 - [[Check Steps]] — plain commands whose exit code is the verdict
 - [[Connections And Routes]] — `always`, `on_pass`, `on_fail`
 - [[Artifact Contract]] — needs and produces, the contract between steps
@@ -64,4 +64,7 @@ Flow Design is the FlowBoard module where you define the **recipe** a task follo
 
 - [[Capability Library Index]] — the skills and agents that steps draw on
 - [[Capabilities In Flows]]
+- [[Project Default Flow]] — the project's adopted flow
+- [[Sandbox Configuration]] — the per-step sandbox override
+- [[Logical Model Ids]] — what `haiku` / `sonnet` / `opus` are
 - [[Component Documentation Tracker]]

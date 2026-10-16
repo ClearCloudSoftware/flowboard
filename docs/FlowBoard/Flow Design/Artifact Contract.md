@@ -20,7 +20,7 @@ The flow-designer guide explains why it matters: *"Those declarations are what l
 
 ## Why files, not messages
 
-The architecture README: *"**Artifacts flow along the edges.** … the graph is valid only if every `requires` is produced by an ancestor (checked at design time — component 2). It is a *dataflow* graph, not a call sequence."* Each step gets a fresh context (drawio concept 7), so artifacts are the only hand-off.
+The architecture README: *"**Artifacts flow along the edges.** … the graph is valid only if every `requires` is produced by an ancestor (checked at design time — component 2). It is a *dataflow* graph, not a call sequence."* Each step gets a fresh context (drawio concept 7: *"one agent per step with a fresh context"*), so artifacts are the main hand-off between steps. They are not the only one: a rejection *"carries your reason into the next attempt"* (feature map §4), **Retry** *"carries my note into it"* (PRD §8), and, if memory is enabled, the `task` scope means *"attempt 2 starts warm"* (PRD §11.2).
 
 ## What the contract drives
 

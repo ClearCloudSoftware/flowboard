@@ -44,7 +44,7 @@ The drawio concept 8 *Human escalation*: *"Every stop (gate, question, spent or 
 | *"Each gate is a place the flow stops and waits for a human. More gates, more of your time, fewer surprises."* / bad sign: *"Zero gates on anything that ships."* | flow-designer guide, *What to compare* |
 | A step with no gate and no sandbox is flagged *unattended and unsandboxed* | flow-designer mockup inspector; see [[Step Guardrails]] |
 
-The canvas bar counts gates (`1 approval gate`), and every library entry shows its gate count.
+The canvas bar counts gates (`1 approval gate`), and every variant card in an expanded library group shows its gate count. A single-author entry shows none.
 
 ## Where seeded flows gate
 
@@ -59,7 +59,7 @@ See [[Flow Design Open Questions]] #29.
 ## Ideas
 
 - **Assign a step to a person or role** — *"a manual or approval step can name who does it (a specific teammate, or a role like 'reviewer')"* (feature map §2 ideas).
-- **Two sign-offs on one gate** — *"the same 'join' that waits for parallel branches, applied to humans"* (feature map §4 ideas). The @pm-guild *Story refinement*, @team-sec and @growth *Launch campaign* v4 flows in the mockup library carry two gates.
+- **Two sign-offs on one gate** — *"the same 'join' that waits for parallel branches, applied to humans"* (feature map §4 ideas). Four flows in the mockup library carry two gates: *Code review* @team-sec v2, *Story refinement* @pm-guild v1, *Incident response* @team-sec v3 and *Launch campaign* @growth v4.
 - **Team guardrails** — *"a review step must wait for approval"* as a rule nobody can quietly lift (feature map §16 ideas).
 - **Separation of duties** — *"whoever ran the build can't be the one who approves its own review"* (feature map §3 ideas).
 

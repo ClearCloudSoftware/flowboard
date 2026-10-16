@@ -19,6 +19,7 @@ Each source lists a different subset of fields. ✓ = present.
 | Name (column header) | `name` | — | — | label on the node | |
 | Kind | `kind` (`ai`/`shell`/`manual`) | kind | Skill or Agent | — | [[Step Kinds]] |
 | Agent and/or skill | `agent_id`, `skill_id` — either or both (D27) | agent and/or skill | ✓ | **Agent** (free text) | [[Capabilities In Flows]] |
+| Extra plugins | `extra_plugin_ids` (JSON array of `plugins.id`, default `[]`) — *"mounted alongside the skill's plugin"* | — | — | — | [[Capability Runtime Mounting]] |
 | Command | `command` (shell only) | — | — | — | [[Check Steps]] |
 | Prompt template | `prompt_template` | prompt template | — | — | Supports `{{placeholders}}` |
 | Model | `model` default `sonnet` | model | ✓ | **Model** | [[Models And Effort]] |
@@ -29,12 +30,13 @@ Each source lists a different subset of fields. ✓ = present.
 | Budget | `max_budget_usd` | limits* | limits* | **Budget** | [[Step Guardrails]] |
 | Attempts | `max_attempts` default 3 | limits* | limits* | **Retries** (0–5) | Not the same number — [[Flow Design Open Questions]] #11 |
 | Advance mode | `advance_mode` `auto`/`approval` | advance mode | ✓ | **Approval** checkbox | [[Approval Gates]] |
-| Sandbox | no column; `settings.sandbox_profile` is *"overridable per step"* (§11.1). Backlog 1.1 adds an optional `step_defs.sandbox_profile` | — | — | **Sandbox** | [[Step Guardrails]] |
+| Sandbox | no column; `settings.sandbox_profile` is *"overridable per step"* (§11.1). Backlog 1.1 adds an optional `step_defs.sandbox_profile` | — | — | **Sandbox** | [[Step Guardrails]]; [[Sandbox Configuration]] |
+| Egress allowlist | no column; part of the same `sandbox_profile` override | — | — | — | [[Flow Design Open Questions]] #14 |
 | Requires | `requires` (JSON array of artifact type keys) | requires | ✓ | **needs** | [[Artifact Contract]] |
 | Produces | `produces` | produces | ✓ | **produces** | [[Artifact Contract]] |
 | Board order | `board_order` | — | — | — | [[Canvas Layout And Board Order]] |
 | Entry | `is_entry` | entry | — | — | [[Flow Validation]] |
-| Position | — | *Decide* (backlog 8.2) | *Don't persist* (D4) | `x`, `y` | [[Canvas Layout And Board Order]] |
+| Position | — | *Decide* (backlog 8.2) | — | `x`, `y` | Drawio card *D4 · Don't persist node positions*; [[Canvas Layout And Board Order]] |
 
 Bold = control label in the flow-designer mockup. *limits\** = the generic word in backlog 8.2 and the drawio card (*"Skill or Agent → model, effort, advance mode, requires, produces, limits."*). Which columns it covers is inferred. Backlog 8.2 lists allowed tools separately.
 
@@ -52,6 +54,7 @@ Bold = control label in the flow-designer mockup. *limits\** = the generic word 
 | `allowed_tools` | `--allowedTools`: agent ∩ skill, narrowed by the step's list (D28), always plus `mcp__vibe__*` |
 | `max_turns` | `--max-turns N` |
 | `max_budget_usd` | `--max-budget-usd N` |
+| skill's plugin + `extra_plugin_ids` | `--plugin-dir` per plugin, at the commit in the task's `capability_pins` (PRD §7; D10, D14) |
 | agent's system prompt | `--append-system-prompt`, whenever the step names an agent |
 | skill slug | `/<plugin>:<slug>` invocation, prompt part 4, whenever the step names a skill |
 | `requires` | prompt part 2, *"read these first"* paths |

@@ -9,13 +9,14 @@ module: Flow Design
 |---|---|
 | **Flow** | The recipe a task follows: a versioned DAG of step definitions (PRD §4). The mockups and the feature map also call it a **recipe**. |
 | **Flow version** | One immutable snapshot of a flow. Editing creates the next version (`Save as v5`). Shown as `v4`. |
-| **Adopted** | The version a project currently points at. The chip reads `adopted 12 Sep`. In the PRD this is `projects.default_flow_id`. |
-| **Pinned** | A task's fixed reference to the flow version it started on (`tasks.flow_id`). See [[Version Pinning]]. |
+| **Adopted** | The version a project currently points at. The chip reads `adopted 12 Sep`. Read as the PRD's `projects.default_flow_id` (an inference: the PRD gives the column no comment, and stores no adoption date — [[Flow Design Open Questions]] #36). |
+| **Pinned** | A task's fixed reference to its flow version (`tasks.flow_id`). Pinned at promotion or at start, depending on the source ([[Flow Design Open Questions]] #7). See [[Version Pinning]]. |
+| **Capability pins** | `tasks.capability_pins`: the plugin commits and agent rows a task runs, *"set when the task starts"* (PRD §5; [[Capability Library Decisions\|D10]]). A flow version names capabilities but pins none. |
 | **Step definition** | A node in the flow: *"Code review, Sonnet, high effort, waits for my approval."* Belongs to a flow version (PRD §4). Table `step_defs`. |
 | **Step instance** | *"one task's occupancy of one step definition. Has state and artifacts."* (PRD §4). A run-time concept. |
 | **Run** | *"one attempt at a step instance. Rework loops create attempt 2, 3, 4 against the same step instance."* (PRD §4) |
 | **Step key** | A stable slug for a step inside a flow, e.g. `code_review` (PRD) or `threat-model` (mockup). Unique per flow version. |
-| **Kind** | What executes a step: `skill`, `agent`, `shell`, `manual` (PRD §5). See [[Step Kinds]]. |
+| **Kind** | What executes a step: `ai`, `shell`, `manual` (PRD §5, after [[Capability Library Decisions\|D27]]). An `ai` step names an agent, a skill or both. The PRD first had `skill`, `agent`, `shell`, `manual`. See [[Step Kinds]]. |
 | **Check step** | The feature map's name for a `kind='shell'` step: a plain command, no AI, exit code is the verdict. See [[Check Steps]]. |
 | **Edge / route / connection** | A link from one step to the next. *Edge* in the schema (`step_edges`), *route* in the mockup, *connection* in the feature map. |
 | **Condition** | When an edge fires: `always`, `on_pass`, `on_fail` (PRD). The mockup labels them *passed* and *failed ↺*; the guide says *on passed* and *on failed*. |
@@ -35,6 +36,7 @@ module: Flow Design
 | **`max_attempts`** | Total runs a step may have, first try included (default 3). The counter lives on the rework *target* (PRD §8). |
 | **Budget** | `max_budget_usd`: *"The most this step may spend on one attempt."* (flow-designer guide) |
 | **Ceiling per task** | The canvas bar's sum of every step's budget. |
+| **Model alias / logical id** | `haiku`, `sonnet`, `opus` are Claude aliases, not native ids (the CLI reports ids like `claude-fable-5-1`). In v1 the alias is the logical id (D20). See [[Models And Effort]] and [[Logical Model Ids]]. |
 | **Draft mode** | A switch that forces every step onto the cheapest model while you iterate on the recipe. Not a version. |
 | **Library** | All flows you can start from, filtered by domain and grouped by name. See [[Flow Library]]. |
 | **Domain** | The job a flow does — Analysis, PO / PM, SDLC, QA, Platform, Design, Marketing — taken from the role starter packs. |
@@ -45,12 +47,13 @@ module: Flow Design
 | **Difference line** | *"The one sentence on what this variant actually does differently."* |
 | **Shape glyph** | A tiny DAG drawing per library entry: straight, fans out, loops back, both, branches. |
 | **Preview** | Viewing a library flow on the canvas, ghosted and read-only. |
-| **Flow type / flow template** | A ready-made flow to start from (backlog: *"Start from flow type"*, *"Flow templates as JSON"*). |
+| **Flow type / flow template** | A ready-made flow to start from (backlog: *"Start from flow type"* in Story 8.2, *"Flow template as JSON"* in Story 1.2). |
 | **Role starter pack** | A ready-made flow per job function, with that role's skills and tools. See [[Role Starter Flows]]. |
 
 > [!warning] Overloaded words
 > - **"Retries"** — the mockup's **Retries** field is *"How many attempts before the step gives up and fails the task"* (guide). Reading it as attempts after the first (`max_attempts − 1`) is a proposal ([[Flow Design Open Questions]] #11). In the runner, *infra retries* are automatic re-runs after a transient failure that do *not* count toward `max_attempts` (PRD §7). The inbox's **Retry** grants one more attempt after escalation.
-> - **"Version"** — a *flow version* (`v4`) is not a *capability version*. *"Tasks are pinned to a flow version, flows are not pinned to a capability version"* (mockups README).
+> - **"Version"** — a *flow version* (`v4`) is not a *capability version*. *"tasks are pinned to a flow version, **flows are not pinned to a capability version**"* (mockups README). A task does pin capability versions, in `capability_pins` (D10).
+> - **"Allowlist"** — the PRD keeps one egress allowlist in `settings.sandbox_profile`, *"overridable per step"* (§11.1). Four mockups speak of a per-step allowlist (*"that step's allowlist"*, *"this step's egress allowlist"*). The flow designer has no allowlist field ([[Flow Design Open Questions]] #14).
 > - **"Branch"** — a fan-out branch, a branch-shaped flow, and the task's git branch are three different things.
 > - **"Pack"** — a *role starter pack* is a seeded flow plus its toolbox; a *bundle pack* in the Capability Library installs skills, agents and flows together; a *provider pack* is a capability's packaging for one CLI. See [[Capability Library Glossary]]. Whether role starter packs are bundle packs is open ([[Flow Design Open Questions]] #35).
 > - **"Flow editor" / "flow designer"** — the same screen. The PRD, backlog and two drawio pages say *editor*; the mockup and the *Harness architecture* page say *designer*.

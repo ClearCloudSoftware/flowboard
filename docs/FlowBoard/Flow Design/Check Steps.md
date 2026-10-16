@@ -26,7 +26,7 @@ From PRD §7 *Shell steps*:
 
 | Design choice | Effect | Source |
 |---|---|---|
-| `command` left null | Runs the project's `check_command`, e.g. `'pnpm lint && pnpm test'` | PRD §5 `projects`, `step_defs` |
+| `command` left null | Runs the project's `check_command`, e.g. `'pnpm lint && pnpm test'`. If that is null too, nothing is stated ([[Projects Open Questions]] #6; [[Project Check Command]]) | PRD §5 `projects`, `step_defs` |
 | Produces `check_output` | The raw log becomes an artifact the next step can require | PRD §6, §15 |
 | `on_pass` → review | *"the model never gets reviewed on code that doesn't pass"* | PRD §15 |
 | `on_fail` → implement | The *mechanical loop*; the rework reads the raw `check_output` | PRD §8, §15 |
@@ -46,7 +46,7 @@ The seeded check step (PRD §15): key `check`, name *Lint & test*, `shell (proje
 
 ## The sensor idea
 
-The drawio *Harness architecture* page calls the shell executor *"the sensor"* (concept 4, *Sensors before autonomy*): *"Check steps run real commands. The exit code is the verdict, and the raw output feeds the next attempt. Later: semgrep, gitleaks and linters as more $0 sensors."* It also shows a dashed *Deterministic gates (later)* card: *"semgrep · gitleaks · trivy · eslint / ruff as extra shell steps: $0 catches before any model reviews"*.
+The drawio *Harness architecture* page calls the shell executor *"the sensor"* (concept 4, *Sensors before autonomy*): *"Check steps run real commands. The exit code is the verdict, and the raw output feeds the next attempt. Later: semgrep, gitleaks and linters as more $0 sensors."* Its *Check container* card: *"same image and mounts, no model, no API key: runs check_command and exits with its code"*. It also shows a dashed *Deterministic gates (later)* card: *"semgrep · gitleaks · trivy · eslint / ruff as extra shell steps: $0 catches before any model reviews"*.
 
 Scheduled shell-step flows are also the proposed way to refresh knowledge assets (drawio *Knowledge assets (later)*, *Schedule trigger (later)*).
 
