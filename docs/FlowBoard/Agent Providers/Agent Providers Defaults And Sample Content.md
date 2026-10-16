@@ -9,7 +9,7 @@ module: Agent Providers
 
 | Default | Value | Source |
 |---|---|---|
-| Provider | Claude Code (the only adapter; *"Every model call goes through the `claude` CLI"*) | PRD §17; [[Capability Library Decisions]] D1 |
+| Provider | Claude Code (the only real adapter; ReplayProvider is the test double; *"Every model call goes through the `claude` CLI"*) | PRD §17; [[Capability Library Decisions]] D1 |
 | `step_defs.model` | `'sonnet'` | PRD §5 |
 | `step_defs.effort` | `'medium'` | PRD §5 |
 | `step_defs.permission_mode` | `'bypassPermissions'` | PRD §5 |

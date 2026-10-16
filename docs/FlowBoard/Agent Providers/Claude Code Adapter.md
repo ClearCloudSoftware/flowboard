@@ -40,7 +40,7 @@ The drawio *Harness architecture* draws the sandboxed form: *"claude -p … --ou
 | `model` | `--model` | via `resolveModel` (identity in v1, [[Capability Library Decisions]] D20) |
 | `effort` | `--effort` | |
 | `toolPolicy.allow` | `--allowedTools` | appended with `mcp__vibe__*` whenever it is set |
-| `toolPolicy.deny` | none in PRD §7 | backlog 0.1 also lists a `--tools` flag to verify, with no stated use |
+| `toolPolicy.deny` | none in PRD §7 | backlog 0.1 also lists a `--tools` flag to verify; the backlog's one use is the importer agent (`--tools ""`, Story 7.3), and no step-level `RunSpec` field maps to it |
 | `tools` | `--mcp-config <per-run mcp.json>` + `--strict-mcp-config` | |
 | `capabilities` (`plugin_dir`) | `--plugin-dir` per plugin | at the pinned commit |
 | `resume` | `--resume … --fork-session` | |

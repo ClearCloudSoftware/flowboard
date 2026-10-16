@@ -26,7 +26,8 @@ These move *"into the Claude adapter, out of the runner"* (`03` §5):
 - *"`message_delta.usage` is cumulative per message → reset per `message_start`, don't sum across deltas."* (`03` §5; backlog Story 3.2, **BUG**: *"reset per `message_start`, do not sum across deltas"*)
 - *"Capture `session_id` once from `system/init`, not every line."* (`03` §5; backlog Story 3.3, **BUG (perf)**: *"parse once from the `system/init` event, not every line"*)
 - *"`total_cost_usd` authoritative → maps to `Usage.costUsd`"* (`03` §5); PRD §7: *"Take the final result event's total cost as authoritative for `runs.cost_usd`."*
-- *"persist `num_turns` per assistant turn so the viewer/board show live numbers."* (backlog Story 3.2)
+
+This note also places backlog Story 3.2's *"persist `num_turns` per assistant turn so the viewer/board show live numbers."* with these fixes (inference: `03` §5 does not list it, and Story 3.2 is a runner story).
 
 ## What the stream sample shows
 

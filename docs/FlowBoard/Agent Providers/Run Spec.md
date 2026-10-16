@@ -37,7 +37,7 @@ module: Agent Providers
 
 `ArtifactRef` is `{ type, path }`: *"Declared artifact type key, e.g. 'research_brief'"* and *"Absolute path in the task's workspace."*
 
-The full assembly rules, including the optional memory part 7 that `PromptParts` has no slot for, are in [[Prompt Assembly]] ([[Execution Open Questions]] #51). `09-memory.md` names this as memory's only change to *"the prompt contract on AgentProvider"*.
+The full assembly rules, including the optional memory part 7 that `PromptParts` has no slot for, are in [[Prompt Assembly]] ([[Execution Open Questions]] #51). `09-memory.md` lists *"the prompt contract on AgentProvider"* among what memory touches.
 
 ## `ToolServer`
 

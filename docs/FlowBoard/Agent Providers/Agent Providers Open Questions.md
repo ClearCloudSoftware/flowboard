@@ -89,7 +89,7 @@ A `NormalizedEvent` script (`replay-provider.ts`), a raw `stream-sample.jsonl` (
 `ANTHROPIC_BASE_URL` → proxy is Claude's mechanism. The drawio lists *"api.openai.com (later)"* on the allowlist and labels the CLI-to-proxy edge *"HTTPS_PROXY"*; the Codex injection mechanism is unstated. Same as [[Sandboxing Open Questions]] #28. → [[Providers And Sandboxing]]
 
 ### 24. Isolating headless runs from personal config
-Backlog 0.1 **DEC**: empty `--settings` or `CLAUDE_CONFIG_DIR`. D5 recommends *"Empty `--settings` file per run"*, but PRD §7 uses `--settings` for the hook file, so it cannot be empty. The stream sample itself shows personal `SessionStart` hooks injecting plugin text, plus personal plugins and MCP servers. Same as [[Execution Open Questions]] #52 and [[Sandboxing Open Questions]] #24. → [[Claude Code Adapter]]
+Backlog 0.1 **DEC**: empty `--settings` or `CLAUDE_CONFIG_DIR`. D5 recommends *"Empty `--settings` file per run"* (backlog; the drawio D5 card: *"D5 · Hook isolation / Empty --settings file per headless run."*), but PRD §7 uses `--settings` for the hook file, so it cannot be empty. The stream sample itself shows personal `SessionStart` hooks injecting plugin text, plus personal plugins and MCP servers. Same as [[Execution Open Questions]] #52 and [[Sandboxing Open Questions]] #24. → [[Claude Code Adapter]]
 
 ### 25. No capability for `maxTurns`
 `budget_cap` covers `maxBudgetUsd`; nothing covers `maxTurns`. → [[Provider Capabilities]]
@@ -116,7 +116,7 @@ Restart recovery re-attaches by pid (`03` §7), but the port only gives a stream
 ## Mappings and failures
 
 ### 31. The Claude adapter's capability set and flag mapping
-No source writes out the Claude adapter's `capabilities` set or a `RunSpec` → flag table; both in these notes are **inferred** from PRD §7 and `03` §5. Gaps the inference exposes: `toolPolicy.deny` has no Claude flag in PRD §7; backlog 0.1 asks to verify a `--tools` flag that nothing uses; `--include-partial-messages` implies `partial_stream`, yet no live-usage event exists (#9). → [[Claude Code Adapter]], [[Provider Capabilities]]
+No source writes out the Claude adapter's `capabilities` set or a `RunSpec` → flag table; both in these notes are **inferred** from PRD §7 and `03` §5. Gaps the inference exposes: `toolPolicy.deny` has no Claude flag in PRD §7; backlog 0.1 asks to verify a `--tools` flag whose one backlog use is the importer agent (*"haiku, `--tools ""`"*, Story 7.3; #36), with no step-level `RunSpec` field mapping to it; `--include-partial-messages` implies `partial_stream`, yet no live-usage event exists (#9). → [[Claude Code Adapter]], [[Provider Capabilities]]
 
 ### 32. Mapping Claude's usage fields onto `Usage`
 **Inferred, not sourced:** `cache_creation_input_tokens` → `cacheWrite`, `cache_read_input_tokens` → `cacheRead`, `num_turns` → `numTurns`. Unstated: whether `input` includes cached tokens, and whether `result.usage` or `modelUsage` is the authority. PRD §7: *"Verify the actual field names against your `docs/stream-sample.jsonl` probe."* Whether the cost is a bill at all (`costBasis: "list"`) is [[Cost And Control Open Questions]] #7. → [[Stream Parsing And Normalization]]
