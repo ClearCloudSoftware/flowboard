@@ -1,0 +1,45 @@
+---
+tags: [flowboard, workspaces, testing]
+module: Workspaces
+---
+
+# Workspaces Acceptance Checks
+
+What the sources ask to be proven about workspaces.
+
+## In the sources
+
+| Check | Source |
+|---|---|
+| *"Promoting a task creates a git worktree on its own branch"* | PRD §16 |
+| *"Promote creates worktree + branch."* | backlog 10.1 |
+| *"Promote Backlog → Todo creates a worktree. No agents run yet."* | PRD §14 M2 |
+| README lists known constraints *"shared worktree … manual cleanup"* | backlog 10.2 |
+| A FIX from the first build that must not regress: *"path aliases break when spawned from the worktree cwd"* | backlog 3.2 |
+| *"integration lane runs a step in a container against the fake `claude`; assert egress denied except allowlist, and that `bypassPermissions` is refused on the `host` tier"* | backlog 3.5 (**GAP**) |
+
+PRD §16 and backlog 10.1 check only creation. Backlog 3.5's container test touches the `ExecHost` side, not the worktree. See [[Sandboxing Testing]].
+
+## Requirements with no check
+
+Backlog 2.1 states these as requirements. No check in the sources (backlog 10.1 included) tests them.
+
+| Requirement | Source |
+|---|---|
+| Demote keeps the worktree; re-promote reuses it | backlog 2.1 (**NEW**) |
+| Cleanup only by explicit action, only when done/cancelled/failed | backlog 2.1 (**PRD**) |
+| Append `.vibe-worktrees/` to `<repo>/.git/info/exclude` | backlog 2.1 (**PRD/FIX**) |
+
+> [!note] Proposal
+> Add checks that: re-promote after demote does not fail and reuses the folder; the parent repo's `git status` stays clean after promote; cleanup is refused before an end state; cleanup never runs on its own. These notes' suggestions, listed in [[Workspaces Open Questions]].
+
+## Testability
+
+The architecture's test double is `ReplayProvider` (*"Replays recorded stream-json in tests. No CLI, no cost."*, drawio). Backlog 0.2 adds *"an integration lane that spawns the real worker against a fake `claude` binary"* and a Playwright lane for *"sheet actions"*. All of them replace the agent, not the workspace: runs still need a real worktree. The drawio *Test lane*: *"vitest on engine rules, fingerprinting and the prompt builder · ReplayProvider drives whole flows at $0 · Playwright E2E against the real UI (v1 shipped without one)"*. No source names a fake Workspace adapter.
+
+## Related
+
+- [[Workspaces Index]]
+- [[Execution Testing]]
+- [[Seed Scratch Repo]]
+- [[Workspaces Roadmap]]
