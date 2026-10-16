@@ -60,12 +60,14 @@ The flow-designer guide: *"**Draft mode isn't a version.** It forces every step 
 | Point | Sources |
 |---|---|
 | Global setting or designer toggle | PRD §13 and feature map §19: a global setting. Mockup: a toggle on the flow designer. See Flow Design Open Questions #28 |
-| Model id | PRD and drawio: `haiku`. `06` §15: the logical id `fast-cheap`. See Flow Design Open Questions #15 |
+| Model id | PRD and drawio: `haiku`. `06` §15: the logical id `fast-cheap`. [[Capability Library Decisions]] D20 treats the Claude aliases as the logical ids in v1. See Flow Design Open Questions #15, [[Execution Open Questions]] #45, [[Agent Providers Open Questions]] #13 |
 | Effort | PRD: `low`. The mockup changes only the model chip; effort chips stay as they were |
 | Budget | No source changes `max_budget_usd`. The mockup's `$0.05` per step ceiling has no other source |
-| Which runs | `06` §15 applies it *"before `launch()"*. So it reaches each new run, including later steps of tasks already running. No source says whether that is intended |
-| Shell steps | Not mentioned. A shell step has no model, so the transform should leave it alone |
+| Which runs | `06` §15 applies it *"before `launch()"*. So it reaches each new run, including later steps of tasks already running (**inferred**; [[Settings And Plumbing Open Questions]] #10 proposes the same). No source says whether that is intended |
+| Shell steps | Not mentioned. A shell step has no model, so the transform should leave it alone (**inferred**; [[Cost And Control Open Questions]] #5) |
 | Rollups | The run records the resolved model, but no source says whether draft-mode runs belong in *cost per finished task by flow version* |
+| Visibility | `06` §15: *"the flow editor and board read settings for display toggles"*. Only the designer mockup shows the switch |
+| Default | Off is **inferred**; no source states it ([[Settings Defaults]]) |
 
 All of these are in [[Cost And Control Open Questions]] #5.
 
@@ -79,3 +81,6 @@ All of these are in [[Cost And Control Open Questions]] #5.
 - [[Spend Caps And Limits]]
 - [[Cost Runtime]]
 - [[Cost Data Model]]
+- [[Draft Mode Setting]]
+- [[Draft Mode And Spec Transforms]]
+- [[Settings Overrides And Spec Transforms]]

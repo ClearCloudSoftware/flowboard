@@ -16,6 +16,7 @@ The number that ticks up while a run is in flight. Drawio *Functional components
 | Live run viewer | *"Sticky footer with elapsed time, turn count, running cost."* | PRD §13, feature map §9 |
 | Viewer, backlog | *"sticky footer with elapsed / turns / **running cost** (estimate from tokens until result lands)"* (**PRD/BUG**) | backlog 3.4 |
 | Inbox context panel | *"What's running right now, what it's costing"* | feature map §12 |
+| Inbox right rail, backlog | *"running steps with live cost estimate"* (**handoff**) | backlog 4.3 |
 | Brief | *"**Live accumulating cost** — this ticks up while a step runs"* | brief §2 |
 | Handoff | *"Ticks up while a step runs, ~1s cadence, from the run's token accounting. Always mono, always right-aligned, never coloured."* | `docs/old/design/README.md` |
 | Acceptance | *"A step streams to `/runs/[id]` with non‑zero cost **and live turns/cost during the run**."* | backlog 10.1 |
@@ -26,7 +27,7 @@ PRD §7: *"Accumulate per-message token usage as you stream so the live view sho
 
 ## Why it showed $0 the first time
 
-The backlog's opening list of bugs that survived the first build includes a *"$0 running cost"* and a *"0 % progress bar"*. The causes it names:
+The backlog's opening list of bugs that survived the first build includes a *"$0 running cost"* and a *"0 % progress bar"*. Only the progress bar gets a named cause (backlog 2.2). The stories that own live numbers carry these **BUG** fixes; tying them to the `$0` figure is **inferred**:
 
 - *"Progress hairline needs `runs.num_turns` written **incrementally** (today only on the final event → always 0 %)."* (backlog 2.2)
 - *"persist `num_turns` per assistant turn so the viewer/board show live numbers."* (backlog 3.2)
@@ -37,7 +38,7 @@ The backlog's opening list of bugs that survived the first build includes a *"$0
 > 2. `07-ports-in-practice.md` updates live cost only `if (ev.type === 'result')`.
 > 3. Claude's price table is a passthrough (`06` §12), so there are no Claude rates to turn mid-run tokens into dollars.
 >
-> Monitor Open Questions #38 raised this. [[Cost And Control Open Questions]] #2 has a **proposal**.
+> Monitor Open Questions #38 raised this; [[Agent Providers Open Questions]] #9 and [[Execution Open Questions]] #62 repeat it. [[Cost And Control Open Questions]] #2 has a **proposal**.
 
 ## Burn rate
 

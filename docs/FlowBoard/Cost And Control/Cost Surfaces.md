@@ -10,14 +10,16 @@ Money shows on almost every screen. This note lists each place, what the figure 
 | Screen | Figure | Counts | Source | Detail |
 |---|---|---|---|---|
 | Projects list `/` | this week's spend per project | Rolling 7 days or calendar week: undecided | PRD §13, backlog 1.3 | [[Spend Rollups]] |
-| App chrome | running dot + *"spend today"* | Not defined | backlog 9.2 | — |
+| App chrome | running dot + *"spend today"*; the old handoff draws `4 running · $28.40 today` | Not defined | backlog 9.2, `docs/old/design/README.md` | — |
+| Board header | `14 tasks · $28.40 today` | Not defined | `docs/old/design/README.md` (handoff 1c) | — |
 | Board card | live cost; split badge with per-branch cost; *"Done · 8 steps + total cost"* | The task's spend so far | PRD §13, backlog 2.2, old handoff | [[Board Projection]] |
 | Monitor topbar | **burn** `/hr`, **today**, **wasted** `(N%)` | Rate of running runs; kept + wasted today; wasted part only | `monitor.html`, monitor guide | [[Burn Today And Wasted]] |
 | Monitor workers strip | burn per hour | Same as topbar | `monitor.html:881` | [[Worker Slots]] |
 | Monitor pulse row | cost in bold, `$X wasted` under it when over half a cent | The task's kept and wasted | `monitor.html` | [[Pulse View]] |
-| Monitor pipeline | *"↺ sent back ×N today · $X burned"* on the retry loop | Wasted on that loop today | `monitor.html:1009` | [[Pipeline View]] |
-| Monitor row detail | *This task, so far*; *Burned on redone work* | Task bill; task wasted | `monitor.html` | [[Task Row Detail]] |
-| Inbox context panel | **costing you** `$/hr`, today, wasted | Burn of running runs; hard-coded `$19.46` and `$2.55` in the mockup | `inbox.html:379`–`388` | [[Human In The Loop Screen]] |
+| Monitor pipeline | *"↺ sent back ×N today · $X burned"* on the retry loop | Not what the label says: `×N` is every extra attempt on every task, failure retries included (`monitor.html:975`), and `$X` is all wasted spend on every task (`:976`). No date filter applies | `monitor.html:975`–`976`, `:1009` | [[Pipeline View]] |
+| Monitor row detail | *This task, so far*; *Burned on redone work* | The task's kept spend (`costOf`, wasted excluded); the task's wasted | `monitor.html:865`–`866` | [[Task Row Detail]] |
+| Monitor needs-you failure card | *"$X spent on the attempts so far"* | The failed step's wasted spend | `monitor.html:750` | [[Needs You Band]] |
+| Inbox context panel | **costing you** `$/hr`, today, wasted | Burn of running runs; hard-coded `$19.46` and `$2.55` in the mockup. Backlog 4.3: *"running steps with live cost estimate"* | `inbox.html:379`–`388`, backlog 4.3 | [[Human In The Loop Screen]] |
 | Inbox cards | *"Approving is free"*, *"Three attempts, $1.44 spent and thrown away"* | Cost of the decision | `inbox.html`, inbox guide | [[Monitor Actions And Costs]] |
 | Task detail header | **bill**, *"$X of it wasted"* | Kept + wasted for one task | `task-detail.html:400` | [[Task Cost And Wasted Spend]] |
 | Task detail timeline | cost per step, `+$X wasted` | Per step instance | `task-detail.html:466` | [[Step Instances And Runs]] |

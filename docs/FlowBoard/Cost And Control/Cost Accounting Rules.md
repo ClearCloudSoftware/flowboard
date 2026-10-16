@@ -53,16 +53,16 @@ From the monitor and inbox guides. The full table is in [[Monitor Actions And Co
 | Retry a failure | *"The failed attempts are already spent. Retrying spends again."* | inbox guide |
 | Answer a question | *"Answering is free."* | task-detail mockup |
 | Leave a question waiting | *"a parked run is not billing you … Leaving the inbox full costs calendar time and a worker slot's worth of throughput — not money."* | inbox guide |
-| Stop | Spend becomes wasted (guides); run finalised as `cancelled` (backlog 3.4) | monitor guide, backlog |
+| Stop | Spend becomes wasted (guides). The monitor guide records the run *"as failed"*; backlog 3.4 says *"finalise as cancelled"* | monitor guide, backlog |
 
 ## The life of a run's cost
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Ticking: run starts (agent step)
+  [*] --> Ticking: run starts (agent step, or a resume as a new run)
   [*] --> Zero: shell step
   Ticking --> Parked: asks, waits 20 min
-  Parked --> Ticking: answer, --resume
+  Parked --> Recorded: row stays parked with its own cost
   Ticking --> Recorded: result event (cost_usd written once)
   Ticking --> RecordedWasted: transient failure → infra retry
   Ticking --> RecordedBlocked: cap hit / auth / config
@@ -70,8 +70,10 @@ stateDiagram-v2
   Zero --> Recorded: cost_usd = 0
   RecordedWasted --> [*]
   Recorded --> [*]
-  RecordedBlocked --> [*]: wasted? not specified
+  RecordedBlocked --> [*]: wasted per the guides, PRD silent
 ```
+
+A resume does not continue the parked run. PRD §9 *"enqueue[s] a new `start_run`"*, which starts at `[*]` as its own run with its own cost ([[Cost Runtime]], [[Cost And Control Open Questions]] #16).
 
 > [!note] Flipping the flag is not rewriting cost
 > Rule 12 sets `wasted = 1` on a run whose cost is already recorded. That is an update to the flag, not to `cost_usd`, so rule 6 still holds for the money. No source says whether the flag change should itself be a journal row.

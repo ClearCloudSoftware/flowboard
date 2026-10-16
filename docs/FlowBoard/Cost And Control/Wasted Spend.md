@@ -7,7 +7,7 @@ module: Cost And Control
 
 > **Wasted spend, called out** — A specific number for money burned on work that got redone or thrown away, so you can actually go after it. (feature map §18)
 
-The brief puts it first: *"This needs its own treatment; it's the number that changes my behaviour"* (brief §5). The monitor guide: *"It's the one number here you can actually act on."*
+The brief singles it out: *"This needs its own treatment; it's the number that changes my behaviour"* (brief §5). The monitor guide: *"It's the one number here you can actually act on."*
 
 ## The flag and the figure
 
@@ -23,8 +23,8 @@ Wasted is never subtracted from anything. The task-detail guide: *"Sending a ste
 | A run **superseded by a rework loop** | Yes | PRD §5, §8: *"Mark the superseded runs `wasted = 1` so the cost view can report discarded spend."* |
 | Runs **downstream** of a rework target | Yes | backlog 5.2: *"Rework: same instance, `attempts++`, new run, downstream runs `wasted=1`, downstream `done` → `skipped` so they re‑instantiate."* |
 | A run that failed **transiently** and was retried | Yes | PRD §7: *"The failed run is marked `wasted = 1` and does **not** count toward `max_attempts`."* Feature map §4: *"It doesn't use up a try, but it still shows up in wasted spend."* |
-| A run **you stopped** | The guides say yes; the PRD does not | Monitor guide: *"a failed build, a run you stopped, a review you sent back"*. Task-detail guide on cancel: *"Anything in flight becomes wasted."* Backlog 3.4: *"finalise as cancelled"*. PRD §13 only says the Stop button *"kills the process"*. Neither sets `wasted` |
-| A run that **failed and blocked** the task (budget or turn cap hit, auth error) | Not specified | PRD §7 blocks the task. Whether the spend becomes wasted if you then retry, or fail the task, is open |
+| A run **you stopped** | The guides say yes; the PRD and backlog do not | Monitor guide: *"a failed build, a run you stopped, a review you sent back"*; its controls table records a stop *"as failed, with "stopped by you" as the reason"*. Task-detail guide on cancel: *"Anything in flight becomes wasted."* Backlog 3.4: *"finalise as cancelled"*. PRD §13 only says the Stop button *"kills the process"*. Neither sets `wasted`, though PRD §7 counts *"process killed by a signal"* as a transient failure ([[Cost And Control Open Questions]] #1) |
+| A run that **failed and blocked** the task (budget or turn cap hit, auth error, egress denial) | The guides say yes; the PRD and backlog do not | Monitor guide: *"A run you stop, or one that fails, has already spent its money, and that spend is re-labelled wasted rather than refunded."* Task-detail guide: its `$0.48` of waste is *"a build the sandbox killed for reaching registry.npmjs.org"*. PRD §7 blocks the task and sets no flag |
 | A **shell** step's failing run | Costs `$0`, so the flag doesn't matter | PRD §7 |
 | **Memory**-layer calls | Never in run rollups | PRD §11.2 |
 
@@ -34,11 +34,11 @@ flowchart TD
   K -->|succeeded, output kept| KEPT[kept]
   K -->|transient failure → infra retry| W1[wasted = 1<br/>attempt not counted]
   K -->|later sent back by a rework edge| W2[wasted = 1<br/>it and every downstream run]
-  K -->|stopped by you| Q1[wasted per the guides<br/>cancelled per the PRD]
-  K -->|cap hit, auth, bad config → blocked| Q2[not specified]
+  K -->|stopped by you| Q1[wasted per the guides<br/>cancelled per backlog 3.4<br/>failed per the monitor guide]
+  K -->|cap hit, auth, bad config → blocked| Q2[wasted per the guides<br/>no flag in the PRD]
 ```
 
-The definitions disagree. PRD §13 and the drawio ideation card say *"money burnt by rework loops"* only. PRD §5, the drawio *Cost ledger* card (*"wasted = rework + infra retries"*) and feature map §4 add infra retries. The guides add stops. Brief §5 is narrowest: *"money burnt on work later discarded by a review sending the task back"*. Monitor Open Questions #17 has the full table. See [[Cost And Control Open Questions]] #1.
+The definitions disagree. PRD §13 and the drawio ideation card say *"money burnt by rework loops"* only. PRD §5, the drawio *Cost ledger* card (*"wasted = rework + infra retries"*) and feature map §4 add infra retries. The guides add stops and failures. Brief §5 is narrowest: *"money burnt on work later discarded by a review sending the task back"*. On a send back they split again: backlog 5.2 flags every downstream run, the task-detail guide's figures keep the rejected review's spend as kept, and the monitor guide lists *"a review you sent back"* as wasted ([[Rework Loop]]). Monitor Open Questions #17 has the full table. See [[Cost And Control Open Questions]] #1.
 
 ## How to read it
 

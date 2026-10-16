@@ -19,7 +19,7 @@ PRD §13, `/costs`: *"Not just a total. Show:"*
 | 4 | Wasted | *"sum of `cost_usd` where `wasted = 1`, i.e. money burnt by rework loops"* | *"wasted spend"* | *Σ cost_usd where wasted = 1* |
 | 5 | Per finished task by flow version | *"cost per completed task, trended by flow version"* | *"cost per completed task by flow version"* | *Cost per completed task — Trended by flow version.* |
 
-The brief's angle on each: *"does the questioning step earn its cost?"*, *"Cost per completed task, trended over time"* (brief §5). Feature map §18 on #5: *"Tracked across recipe versions, so you can tell whether a change made things cheaper or more expensive."*
+The brief (§5) lists four of the five (it has no per-project rollup) and asks a question of only #2: *"does the questioning step earn its cost?"* It words #5 as *"Cost per completed task, trended over time"*. Feature map §18 on #5: *"Tracked across recipe versions, so you can tell whether a change made things cheaper or more expensive."*
 
 ## How each joins
 
@@ -38,7 +38,7 @@ Every rollup starts from `runs`. **Proposal** (no source spells out the joins):
 
 ## Model × effort needs the run's own record
 
-`runs.model` and `runs.effort` are not in the PRD §5 schema. Backlog 1.1 adds them: *"`runs.model`, `runs.effort` (draft mode must not corrupt cost views)"*. `02` §1 agrees. Without them, a draft-mode run on haiku/low would be booked to the step's opus/high. See [[Draft Mode]].
+`runs.model` and `runs.effort` are not in the PRD §5 schema. Backlog 1.1 adds them: *"`runs.model`, `runs.effort` (draft mode must not corrupt cost views)"*. `02` §1 agrees. Without them, a draft-mode run on haiku/low would be booked to the step's opus/high. Which id `runs.model` holds (alias, logical id, or the CLI's `claude-fable-5-1`) is [[Cost And Control Open Questions]] #24. See [[Draft Mode]].
 
 ## Cost per finished task
 

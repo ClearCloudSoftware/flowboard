@@ -9,7 +9,7 @@ What cost data is persisted, and where.
 
 | What | Where | Source |
 |---|---|---|
-| A run's cost, tokens, turns, wasted flag | `runs` in `data/flowboard.db` (SQLite, WAL, `busy_timeout` 5 s) | PRD §5, drawio *SQLite* card |
+| A run's cost, tokens, turns, wasted flag | `runs` in `data/flowboard.db` (SQLite, WAL, `busy_timeout` 5 s) | PRD §3, §5; backlog 1.1; drawio *SQLite* card |
 | The raw provider line for every event | `run_events.raw` | PRD §5, `01-ports.md` |
 | Step limits, model, effort | `step_defs` | PRD §5 |
 | Draft mode | `settings` | PRD §13, `06` §15 |
@@ -25,7 +25,7 @@ The ledger is a read model over `runs`. The drawio *Read models* card: *"board p
 
 ## Retention
 
-No source sets a retention period for `runs` or `run_events`. Cost history is meant to be permanent: *"an honest, unchangeable log of what every agent did and what it cost"* (feature map, *A clear record*). `ON DELETE CASCADE` from `tasks` to `step_instances` to `runs` means deleting a task deletes its cost history. No source says whether tasks are ever deleted.
+No source sets a retention period for `runs` or `run_events`. Cost history is meant to be permanent: *"an honest, unchangeable log of what every agent did and what it cost"* (feature map, *A clear record*). `ON DELETE CASCADE` runs `projects → tasks → step_instances → runs → run_events` (PRD §5), so deleting a task or a project deletes its cost history. No route deletes either (PRD §12). The Projects set flags the same clash with the append-only journal: [[Project Lifecycle And Deletion]], [[Projects Open Questions]] #9.
 
 ## Who writes
 

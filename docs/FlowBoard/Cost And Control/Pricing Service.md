@@ -53,10 +53,12 @@ A second inbox fixture, already answered: `cost-rollup`, *"Roll up by model, or 
 ## What is not specified
 
 - Where the rate table lives (a table, a JSON file, settings) and who maintains it.
-- The rate shape: per million input, output, cache-read and cache-write tokens is the natural reading of `Usage`, but no source says so.
+- The rate shape: per million input, output, cache-read and cache-write tokens is the natural reading of `Usage`, but no source says so. The Claude probe splits cache writes into 5-minute and 1-hour lifetimes, which a single cache-write rate cannot tell apart (**inferred**).
 - The provider id. `price()` takes `provider`, but the PRD `runs` table has no provider column; `02` §1 proposes adding `runs.provider`.
 
-All three are in [[Cost And Control Open Questions]] #6.
+- The model key: the step's alias, a logical id, or the id the CLI reports (`claude-fable-5-1` in the probe).
+
+These are in [[Cost And Control Open Questions]] #6 and #24.
 
 ## Related
 

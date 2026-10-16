@@ -53,6 +53,15 @@ PRD §0 asks for a probe first: *"Read the actual events. Write the parser again
 
 So the Claude stream **does** carry per-message tokens mid-run, but no dollar figure until `result`.
 
+Details other notes depend on:
+
+- The probe splits cache writes by lifetime: `cache_creation.ephemeral_5m_input_tokens` and `ephemeral_1h_input_tokens`. `Usage` has a single `cacheWrite`. See [[Cost And Control Open Questions]] #6.
+- `modelUsage` is keyed by the id the CLI reports, `claude-fable-5-1`, not by an alias such as `sonnet`. See [[Cost And Control Open Questions]] #24.
+- The `result` line carries `is_error: false`. Backlog 3.2 fails a run on *"non‑zero or `is_error`"*; `RunResult` has no field for it ([[Agent Providers Open Questions]] #33).
+- `docs/old/stream-sample.stderr` is empty.
+
+The mapping from these fields onto `Usage` (`cache_creation_input_tokens` → `cacheWrite`, `cache_read_input_tokens` → `cacheRead`) is **inferred**. No source writes it out or says whether `input` includes cached tokens ([[Agent Providers Open Questions]] #32).
+
 ## Parsing rules
 
 | Rule | Source |
@@ -63,10 +72,10 @@ So the Claude stream **does** carry per-message tokens mid-run, but no dollar fi
 | *"Accumulate per-message token usage as you stream so the live view shows a running number before the run ends. Verify the actual field names against your `docs/stream-sample.jsonl` probe."* | PRD §7 |
 | *"Persist the raw line alongside the normalized event … so a new provider's parser can be debugged against real captures without re-spending."* | `01-ports.md` |
 
-All of these sit inside the Claude adapter: *"every Claude-specific fix the backlog lists moves **into the Claude adapter**, out of the runner"* (`03` §5).
+Only two of these are listed as adapter fixes: the `message_delta.usage` reset and the `total_cost_usd` → `Usage.costUsd` mapping (`03` §5: *"every Claude-specific fix the backlog lists moves **into the Claude adapter**, out of the runner"*). The others are not Claude-specific. Persisting `num_turns` per assistant turn is a database write by the runner (see [[Cost Runtime]]), and storing the raw line applies to every provider (*"the schema already has `run_events.raw`"*, `01-ports.md`). Who accumulates live tokens (PRD §7) is open ([[Cost And Control Open Questions]] #2).
 
 > [!warning] Gap: live tokens have no normalized event
-> The stream has the tokens and the capability has a name, but `NormalizedEvent` has no usage-delta kind. `Usage` rides only on `result`. `07-ports-in-practice.md` updates live cost only `if (ev.type === 'result')`. See [[Live Cost]] and [[Cost And Control Open Questions]] #2.
+> The stream has the tokens and the capability has a name, but `NormalizedEvent` has no usage-delta kind. `Usage` rides only on `result`. `07-ports-in-practice.md` updates live cost only `if (ev.type === 'result')`. See [[Live Cost]], [[Cost And Control Open Questions]] #2 and [[Agent Providers Open Questions]] #9.
 
 ## Related
 
@@ -74,3 +83,4 @@ All of these sit inside the Claude adapter: *"every Claude-specific fix the back
 - [[Live Cost]]
 - [[Event Stream And SSE]]
 - [[Provider Coverage And Portability]]
+- [[Normalized Event Envelope]]
