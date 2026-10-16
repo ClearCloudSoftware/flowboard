@@ -15,7 +15,7 @@ module: Capability Library
 
 The drawio *Logical components* page names the area *Skills & agents — install, edit, list*, without routes. The harness-architecture diagram's browser box *Library · Costs · Settings* lists *"skills & agents"* among its contents.
 
-v1 keeps the single library screen, scoped to the current project, because the store is per project ([[Capability Library Decisions|D5]]); the PRD and backlog now give it the project route. See [[Projects Open Questions]] for the route conflict from the project side.
+v1 keeps the single library screen, scoped to the current project, because the store is per project ([[Capability Library Decisions|D5]]); the PRD and backlog now give it the project route. See [[Projects Open Questions]] #21 (resolved by D5) for the route conflict from the project side.
 
 ## HTTP API (earlier PRD §12)
 
@@ -28,7 +28,7 @@ GET    /api/agents                          POST /api/agents
 
 ## v1 API (decided)
 
-Derived from the decisions (D24); PRD §12 now lists the same routes. Everything is project-scoped except actions on one plugin or agent. The `_staging/<uuid>` directory and the `403` for a seeded agent come from D24 and D21; PRD §12 says only *"clone to staging"* and does not give the `403`.
+Derived from the decisions (D24); PRD §12 now lists the same routes. Everything is project-scoped except actions on one plugin or agent. The `_staging/<uuid>` directory and the `403` for a seeded agent come from D24 and D21; PRD §12 says only *"clone to staging"* and does not give the `403`. Also not in PRD §12, and inferred here from the decisions: the amber flag in the library response (D9), the update preview's contents (D19), and the `409` on agent delete (D17).
 
 | Method | Path | For | Decision |
 |---|---|---|---|

@@ -27,7 +27,7 @@ The seed flow is **Software delivery**: the PRD's nine steps with the mockup's r
 | `review` | `reviewer` | `/code-review` | **approval** | adds `reviewer` |
 | `summarize` | `scribe` | — | auto | `summarizer` → `scribe` |
 
-Models, efforts, `requires` and `produces` stay as in the PRD table below. The mockup gives the same agents different defaults (`scout` haiku/low against `research` sonnet/medium, for example). That an agent's defaults only prefill the step editor is a proposal: [[Capability Library Open Questions]] #21.
+Models and efforts stay as in the PRD table below; `requires` and `produces` stay as in PRD §15's table, which this note does not copy. The mockup gives the same agents different defaults (`scout` haiku/low against `research` sonnet/medium, for example). That an agent's defaults only prefill the step editor is a proposal: [[Capability Library Open Questions]] #21.
 
 | Kind | Seeds | Notes |
 |---|---|---|

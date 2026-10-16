@@ -69,7 +69,7 @@ The mockup's **+ Define agent** button only selects `architect` and switches the
 
 ## 11. Seed set
 
-> [!check] **Resolved — D22.** Mockup names with the PRD's contract skills kept; `implement` stays `/ponytail`.
+> [!check] **Resolved — D22, superseded in part by D27 and D30.** Mockup names with the PRD's contract skills kept. `implement` is `developer` + `/ponytail` (D27); `ask-three` is a test fixture, not a seed (D30).
 
 PRD seeds (`researcher`, `planner`, `ponytail`, `explain-simply`…), plus backlog Story 1.2's research agents, differ from the mockup's Delivery pack (`scout`, `architect`, `developer`, `scribe`…). Which is canonical? See [[Seeded Capabilities]].
 
@@ -128,7 +128,7 @@ The PRD seed flow (§15) and backlog Story 1.2 now carry the decided names. See 
 
 > [!question] **Open — needs a probe, not a decision.** Tracked in backlog Story 0.1.
 
-D16 invokes every plugin skill fully qualified, because Claude Code namespaces plugin skills and two plugins may ship the same slug. Nothing yet confirms that `claude -p` with `--plugin-dir` resolves `/<plugin>:<slug>` in the prompt the way interactive mode does. If it doesn't, the fallback is D16's rejected option: bare `/slug`, with slugs unique per project and colliding installs refused. That would put a `UNIQUE (project_id, slug)` constraint back on `skills`. See [[Capability Runtime Mounting]].
+D16 invokes every plugin skill fully qualified, because Claude Code namespaces plugin skills and two plugins may ship the same slug. Nothing yet confirms that `claude -p` with `--plugin-dir` resolves `/<plugin>:<slug>` in the prompt the way interactive mode does. If it doesn't, one possible fallback (a proposal; D16 records no alternative) is bare `/slug`, with slugs unique per project and colliding installs refused. That would put a `UNIQUE (project_id, slug)` constraint back on `skills`. See [[Capability Runtime Mounting]].
 
 ## 20. Can a step or flow travel to another project?
 
@@ -146,7 +146,7 @@ PRD §4 calls an agent *"a system prompt and defaults"* and PRD §5 gives it `de
 
 > [!question] **Open.**
 
-D8 mounts a plugin as-is, *"hooks, agents, commands and `.mcp.json` included"*, so a plugin's own agent definitions reach Claude Code. The library's agents are `agents` rows (PRD §5), defined in the form (D21) or seeded (D12). Install parses only `skills/*/SKILL.md` (backlog Story 7.1; PRD §13), so nothing says whether a plugin's agents are listed, become rows a step can name, or stay invisible. In the mockup, agents arrived inside bundle packs, which are deferred (D3). See [[Agent Capabilities]].
+D8 mounts a plugin as-is, *"hooks, agents, commands and `.mcp.json` included"*, so a plugin's own agent definitions reach Claude Code. The library's agents are `agents` rows (PRD §5), defined in the form (D21) or seeded (D12). Install parses `skills/*/SKILL.md` (backlog Story 7.1: *"parse every `skills/*/SKILL.md`"*; PRD §12: *"clone to staging, parse, return what was found"*) and takes the plugin name from `plugin.json` (PRD §5: *"plugin.json name, else the repo name"*). No source says it reads a plugin's agent definitions, so nothing says whether a plugin's agents are listed, become rows a step can name, or stay invisible. In the mockup, agents arrived inside bundle packs, which are deferred (D3). See [[Agent Capabilities]].
 
 ## 23. Whose allowlist does an amber mark point at?
 
@@ -158,7 +158,7 @@ The library mockup and guide say a network-capable capability *"still needs the 
 
 > [!question] **Open.**
 
-PRD §13: *"Dark-first, dense, keyboard-friendly. Use shadcn defaults; do not build a design system."* The library mockup and guide are light only (`color-scheme:light`), as is the drawio *Harness architecture* tech card (*"light, zero radius, IBM Plex"*); backlog Story 9.1 says *"light default"*. Same as [[Flow Design Open Questions]] #34 and [[Settings And Plumbing Open Questions]] #7. See [[Capability Library Screen]].
+PRD §13: *"Dark-first, dense, keyboard-friendly. Use shadcn defaults; do not build a design system."* The library mockup and guide are light only (`color-scheme:light`), as is the drawio *Harness architecture* tech card (*"light, zero radius, IBM Plex"*); backlog Story 9.1 says *"light default"*. The old design handoff (`docs/old/design/README.md`) is dark — *"Dark (the designed default)"* — with a *"1f — Light mode"* variant. Feature map §19 offers *"Light, dark, or follow the system"* and backlog Story 8.3 *"theme light/dark/system"*. Same as [[Flow Design Open Questions]] #34 and [[Settings And Plumbing Open Questions]] #7. See [[Capability Library Screen]].
 
 ## 25. Proposals in these notes that no source or decision states
 
@@ -169,6 +169,8 @@ PRD §13: *"Dark-first, dense, keyboard-friendly. Use shadcn defaults; do not bu
 - The step editor's picker lists skills as `plugin:slug` ([[Capabilities In Flows]]), following D16.
 - Validation rejects an extra plugin that is not installed in the project ([[Capabilities In Flows]]); see #20.
 - An agent's defaults prefill the step editor ([[Seeded Capabilities]]); see #21.
+- The install button reads **+ Install from git** ([[Installing A Capability From GitHub]], [[Capability Library Controls]], [[Capability Library Screen]]). D7 says what install accepts, not the label; the mockup reads *"+ Install from GitHub"*.
+- The status bar's store path reads `<project>/.flowboard/skills` ([[Capability Library Screen]]). D5 places the store, not the label; the mockup reads *"store ~/.flowboard/capabilities"*.
 
 ## 26. Where does a plugin's author come from?
 

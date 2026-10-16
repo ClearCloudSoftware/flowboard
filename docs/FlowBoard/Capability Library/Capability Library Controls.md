@@ -11,7 +11,7 @@ Every control on the [[Capability Library Screen]].
 
 | Control | What it does |
 |---|---|
-| **+ Install from git** | Clone any git URL (GitHub or `file://`), parse, review, confirm. Nothing is written until the last step. The mockup labels it *Install from GitHub*. See [[Installing A Capability From GitHub]]. |
+| **+ Install from git** | Clone any git URL (GitHub or `file://`), parse, review, confirm. Nothing is written until the last step. The mockup labels it *Install from GitHub*; **+ Install from git** is proposed wording ([[Capability Library Open Questions]] #25). See [[Installing A Capability From GitHub]]. |
 | **+ Define agent** | Opens a form: name, description, prompt, default model, default effort, allowed tools ([[Capability Library Decisions|D21]]). In the mockup it only selects `architect` and switches the kind filter to Agents. See [[Agent Capabilities]]. |
 | **Check for updates** | v1. Checks every git-sourced plugin in the project against its remote. The only way updates are found (D13). |
 

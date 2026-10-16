@@ -16,7 +16,7 @@ An **agent** is a named role — a *who* rather than a *how*. In a step definiti
 | system prompt | The role's standing instructions |
 | default model | A Claude alias — `opus` / `sonnet` / `haiku` — treated as the logical id in v1 ([[Capability Library Decisions|D20]]). The architecture's provider-neutral ids (`reasoning-high` → `opus` / `o3`) arrive with the second provider |
 | default effort | `low` · `medium` · `high` in the mockup. The PRD gives `agents.default_effort` no value list (the `low\|medium\|high\|xhigh\|max` comment is on `step_defs.effort`) |
-| allowed tools | JSON array; null means unrestricted |
+| allowed tools | JSON array (PRD §5). That null means unrestricted is an inference: PRD §5 says *"null = unrestricted"* only for `step_defs.allowed_tools` |
 | builtin flag | Builtin (seeded) agents are read-only in the editor; **Duplicate to edit** makes an editable copy (D21) |
 | project | Agents are scoped to a project, like plugins and flows (D5, D23) |
 

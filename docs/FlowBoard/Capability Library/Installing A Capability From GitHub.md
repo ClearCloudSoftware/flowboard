@@ -8,7 +8,7 @@ module: Capability Library
 **+ Install from GitHub** is one of the two ways anything enters the library (the other is [[Agent Capabilities|+ Define agent]]). It takes a repository URL and nothing else.
 
 > [!check] v1: any git URL, one plugin per install
-> Install accepts **any git URL**, including `file:///…` for a skill you are writing yourself ([[Capability Library Decisions|D7]]); the button reads **+ Install from git**. What gets installed is the **plugin** — every skill in the repository, as one unit (D4). The clone lands in the project's store under its commit (D5). Plugin contents are installed as-is, hooks and MCP servers included (D8); a plugin that ships `.mcp.json` or `hooks/` is marked amber (D9). There is no providers check in v1 (D1).
+> Install accepts **any git URL**, including `file:///…` for a skill you are writing yourself ([[Capability Library Decisions|D7]]); the button reads **+ Install from git** (proposed wording, [[Capability Library Open Questions]] #25). What gets installed is the **plugin** — every skill in the repository, as one unit (D4). The clone lands in the project's store under its commit (D5). Plugin contents are installed as-is, hooks and MCP servers included (D8); a plugin that ships `.mcp.json` or `hooks/` is marked amber (D9). There is no providers check in v1 (D1).
 
 ## Principles
 

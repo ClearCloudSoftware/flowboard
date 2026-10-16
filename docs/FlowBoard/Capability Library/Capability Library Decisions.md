@@ -52,7 +52,7 @@ The v1 design, settled in a grilling session on 2026-10-15 that worked through [
 | # | Decision | Resolves |
 |---|---|---|
 | D17 | **"Used by" counts** each flow's latest version, plus any flow version pinned by a non-terminal task. Old, unpinned flow versions do not block removal. `extra_plugin_ids` count as uses. | — |
-| D18 | **Remove asks for confirmation** (PRD), and stays disabled while anything uses the plugin. | — |
+| D18 | **Remove asks for confirmation** (backlog Story 7.1: *"remove with confirm"*; PRD §13 now follows), and stays disabled while anything uses the plugin. | — |
 | D19 | **An update that drops an in-use skill is refused.** The update preview lists added and removed skills; if a removed skill is in use (D17), the update is blocked, same rule as Remove. | — |
 
 ## Agents and seeds

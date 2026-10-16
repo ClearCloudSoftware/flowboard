@@ -20,7 +20,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 |---|---|
 | `docs/mockups/capability-library.html` | The screen; sample catalogue (7 skills, 7 agents, 3 packs); install dialog; derived values; network-tool set |
 | `docs/mockups/capability-library-guide.html` | Field guide: anatomy, capability vs pack, kinds, marks, tools and egress, install walkthrough (both branches), pinning table, every control |
-| `docs/flowboard-ideation.drawio` | *Functional components*: Capability library group and its edge to Flow design. *FlowBoard ideation*: Skills & agents (`/skills`, `/agents`), capability packs. *Logical components*: Skills & agents → Disk. *Harness architecture*: durable-state store, `ro` `/skills` mount, GitHub install edge, out-of-scope marketplace |
+| `docs/flowboard-ideation.drawio` | *Functional components*: Capability library group and its edge to Flow design. *FlowBoard ideation*: Skills & agents (`/skills`, `/agents`), capability packs, the *Out of scope (v1)* box (*"plugin marketplace"*). *Logical components*: Skills & agents → Disk. *Harness architecture*: durable-state store, `ro` `/skills` mount, GitHub install edge |
 | `docs/old/architecture/05-environment-and-registry.md` §13 | Skill/Agent registry → Capability packs: the seam, `CapabilityPack`, provider-tagged install, seed idea |
 | `docs/old/reference/core/ports/agent-provider.ts` | `CapabilityPack`, mount kinds, open `ProviderId`, `RunSpec.capabilities` and `toolPolicy`, `plugins` capability flag, the six-field `PromptParts` (part 4 as `"/grill-me"`) |
 | `.gitignore` | `skills/_installed/` (removed on 2026-10-15) |

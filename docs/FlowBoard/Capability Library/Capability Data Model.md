@@ -36,7 +36,7 @@ CREATE TABLE skills (
 --   UNIQUE (project_id, slug); default_model holds a Claude alias (opus|sonnet|haiku)
 
 -- step_defs: kind becomes 'ai' | 'shell' | 'manual'; an 'ai' step sets agent_id, skill_id or both (D27)
---             + extra_plugin_ids TEXT   -- JSON array of plugins.id, mounted alongside the skill's plugin
+--             + extra_plugin_ids TEXT NOT NULL DEFAULT '[]'   -- JSON array of plugins.id, mounted alongside the skill's plugin
 -- tasks:     + capability_pins  TEXT   -- JSON {plugins: {id: sha}, agents: {id: <agent row>}}, set at task start
 ```
 
