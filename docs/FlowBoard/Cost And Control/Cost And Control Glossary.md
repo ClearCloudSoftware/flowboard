@@ -12,7 +12,7 @@ module: Cost And Control
 |---|---|---|
 | **Bill** | A task's or a day's total spend: kept plus wasted. *"It never goes down."* | task-detail guide, monitor guide |
 | **Budget** ⚠ | (1) A step's **spend cap**, `step_defs.max_budget_usd`, *"the most this step may spend on one attempt"*. (2) The **attempt budget**, `max_attempts`, which every rework loop into a step shares (*"every loop that sends work back to the same step shares one budget"*, PRD §8). (3) A **team budget**, a monthly cap (feature map §18 idea). (4) A **portability budget** in the capability library guide, which has nothing to do with money | flow-designer guide, PRD §5 and §8, feature map, capability-library guide |
-| **Burn** ⚠ | (1) **Burn rate**, the dollars per hour of everything running now (monitor topbar, inbox *costing you*). (2) As a verb: *"money burnt by rework loops"* (PRD §13), *"burns money for no gain"* | monitor mockup, PRD §13 |
+| **Burn** ⚠ | (1) **Burn rate**, the dollars per hour of everything running now (monitor topbar, inbox *costing you*). (2) As a verb: *"money burnt by rework loops"* (PRD §13), *"burns money for no gain"* (flow-designer guide) | monitor mockup, PRD §13, flow-designer guide |
 | **Burning idle** | A blocked batch still spending while it waits. Old handoff only; the newer mockups say waiting is free | `docs/old/design/README.md` |
 | **Ceiling per task** | The flow designer's sum of step budgets, `est. $X ceiling per task`. Not a hard limit. See [[Spend Caps And Limits]] | `flow-designer.html:611` |
 | **Cost** ⚠ | (1) A run's dollars, `runs.cost_usd`. (2) In the mockups, `cost` on a step is the **kept** part only, beside a separate `wasted` | PRD §5, `task-detail.html`, `monitor.html` |

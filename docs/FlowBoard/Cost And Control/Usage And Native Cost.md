@@ -72,7 +72,7 @@ The mapping from these fields onto `Usage` (`cache_creation_input_tokens` → `c
 | *"Accumulate per-message token usage as you stream so the live view shows a running number before the run ends. Verify the actual field names against your `docs/stream-sample.jsonl` probe."* | PRD §7 |
 | *"Persist the raw line alongside the normalized event … so a new provider's parser can be debugged against real captures without re-spending."* | `01-ports.md` |
 
-All of these sit inside the Claude adapter: *"every Claude-specific fix the backlog lists moves **into the Claude adapter**, out of the runner"* (`03` §5).
+Only two of these are listed as adapter fixes: the `message_delta.usage` reset and the `total_cost_usd` → `Usage.costUsd` mapping (`03` §5: *"every Claude-specific fix the backlog lists moves **into the Claude adapter**, out of the runner"*). The others are not Claude-specific. Persisting `num_turns` per assistant turn is a database write by the runner (see [[Cost Runtime]]), and storing the raw line applies to every provider (*"the schema already has `run_events.raw`"*, `01-ports.md`). Who accumulates live tokens (PRD §7) is open ([[Cost And Control Open Questions]] #2).
 
 > [!warning] Gap: live tokens have no normalized event
 > The stream has the tokens and the capability has a name, but `NormalizedEvent` has no usage-delta kind. `Usage` rides only on `result`. `07-ports-in-practice.md` updates live cost only `if (ev.type === 'result')`. See [[Live Cost]], [[Cost And Control Open Questions]] #2 and [[Agent Providers Open Questions]] #9.

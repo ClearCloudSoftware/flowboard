@@ -27,7 +27,17 @@ Places where the sources disagree or leave a gap. Each needs a decision before b
 
 **Stops.** Three readings. Backlog 3.4 and `03` §8: *"finalise as cancelled"*. The monitor guide: the run *"is recorded as failed, with "stopped by you" as the reason"*. PRD §7 counts *"process killed by a signal"* as transient, so a literal classifier would retry a stopped run and flag it as an infra retry (Monitor Open Questions #35, [[Execution Open Questions]] #55). Of the three, only the PRD §7 reading sets `wasted`; the guides move the spend to wasted whatever the state.
 
-**Send backs.** The guides move only the rework target's last attempt to wasted (*"moves everything the last attempt spent into **wasted**"*, `inbox.html:334`); in their figures the rejected review's own spend stays kept. Backlog 5.2 flags every downstream run, which includes that review. See [[Rework Loop]].
+**Send backs.** Still open: the sources give different answers on whether the rejected review's own spend becomes wasted. Figures are for the task-detail sample, where Review cost `$0.16` (`task-detail.html:323`).
+
+| Source | What a send back makes wasted | kept | wasted | bill |
+|---|---|---|---|---|
+| Backlog 5.2 | *"downstream runs `wasted=1`"*: the target's last attempt and every run after it, so the review too | $0.85 | $1.76 | $2.61 |
+| Task-detail guide | The first build only: *"The $1.12 the first build kept is now wasted, so the bill stays $2.61 and the wasted column jumps to $1.60."* Review stays kept, though the guide says *"Review is discarded"* | $1.01 | $1.60 | $2.61 |
+| Task-detail mockup `sendBack()` | Zeroes Review's cost instead of moving it, so the bill shrinks (#19) | $0.85 | $1.60 | $2.45 |
+| Inbox mockup | *"moves everything the last attempt spent into **wasted**"* (`inbox.html:334`) | | | |
+| Monitor guide | Lists *"a review you sent back"* among the attempts thrown away (`monitor-guide.html:490`); read literally, the review's spend is wasted | | | |
+
+The backlog 5.2 figures are the rule applied to the sample (**inferred**, as in Task Detail's table). [[Task Detail Open Questions]] #15 tabulates the three task-detail sets; [[Monitor Open Questions]] #17 asks whether the rejected review's spend is *"wasted, kept or dropped"*. See [[Rework Loop]].
 
 Monitor Open Questions #14 and #17 cover the stop and reject cases. See [[Wasted Spend]].
 
@@ -53,6 +63,8 @@ Monitor and inbox *today*, chrome *"spend today"* (backlog 9.2), projects list *
 - **Budget.** The mockup's draft ceiling counts `$0.05` per step; no source caps budget in draft mode, and `06` §15's transform changes only model and effort.
 - **Scope.** Applied *"before `launch()`"*, so it reaches the next run of tasks already running (**inferred**; [[Settings And Plumbing Open Questions]] #10 proposes the same). Intended?
 - **Shell steps.** Unmentioned; presumably untouched.
+- **Transform order.** No source fixes it. **Proposal** (shared with [[Settings And Plumbing Open Questions]] #10): draft mode, then sandbox resolution, then the permission gate last. See [[Cost Runtime]].
+- **Storage.** **Proposal** (shared with [[Settings Data Model]]): one `settings` row per top-level setting with a JSON `value`, so key `draft_mode`, value `true` or `false`. See [[Cost Data Model]].
 - **Rollups.** Do draft-mode runs count toward *cost per finished task by flow version*? They would make a version look cheap.
 - **Default.** Off is **inferred**; no source states it ([[Settings Defaults]], [[Settings And Plumbing Open Questions]] #5).
 - **Visibility.** Does the board or monitor show that draft mode is on? `06` §15: *"the flow editor and board read settings for display toggles"*, but no indicator is drawn. No mockup outside the designer shows it.
@@ -92,15 +104,19 @@ See [[Spend Caps And Limits]].
 
 Bill or kept? Do failed and cancelled tasks count (PRD says *"completed"*, feature map *"finished"*)? Do draft-mode runs (#5)? Does a task that crossed a flow-version change count once, under its pinned version? Task Detail Open Questions #18.
 
+The flow library's `~$/task` has no definition either. **Proposal:** cost per finished task for that flow version ([[Cost Surfaces]]). See also #22.
+
 ### 11. What does "per step definition" group by?
 
 PRD §13 wants *"what `/grill-me` actually costs"* (a skill). Feature map §18: *"per step (so you can see what a particular skill really costs you)"*. Backlog 8.1: *"per step def (by flow version)"*. `step_defs.id` changes every version. Group by `step_defs.id`, by step key across versions, by skill, or by agent? See [[Spend Rollups]].
+
+No source spells out the joins behind any rollup. **Proposal** in [[Spend Rollups]]: every rollup starts from `runs` and joins through `step_instances` to `step_defs`, `tasks` and `projects`; model × effort reads `runs` alone.
 
 ## Interfaces
 
 ### 12. API gaps
 
-- No settings route in PRD §12, so nothing toggles draft mode. **Proposal:** `GET` and `PATCH /api/settings`, one settings object with `PATCH` as a partial update. Shared with [[Settings And Plumbing API And Routes]], Memory and Sandboxing ([[Settings And Plumbing Open Questions]] #2).
+- No settings route in PRD §12, so nothing toggles draft mode. **Proposal:** `GET` and `PATCH /api/settings`, one settings object with `PATCH` as a partial update. Shared with [[Settings And Plumbing API And Routes]], [[Escalation API And Routes]], Memory and Sandboxing ([[Settings And Plumbing Open Questions]] #2).
 - No response shape for `GET /api/costs`. **Proposal** in [[Cost API And Routes]].
 - No endpoint for chrome *spend today*. It belongs on the summary poller (backlog 9.2), which is unnamed.
 

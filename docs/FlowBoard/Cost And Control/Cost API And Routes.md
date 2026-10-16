@@ -23,7 +23,7 @@ Backlog 8.1: *"Add project filter and real `from`/`to` (API supports both, UI se
 ## Not specified
 
 > [!question] No settings endpoint
-> PRD §12 lists no route to read or change settings, so nothing toggles draft mode. Backlog 8.3 requires the toggle. **Proposal**, shared with [[Settings And Plumbing API And Routes]], Memory and Sandboxing: `GET /api/settings` returns one settings object, and `PATCH /api/settings` takes a partial update, here `{ draft_mode: boolean }`. See [[Cost And Control Open Questions]] #12 and [[Settings And Plumbing Open Questions]] #2.
+> PRD §12 lists no route to read or change settings, so nothing toggles draft mode. Backlog 8.3 requires the toggle. **Proposal**, shared with [[Settings And Plumbing API And Routes]], [[Escalation API And Routes]], Memory and Sandboxing: `GET /api/settings` returns one settings object, and `PATCH /api/settings` takes a partial update, here `{ draft_mode: boolean }`. See [[Cost And Control Open Questions]] #12 and [[Settings And Plumbing Open Questions]] #2.
 
 > [!question] No response shape for `/api/costs`
 > **Proposal**, one call that returns every rollup:

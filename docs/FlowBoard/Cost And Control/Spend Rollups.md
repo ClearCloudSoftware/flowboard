@@ -19,7 +19,7 @@ PRD §13, `/costs`: *"Not just a total. Show:"*
 | 4 | Wasted | *"sum of `cost_usd` where `wasted = 1`, i.e. money burnt by rework loops"* | *"wasted spend"* | *Σ cost_usd where wasted = 1* |
 | 5 | Per finished task by flow version | *"cost per completed task, trended by flow version"* | *"cost per completed task by flow version"* | *Cost per completed task — Trended by flow version.* |
 
-The brief's angle on each: *"does the questioning step earn its cost?"*, *"Cost per completed task, trended over time"* (brief §5). Feature map §18 on #5: *"Tracked across recipe versions, so you can tell whether a change made things cheaper or more expensive."*
+The brief (§5) lists four of the five (it has no per-project rollup) and asks a question of only #2: *"does the questioning step earn its cost?"* It words #5 as *"Cost per completed task, trended over time"*. Feature map §18 on #5: *"Tracked across recipe versions, so you can tell whether a change made things cheaper or more expensive."*
 
 ## How each joins
 

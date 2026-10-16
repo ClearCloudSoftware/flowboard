@@ -9,11 +9,13 @@ How a run's cost moves from the provider to the screen.
 
 ## Before launch: the transform chain
 
-The runner builds a `RunSpec` from the step definition and applies transforms before `launch()`. No source fixes their order; the list follows the **proposal** in [[Settings Overrides And Spec Transforms]] (draft mode, then sandbox, then the permission gate; [[Settings And Plumbing Open Questions]] #10). Limits are not a transform: they ride on the `RunSpec` from `step_defs`.
+The runner builds a `RunSpec` from the step definition and applies transforms before `launch()`. No source fixes their order; the list follows the **proposal** in [[Settings Overrides And Spec Transforms]] (draft mode, then sandbox resolution, then the permission gate last; [[Settings And Plumbing Open Questions]] #10, and [[Cost And Control Open Questions]] #5).
 
 1. **Draft mode**, if on: `s => ({ ...s, model: 'fast-cheap', effort: 'low' })` (`06` §15).
 2. **Sandbox profile**: *"draft mode and the sandbox profile compose as `RunSpec` transformers."* (backlog 3.5)
-3. **Limits**: `limits: { maxTurns, maxBudgetUsd }` from `step_defs` (`agent-provider.ts`). The runner *"maps the logical `max_turns` / `max_budget_usd` caps to the sandbox's physical `--memory` / `--cpus` / `--pids-limit` / wall-clock backstops"* (`03` §6).
+3. **Permission gate**: last, because it checks the resolved tier (see [[Settings Overrides And Spec Transforms]]).
+
+Limits are not a transform: they ride on the `RunSpec` from `step_defs` as `limits: { maxTurns, maxBudgetUsd }` (`agent-provider.ts`). The runner *"maps the logical `max_turns` / `max_budget_usd` caps to the sandbox's physical `--memory` / `--cpus` / `--pids-limit` / wall-clock backstops"* (`03` §6).
 
 It records what actually ran: *"records model, effort, tier"* (drawio *Runner*). `03` §6 suggests snapshotting *"the resolved `RunSpec` to `data/runs/<id>/spec.json"*. PRD §7 snapshots *"the final args to `data/runs/<id>/args.json`"*.
 

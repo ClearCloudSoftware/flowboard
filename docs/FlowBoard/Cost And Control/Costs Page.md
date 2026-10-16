@@ -20,7 +20,7 @@ PRD §13:
 > - **wasted spend**: sum of `cost_usd` where `wasted = 1`, i.e. money burnt by rework loops
 > - cost per completed task, trended by flow version
 
-The brief (§5) asks a question of each, and singles out wasted spend: *"This needs its own treatment"*. See [[Spend Rollups]].
+The brief (§5) lists four of the five (it has no per-project rollup), asks a question of only the per-step one (*"does the questioning step earn its cost?"*), and singles out wasted spend: *"This needs its own treatment"*. See [[Spend Rollups]].
 
 ## What the backlog adds
 
@@ -47,11 +47,16 @@ Whether the draft toggle lives on `/costs`, on a settings screen, in the designe
 
 ## Look and feel the sources fix
 
-Nothing screen-specific. General rules that apply:
+Screen-specific:
+
+- Brief §5: *"Recharts, so keep chart types to bar, line and area."*
+- PRD §13: spend per project over time as a *"bar chart, Recharts"*.
+- Backlog 8.1 (**BUG**): *"Use the red token, not `text-red-400`; do not freeze `now` for the page lifetime."*
+
+General rules that apply:
 
 - The newer mockups colour only wasted, and not consistently. The monitor topbar's wasted figure uses `--wait` (`monitor.html:61`), the colour the monitor otherwise uses for work waiting on a human. The monitor row, the inbox and task detail use `--fail` red (`monitor.html:209`, `inbox.html:388`, `task-detail.html:64`). See [[Cost And Control Open Questions]] #21.
 - The old handoff: live cost is *"Always mono, always right-aligned, never coloured."* Type: *"IBM Plex Mono (all numbers, ids, keys, slugs, models, times, costs)"*.
-- Backlog 8.1: wasted uses *"the red token"*.
 
 ## What is missing
 

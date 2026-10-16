@@ -9,7 +9,7 @@ The per-step controls that bound what a run can spend, and the physical limits b
 
 > *Guardrails* — A spending cap, a limit on back-and-forth turns, which tools it's allowed, and how many times it may retry before giving up. (feature map §2)
 
-## Three layers
+## Four layers
 
 | Layer | Control | Where | Source |
 |---|---|---|---|

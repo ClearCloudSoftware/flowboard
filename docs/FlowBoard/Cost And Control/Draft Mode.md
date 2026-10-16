@@ -64,7 +64,7 @@ The flow-designer guide: *"**Draft mode isn't a version.** It forces every step 
 | Effort | PRD: `low`. The mockup changes only the model chip; effort chips stay as they were |
 | Budget | No source changes `max_budget_usd`. The mockup's `$0.05` per step ceiling has no other source |
 | Which runs | `06` §15 applies it *"before `launch()"*. So it reaches each new run, including later steps of tasks already running (**inferred**; [[Settings And Plumbing Open Questions]] #10 proposes the same). No source says whether that is intended |
-| Shell steps | Not mentioned. A shell step has no model, so the transform should leave it alone |
+| Shell steps | Not mentioned. A shell step has no model, so the transform should leave it alone (**inferred**; [[Cost And Control Open Questions]] #5) |
 | Rollups | The run records the resolved model, but no source says whether draft-mode runs belong in *cost per finished task by flow version* |
 | Visibility | `06` §15: *"the flow editor and board read settings for display toggles"*. Only the designer mockup shows the switch |
 | Default | Off is **inferred**; no source states it ([[Settings Defaults]]) |

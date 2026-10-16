@@ -50,7 +50,9 @@ Every fact in these notes comes from the files below (paths relative to the repo
 | `docs/FlowBoard/Execution/*` | Linked: [[Draft Mode And Spec Transforms]], [[Rework Loop]]; Execution Open Questions #45, #46, #55, #62 |
 | `docs/FlowBoard/Capability Library/*` | [[Capability Library Decisions]] D20: Claude aliases as the logical model ids |
 | New sets on unmerged branches | Settings And Plumbing: [[Settings Defaults]], [[Draft Mode Setting]], [[Settings Overrides And Spec Transforms]], [[Settings Data Model]], [[Settings And Plumbing API And Routes]]; Open Questions #2, #5, #10, #22. Agent Providers: [[Logical Model Ids]], [[Normalized Event Envelope]]; Open Questions #9, #12, #13, #16, #25, #32, #33. Memory: [[Measuring Memory Payoff]], [[Mem0 Adapter]]; Open Questions #22, #24. Projects: [[Project Lifecycle And Deletion]]; Open Questions #9, #11. Sandboxing: [[Resource Limits]]. Intake And Import: Open Questions #12 |
-| `docs/FlowBoard/Task Detail/*` | Linked: [[Task Cost And Wasted Spend]], [[Attempts And Send Back]], [[Sample Task Auth Refactor]]; Task Detail Open Questions #15, #17, #18 |
+| `docs/FlowBoard/Task Detail/*` | Linked: [[Task Cost And Wasted Spend]], [[Attempts And Send Back]], [[Sample Task Auth Refactor]], [[Memory Carried Into A Task]]; Task Detail Open Questions #15, #17, #18 |
+| `docs/FlowBoard/Human In The Loop/*` | Linked: [[Ask Park And Resume]], [[Human In The Loop Screen]], [[Answers And Memory]]; [[Human In The Loop Open Questions]] #38, #42 |
+| `docs/FlowBoard/Escalation And Notifications/*` | Linked: [[Escalation API And Routes]] (the shared settings-route proposal) |
 | `docs/FlowBoard/Flow Design/*` | Linked: [[Models And Effort]], [[Step Guardrails]], [[Seeded Flows]], [[Flow Library]]; Flow Design Open Questions #12, #15, #28 |
 | `docs/FlowBoard/Component Documentation Tracker.md` | Scope: live cost, rollups, wasted spend, draft mode; feature map §18; architecture #12 |
 

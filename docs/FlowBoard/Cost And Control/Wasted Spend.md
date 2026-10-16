@@ -7,7 +7,7 @@ module: Cost And Control
 
 > **Wasted spend, called out** — A specific number for money burned on work that got redone or thrown away, so you can actually go after it. (feature map §18)
 
-The brief puts it first: *"This needs its own treatment; it's the number that changes my behaviour"* (brief §5). The monitor guide: *"It's the one number here you can actually act on."*
+The brief singles it out: *"This needs its own treatment; it's the number that changes my behaviour"* (brief §5). The monitor guide: *"It's the one number here you can actually act on."*
 
 ## The flag and the figure
 
@@ -38,7 +38,7 @@ flowchart TD
   K -->|cap hit, auth, bad config → blocked| Q2[wasted per the guides<br/>no flag in the PRD]
 ```
 
-The definitions disagree. PRD §13 and the drawio ideation card say *"money burnt by rework loops"* only. PRD §5, the drawio *Cost ledger* card (*"wasted = rework + infra retries"*) and feature map §4 add infra retries. The guides add stops and failures. Brief §5 is narrowest: *"money burnt on work later discarded by a review sending the task back"*. The guides also move only the rework target's spend on a send back, where backlog 5.2 flags every downstream run ([[Rework Loop]]). Monitor Open Questions #17 has the full table. See [[Cost And Control Open Questions]] #1.
+The definitions disagree. PRD §13 and the drawio ideation card say *"money burnt by rework loops"* only. PRD §5, the drawio *Cost ledger* card (*"wasted = rework + infra retries"*) and feature map §4 add infra retries. The guides add stops and failures. Brief §5 is narrowest: *"money burnt on work later discarded by a review sending the task back"*. On a send back they split again: backlog 5.2 flags every downstream run, the task-detail guide's figures keep the rejected review's spend as kept, and the monitor guide lists *"a review you sent back"* as wasted ([[Rework Loop]]). Monitor Open Questions #17 has the full table. See [[Cost And Control Open Questions]] #1.
 
 ## How to read it
 

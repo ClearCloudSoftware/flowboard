@@ -41,7 +41,7 @@ Backlog 10.1 tightens the first: *"with non‑zero cost **and live turns/cost du
 | 3.5 | Map logical caps to physical limits; draft mode and sandbox as `RunSpec` transformers | NEW |
 | 4.3 | Inbox right rail with live cost estimate | handoff |
 | 5.2 | Rework marks downstream runs wasted | PRD |
-| 7.3 | The importer agent runs on haiku, outside any step run | FIX |
+| 7.3 | The importer agent runs on haiku (outside any step run, **inferred**; [[Cost And Control Open Questions]] #23) | FIX |
 | 8.1 | `/costs` charts and tables, filters, red token, loading state | PRD, GAP, BUG |
 | 8.3 | Draft mode toggle in settings | PRD/NEW |
 | 9.2 | Chrome spend today, one summary poller | handoff |
