@@ -30,7 +30,7 @@ flowchart LR
   Q -- "answers → resume" --> ENGINE["Flow engine"]
 ```
 
-Drawn from the drawio *Logical components* page: *Question service → Notifier* (*"escalate at 5 min"*), *Notifier → Slack* (unlabelled; the Slack box itself reads *"Slack / Block Kit + signature check"*), *Question service → Flow engine* (*"answers → resume"*). On the *Functional components* page the only edge into Escalation is *Human in the loop → Escalation*, labelled *"unanswered too long"*.
+Drawn from the drawio *Logical components* page: *Question service → Notifier* (*"escalate at 5 min"*), *Notifier → Slack* (unlabelled; the Slack box itself reads *"Slack / Block Kit + signature check"*), *Question service → Flow engine* (*"answers → resume"*), *MCP ask tool → Question service* (*"ask"*). The drawio draws *Inbox → Question service* unlabelled; the dotted `answer` edge is that edge, labelled here. The drawio has no edge from the service to the inbox or back from Slack; the solid `Question service → Inbox` edge and the dotted `interaction` edge are added here. On the *Functional components* page the only edge into Escalation is *Human in the loop → Escalation*, labelled *"unanswered too long"*.
 
 Escalation does not own questions. [[Human In The Loop Index|Human In The Loop]] owns the question schema, the inbox and park/resume. Escalation "subscribes to (9)'s question lifecycle; writes answers back through the *same* idempotent path as the web inbox, so web and channel can't diverge." (`04` §10).
 

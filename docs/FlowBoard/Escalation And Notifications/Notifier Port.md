@@ -73,7 +73,7 @@ The file's own comment sets the boundary: *"Reconciliation (first-write-wins, re
 
 ## What the port does not cover
 
-- **Inbound.** Neither version has a method for receiving answers. Each adapter handles its own interactions (for Slack, `POST /api/slack/interactions`) and calls the shared answer path. See [[Signed Inbound Interactions]].
+- **Inbound.** Neither version has a method for receiving answers. The sources put signature verification in the adapter and the Slack route in `apps/web` (`POST /api/slack/interactions`); how one reaches the other is not said. See [[Signed Inbound Interactions]] and Open Questions #22.
 - **Cancellation.** There is `updateResolved` but no way to repaint a message when its question is cancelled or expires. See [[Escalation Lifecycle]] and Open Questions #11.
 - **Choosing a channel.** Nothing says how a channel is chosen if more than one is configured. See [[Notification Channels]].
 

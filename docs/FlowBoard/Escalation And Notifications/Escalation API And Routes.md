@@ -15,17 +15,17 @@ module: Escalation And Notifications
 | `POST /api/questions/:id/answer` | Web answers. Shares the idempotent path with Slack; triggers `chat.update` if escalated | PRD §12, `04` §10 |
 | `GET /api/questions?state=pending` | The inbox feed | PRD §12 |
 | `POST /api/questions/:id/unanswer` | Undo; *"+ `chat.update` on undo"* (**NEW**) | backlog 4.4 |
-| SSE snapshot stream | *"pending + answered in last 2 min"*, *"so Slack answers repaint"*; path not named | backlog 4.3, `04` §9 |
+| SSE snapshot stream | *"pending + answered in last 2 min"*, *"so Slack answers repaint"*. PRD §10: *"the inbox subscribes to an SSE stream"*, but §12 lists only `GET /api/runs/:id/stream`; no source names the inbox stream's path | PRD §10, §12; backlog 4.3, `04` §9 |
 
 ## Outbound calls (Slack Web API)
 
 | Call | When | Source |
 |---|---|---|
 | `chat.postMessage` | The escalation job posts a still-pending question | PRD §10 |
-| `chat.update` | Web answer, Slack answer, undo | PRD §10, backlog 6.2 |
+| `chat.update` | Web answer (PRD §10); Slack answer and undo (backlog 6.2, 4.4; `04` §10) | PRD §10, backlog 4.4, 6.2, `04` §10 |
 | A modal with `plain_text_input` | A `text` or `number` question's button is pressed | PRD §10 |
 
-The PRD names only `chat.postMessage` and `chat.update`. Opening a modal needs one more Slack call, which no source names.
+The PRD names only `chat.postMessage` and `chat.update`. Opening a modal needs one more Slack call, which no source names (Slack API knowledge, not in the sources).
 
 ## Proposed
 
@@ -34,7 +34,7 @@ The PRD names only `chat.postMessage` and `chat.update`. Opening a modal needs o
 
 | Endpoint | Why | OQ |
 |---|---|---|
-| `GET /api/settings`, `PATCH /api/settings` with the threshold | Nudge timing is a setting (feature map §19, backlog 8.3) but PRD §12 has no settings route. Same endpoint [[Cost API And Routes]] proposes for draft mode. Field name and unit wait on #2 (`escalation_threshold_ms` in `04` §10 and backlog 6.1; minutes in backlog 8.3 and `06` §15). | #17, #2 |
+| `GET /api/settings`, `PATCH /api/settings` with the threshold | The threshold is a setting in `04` §10, `06` §15 and backlog 6.1, 8.3 (feature map §19's *Nudge timing*), but PRD §12 has no settings route, and PRD §10 fixes the value. The same pair is proposed by Cost And Control, Settings And Plumbing, Memory and Sandboxing, as one settings object ([[Settings And Plumbing API And Routes]], [[Settings And Plumbing Open Questions]] #2). Field name and unit wait on #2 (`escalation_threshold_ms` in `04` §10 and backlog 6.1; minutes in backlog 8.3 and `06` §15); Settings And Plumbing's proposed schema stores `escalation_threshold_ms` ([[Settings Data Model]]). | #17, #2 |
 | No new route for Socket Mode | If Slack moves to Socket Mode, `POST /api/slack/interactions` goes away and the worker holds the socket | #6 |
 
 ## Related
@@ -43,3 +43,4 @@ The PRD names only `chat.postMessage` and `chat.update`. Opening a modal needs o
 - [[Resolve Everywhere]]
 - [[Human In The Loop API And Routes]]
 - [[Escalation Runtime]]
+- [[Settings And Plumbing API And Routes]]

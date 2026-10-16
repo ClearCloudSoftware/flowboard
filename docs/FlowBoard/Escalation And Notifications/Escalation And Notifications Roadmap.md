@@ -18,7 +18,7 @@ module: Escalation And Notifications
 | First write wins; loser told *"already answered by <channel>"* | PRD §10, backlog 6.2 |
 | `chat.update` on web answer (PRD §10), Slack answer and undo (backlog 6.2, `04` §10) | PRD §10, backlog 6.2, `04` §10 |
 | SSE snapshot so Slack answers repaint the inbox | PRD §10, backlog 4.3 |
-| Escalation threshold as a setting | backlog 6.1, 8.3 (**PRD/NEW**) |
+| Escalation threshold as a setting (beyond the PRD, which fixes 5 minutes) | backlog 6.1, 8.3 (**PRD/NEW**); `04` §10, `06` §15 |
 | Cancel a failed run's pending questions so they stop escalating | `04` §9, backlog 3.2 (**PRD/BUG**) |
 
 Acceptance (PRD §16): *"Leaving a question for 5 minutes posts it to Slack; answering in Slack updates the web UI live, and vice versa"*. Backlog Story 10.1: *"5‑min Slack escalation both directions (live)."*
@@ -28,7 +28,7 @@ Acceptance (PRD §16): *"Leaving a question for 5 minutes posts it to Slack; ans
 | Item | Tag | Source |
 |---|---|---|
 | Run once against a real Slack workspace | **GAP** | backlog 6.3 |
-| Failed runs' questions keep escalating | **BUG** | backlog 3.2 |
+| Failed runs' questions keep escalating | **PRD/BUG** | backlog 3.2 |
 | One stream instead of three pollers | **BUG (perf)** | backlog 4.3 |
 | Undo: keep or drop | **DEC** | backlog 4.4, D2 |
 
@@ -49,7 +49,7 @@ Acceptance (PRD §16): *"Leaving a question for 5 minutes posts it to Slack; ans
 |---|---|
 | **Nudge the right person** — the assignee's own DM | feature map §13 💡 |
 | **An escalation ladder** — backup or lead after a second wait | feature map §13 💡 |
-| **More channels** — *"chat, email, or other channels"* (feature map §13); Discord, email, webhook, desktop (architecture README, drawio) | feature map §13, architecture README, drawio |
+| **More channels** — a feature in feature map §13 (*"chat, email, or other channels"*), not a 💡, but beyond the PRD's one Slack adapter; Discord, email, webhook, desktop (architecture README, drawio) | feature map §13, architecture README, drawio |
 | A *"my inbox"* filter and a shared pool to claim from | feature map §12 💡 |
 | A trends dashboard including *"how fast questions get answered"* | feature map parking lot |
 
@@ -62,7 +62,7 @@ See [[Personal Routing And Ladders]] and [[Notification Channels]].
 | Authentication, user accounts, roles | PRD §2, §17 |
 | Multi-machine support | PRD §17 |
 | Notifications for anything other than a waiting decision | not in any source; see [[Escalation Scope]] |
-| Starting tasks from a Slack message | feature map parking lot; Intake, not this component |
+| Starting tasks from a Slack message | feature map parking lot; Intake, not this component ([[Future Task Sources]]) |
 
 ## Related
 

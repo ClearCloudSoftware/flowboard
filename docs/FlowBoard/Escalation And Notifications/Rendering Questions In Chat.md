@@ -26,7 +26,7 @@ How an escalated question looks in the channel.
 Backlog 6.2 summarises: *"Per‑kind blocks (buttons / `multi_static_select` + submit / modal `plain_text_input`)"*.
 
 > [!warning] "The same controls"
-> The inbox guide promises more than the PRD delivers: *"posted to your chat tool with the same controls on it"*, and a shape *"looks and behaves the same everywhere you might answer it — here, or in chat."* The monitor guide: *"with the same buttons"*. In Slack, text and number go through a modal, and a number arrives as plain text. Nothing says how a number answer from Slack is validated. See [[Escalation And Notifications Open Questions]] #5.
+> The inbox guide promises more than the PRD delivers: *"posted to your chat tool with the same controls on it"*, and a shape *"looks and behaves the same everywhere you might answer it — here, or in chat."* The monitor guide: *"with the same buttons"*. Feature map §11: *"One shared question format — A simple set of shapes (yes/no, pick-one, pick-many, free text, a number) that looks and works the same everywhere you might answer."* In Slack, text and number go through a modal, and a number arrives as plain text. Nothing says how a number answer from Slack is validated. See [[Escalation And Notifications Open Questions]] #5.
 
 ## What the message carries
 

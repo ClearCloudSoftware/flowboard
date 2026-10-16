@@ -23,7 +23,7 @@ Both ideas need to know who a question is for. The sources have pieces of that:
 
 | Piece | Source |
 |---|---|
-| Inbox mockup: `who: 'you'` or `who: 'dana'` on each item; a *"waiting on dana"* label; a *mine / all* filter | `inbox.html` |
+| Inbox mockup: `who: 'you'` or `who: 'dana'` on each item; a *"waiting on dana"* label; a *Waiting on me* / *Everyone* filter (`mine` / `all`) | `inbox.html` |
 | *"A "my inbox" filter — each teammate sees only what is waiting on them."* | feature map §12 💡 |
 | "Teams & collaboration — … identities for the people involved, light roles and permissions … and a *who* stamped on every human approve/reject/answer in the record." | feature map *Across everything* |
 | *"Local-collab first — named people, assignees, and per-person routing need no accounts server"* | feature map *Across everything* 💡 |

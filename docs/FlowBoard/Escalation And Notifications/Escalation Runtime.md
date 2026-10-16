@@ -18,7 +18,7 @@ Where escalation code lives and how a question moves through it.
 | The escalation timer: the job loop that runs `escalate_question` | `apps/worker` (*"job loop, runner, ask_user broker, escalation timer"*) | PRD §3 |
 | `POST /api/slack/interactions`, `POST /api/questions/:id/answer` | `apps/web` route handlers, thin | PRD §12 |
 
-No source says where the skip rules (*"skip if already answered or posted"*) live. `07` puts the answered check inside `escalate()`, the job's own function.
+No source says where the skip rules (*"skip if already answered or posted"*) live. `07` puts the answered check inside `escalate()`, the job's own function. Nor does any source say who enqueues the job: PRD §10 says only *"When a question is inserted"*, and the broker is the one inserting (PRD §9), so the diagram below puts the enqueue there. That is an inference.
 
 *"the domain (flow engine, board projection, question protocol, cost ledger) depends only on **ports**; everything provider-specific is an **adapter** behind one."* (architecture README).
 

@@ -34,11 +34,11 @@ The schema has nowhere to record an escalated gate or failure. The Human In The 
 
 ## What is never a notification
 
-No source sends a notification for a run starting, finishing or failing, or for a task finishing. A failure card escalates (above) because it is a stop waiting on you, not a *run failed* ping. The one non-question alert in the sources is a feature-map idea, *"A team budget — give a team a monthly cap and alert its lead as it fills."* (§18), which belongs to Cost And Control. The parking-lot idea *"A trends dashboard — throughput over time, how fast questions get answered"* is a dashboard, not a notification.
+No source sends a notification for a run starting, finishing or failing, or for a task finishing. A failure card escalates (above) because it is a stop waiting on you, not a *run failed* ping. The one non-question alert in the sources is a feature-map idea, *"A team budget — give a team a monthly cap and alert its lead as it fills."* (§18), which belongs to Cost And Control. The parking-lot idea *"A trends dashboard — throughput over time, how fast questions get answered, cost per feature."* is a dashboard, not a notification.
 
 > [!note] Not this component
-> - In the capability library mockup, a sample agent's *used by* list includes a step named `notify` in a flow called *Release and rollback* (`capability-library.html`). That is a step in someone's flow, not FlowBoard notifying anyone.
-> - *"Kick off work from outside — start a task straight from a GitHub issue, a Slack message, or on a schedule."* (feature map parking lot) is inbound task intake, the [[Component Documentation Tracker|Intake And Import]] component's territory.
+> - In the capability library mockup, the `scribe` agent's *used by* list includes a step named `notify` in a flow called *Release and rollback* (`capability-library.html`). That is a step in someone's flow, not FlowBoard notifying anyone.
+> - *"Kick off work from outside — start a task straight from a GitHub issue, a Slack message, or on a schedule."* (feature map parking lot) is inbound task intake, the Intake And Import component's territory ([[Future Task Sources]]).
 
 ## Related
 

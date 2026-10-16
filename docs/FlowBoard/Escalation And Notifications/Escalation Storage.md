@@ -19,10 +19,15 @@ module: Escalation And Notifications
 
 ## Secrets
 
-The tokens are host-side only. The sandbox mounts list *"never : ~/.ssh, cloud credentials, flowboard.db, docker.sock"* (drawio *Harness architecture*), and the agent never talks to Slack: the worker posts, and the web app receives interactions (PRD §3, §12).
+The tokens are host-side only. The sandbox mounts list *"never: ~/.ssh, cloud credentials, flowboard.db, docker.sock"* (drawio *Harness architecture*); PRD §11.1: *"Never mount host secrets (`~/.ssh`, cloud credentials), the host DB, or the Docker socket."* The agent never talks to Slack: the worker posts, and the web app receives interactions (PRD §3, §12). See [[Sandbox Mounts]].
+
+**Inference:** `.env.local` sits in FlowBoard's own directory, and a sandbox mounts only the task worktree, the step's plugin dirs and the ask socket (PRD §11.1, drawio), so the Slack secrets never reach a sandbox. No source says this about `.env.local` directly.
+
+> [!note] Slack is not on the egress allowlist (inference)
+> The sandbox allowlist holds *"the model endpoint and the package registries a build needs"* (PRD §11.1). Slack is not on it, and need not be: the Slack calls are made by host processes (the worker posts, PRD §3; `apps/web` receives interactions, PRD §12), outside any sandbox, the same host-side reasoning the sources apply to the `ask_user` broker and memory. No source mentions Slack in an egress context, or says which process makes the `chat.update` call. See [[Egress Allowlist]] and [[Host-Side Brokers]].
 
 > [!note] Settings vs env
-> The threshold lives in `settings`, editable at runtime. The channel and tokens live in `.env.local` (PRD §10); no source says when they are read. No source puts channel choice in `settings`.
+> The threshold lives in `settings` (where it is a setting at all; see [[Escalation Threshold]]), though no route edits it yet. The channel and tokens live in `.env.local` (PRD §10); no source says when they are read. No source puts channel choice in `settings`.
 
 ## What leaves the machine
 
@@ -33,3 +38,5 @@ Only the message. The rule allows task title and question text; the interface al
 - [[Escalation Data Model]]
 - [[Slack Adapter]]
 - [[Human In The Loop Storage]]
+- [[Environment And Configuration]]
+- [[Egress Allowlist]]

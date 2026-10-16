@@ -12,19 +12,19 @@ Every place the sources disagree or leave a gap. Proposals are marked; none is i
 | Timing | #1, #2, #19, #21 |
 | Scope | #3, #4 |
 | Rendering and content | #5, #14 |
-| Transport, identity and races | #6, #10, #12 |
-| The port and channels | #7, #9, #11 |
+| Transport, identity and races | #6, #10, #12, #22 |
+| The port and channels | #7, #9, #11, #22 |
 | Data | #8, #16 |
 | Failure handling | #13 |
 | UI and settings | #15, #17, #18, #20 |
 
 ### 1. 5 or 10 minutes?
 
-5 minutes: PRD §10, §14 M6, §16; `04` §10; backlog 6.1 and 10.1; every drawio page; old brief and handoff. 10 minutes: `inbox.html` (`ESCALATE = 10 * MIN`), `inbox-guide.html`, `monitor.html:731`, mockups README. It is only the default, since the value is a setting. Same as HITL #18, Monitor #9. See [[Escalation Threshold]].
+5 minutes: PRD §10, §14 M6, §16; `04` §10; backlog 6.1 and 10.1; every drawio page; old brief and handoff. 10 minutes: `inbox.html` (`ESCALATE = 10 * MIN`), `inbox-guide.html`, `monitor.html:731`, mockups README. It is only a default where the value is a setting (`04` §10, `06` §15, backlog 6.1, 8.3); PRD §10 fixes it at 5. Same as HITL #18, Monitor #9, Settings And Plumbing #6. See [[Escalation Threshold]].
 
 ### 2. Milliseconds or minutes?
 
-`escalation_threshold_ms` in `04` §10 and backlog 6.1; *"escalation threshold (minutes)"* in `06` §15 and *"in minutes"* in backlog 8.3. **Proposal:** store milliseconds, show minutes.
+`escalation_threshold_ms` in `04` §10 and backlog 6.1; *"escalation threshold (minutes)"* in `06` §15 and *"in minutes"* in backlog 8.3. **Proposal:** store milliseconds, show minutes (also the proposal in [[Settings Data Model]], with the old prototype's 1–30 minute range).
 
 ### 3. Questions only, or gates, failures and escalated loops too?
 
@@ -60,7 +60,7 @@ PRD §10 wants the repaint to show *"by whom"*; `updateResolved(ref, by)` carrie
 
 ### 11. Repainting a cancelled or expired question
 
-`updateResolved` is the only repaint. When a run fails, pending questions are cancelled *"so they stop escalating"* (`04` §9); when a task is cancelled, too (backlog 2.1). But a message already in Slack keeps its live buttons. `expired` is never set (backlog 1.1, **BUG**). **Proposal:** call `updateResolved(ref, 'cancelled')`, or add an `updateCancelled(ref, reason)` method. See [[Escalation Lifecycle]].
+`updateResolved` is the only repaint. When a run fails, pending questions are cancelled *"so they stop escalating"* (`04` §9); when a task is cancelled, too (backlog 2.1). But a message already in Slack keeps its live buttons. `expired` is never set (backlog 1.1, **BUG**). Same as HITL #17. **Proposal:** call `updateResolved(ref, 'cancelled')`, or add an `updateCancelled(ref, reason)` method. See [[Escalation Lifecycle]].
 
 ### 12. What does the loser of a race see?
 
@@ -80,11 +80,11 @@ Old handoff 1e: *"No colour flash, no toast, no motion beyond the opacity change
 
 ### 16. "Only writer of questions"
 
-PRD §9: the broker *"is the only writer of the `questions` table"*. Web answers, Slack answers and the escalation job's `saveRef` also write it. First-write-wins needs every answer to go through one conditional UPDATE. Not reconciled. See [[Escalation Runtime]].
+PRD §9: the broker *"is the only writer of the `questions` table"*; `04` §9, `08` (*"which alone writes `questions`"*) and the drawio broker card (*"only writer of questions"*) repeat it. Web answers, Slack answers and the escalation job's `saveRef` also write it. First-write-wins needs every answer to go through one conditional UPDATE. Not reconciled. Same as HITL #36. See [[Escalation Runtime]].
 
 ### 17. No settings route
 
-The threshold is a setting (feature map §19, backlog 8.3), but PRD §12 has no settings endpoint. **Proposal:** `GET` / `PATCH /api/settings`, shared with [[Cost API And Routes]]. See [[Escalation API And Routes]].
+The threshold is a setting in `04` §10, `06` §15 and backlog 6.1 and 8.3 (feature map §19 names it *Nudge timing*), but PRD §12 has no settings endpoint, and PRD §10 fixes the value at 5 minutes. **Proposal:** `GET` / `PATCH /api/settings`, shared with [[Cost API And Routes]], [[Settings And Plumbing API And Routes]], [[Memory API And Routes]] and [[Sandboxing API And Routes]]; tracked as [[Settings And Plumbing Open Questions]] #2. See [[Escalation API And Routes]].
 
 ### 18. Undo and the chat message
 
@@ -100,7 +100,11 @@ The old handoff ramps colour, collapses escalated batches by default (*"asserted
 
 ### 21. Does the run park before or after escalation?
 
-PRD §9 holds the agent's call open for 20 minutes before parking; the inbox guide's diagram draws *parked* before *escalated*. Same as Monitor #8. See [[Escalation Lifecycle]].
+PRD §9 holds the agent's call open for 20 minutes before parking; the inbox guide's diagram draws *parked* before *escalated*. Same as HITL #5 and Monitor #8. See [[Escalation Lifecycle]].
+
+### 22. How does a Slack interaction reach the adapter?
+
+The port has no inbound method (`01-ports.md`, `notifier.ts`). Signature verification *"stays in the adapter"* (`04` §10; `notifier.ts`: *"the adapter only renders and verifies signatures"*). But the route is thin and calls *"a function in `packages/core`"* (PRD §12), and `06` §15 says *"Every port is called from `src/lib/`, **never from a route**"*. No source says how the route hands the raw body and headers to the adapter's check without calling an adapter itself. **Proposal:** the route passes the raw body and headers to one core function, which asks the injected channel adapter to verify and parse, then calls the shared answer path. See [[Signed Inbound Interactions]], [[Notifier Port]].
 
 ## Related
 
