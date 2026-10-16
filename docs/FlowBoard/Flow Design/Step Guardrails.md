@@ -19,7 +19,7 @@ The flow-designer guide: *"Each field is a guardrail — the things that decide 
 | Attempts | `max_attempts` (default 3) | **Retries** (0–5) | *"How many attempts before the step gives up and fails the task."* (guide) | *"Set high on a step that fails deterministically and you pay for the same failure several times."* |
 | Approval | `advance_mode` | **Approval** | See [[Approval Gates]] | *"No gate on the last step before a merge means nothing human ever sees the result."* |
 | Sandbox | no column; `settings.sandbox_profile` is *"overridable per step"* (§11.1). Backlog 1.1 adds optional `step_defs.sandbox_profile` | **Sandbox** | *"How locked down the run is: none, a container, or a sealed container with no network."* | *"**none** on an unattended step is an agent with your machine and your keys, reading untrusted content."* |
-| Egress allowlist | no column; the allowlist is part of `settings.sandbox_profile`, *"overridable per step"* (§11.1) | — | Hosts the step's sandbox may reach. Four other mockups call it *"that step's allowlist"* | — |
+| Egress allowlist | no column; the allowlist is part of `settings.sandbox_profile`, *"overridable per step"* (§11.1) | — | Hosts the step's sandbox may reach. Four other mockups speak of a per-step allowlist (*"that step's allowlist"*, *"this step's egress allowlist"*) | — |
 | Permission mode | `permission_mode` (default `bypassPermissions`) | — | The agent CLI's permission mode | — |
 
 `docs/pitch.md` says *"Every step has a budget and a turn cap"*; in PRD §5 both are nullable with no default ([[Flow Design Open Questions]] #37).

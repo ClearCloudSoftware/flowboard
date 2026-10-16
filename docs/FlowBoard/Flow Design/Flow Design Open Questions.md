@@ -54,7 +54,7 @@ The two only differ if promote and Start are separate actions. Decision **D1** r
 
 ### 8. Can a saved version fail validation?
 
-The mockup opens with the chip reading *adopted 12 Sep* (nothing edited), yet the strip says *won't save — 1 problem* (`threat-model` needs `design.md`). A saved version should never be invalid. One can become invalid later, if the validation rules change or a capability is removed. What does the designer show for an adopted version that no longer validates, and can tasks still start on it?
+The mockup opens with the chip reading *adopted 12 Sep* (nothing edited), yet the strip says *won't save — 1 problem* (`threat-model` needs `design.md`). A saved version should never be invalid. One can become invalid later, if the validation rules change or a capability is removed. Removal protects only some versions: Remove *"is disabled while any step uses the plugin (counting each flow's latest version and any version a running task pins)"* (PRD §13), and [[Capability Library Decisions|D17]] adds *"Old, unpinned flow versions do not block removal."* So an older version that no task pins can name a skill that is gone (see [[Version Pinning]]). What does the designer show for an adopted version that no longer validates, and can tasks still start on it?
 
 ## Steps
 
@@ -95,7 +95,7 @@ Backlog Story 1.1 adds an optional `step_defs.sandbox_profile` override. PRD §1
 
 The monitor and the inbox offer **Allow host & retry**, which *"adds api.stripe.com to this step's egress allowlist"* so that *"the next task down this flow will not pay the same toll"*. That changes a step definition from outside the designer. Does it create a flow version? Partly answered: the PRD keeps the allowlist in `settings.sandbox_profile` (*"tier, image, egress allowlist, limits"*), *"overridable per step"* (§11.1, `PRD.MD:515`), so a per-step allowlist is expected. Whether that override lives on the flow version is still open.
 
-The flow designer cannot show or edit it. Four other mockups speak of a per-step list: the capability library (*"a step using it will still fail closed until you add the host it needs to that step's allowlist"*), the monitor (sample task *"Default-deny egress allowlist, per step"*), the inbox and task detail (*"npmjs.org is now on this step's allowlist"*). The flow-designer inspector has a **Sandbox** select and no allowlist field. Which list a step uses (global, replaced or merged per step) is [[Sandboxing Open Questions]] #10. See [[Egress Allowlist]] and [[Egress Denials]].
+The flow designer cannot show or edit it. Four other mockups speak of a per-step list: the capability library (*"a step using it will still fail closed until you add the host it needs to that step's allowlist"*), the monitor (sample task *"Default-deny egress allowlist, per step"*), the inbox (*"api.stripe.com was not on this step's allowlist"*) and task detail (*"npmjs.org is now on this step's allowlist"*). The flow-designer inspector has a **Sandbox** select and no allowlist field. Which list a step uses (global, replaced or merged per step) is [[Sandboxing Open Questions]] #10. See [[Egress Allowlist]] and [[Egress Denials]].
 
 ### 15. Model ids and effort values
 
@@ -135,7 +135,12 @@ PRD §6: every `requires` entry *"is produced by some ancestor step in the DAG"*
 
 ### 23. "Exactly one entry" or "exactly one producer"?
 
-Backlog Story 5.1: *"every `requires` produced by an ancestor, exactly one entry, known types"*. `02` §2: *"exactly one producer; known types"*. These read as two rules: one entry step (the PRD's `is_entry` column and the backlog inspector field *entry*), and one producer per artifact type. The mockup checks neither. It takes the first step with no incoming route as the entry and flags every other such step as unreachable. See [[Flow Validation]].
+Backlog Story 5.1: *"every `requires` produced by an ancestor, exactly one entry, known types"*. `02` §2: *"every `requires` entry is produced by some ancestor; exactly one producer; known types"*. 5.1's *"exactly one entry"* reads two ways:
+
+- **One entry step.** Backlog Story 8.2's inspector lists a field *entry* (*"advance mode, entry, requires"*), and the PRD has an `is_entry` column. On this reading the two sources state two rules: one entry step, and one producer per artifact type.
+- **Each `requires` entry.** `02` §2 has *"exactly one producer"* where 5.1 has *"exactly one entry"*, so 5.1 may mean that each `requires` entry has exactly one producer.
+
+[[Execution Open Questions]] #65 weighs the same two readings. The mockup checks neither. It takes the first step with no incoming route as the entry and flags every other such step as unreachable. See [[Flow Validation]].
 
 ### 24. Artifact type keys or filenames?
 

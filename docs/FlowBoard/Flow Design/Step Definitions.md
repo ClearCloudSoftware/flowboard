@@ -36,7 +36,7 @@ Each source lists a different subset of fields. ✓ = present.
 | Produces | `produces` | produces | ✓ | **produces** | [[Artifact Contract]] |
 | Board order | `board_order` | — | — | — | [[Canvas Layout And Board Order]] |
 | Entry | `is_entry` | entry | — | — | [[Flow Validation]] |
-| Position | — | *Decide* (backlog 8.2) | *Don't persist* (D4) | `x`, `y` | [[Canvas Layout And Board Order]] |
+| Position | — | *Decide* (backlog 8.2) | — | `x`, `y` | Drawio card *D4 · Don't persist node positions*; [[Canvas Layout And Board Order]] |
 
 Bold = control label in the flow-designer mockup. *limits\** = the generic word in backlog 8.2 and the drawio card (*"Skill or Agent → model, effort, advance mode, requires, produces, limits."*). Which columns it covers is inferred. Backlog 8.2 lists allowed tools separately.
 

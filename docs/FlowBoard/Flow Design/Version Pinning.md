@@ -65,6 +65,7 @@ Backlog D1's *default recommendation* (not yet decided) is an explicit Start but
 - **Board columns.** The board takes its columns from *"the project's active flow ordered by `board_order`"* (PRD §13). A task pinned to an older version can be on a step the active version no longer has. No source says where that card sits.
 - **The monitor shows one version.** The monitor mockup's topbar shows a single `v4`. A mixed fleet of v4 and v5 tasks is not designed.
 - **Archived versions.** `flows.is_archived` exists (PRD §5). Archiving a version tasks still pin is not covered.
+- **Old versions and capability removal.** Removing a plugin *"is disabled while any step uses the plugin (counting each flow's latest version and any version a running task pins)"*, and an update *"is refused if it drops one a step uses"* (PRD §13). [[Capability Library Decisions|D17]] counts *"each flow's latest version, plus any flow version pinned by a non-terminal task"*: *"Old, unpinned flow versions do not block removal."* An older version that no task pins is therefore unprotected. Inference: re-adopting it can give a version that names a removed skill and no longer validates ([[Flow Design Open Questions]] #8).
 
 ## Related
 

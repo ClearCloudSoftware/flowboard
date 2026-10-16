@@ -14,7 +14,7 @@ The flow-designer guide's lede: *"the screen refuses to save a recipe that can't
 | **Inputs are produced upstream** | *"every `requires` entry is produced by some ancestor step in the DAG. Reject the save with a clear error if not."* | Blocks save | PRD §6; `02` §2; backlog 5.1 | ✓ |
 | **Every step is reachable** | *"A step with nothing leading into it would never run, so it is flagged rather than silently ignored."* | Blocks save (mockup) | flow-designer guide | ✓ |
 | **Exactly one producer** | *"exactly one producer"* | Blocks save | `02` §2 | — |
-| **Exactly one entry** | *"exactly one entry"* | Blocks save | backlog Story 5.1 | — (entry inferred) |
+| **Exactly one entry** | *"exactly one entry"* (one entry step, or one producer per `requires` entry: [[Flow Design Open Questions]] #23) | Blocks save | backlog Story 5.1 | — (entry inferred) |
 | **Known types** | *"known types"* | Blocks save | `02` §2; backlog 5.1 | — |
 | **Capability contract** | *"every knob a step uses is supported by its target provider"* | *"a design-time warning"* (`01-ports.md`) | `02` §2; `01-ports.md` | — |
 | **Provider match** | *"validation checks the pack's provider matches the step's provider"* | None given (`05`); *"the recipe will not save"* (capability-library guide). **Moot in v1**, which is Claude-only ([[Capability Library Decisions\|D1]]) | `05` §13 | — |
