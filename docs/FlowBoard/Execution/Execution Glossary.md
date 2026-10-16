@@ -49,7 +49,7 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 | **Rework** | An `on_fail` edge to an earlier step: same instance, `attempts++`, a new run | PRD §8, `02` §3 |
 | **Escalate** ⚠ | (1) Engine: a spent or stuck loop parks the target at `awaiting_approval`, task `blocked` (PRD §8). (2) Notifier: post a pending question to Slack after a timer (PRD §10). | [[Loop Guard And Escalation]] |
 | **Park** | Exit the agent process with state saved; the run becomes `parked` | PRD §9 |
-| **Resume** | A new `start_run` with `--resume <session> --fork-session` | PRD §9 |
+| **Resume** | A new `start_run` with `--resume <session> --fork-session`. The drawio *Flow engine* card instead says *"park / resume via prompt replay"*, the context-replay path ([[Prompt Assembly]]) | PRD §9; drawio card `engine-3` |
 | **Stop** ⚠ | (1) Kill one run's process (PRD §13, `03` §8). (2) Monitor guide: *"Ends that run now. It is recorded as failed"*. (3) At a gate *"the task stops here and asks for you"* (monitor guide). | [[Stopping And Cancelling]] |
 | **Cancel** | End a task: stop runs, cancel questions, skip instances | backlog 2.1 |
 

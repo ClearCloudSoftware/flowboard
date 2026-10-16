@@ -200,7 +200,7 @@ PRD §7's completion rule: non-zero → `failed`. Its shell paragraph: *"a resul
 Downstream steps are re-instantiated on rework (`02` §3), so the previous failed `check` run sits on an earlier instance. How the fingerprint lookup crosses instances is not stated. → [[Stuck Detection And Fingerprints]]
 
 ### 59. Escalation delay: 5 or 10 minutes
-PRD §10, the drawio and backlog 6.1 (`settings.escalation_threshold_ms`, default 5 min): 5 minutes. The inbox mockup: *"escalation after 10m"*. Same as [[Settings And Plumbing Open Questions]] #6 and [[Human In The Loop Open Questions]] #18. → [[Job Queue]]
+PRD §10, the drawio and backlog 6.1 (`settings.escalation_threshold_ms`, default 5 min): 5 minutes. 10 minutes: `inbox.html` (`ESCALATE = 10 * MIN`), `inbox-guide.html` (*"escalation after 10m"*, *"Ten minutes without an answer"*), `monitor.html:731` (`> 10 * MIN`) and the mockups README (*"crosses the ten-minute threshold"*). Same as [[Escalation And Notifications Open Questions]] #1 (the full source list), [[Monitor Open Questions]] #9, [[Settings And Plumbing Open Questions]] #6 and [[Human In The Loop Open Questions]] #18. See [[Escalation Threshold]]. → [[Job Queue]]
 
 ### 60. Cleanup after failure
 PRD §11 offers cleanup once `done` or `cancelled`; feature map §14 and the task-detail guide say *"finished or cancelled"*. Backlog 2.1, `05` §11 and `workspace.ts` add `failed`. The task-detail mockup draws the button only once every step is done. Same as [[Workspaces Open Questions]] #11 and [[Task Detail Open Questions]] #13. → [[Execution Storage]], [[Cleaning Up A Workspace]]
@@ -218,7 +218,7 @@ PRD §7 *Sandboxed runs*: *"inside the task's container"*. PRD §11.1: *"one per
 PRD §8 says *"approve means pass"* only for the no-outcome gate. `02` §3 and backlog 5.2 add *"Approve overrides the agent's `fail` outcome"*; backlog 10.2 lists *"approve overrides outcome"* as a README deviation. Feature map §4 (*"**Your call wins** — If you approve or reject a step, your decision overrides whatever the agent concluded"*) and drawio harness concept 8 (*"Your call overrides the agent's."*) side with `02` §3. → [[Advancement Rules]]
 
 ### 65. How many entry steps
-Backlog 5.1's validation says *"exactly one entry"*; `02` §2 states the same rule as *"exactly one producer"*, so "entry" there most likely means each `requires` entry. Whether a flow may have several entry steps is not stated. → [[Starting A Task]]
+Backlog 5.1's validation says *"exactly one entry"*. Backlog 8.2's inspector lists a field *"entry"* (beside *"advance mode"* and *"requires"*), which supports reading 5.1 as one entry step, with the PRD's `is_entry` column. `02` §2 has *"exactly one producer"*, which allows reading "entry" as each `requires` entry instead. Same as [[Flow Design Open Questions]] #23, which reads them as two rules: one entry step and one producer per artifact type. → [[Starting A Task]]
 
 ## Added on the second grounding review
 
@@ -238,7 +238,7 @@ PRD §12 puts *"create worktree"* in the promote route (`apps/web`). The drawio 
 The drawio's *Life of one step* A: *"You press Start, or the engine advances a task. A server action validates the request."* In B, Next.js writes the rows and the `start_run` job. But `advance_task` is a worker job (PRD §8), so an engine advance involves no server action and no web write. **Inferred:** A and B describe Start only; after an advance the worker enqueues the next `start_run` itself. → [[Life Of One Step]]
 
 ### 71. Proving the no-outcome gate on the seeded flow
-PRD §14 M5 wants *"a run that sets no outcome stops at a gate instead of passing"*. In the seeded flow `check` is a shell step and always has an outcome; `review` is the only AI step with conditional edges, and its own approval gate fires first. So no seeded step shows a distinct *"no outcome reported"* gate, and no source names the test flow or fixture that would. → [[Seeded Flow Execution]]
+PRD §14 M5 wants *"a run that sets no outcome stops at a gate instead of passing"*. In the seeded flow `check` is a shell step and always has an outcome; `review` is the only AI step with conditional edges, and its own approval gate fires first. If Approve writes `pass` (`02` §3, feature map §4; see #64), no seeded step shows a distinct *"no outcome reported"* gate. Read literally, PRD §8 shows it only after a silent `review` is approved, as a second gate on the same step. No source names the test flow or fixture that would prove the gate on its own. → [[Seeded Flow Execution]]
 
 ### 72. Test runner: `tsx --test` or vitest
 Backlog 0.2 (**FIX**): *"`pnpm test` = `tsx --test --test-concurrency=1` on a throwaway `VIBE_DB_PATH`"*. The drawio *Test lane*: *"vitest on engine rules, fingerprinting and the prompt builder"*. Same as [[Settings And Plumbing Open Questions]] #27. → [[Execution Testing]]

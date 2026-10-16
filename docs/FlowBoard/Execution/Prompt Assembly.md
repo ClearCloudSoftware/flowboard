@@ -42,7 +42,7 @@ The memory side is in [[Recalled Memory In The Prompt]] and [[Memory Recall]].
 
 ## What changes on resume
 
-After a park, the resume prompt contains the answers (PRD §9). Backlog Story 3.2 (**BUG**): *"Resume prompt must repeat the requires/produces paths, not only the answers."* `03` §6 repeats it. A provider without `resume_fork` gets the same thing by design: *"context-replay (re-inject requires/produces + answers into a fresh prompt — which the spec already does anyway)"* (`01-ports.md`). Which part holds the answers is not stated. The HITL side is in [[Ask Park And Resume]]; the provider side in [[Session Resume And Context Replay]].
+After a park, the resume prompt contains the answers (PRD §9). Backlog Story 3.2 (**BUG**): *"Resume prompt must repeat the requires/produces paths, not only the answers."* `03` §6 repeats it. A provider without `resume_fork` gets the same thing by design: *"context-replay (re-inject requires/produces + answers into a fresh prompt — which the spec already does anyway)"* (`01-ports.md`). The drawio *Flow engine* card (`engine-3`) describes only this path: *"Advance modes / auto · wait for approval · wait for answers (park / resume via prompt replay)."* PRD §9 resumes with *"`--resume <claude_session_id> --fork-session`"* instead. Which part holds the answers is not stated. The HITL side is in [[Ask Park And Resume]]; the provider side in [[Session Resume And Context Replay]].
 
 ## Design idea behind it
 

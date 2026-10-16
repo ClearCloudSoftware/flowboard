@@ -67,7 +67,7 @@ No source spells out the steps. From the drawio *Life of one step*:
 2. Create a `pending` step instance for every step definition with `is_entry = 1`.
 3. Enqueue one `start_run` job per entry instance.
 
-How many entry steps a flow may have is not settled. Backlog 5.1's validation lists *"exactly one entry"*, but `02` §2 states the same rule as *"exactly one producer"*, so "entry" there most likely means each `requires` entry, not the flow's entry step ([[Execution Open Questions]] #65). The seeded flow starts at `research`. See [[Step Definitions]].
+How many entry steps a flow may have is not settled. Backlog 5.1's validation lists *"exactly one entry"*, and backlog 8.2's inspector has a field *"entry"*, which supports reading it as one entry step; [[Flow Design Open Questions]] #23 reads it so. `02` §2 states a similar rule as *"exactly one producer"*, which allows the other reading, one producer per `requires` entry ([[Execution Open Questions]] #65). The seeded flow starts at `research`. See [[Step Definitions]].
 
 ## Going back
 

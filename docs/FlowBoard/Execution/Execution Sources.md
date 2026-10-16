@@ -11,7 +11,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 > These notes follow the sources as of commit `1787d20` (2026-10-15), on `dev`. They were corrected after an independent grounding pass on the same date, and again after a second grounding pass (2026-10-15) that also aligned them with the Agent Providers, Sandboxing, Workspaces, Memory, Intake And Import, Projects and Settings And Plumbing sets.
 
 > [!info] No mockup of its own
-> Execution has no screen. The tracker lists its mockup as *"partial (via task detail)"*. Its visible behaviour was gathered from the mockups and guides listed below.
+> Execution has no screen. The tracker lists its mockup as *"partial (via task detail) — also `monitor`, `inbox`, `flow-designer`"*. Its visible behaviour was gathered from the mockups and guides listed below.
 
 ## Primary
 
@@ -71,6 +71,8 @@ The sets written since, overlapping execution:
 | [[Intake And Import Index]] | tasks entering the board; the `import_backlog` job |
 | [[Settings And Plumbing Index]] | draft mode, settings keys, process topology, [[Settings And Plumbing Open Questions]] |
 | [[Projects Index]] | `repo_path`, `check_command` |
+| [[Cost And Control Index]] | the draft-mode rule applied at launch ([[Draft Mode]]), live cost and wasted spend ([[Live Cost]], [[Wasted Spend]]) |
+| [[Escalation And Notifications Index]] | the `escalate_question` job and its delay: [[Escalation Timer]], [[Escalation Threshold]], [[Escalation And Notifications Open Questions]] |
 
 ## Related
 

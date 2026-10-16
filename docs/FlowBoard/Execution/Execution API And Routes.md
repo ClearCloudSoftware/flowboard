@@ -13,7 +13,7 @@ module: Execution
 |---|---|---|
 | `POST` | `/api/tasks/:id/promote` | *"backlog -> todo, pin flow, create worktree"* |
 | `POST` | `/api/tasks/:id/cancel` | stop runs, cancel questions, skip instances (backlog 2.1) |
-| `POST` | `/api/step-instances/:id/approve` | outcome pass (*"approve means pass"*, PRD §8); enqueueing `advance_task` is inferred |
+| `POST` | `/api/step-instances/:id/approve` | outcome pass: *"Approve overrides the agent's `fail` outcome (human wins)"* (`02` §3). PRD §8 says *"approve means pass"* only of the no-outcome gate ([[Execution Open Questions]] #64). Enqueueing `advance_task` is inferred |
 | `POST` | `/api/step-instances/:id/reject` | outcome fail + reason; *"reject with no `on_fail` edge fails the task"* (`02` §3, backlog 5.2). Backlog 2.3: the UI must send the reason. |
 | `POST` | `/api/step-instances/:id/retry` | one more attempt with a note (PRD §8) |
 | `POST` | `/api/questions/:id/answer` | may enqueue a resume `start_run` (PRD §9) |

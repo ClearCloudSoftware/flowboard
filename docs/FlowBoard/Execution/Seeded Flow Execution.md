@@ -73,7 +73,7 @@ After a rework: `implement` runs again with the failing artifact in its read-fir
 ## Points to watch
 
 - **`grill` produces `questions` and `answers`**, so a run that parks and resumes still has to write both files. The resume prompt must repeat them (backlog 3.2).
-- **`review` needs no fingerprint** but must call `set_outcome` (PRD §15). Under PRD §8's ordering, a review that sets no outcome is hidden by its own approval gate. The approval rule runs first (*"set the step instance to `awaiting_approval` and stop"*); the no-outcome check sits inside `advance_task`, which runs only after Approve, and *"approve means pass"*. So a silent review shows as an ordinary gate, never as *"no outcome reported"*. See [[Advancement Rules]].
+- **`review` needs no fingerprint** but must call `set_outcome` (PRD §15). Under PRD §8's ordering, a review that sets no outcome first stops at its own approval gate. The approval rule runs first (*"set the step instance to `awaiting_approval` and stop. It advances only when I click Approve."*); the no-outcome check sits inside `advance_task`, which runs only after Approve. PRD §8 says *"approve means pass"* only of the no-outcome gate. If Approve writes `pass` (`02` §3, feature map §4), a silent review shows as an ordinary gate, never as *"no outcome reported"*. Read literally, the PRD gates it twice: once for approval, then again with "no outcome reported" ([[Execution Open Questions]] #64, #71). See [[Advancement Rules]].
 - **`check` runs no prompt at all.** *"A `kind='shell'` step runs no model"* (PRD §7). It depends on `implement` and `tests` through edges only.
 - **`implement` is a join by definition** (three incoming edges), though its loop-back edges never block it in practice; see [[Fan-Out And Join]].
 

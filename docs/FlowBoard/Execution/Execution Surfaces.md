@@ -5,7 +5,7 @@ module: Execution
 
 # Execution Surfaces
 
-Execution has **no screen of its own**. The tracker lists its mockup as *"partial (via task detail)"*. Its state shows up on six other screens, and its controls are spread across them. This note stands in for an *Execution Screen* note; every control is in [[Execution Controls]].
+Execution has **no screen of its own**. The tracker lists its mockup as *"partial (via task detail) — also `monitor`, `inbox`, `flow-designer`"*. Its state shows up on six other screens, and its controls are spread across them. This note stands in for an *Execution Screen* note; every control is in [[Execution Controls]].
 
 ## Where execution shows
 

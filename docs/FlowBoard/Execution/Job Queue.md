@@ -36,7 +36,7 @@ CREATE INDEX jobs_ready ON jobs(state, run_after);
 
 | Kind | Enqueued by | Does | Source |
 |---|---|---|---|
-| `start_run` | Start, `advance_task`, rework, resume, infra retry | builds the command and launches one run | PRD §7, §9 |
+| `start_run` | Start, `advance_task`, resume; **inferred:** rework, infra retry | builds the command and launches one run | PRD §7, §9. PRD §8 says rework *"creates a new run"* and PRD §7 that transient failures *"retry the same attempt automatically"*; neither names the job. Using `start_run` for them is a proposal ([[Infra Retries]]). |
 | `advance_task` | a step marked `done` | *"resolves outgoing edges from the completed step definition"* | PRD §8 |
 | `escalate_question` | question insert, `run_after = now + 5 minutes` | posts to Slack if still pending | PRD §10. Backlog 6.1 and `04` §10 make the delay a setting: *"`escalate_question` at `now + settings.escalation_threshold_ms` (default 5 min); skip if answered or already posted."* The inbox mockup escalates after 10 minutes, and the monitor mockup tags needs-you items past 10 minutes ([[Execution Open Questions]] #59, [[Escalation Timer]]). |
 | `import_backlog` | `POST /api/import/backlog` | backlog import; pasted `content` *"goes to a temp file, enqueues `import_backlog` with `cleanup`, returns `{queued}`; worker deletes the temp file"* | backlog 7.3 (**NEW (uncommitted)**); [[Import Job Lifecycle]] |

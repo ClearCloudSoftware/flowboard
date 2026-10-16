@@ -23,13 +23,13 @@ What the runner does with one leased `start_run` job. Feature map §7: *"The par
 | 10 | Commit memory after a success | PRD §11.2 |
 | 11 | Hand to the engine (§8) | PRD §7 |
 
-No source lists these stages as one sequence; the order is assembled from PRD §7 and the drawio *Life of one step* C–I ([[Life Of One Step]]). The drawio puts recall (D) after building the RunSpec and prompt (C); the table puts it first because part 7 goes into the prompt.
+No source lists these stages as one sequence; the order is assembled from PRD §7 and the drawio *Life of one step* C–I ([[Life Of One Step]]). The drawio orders it differently: it puts recall (D) after building the RunSpec and prompt (C), and [[Memory Runtime]] follows that order. The table puts it first because part 7 goes into the prompt; that order is an inference. PRD §11.2 and `03` §6 say only that recall comes before the run. See [[Memory Open Questions]] #30.
 
 The drawio *Runner* card: *"builds the RunSpec · draft-mode transform · writes per-run mcp.json + settings.json (hooks) · records model, effort, tier"*.
 
 ## The illustrative code
 
-`07-ports-in-practice.md` sketches the runner touching three ports and no adapter (abridged: parameter types, two comments and the `register` fields dropped):
+`07-ports-in-practice.md` sketches the runner touching three ports and no adapter (abridged: the three `import type` lines, the parameter types, three comments and the `register` fields dropped):
 
 ```ts
 export async function runStep(deps, step, task, produces) {

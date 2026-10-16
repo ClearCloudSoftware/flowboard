@@ -75,7 +75,7 @@ The monitor guide's *"four handoff rules"* (Advance, Fan out, Join, Loop back) r
 
 - **Approval and questions together.** A step with `advance_mode='approval'` that also has unanswered questions hits rule 1 first and never reaches rule 2. Whether that is intended is not stated ([[Execution Open Questions]] #5).
 - **Approval on a failed outcome.** On an approval step whose agent set `fail`, the run still "succeeds", so rule 1 parks it for approval. Under `02` §3 Approve then overrides to pass; the PRD does not say, and the backlog calls the override a deviation ([[Execution Open Questions]] #64). The screens should show the agent's verdict at the gate.
-- **A silent approval step.** Because rule 1 comes first, a run on an approval step that sets no outcome waits at an ordinary gate, never at *"no outcome reported"*. The `review` step in the seeded flow is such a step ([[Seeded Flow Execution]]).
+- **A silent approval step.** Because rule 1 comes first, a run on an approval step that sets no outcome waits first at an ordinary gate. If Approve writes `pass` (`02` §3 *"Approve overrides…"*, feature map §4 *"Your call wins"*), `advance_task` then finds an outcome and the step never shows *"no outcome reported"*. Read literally, PRD §8 says only that the step *"advances only when I click Approve"*; the no-outcome check then runs inside `advance_task` and parks the same step a second time, now with "no outcome reported". So the PRD alone gates a silent approval step twice ([[Execution Open Questions]] #64, #71). The `review` step in the seeded flow is such a step ([[Seeded Flow Execution]]).
 - **`manual` steps.** PRD §5 allows `kind = 'manual'`; no rule says what the engine does when it reaches one. See [[Execution Open Questions]] #6.
 
 ## Related

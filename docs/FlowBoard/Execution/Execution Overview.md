@@ -25,7 +25,7 @@ The drawio *Functional components* page lists the Execution box (*"dashed = not 
 | Stop | *"kill the process"* | [[Stopping And Cancelling]] |
 | Isolate the workspace (dashed) | *"worktree per task today; devcontainer / Docker sandbox / remote host later"* | Covered by [[Workspaces Index]] and [[Task Workspace]]; the container side by [[Sandboxing Index]] |
 
-The tracker scopes the component as *"Start, run a step, advance, rework loop, split and join, stop"*, mapping to feature map §4 *The engine*, §7 *The runner*, §8 *The work queue*, and architecture components #3, #6 and #7.
+The tracker scopes the component as *"Start, run a step, advance, rework loop, split and join, stop, cancel, infra retries, loop guard"*, mapping to feature map §4 *The engine*, §7 *The runner*, §8 *The work queue*, and architecture components *"#3 Flow execution engine, #6 Runner / execution host, #7 Job queue & worker lifecycle (also #5, `08-sandboxing.md`)"*.
 
 ## Place in the system
 
@@ -65,7 +65,7 @@ On the drawio *Logical components* page these appear as **Flow engine**, **Job q
 | The board is a projection | *"The board is a projection, not the model."* (PRD §4) |
 | Sensors before autonomy | *"Check steps run real commands. The exit code is the verdict, and the raw output feeds the next attempt."* (drawio *Harness architecture*, concept 4) |
 
-The drawio *Harness architecture* page names the execution rules as two harness concepts:
+The drawio *Harness architecture* page names the execution rules as three harness concepts:
 
 - **Loop layer** (6): *"Rework edges share one attempt budget, a repeated fingerprint escalates early, infra retries stay out of the count, and a missing outcome is never a pass."*
 - **Graph layer** (7): *"A versioned DAG: one agent per step with a fresh context, parallel branches in the task's own worktree, and an adversarial review only after the check passes."*
