@@ -14,12 +14,14 @@ The drawio *Harness architecture* page traces one step from button to verdict wi
 | A | *"You press Start, or the engine advances a task. A server action validates the request."* | *"HTTP · server actions"* | [[Starting A Task]] |
 | B | *"Next.js writes the task and step rows plus a start_run job, then returns. It never spawns anything."* | *"write rows + enqueue job"* | [[Job Queue]] |
 | C | *"The worker leases the job. The engine picks the step; the runner builds the RunSpec and the prompt: contract, read-first paths, output paths."* | *"lease job"* | [[Runner Pipeline]], [[Prompt Assembly]] |
-| D | *"If memory is on, the runner recalls (capped) before launch and writes after success. Host side only."* | *"recall / write (local adapter)"* | [[Prompt Assembly]] |
-| E | *"The permission gate checks the tier; the runner writes mcp.json and the hook settings; the ExecHost starts a sandbox with the worktree at /work."* | *"docker run via ExecHost"* | [[Run Guardrails At Launch]] |
-| F | *"claude runs inside, holding only a dummy key. Every call leaves through the egress proxy, which checks the allowlist and adds the real key toward the model endpoint."* | *"HTTPS_PROXY"* | [[Capability Tools And Egress]] |
-| G | *"stream-json on stdout → parser → run_events + live cost → SSE → run viewer and board."* | *"stream-json on stdout"*, *"run_events + cost"*, *"SSE"*, *"tail by seq"* | [[Event Stream And SSE]] |
+| D | *"If memory is on, the runner recalls (capped) before launch and writes after success. Host side only."* | *"recall / write (local adapter)"* | [[Prompt Assembly]], [[Memory Recall]], [[Memory Commit]] |
+| E | *"The permission gate checks the tier; the runner writes mcp.json and the hook settings; the ExecHost starts a sandbox with the worktree at /work."* | *"docker run via ExecHost"* | [[Run Guardrails At Launch]], [[Permission Gate]], [[Sandboxed Run Lifecycle]] |
+| F | *"claude runs inside, holding only a dummy key. Every call leaves through the egress proxy, which checks the allowlist and adds the real key toward the model endpoint."* | *"HTTPS_PROXY"* | [[Capability Tools And Egress]], [[Credential Injecting Proxy]], [[Egress Allowlist]] |
+| G | *"stream-json on stdout → parser → run_events + live cost → SSE → run viewer and board."* | *"stream-json on stdout"*, *"run_events + cost"*, *"SSE"*, *"tail by seq"* | [[Event Stream And SSE]], [[Stream Parsing And Normalization]] |
 | H | *"A question goes shim → ask.sock → broker → questions → Inbox, and to Slack after 5 minutes. After 20 minutes the agent parks and resumes later with --resume."* | *"ask.sock"*, *"questions"*, *"Block Kit after 5 min"* | [[Ask Park And Resume]] |
 | I | *"On exit: scan artifacts, read the outcome. A check step runs check_command in a fresh container and its exit code decides. The engine follows on_pass / on_fail and escalates when the loop is spent, stuck, or silent."* | *"artifacts + outcome"*, *"run check_command"* | [[Run Outcomes]], [[Advancement Rules]], [[Loop Guard And Escalation]] |
+
+Beat A covers two triggers, but only one goes through the web process. *Inference:* when the engine advances a task, `advance_task` is a job the worker runs (PRD §8), so the server action in A and the Next.js write in B apply to **Start** only. After an advance, the worker enqueues the next `start_run` itself ([[Execution Open Questions]] #70).
 
 ## As a sequence
 
@@ -62,3 +64,5 @@ sequenceDiagram
 - [[Runner Pipeline]]
 - [[Execution Runtime]]
 - [[Life Of A Task]]
+- [[Sandboxed Run Lifecycle]]
+- [[Memory Lifecycle]]

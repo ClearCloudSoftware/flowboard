@@ -69,4 +69,11 @@ Execution is the part of FlowBoard that **makes a task move**. It starts a task,
 - [[Monitor Index]]: watching execution across tasks
 - [[Task Detail Index]]: one task's execution history
 - [[Capability Library Index]]: the skills and agents a run mounts
+- [[Agent Providers Index]]: the provider port and adapters the runner launches through
+- [[Sandboxing Index]]: the ExecHost, permission gate and egress wall around a run
+- [[Workspaces Index]]: the worktree each task runs in
+- [[Memory Index]]: recall before and commit after a run
+- [[Intake And Import Index]]: where tasks come from; the `import_backlog` job
+- [[Settings And Plumbing Index]]: draft mode, settings and the processes
+- [[Projects Index]]: `repo_path` and `check_command`
 - [[Component Documentation Tracker]]

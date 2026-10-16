@@ -19,7 +19,9 @@ What is in v1, what the designs add beyond the PRD, ideas, and what is out of sc
 | M7 | The `import_backlog` job | *"Library and import. Skills install from GitHub, agent CRUD, markdown backlog import."* |
 | M9 | Memory recall and commit around a run | *"Memory (optional, additive)."* |
 
-Draft mode (PRD §13) is assigned to no milestone. The backlog implements the override in the runner (3.2) and the toggle in settings (8.3).
+Draft mode (PRD §13) is assigned to no milestone. PRD §13 describes the toggle right after the `/costs` views, which M8 builds, and the drawio puts it on the costs screen (*"rollups and draft-mode toggle"*, *Logical components*), so M8 is the likely home (*inference*). The backlog implements the override in the runner (3.2) and the toggle in settings (8.3).
+
+The pitch counts *"eight build milestones"*, ending with *"the cost/sandbox views"*. It leaves out M9 memory, and names the sandbox views where PRD §14's M8 has the flow editor UI.
 
 Sandboxed execution (PRD §11.1) is *"in scope but optional"* (PRD §17).
 
@@ -33,11 +35,11 @@ Sandboxed execution (PRD §11.1) is *"in scope but optional"* (PRD §17).
 | **Retry as-is**, **Allow host & retry** | monitor and inbox mockups | not in PRD |
 | `queued` as a visible step state | monitor and task-detail mockups | not a PRD state |
 | Worker slots strip with per-slot Stop | monitor mockup | cap from `VIBE_MAX_RUNS` |
-| Restart re-attach by pid | `03` §7, backlog 3.3 | fix |
-| Graceful shutdown → `cancelled` | `03` §7, backlog 3.3 | gap |
+| Restart re-attach by pid | `03` §7, backlog 3.3 | fix (backlog **BUG**) |
+| Graceful shutdown → `cancelled` | `03` §7, backlog 3.3 | backlog **GAP** |
 | `RunSpec` transformer chain | `06` §15, backlog 3.5 | architecture |
 | Run spec snapshot and replay | `03` §6, drawio *Run records* | idea |
-| Logical model ids | `01-ports.md` | architecture |
+| Logical model ids | `01-ports.md` | architecture ([[Logical Model Ids]]) |
 
 ## Ideas
 
@@ -51,9 +53,9 @@ From the architecture:
 - **StepExecutor**: *"generalize `step_defs.kind` (`skill|agent|shell|manual`) into a **StepExecutor interface**"* (`02` §3; README open decision 1).
 - **A fleet**: *"the worker can become a fleet later, for free"* (README); *"allows remote executors or a fleet without touching the core"* (`03` §7).
 - **A materialised board**: *"expose it as a **materialized view refreshed on job completion** instead of client polling"* (`02` §4).
-- **Scheduled flows** (drawio, dashed): *"cron-style rows in jobs → maintenance flows: knowledge-asset refresh, nightly gates"*.
-- **Deterministic gates** (drawio, dashed): *"semgrep · gitleaks · trivy · eslint / ruff as extra shell steps: $0 catches before any model reviews"*.
-- **Injection scan** (drawio, dashed): *"LLM Guard over artifacts before the next step or memory trusts them"*.
+- **Scheduled flows** (drawio *Schedule trigger (later)*): *"cron-style rows in jobs → maintenance flows: knowledge-asset refresh, nightly gates"*.
+- **Deterministic gates** (drawio, *later*): *"semgrep · gitleaks · trivy · eslint / ruff as extra shell steps: $0 catches before any model reviews"*.
+- **Injection scan** (drawio, *later*): *"LLM Guard over artifacts before the next step or memory trusts them"*. The feature map parking lot has the same idea: *"Check for hidden manipulation"*.
 
 From the feature map parking lot:
 
@@ -72,3 +74,7 @@ PRD §17: *"Do not build: authentication, user accounts, roles, deployment confi
 - [[Execution Index]]
 - [[Execution Open Questions]]
 - [[Execution Testing]]
+- [[Agent Providers Roadmap]]
+- [[Sandboxing Roadmap]]
+- [[Workspaces Roadmap]]
+- [[Memory Roadmap]]

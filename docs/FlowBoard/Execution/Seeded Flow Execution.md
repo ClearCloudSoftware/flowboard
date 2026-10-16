@@ -46,7 +46,7 @@ Illustrative, assembled from PRD §8, §9 and §15. No source walks the seeded f
 
 | Beat | Engine | State after |
 |---|---|---|
-| Start | `research` is the entry step; `start_run` | research running |
+| Start | `research` is the entry step (listed first in PRD §15, which marks no `is_entry`); `start_run` | research running |
 | research done | `always` → `grill` | grill running |
 | grill asks | `ask_user_batch`; may park after 20 min | `awaiting_answers` |
 | answers in | resume `start_run` | grill running → done |
@@ -73,13 +73,15 @@ After a rework: `implement` runs again with the failing artifact in its read-fir
 ## Points to watch
 
 - **`grill` produces `questions` and `answers`**, so a run that parks and resumes still has to write both files. The resume prompt must repeat them (backlog 3.2).
-- **`review` needs no fingerprint** but must call `set_outcome` (PRD §15). Under PRD §8's ordering, a review that sets no outcome is hidden by its own approval gate. The approval rule runs first (*"set the step instance to `awaiting_approval` and stop"*); the no-outcome check sits inside `advance_task`, which runs only after Approve, and *"approve means pass"*. So a silent review shows as an ordinary gate, never as *"no outcome reported"*. See [[Advancement Rules]].
+- **`review` needs no fingerprint** but must call `set_outcome` (PRD §15). Under PRD §8's ordering, a review that sets no outcome first stops at its own approval gate. The approval rule runs first (*"set the step instance to `awaiting_approval` and stop. It advances only when I click Approve."*); the no-outcome check sits inside `advance_task`, which runs only after Approve. PRD §8 says *"approve means pass"* only of the no-outcome gate. If Approve writes `pass` (`02` §3, feature map §4), a silent review shows as an ordinary gate, never as *"no outcome reported"*. Read literally, the PRD gates it twice: once for approval, then again with "no outcome reported" ([[Execution Open Questions]] #64, #71). See [[Advancement Rules]].
 - **`check` runs no prompt at all.** *"A `kind='shell'` step runs no model"* (PRD §7). It depends on `implement` and `tests` through edges only.
 - **`implement` is a join by definition** (three incoming edges), though its loop-back edges never block it in practice; see [[Fan-Out And Join]].
 
 ## The sources' own proof
 
 PRD §14, M5: *"Proof it works: a deliberately failing test in the scratch repo sends the seeded flow from `check` back to `implement` with the raw log, and a run that sets no outcome stops at a gate instead of passing."*
+
+*Inference:* the seeded flow alone cannot show the second half as a distinct *"no outcome reported"* gate. `check` is a shell step, so it always has an outcome, and `review`, the only AI step with conditional edges, is an approval step whose own gate hides a missing outcome (see *Points to watch*). A run that sets no outcome does still stop at a gate, just not one labelled as such ([[Execution Open Questions]] #71).
 
 PRD §15: *"Seed the scratch project's `check_command` with something that exists in the scratch repo."* The seeded skills are *"real local plugin dirs under FlowBoard's `./skills/` … so M5 is testable without any GitHub access."*
 

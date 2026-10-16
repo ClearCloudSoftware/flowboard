@@ -21,6 +21,9 @@ The cap on rework, and what happens when a loop is spent or stuck. PRD §4: *"**
 
 Backlog decision D3: *"`max_attempts` = total runs incl. the first (default 3); escalate to a gate, never auto-fail"*, with the recommendation column reading *"Decided 2026-10-15; see PRD §8"*.
 
+> [!question] When does `attempts` count the first run?
+> `step_instances.attempts` is `INTEGER NOT NULL DEFAULT 0` (PRD §5), and PRD §8 increments it only on rework (*"increments that step instance's `attempts` and creates a new run"*). For it to count *"total runs of the step, first try included"*, the first run must set it to 1. No source says so. The mockups start every step at `attempts: 1` (`monitor.html`, `task-detail.html`). The check in the diagram below assumes `attempts` already counts the first run. See [[Execution Open Questions]] #66.
+
 ## When it escalates
 
 > *"**Escalate, don't fail, when a loop is spent or stuck.** Escalate in either of two cases. First, when a rework edge would start a run past `max_attempts`. Second, when a shell step fails with the **same fingerprint** as its previous failed run, because the redo changed nothing. Either way, start nothing. Set the target step instance to `awaiting_approval` and the task to `blocked`, and show the failing step's last artifact (the error log or review) on the gate. I choose: **Retry** grants one more attempt and carries my note into it, like a rejection reason. It does not reset the counter. **Fail task** ends it."* (PRD §8)
@@ -37,13 +40,13 @@ flowchart TD
   H -->|Fail task| END[Task failed]
 ```
 
-The drawio *Loop guard* card: *"attempts counted on the rework target, shared by every loop into it · max_attempts 3 = total runs · same check fingerprint twice → escalate · gate: Retry + note / Fail task"*.
+The drawio *Loop guard* card: *"attempts counted on the rework target, shared by every loop into it · max_attempts 3 = total runs · same check fingerprint twice → escalate · gate: Retry + note / Fail task"*. Harness concept 6, *Loop layer*: *"Rework edges share one attempt budget, a repeated fingerprint escalates early, infra retries stay out of the count, and a missing outcome is never a pass."*
 
 Feature map §4: *"After a set number, it stops and hands the task to you with the last error, instead of looping forever. You either give it one more try with a note, or fail the task."*
 
 ## Where the escalation lands
 
-- **In the inbox.** The drawio harness concept 8: *"Every stop (gate, question, spent or stuck loop) lands in one inbox, then Slack."* The inbox mockup draws it as a **failure** card. See [[Failures And Escalated Loops]].
+- **In the inbox.** The drawio harness concept 8: *"Every stop (gate, question, spent or stuck loop) lands in one inbox, then Slack."* The inbox guide draws a spent loop as a **failure** card: *"A step ran out of attempts. Nothing is running; nothing is being spent."* That card offers no Retry with a note and no Fail task. See [[Failures And Escalated Loops]] and [[Human In The Loop Open Questions]] #24.
 - **On the task.** The target instance holds the gate; the evidence is the failing step's last artifact.
 - **API.** Retry is `POST /api/step-instances/:id/retry` (PRD §12). Fail task has no endpoint in the PRD. See [[Execution API And Routes]].
 
@@ -56,18 +59,19 @@ Feature map §4: *"After a set number, it stops and hands the task to you with t
 > |---|---|
 > | PRD §16 acceptance | *"Rejecting a review sends the task back to `implement` as attempt 2, and three failed attempts fail the task"* |
 > | Backlog 10.1 | *"Reject → attempt 2; three failures fail the task."* |
-> | drawio *FlowBoard ideation* | *"D3 · max_attempts = attempts allowed / Fail on the 4th (default 3). Loops are guarded."* |
+> | drawio *FlowBoard ideation* | Card *D3 · max_attempts = attempts allowed*: *"Fail on the 4th (default 3). Loops are guarded."* |
 > | Flow designer guide | *Retries*: *"How many attempts before the step gives up and fails the task."* |
-> | Monitor guide | *"Retries are capped, then the task fails."* |
+> | Monitor guide | *"Retries are capped, then the task fails."*; *"The loop can run a few times before the engine gives up and fails the task outright"* |
 > | Task-detail guide | *"After the limit the engine gives up and fails the task rather than looping on your money forever."* |
 >
-> On the count, the drawio card agrees with PRD §8: *"max_attempts = attempts allowed / Fail on the 4th (default 3)"* allows three runs and refuses a fourth, as PRD §8 escalates *"when a rework edge would start a run past `max_attempts`"*. The conflict is only fail versus escalate. See [[Execution Open Questions]] #14.
+> On the count, the drawio card agrees with PRD §8: *"max_attempts = attempts allowed"*, *"Fail on the 4th (default 3)"* allows three runs and refuses a fourth, as PRD §8 escalates *"when a rework edge would start a run past `max_attempts`"*. The conflict is only fail versus escalate. See [[Execution Open Questions]] #14.
 >
 > The flow designer's *Retries* field is not `max_attempts` one-to-one: the mockup defaults it to 2 against the PRD's 3. See [[Execution Open Questions]] #15.
 
 ## Retry semantics
 
-- Retry *"does not reset the counter"* (PRD §8). So after a Retry the target is at `max_attempts + 1`; its next failure escalates again at once. *Inferred* from the rule; not stated.
+- Retry *"does not reset the counter"* (PRD §8). So after a Retry the target is at `max_attempts + 1`; its next failure escalates again at once. *Inferred* from the rule; not stated ([[Execution Open Questions]] #16).
+- PRD §4 and the drawio card *Step def → step instance → run* say rework loops *"create attempt 2, 3, 4"*. With the default of 3, a fourth run comes only from a Retry at the gate or a raised `max_attempts` (inference).
 - The monitor and inbox mockups add **Retry as-is** and **Allow host & retry** on a failure card. Allow host & retry *"Adds the blocked host to this step's egress allowlist, then re-queues the run as the next attempt"* (monitor guide). Neither is in the PRD.
 
 ## Related

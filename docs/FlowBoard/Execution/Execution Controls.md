@@ -22,9 +22,9 @@ No mockup draws a Start or Promote button ([[Monitor Open Questions]] #24).
 
 | Control | Where | Key | Engine effect | Money (guides) |
 |---|---|---|---|---|
-| Approve | Monitor needs-you, task detail, inbox | `a`; in the inbox also `↵` on a gate card | outcome pass, *"The next step queues immediately"* | *"Free — nothing is re-run, nothing is wasted."* |
-| Send back | same | `r` | reject with reason → `on_fail` rework | *"The build's kept spend moves to wasted."* |
-| `esc` | reason box | `esc` | cancels the reason box | — |
+| Approve | Monitor needs-you, task detail, inbox | `a`; in the inbox also `↵` on a gate card | outcome pass, *"The next step queues immediately"* (task-detail and inbox guides) | *"Free — nothing is re-run, nothing is wasted."* (task-detail guide) |
+| Send back | same | `r` | reject with reason → `on_fail` rework | *"The build's kept spend moves to wasted."* (task-detail guide) |
+| `esc` | reason box | `esc` | cancels the reason box; on the monitor it also closes the open row | — |
 
 PRD §13: *"Approve / Reject buttons on the step that is awaiting approval."* Backlog 2.3 (**BUG**): *"**Reject asks for a reason** (API accepts it, board renders it, UI never sends it)."* Backlog 2.2 (**BUG**): *"Either implement the `a` (approve) shortcut or remove the chip from awaiting‑approval cards."*
 
@@ -43,8 +43,8 @@ Monitor guide: *"Records your answer and hands it to the paused run, which finis
 |---|---|---|---|
 | Retry (with a note) | escalation gate | *"grants one more attempt … does not reset the counter"* | PRD §8; `POST /api/step-instances/:id/retry` (PRD §12) |
 | Fail task | escalation gate | ends the task | PRD §8; no endpoint |
-| Retry as-is | monitor, inbox failure card | *"Re-queues the run unchanged."* | monitor guide |
-| Allow host & retry | monitor, inbox failure card (inbox: `↵`) | *"Adds the blocked host to this step's egress allowlist, then re-queues the run as the next attempt."* | monitor guide; inbox guide draws *"↵ Allow host & retry"*, and the inbox's `Enter` handler runs it on a failure card |
+| Retry as-is | monitor, inbox failure card | *"Re-queues the run unchanged."* | monitor guide ([[Execution Open Questions]] #23) |
+| Allow host & retry | monitor, inbox failure card (inbox: `↵`) | *"Adds the blocked host to this step's egress allowlist, then re-queues the run as the next attempt."* | monitor guide; inbox guide draws *"↵ Allow host & retry"*, and the inbox's `Enter` handler runs it on a failure card ([[Execution Open Questions]] #24) |
 | Open the log | monitor, inbox failure card | none | monitor, inbox |
 
 The two retry buttons are mockup-only; the PRD's Retry and Fail task are not drawn on any mockup. See [[Failures And Escalated Loops]].
@@ -55,10 +55,11 @@ The two retry buttons are mockup-only; the PRD's Retry and Fail task are not dra
 |---|---|---|---|
 | Stop | Live run viewer | SIGTERM, `cancelled` (`03` §8) | — |
 | stop | Monitor workers strip | *"recorded as failed, with "stopped by you""* | *"Everything it had spent moves to wasted"* |
-| Stop this run | Monitor row detail, task detail story row | same as the strip's stop | same |
-| Pause | Task detail | *"Stops after the current run rather than mid-flight."* | *"Stops future spend only."* |
+| Stop this run | Monitor row detail | *"Same as the strip's stop, reachable without hunting for the slot."* | same |
+| Stop from the story row | Task detail | task-detail guide: *"Watch, or stop the run from the story row if it is clearly lost."* No button is drawn in `task-detail.html`. | — |
+| Pause | Task detail | *"Stops after the current run rather than mid-flight."* No engine rule backs it ([[Execution Open Questions]] #29). | *"Stops future spend only."* |
 | Cancel task | Task detail | stop all, cancel questions, skip instances | *"Anything in flight becomes wasted."* |
-| Clean up workspace | Task detail | removes branch and folder, only once finished or cancelled | — |
+| Clean up workspace | Task detail | *"Only offered once the task is finished or cancelled. Removes the branch and the folder."* Backlog 2.1 also allows it after `failed` ([[Execution Open Questions]] #60). See [[Cleaning Up A Workspace]]. | — |
 
 ## Shape what runs
 
@@ -76,12 +77,12 @@ The two retry buttons are mockup-only; the PRD's Retry and Fail task are not dra
 |---|---|---|
 | `a` | Approve | monitor, task detail, inbox |
 | `r` | Send back (reason box) | monitor, task detail, inbox |
-| `esc` | Cancel the reason box | task detail, inbox |
+| `esc` | Cancel the reason box | monitor, task detail, inbox |
 | `1`–`9` | Pick an option | inbox, monitor |
 | `↵` | Submit; on a gate card Approve; on a failure card Allow host & retry | inbox |
 | `w` | Expand worker slots | monitor |
 
-No key is assigned to Start, Stop, the PRD's Retry or Fail task, Retry as-is or Cancel in any source.
+No key is assigned to Start, Stop, the PRD's Retry or Fail task, Retry as-is or Cancel in any source. Backlog 9.4 (**BUG**) asks for a *"keyboard equivalent for promote/demote"* without naming one.
 
 ## Related
 
@@ -89,3 +90,4 @@ No key is assigned to Start, Stop, the PRD's Retry or Fail task, Retry as-is or 
 - [[Execution Surfaces]]
 - [[Execution API And Routes]]
 - [[Stopping And Cancelling]]
+- [[Egress Denials]]

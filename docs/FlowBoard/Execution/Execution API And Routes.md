@@ -13,13 +13,14 @@ module: Execution
 |---|---|---|
 | `POST` | `/api/tasks/:id/promote` | *"backlog -> todo, pin flow, create worktree"* |
 | `POST` | `/api/tasks/:id/cancel` | stop runs, cancel questions, skip instances (backlog 2.1) |
-| `POST` | `/api/step-instances/:id/approve` | outcome pass; enqueue `advance_task` |
+| `POST` | `/api/step-instances/:id/approve` | outcome pass: *"Approve overrides the agent's `fail` outcome (human wins)"* (`02` §3). PRD §8 says *"approve means pass"* only of the no-outcome gate ([[Execution Open Questions]] #64). Enqueueing `advance_task` is inferred |
 | `POST` | `/api/step-instances/:id/reject` | outcome fail + reason; *"reject with no `on_fail` edge fails the task"* (`02` §3, backlog 5.2). Backlog 2.3: the UI must send the reason. |
 | `POST` | `/api/step-instances/:id/retry` | one more attempt with a note (PRD §8) |
 | `POST` | `/api/questions/:id/answer` | may enqueue a resume `start_run` (PRD §9) |
 | `GET` | `/api/runs/:id` | one run |
 | `GET` | `/api/runs/:id/stream` | SSE: *"replays existing `run_events` for the run, then streams new ones. Reconnect with `Last-Event-ID`."* |
 | `GET` | `/api/projects/:id/board` | *"board projection: columns + cards"* |
+| `POST` | `/api/import/backlog` | *"md file -> tasks"*; enqueues an `import_backlog` job for the worker (backlog 7.3). See [[Intake API And Routes]] |
 
 (PRD §12)
 
@@ -33,7 +34,7 @@ module: Execution
 ## Proposed
 
 > [!note] Proposals
-> Not in any source. The task-level paths match [[Task Detail API And Routes]]; the retry body follows [[Monitor API And Routes]]. Each is listed in [[Execution Open Questions]].
+> Not in any source, except the `start` path, which the backlog intro records. The task-level paths match [[Task Detail API And Routes]] (and, for demote, [[Workspaces API And Routes]]); the stop path and the retry body follow [[Monitor API And Routes]]. Each is listed in [[Execution Open Questions]] #47.
 
 | Method | Path | For |
 |---|---|---|
@@ -44,12 +45,14 @@ module: Execution
 | `POST` | `/api/runs/:id/stop` | Stop a run |
 | `POST` | `/api/step-instances/:id/retry` with `{ note?, allowHost? }` | PRD §8's Retry *"carries my note"*; the mockups' **Retry as-is** (no host) and **Allow host & retry** |
 
-Three sibling sets propose different shapes for the same actions; pick one ([[Execution Open Questions]] #47):
+Sibling sets propose different shapes for the same actions; pick one ([[Execution Open Questions]] #47):
 
-| Action | [[Task Detail API And Routes]] | [[Monitor API And Routes]] | [[Human In The Loop API And Routes]] |
-|---|---|---|---|
-| Fail task | `POST /api/tasks/:id/fail` | — | `POST /api/step-instances/:id/fail-task` (or `reject` with `{ failTask: true }`) |
-| Allow host & retry | — | `retry` with `{ note?, allowHost? }` | `POST /api/step-instances/:id/allow-host` `{ host }` |
+| Action | [[Task Detail API And Routes]] | [[Monitor API And Routes]] | [[Human In The Loop API And Routes]] | [[Sandboxing API And Routes]] |
+|---|---|---|---|---|
+| Fail task | `POST /api/tasks/:id/fail` | — | `POST /api/step-instances/:id/fail-task` (or `reject` with `{ failTask: true }`) | — |
+| Allow host & retry | — | `retry` with `{ note?, allowHost? }` | `POST /api/step-instances/:id/allow-host` `{ host }` | `POST /api/step-instances/:id/allow-host` `{ host }` |
+
+The proposals agree elsewhere: Stop as `POST /api/runs/:id/stop` (Task Detail, Monitor), demote as `POST /api/tasks/:id/demote` (Task Detail, Workspaces). Clean-up of the workspace, `POST /api/tasks/:id/cleanup`, is proposed by Task Detail and Workspaces; it does not touch execution.
 
 ## What a route does, step by step
 
@@ -73,7 +76,7 @@ sequenceDiagram
 
 - *"Every port is called from `src/lib/`, **never from a route**"* (`06` §15). `06` uses the first build's layout (`src/app/api/`, `src/lib/`); in the PRD's layout that is `apps/web/app/api/` calling `packages/core` (PRD §3, §12).
 - *"If a route ever needs to know whether it's Claude or Codex, something leaked upward."* (`06` §15)
-- Stop is the one route that touches a process (by pid).
+- Stop is the one route that touches a process (by pid): *"SIGTERM by pid from the route (same machine)"* (backlog 3.4; `03` §8).
 
 ## Related
 
@@ -82,3 +85,6 @@ sequenceDiagram
 - [[Job Queue]]
 - [[Task Detail API And Routes]]
 - [[Monitor API And Routes]]
+- [[Workspaces API And Routes]]
+- [[Sandboxing API And Routes]]
+- [[Thin Route Handlers]]
