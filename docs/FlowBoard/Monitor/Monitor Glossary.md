@@ -7,7 +7,7 @@ module: Monitor
 
 | Term | Meaning |
 |---|---|
-| **Monitor** | The screen `flowboard/monitor`: needs-you band, worker strip, and three views over the live tasks. The mockups' name for what the PRD calls **the board**. |
+| **Monitor** | The screen `flowboard/monitor`: needs-you band, worker strip, and three views over the live tasks. The tracker files it under one component with the PRD's **board**; whether it replaces the board is [[Monitor Open Questions]] #1. |
 | **Board** | PRD §13 `/p/[slug]`: a Kanban read model whose columns are Backlog, Todo, one column per flow step, and Done. See [[Board Projection]]. |
 | **Projection / read model** | A view derived from the task and step-instance rows, never written to. *"Board = projection of `step_instances` → CQRS; read model derived from write model."* (architecture README) |
 | **Column** | One board column per step definition, ordered by `board_order`. On the monitor the columns survive only as the cells of the [[Flow Bar And Step States\|flow bar]]. |
@@ -53,7 +53,7 @@ module: Monitor
 > - **"Wasted"** — PRD §5: runs *"superseded by a rework loop or an infra retry"*. The guide adds stopped and failed runs. See [[Monitor Open Questions]] #17.
 > - **"Worker"** — a concurrent run slot on the monitor; the background process `apps/worker` in the PRD and drawio.
 > - **"Timeline"** — the monitor's [[Timeline View]] is a Gantt of every task's runs. The task detail screen's *step timeline* lists one task's steps.
-> - **"Board"** — the PRD board (Kanban) and the monitor (pulse list) are two designs of one component. The task-detail mockup's back button still says **Board**.
+> - **"Board"** — the PRD board (Kanban) and the monitor (pulse list) are filed under one component by the tracker. No source says they are the same screen ([[Monitor Open Questions]] #1). The task-detail mockup's back button still says **Board**.
 
 ## Related
 

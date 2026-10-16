@@ -73,7 +73,7 @@ Pipeline has no tools.
 Rules from the code:
 
 - Keys are ignored while focus is in an input or select, and with ⌘, Ctrl or Alt held. Opening **Send back** focuses the reason input, so `Esc` cannot cancel it there, despite the guide ([[Monitor Open Questions]] #46).
-- `a`, `r` and `1`–`9` act on `needsList()[0]`, the oldest item, only if it is the right kind. If the oldest item is a failure, `a` does nothing even when a gate sits below it. On the seeded screen the oldest item *is* a failure (`billing-webhook`, 42m), so all three do nothing until it is cleared with the mouse ([[Monitor Open Questions]] #44).
+- `a`, `r` and `1`–`9` act on `needsList()[0]`, the oldest item, only if it is the right kind. If the oldest item is a failure, `a` does nothing even when a gate sits below it. On the seeded screen the oldest item *is* a failure (`billing-webhook`, waited about 42m), so all three do nothing until it is cleared with the mouse ([[Monitor Open Questions]] #44).
 - `j`/`k` move within the current filter and sort.
 - The handler ignores the current view: `j`/`k`/`↵`/`o` move and open rows even while Timeline or Pipeline is showing, out of sight. With a row focused, `↵` toggles that row even when focus is on a needs-band button.
 

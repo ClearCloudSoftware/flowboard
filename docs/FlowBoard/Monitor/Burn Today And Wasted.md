@@ -26,6 +26,7 @@ Elsewhere:
 - PRD §5 `runs.wasted`: *"1 if superseded by a rework loop or an infra retry"*.
 - Feature map §4, on infra hiccups: *"It doesn't use up a try, but it still shows up in wasted spend."*
 - Design brief: *"This needs its own treatment; it's the number that changes my behaviour"*.
+- Pitch, a success measure: *"**Wasted spend is a number on a dashboard**, and it trends down as flows are tuned (baseline it in week 1)."* (`docs/pitch.md`)
 
 The guide adds **stopped runs** to wasted. The PRD does not mark cancelled runs `wasted = 1` ([[Monitor Open Questions]] #17).
 
@@ -66,3 +67,5 @@ Each row shows its cost in bold and, when over half a cent, `$X wasted` in brick
 - [[Pipeline View]]
 - [[Worker Slots]]
 - [[Models And Effort]]
+- [[Wasted Spend]]
+- [[Live Cost]]

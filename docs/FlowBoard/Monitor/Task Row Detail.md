@@ -34,7 +34,7 @@ The mapping is an inference, not stated in any source ([[Monitor Open Questions]
 | Part | Content |
 |---|---|
 | Artifacts | Header *"the contract for the next step"*. One line per finished step: `.flowboard/<task-id>/<file>` and its size. Otherwise *"Nothing written yet."* Only `done` runs are listed, so a review held at the gate is missing ([[Monitor Open Questions]] #47) |
-| Spend | *This task, so far*, *Burned on redone work* (brick when non-zero), and *Sandbox: container · default-deny egress* |
+| Spend | *This task, so far*, *Burned on redone work* (brick when non-zero), and *Sandbox: container · default-deny egress*, a fixed string for every task ([[Monitor Open Questions]] #25) |
 
 Artifact files in the mockup: `brief.md`, `plan.md`, `changes.patch`, `test-report.md`, `review.md`, `summary.md`. The path differs from PRD §6 (`<worktree>/.vibe/task-<id>/NN-<type>.<ext>`). See [[Monitor Open Questions]] #26 and [[Artifact Contract]].
 

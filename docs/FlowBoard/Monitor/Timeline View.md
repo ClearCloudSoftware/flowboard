@@ -15,7 +15,7 @@ Guide: *"How long has this really taken, and how much of that was waiting on me?
   - petrol **running**
   - stone **finished**
   - brick **failed**
-- One hatched ochre bar from when a gate opened or a question was asked until now, labelled *"waiting on you"*.
+- One hatched ochre bar from when a gate opened or a question was asked until now, labelled *"waiting on you"*. Mockup bug: `approve()` (`monitor.html:673-677`) sets the review run to `done` but never clears `r.since`, and the timeline draws a hold bar for any run with `since` (`monitor.html:924`). After **Approve** the lane keeps a growing *waiting on you* bar. `reject()` and `answer()` clear it ([[Monitor Open Questions]] #22).
 - Overlapping bars stack into extra rows in the lane, so parallel `build` and `tests` sit one above the other.
 - A brick **NOW** line at the right edge.
 - Tooltip: `task · Step · model · duration · cost`, or `task · Step · waiting on you 12m`.

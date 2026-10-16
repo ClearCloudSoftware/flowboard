@@ -5,7 +5,7 @@ module: Monitor
 
 # Board Projection
 
-Architecture component **#4**, *Board projection (read model)*. The PRD's board and the monitor are two views of the same projection.
+Architecture component **#4**, *Board projection (read model)*. The tracker files the PRD's board and the monitor under one component. Whether the monitor replaces the board is [[Monitor Open Questions]] #1; if both ship, reading them off the same projection is an inference.
 
 > *"**The board is a projection, not the model.** The flow is a DAG. A card's column is derived from its furthest-advanced step instance. When a task has multiple step instances running in parallel, the card sits in the column of the split point and shows a split badge listing the active branches."* (PRD §4)
 

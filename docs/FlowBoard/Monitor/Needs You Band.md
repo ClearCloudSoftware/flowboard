@@ -33,13 +33,13 @@ The guide says `Esc` cancels the form (*"Close the detail, cancel a reason box"*
 
 ## Empty state
 
-When nothing is blocked the band collapses to one white line: `✓ Nothing waiting on you. · 3 running, 5 queued`. *"When nothing is blocked, band 3 collapses to a single white line and every trace of amber leaves the screen."* The old handoff gave the inbox's empty state the same job: *"The empty state's job is to say what is running."*
+When nothing is blocked the band collapses to one white line: `✓ Nothing waiting on you. · 3 running, 5 queued`. *"When nothing is blocked, band 3 collapses to a single white line and every trace of amber leaves the screen."* The old handoff gave the inbox's empty state the same job: *"The empty state's job is to say what is running."* So does the drawio *Inbox* card: *"Empty state shows what's running / Not a shrug illustration."*
 
 When something is waiting the band turns amber (`needs.hot`: wash `#F7EAD3`, a solid ochre header). This is the one element where the accent runs at full strength.
 
 ## Against the inbox
 
-The [[Component Documentation Tracker|Human In The Loop]] component's inbox shows the same items with every question shape. The band only renders single-choice questions as buttons. The same seeded task differs: `csv-export` is one three-option question on the monitor and a five-question batch in the inbox mockup. How the band shows a batch, a text or a number question is not designed ([[Monitor Open Questions]] #5).
+The [[Human In The Loop Index|Human In The Loop]] component's inbox shows the same items with every question shape. The band only renders single-choice questions as buttons. The same seeded task differs: `csv-export` is one three-option question on the monitor and a five-question batch in the inbox mockup. How the band shows a batch, a text or a number question is not designed ([[Monitor Open Questions]] #5).
 
 The card copy for a gate is fixed (*"Review passed…"*). PRD §8 also parks steps at `awaiting_approval` for *"no outcome reported"* and for a spent or stuck loop. Those need different wording ([[Monitor Open Questions]] #33).
 

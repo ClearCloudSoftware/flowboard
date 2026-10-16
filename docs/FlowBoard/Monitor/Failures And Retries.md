@@ -39,12 +39,12 @@ The PRD separates three kinds of failure. The monitor shows one.
 |---|---|---|---|
 | **Work verdict** (`outcome = fail`) | Follows the step's `on_fail` edge: a rework loop (§8) | Yes, on the rework *target* | Next attempt, or the escalation gate at `max_attempts` |
 | **Transient infra failure** | *"rate limited, overloaded, network error, process killed by a signal or lost on restart"*: retried *"up to 3 times, with backoff of 30 s, 2 min and 8 min"*, marked `wasted = 1` (§7) | No | Automatic retry |
-| **Other run failure** | *"budget or turn cap hit, auth error, bad config, unknown"*, or a 4th transient: *"put the task into `blocked`"* (§7) | No | Task blocked |
+| **Other run failure** | *"budget or turn cap hit, auth error, bad config, unknown"*, or a 4th transient: *"put the task into `blocked`"* (§7) | Not stated. PRD §7 says *"does **not** count"* only of transient retries, and §8 excludes *"infra retries"*. Inference: moot, since the task blocks | Task blocked |
 
 At the cap, PRD §8 escalates rather than fails: *"Set the target step instance to `awaiting_approval` and the task to `blocked`, and show the failing step's last artifact (the error log or review) on the gate. I choose: **Retry** grants one more attempt and carries my note into it, like a rejection reason. It does not reset the counter. **Fail task** ends it."* A shell check failing with the same fingerprint twice escalates early (PRD §8). The escalate-don't-fail rule is backlog decision **D3**, decided 2026-10-15.
 
 > [!warning] Conflicts
-> - The monitor's *"Attempt 3 of 3"* counts a sandbox denial as an attempt. Under PRD §7 a non-zero agent exit is an infrastructure failure, *"never a verdict on the work"*, and does not count. That assumes a denial ends the run with a non-zero exit; no source says whether it does or only fails the tool call (inference). [[Monitor Open Questions]] #11.
+> - The monitor's *"Attempt 3 of 3"* counts a sandbox denial as an attempt. Under PRD §7 a non-zero agent exit is an infrastructure failure, *"never a verdict on the work"*. §7 says a transient one does not count toward `max_attempts`; for a non-transient one (which blocks the task) it is silent. That assumes a denial ends the run with a non-zero exit; no source says whether it does or only fails the tool call (inference). [[Monitor Open Questions]] #11.
 > - The monitor's failure card has no **Fail task** and its retry takes no note. [[Monitor Open Questions]] #12.
 > - The guide's walkthrough: *"Retries are capped, then the task fails."* (`monitor-guide.html:691`). That contradicts backlog D3, though PRD §16's checklist agrees with the guide (*"three failed attempts fail the task"*); already tracked as [[Flow Design Open Questions]] #11.
 

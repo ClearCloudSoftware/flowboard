@@ -39,7 +39,7 @@ The first four edges and their labels come from the drawio page *Functional comp
 | Open artifacts | plan.md vs summary.md diff |
 | See status at a glance | state dot, current step, split badge |
 
-*Read the step timeline* and *Open artifacts* belong to the task detail screen (the Task Detail component). These notes only cover them where the monitor's row detail shows them.
+*Read the step timeline* and *Open artifacts* belong to the task detail screen (the [[Task Detail Index|Task Detail]] component). These notes only cover them where the monitor's row detail shows them.
 
 On the *Logical components* page, **Board `/p/[slug]`** (*projection of task + step state*) reads **Task & run state** in Core. **Run viewer `/runs/[id]`** (*live event stream (SSE)*) reads the **Run orchestrator**. The architecture catalogues the two halves as component **#4 Board projection (read model)** (`02-core-and-engine.md` §4) and **#8 Event stream & live viewer** (`03-execution-substrate.md` §8).
 
@@ -57,14 +57,15 @@ On the *Logical components* page, **Board `/p/[slug]`** (*projection of task + s
 | **Catch up on reconnect** | *"reopen the page and it catches you up from the start."* (feature map §9) |
 | **Waste is the number to attack** | *"Wasted is the number to attack. It's every dollar spent on an attempt that was thrown away"* (monitor guide, *Money*) |
 | **Keyboard first** | *"This is the screen you'll live in, so it's built to be driven without a mouse."* (monitor guide, *Keyboard*) |
+| **Safe to leave running** | *"agent work becomes visible, controllable, and safe to leave running instead of invisible, unbounded, and hand-held."* (`docs/pitch.md`; emphasis dropped) |
 | **Calm, not alarming** | *"Reserve strong colour for the two or three states that genuinely need me right now."* (`docs/old/design/brief.md`) |
 
 ## What it is not
 
 - **Not the engine.** The Monitor never decides where a task goes. It shows the engine's state, and it offers the human decisions the engine waits on. See [[Hand-Off Rules]].
-- **Not the inbox.** The inbox (`/inbox`, the Human In The Loop component) is where you work through questions and batches one at a time. The Monitor's [[Needs You Band]] shows the same items so you can clear them without leaving.
+- **Not the inbox.** The inbox (`/inbox`, the [[Human In The Loop Index|Human In The Loop]] component) is where you work through questions and batches one at a time. The Monitor's [[Needs You Band]] shows the same items so you can clear them without leaving.
 - **Not the task detail screen.** Clicking a task's row opens an inline summary. The whole story (timeline, artifacts, diff) lives at the task detail screen.
-- **Not the cost page.** The topbar shows *burn*, *today* and *wasted*. Rollups by project, step and model live on `/costs`. See [[Burn Today And Wasted]].
+- **Not the cost page.** The topbar shows *burn*, *today* and *wasted*. Rollups by project, step and model live on `/costs` ([[Costs Page]], in the Cost And Control component). See [[Burn Today And Wasted]].
 
 ## Related
 
@@ -73,3 +74,5 @@ On the *Logical components* page, **Board `/p/[slug]`** (*projection of task + s
 - [[Board Projection]]
 - [[Live Run Viewer]]
 - [[Flow Design Overview]]
+- [[Execution Index]]
+- [[Cost And Control Index]]

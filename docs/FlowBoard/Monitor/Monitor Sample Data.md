@@ -5,7 +5,7 @@ module: Monitor
 
 # Monitor Sample Data
 
-The mockup opens on *"the board mid-morning"*: twelve tasks seeded in `TASKS` (`monitor.html`), nearly all of them FlowBoard working on itself (`pdf-import` is not). The PRD's real seed is separate: one project, the *Software delivery* flow, and sample tasks (PRD §15; drawio card *Seed data*: *"One project, default flow, sample tasks, so the app is alive on first run."*). See [[Seeded Flows]].
+The mockup opens on *"the board mid-morning"*: twelve tasks seeded in `TASKS` (`monitor.html`), all twelve carrying `flowboard/*` repo labels. The real seed is separate. PRD §15 seeds *"one project and one flow, **Software delivery**"*, backlog Story 1.2 adds the agents, skills and a scratch-repo project, and neither seeds any tasks: M2 says *"Create tasks manually."* (PRD §14). Only the drawio seeds sample tasks: card *Seed data* (*FlowBoard ideation*, *"One project, default flow, sample tasks, so the app is alive on first run."*) and card *Seed project* (*Functional components*, *"default flow + sample tasks"*). The sources disagree, and none says what the sample tasks would be: [[Intake And Import Open Questions]] #19, [[Seed Data]]. Either way, the mockup's twelve tasks are its own illustration, not a seed. See [[Seeded Flows]].
 
 ## The flow
 
@@ -31,6 +31,8 @@ The mockup opens on *"the board mid-morning"*: twelve tasks seeded in `TASKS` (`
 | `inbox-keyboard` | flowboard/web | Number-key answers, no mouse, in the inbox | Done ~111m ago |
 | `drawio-export` | flowboard/web | Export a flow as a drawio diagram | Backlog, no runs |
 
+The *Repo* column is the mockup's `owner/name` label (six repos). The mockup never mentions a project, and shows the repo only in the row detail header. The PRD identifies a project's repo by a local `repo_path`. Whether each repo is a project is [[Monitor Open Questions]] #2 and [[Projects Open Questions]] #1 and #2.
+
 At open: 4 running (every slot full), 2 queued, 4 in Needs you. Oldest first: `billing-webhook`, `csv-export`, `provider-codex`, `auth-refactor`. The guide's anatomy diagram shows different illustrative counts (`3/4`, `queue 5`, `NEEDS YOU 2`).
 
 The two questions:
@@ -38,7 +40,7 @@ The two questions:
 - `csv-export`: *"The ledger export can stream straight out of Postgres, or stage to object storage first. Streaming is cheaper but holds a connection for the whole export."*: `Stream from Postgres` · `Stage to object storage` · `Decide it yourself`.
 - `provider-codex`: *"The Codex CLI reports no per-call cost. Estimate spend from token counts, or record it as unknown and leave the totals honest?"*: `Estimate from tokens` · `Record as unknown`.
 
-`billing-webhook` has no `tests` run although `plan` fans out to both. That looks like a seed slip.
+`billing-webhook` has no `tests` run although `plan` fans out to both. That looks like a seed slip (inference; [[Monitor Open Questions]] #28).
 
 ## Log lines
 
@@ -84,4 +86,6 @@ The `csv-export` and `pdf-import` differences are [[Monitor Open Questions]] #5 
 
 - [[Life Of A Task]]
 - [[Seeded Flows]]
+- [[Seed Data]]
+- [[Project Surfaces]]
 - [[Monitor Screen]]
