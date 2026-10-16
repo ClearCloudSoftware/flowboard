@@ -34,7 +34,7 @@ CREATE TABLE tasks (
 | Column | Create | Import | Promote |
 |---|---|---|---|
 | `title`, `body` | set by you (*inferred*: no source gives the create body) | set; overwritten on re-import (`07`) | — |
-| `acceptance_criteria`, `non_goals` | set by you | returned by the agent path (PRD §15), not by the reference parser; whether the upsert writes them is open (#7) | — |
+| `acceptance_criteria`, `non_goals` | set by you (*inferred*: no source gives the create body) | returned by the agent path (PRD §15), not by the reference parser; whether the upsert writes them is open (#7) | — |
 | `status` | `backlog` (*inferred*) | `backlog` (*inferred*) | → `todo` |
 | `import_key` | null | the derived key | — |
 | `flow_id` | null | null | pinned |

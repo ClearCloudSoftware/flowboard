@@ -58,8 +58,8 @@ Backlog 9.4 (**BUG**): *"keyboard equivalent for promote/demote"*. No key is nam
 
 | Screen | What it shows of intake |
 |---|---|
-| Monitor (`monitor.html`) | A **backlog** count in the pipeline readout and the status bar: tasks with no runs (`TASKS.filter(t => !runsOf(t).length)`). The *Idle* icon covers *"queued or in the backlog"*. No backlog column, no drag, no promote ([[Monitor Open Questions]] #24) |
-| Monitor guide | Beats *"In the backlog"* (*"This is the only place on the board you can drag a card into."*) and *"You promote it"*. Note *"Why you can't drag a card."* See [[Life Of A Task]] |
+| Monitor (`monitor.html`) | A **backlog** count in the pipeline readout and the status bar: tasks with no runs (`TASKS.filter(t => !runsOf(t).length)`). No backlog column, no drag, no promote ([[Monitor Open Questions]] #24) |
+| Monitor guide | Beats *"In the backlog"* (*"This is the only place on the board you can drag a card into."*) and *"You promote it"*. Note *"Why you can't drag a card."* The *Idle* icon covers *"queued or in the backlog"*. See [[Life Of A Task]] |
 | Task detail (`task-detail.html`) | **Send to backlog** action |
 | Task-detail guide | Lifecycle box *backlog · "no workspace yet"*, arrow *"you promote it"* |
 | Projects list (PRD §13, no mockup) | *"Cards with task counts by status"*, so backlog counts show there |

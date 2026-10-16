@@ -5,7 +5,7 @@ module: Intake And Import
 
 # Intake And Import Open Questions
 
-Every place the sources disagree or leave a gap. Proposals are marked; none is in a source. Rows marked *observed* were found by running the reference code (`markdown-source.ts`, Node 24.11), not stated in a source. Some questions are shared with [[Execution Open Questions]], [[Flow Design Open Questions]], [[Monitor Open Questions]], [[Task Detail Open Questions]], [[Projects Open Questions]], [[Workspaces Open Questions]] and [[Agent Providers Open Questions]]; those are linked rather than repeated.
+Every place the sources disagree or leave a gap. Proposals are marked; none is in a source. Rows marked *observed* were found by running the reference code (`markdown-source.ts`, Node 24.11), not stated in a source. Some questions are shared with [[Execution Open Questions]], [[Flow Design Open Questions]], [[Monitor Open Questions]], [[Task Detail Open Questions]], [[Projects Open Questions]], [[Workspaces Open Questions]], [[Agent Providers Open Questions]] and [[Settings And Plumbing Open Questions]]; those are linked rather than repeated.
 
 | Theme | Questions |
 |---|---|
@@ -73,7 +73,7 @@ A hand-made task has no `import_key`, so an import of the same item makes a seco
 
 ### 14. Promote, or promote and start?
 
-D1 recommends *"Explicit Start button on card + sheet; promote stays cheap"* (backlog). The monitor and task-detail guides draw promote as the start (*"research queued"*; backlog → running). Whether the flow is pinned and the worktree made at promote (PRD §5, §11, §12, backlog 2.1) or at start (PRD §4, architecture README, drawio *"Start task / pin flow version"*, feature map §3 and §14) follows from this. Same as [[Execution Open Questions]] #2, [[Flow Design Open Questions]] #7, [[Monitor Open Questions]] #24, [[Task Detail Open Questions]] #10, [[Workspaces Open Questions]] #1. Errors for a bad promote are not listed ([[Workspaces Open Questions]] #3). See [[Promoting A Task]].
+D1 recommends *"Explicit Start button on card + sheet; promote stays cheap"* (backlog); the drawio *Life of one step* card starts with *"You press Start"*. The monitor and task-detail guides draw promote as the start (*"research queued"*; backlog → running). Whether the flow is pinned and the worktree made at promote (PRD §5, §11, §12, backlog 2.1) or at start (PRD §4, architecture README, drawio *"Start task / pin flow version"*, feature map §3 and §14) follows from this. Same as [[Execution Open Questions]] #2, [[Flow Design Open Questions]] #7, [[Monitor Open Questions]] #24, [[Task Detail Open Questions]] #10, [[Workspaces Open Questions]] #1. Errors for a bad promote are not listed ([[Workspaces Open Questions]] #3). See [[Promoting A Task]].
 
 ### 15. Which worktree layout, and which process makes it?
 

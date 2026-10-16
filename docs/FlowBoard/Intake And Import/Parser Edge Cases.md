@@ -9,7 +9,7 @@ How the reference [[Markdown Task Source]] behaves on input the sources do not d
 
 | Input | Result | Why |
 |---|---|---|
-| Text before the first heading | dropped | *"ponytail: lines before the first heading are ignored (no ambiguous parent)"* (the one case the code comments on) |
+| Text before the first heading | dropped | *"ponytail: lines before the first heading are ignored (no ambiguous parent)"* (one of two cases the code comments on; the other is the de-dupe row below) |
 | `# Title` (level 1) | not a task; before the first `##` it is dropped, after it it is body text | only `#{2,3}` opens a block |
 | `#### Sub` (level 4) | becomes body text of the block above | same |
 | `##NoSpace` | not a heading | the regex needs whitespace after the hashes |

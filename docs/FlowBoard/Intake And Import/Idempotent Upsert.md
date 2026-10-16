@@ -13,12 +13,13 @@ How parsed tasks become rows without duplicates.
 
 ## The acceptance test
 
-Five sources state the test, in two forms: *no duplicates, edits picked up* (PRD, backlog) and *0 created, N updated* (architecture):
+Six statements of the test, in two forms: *no duplicates, edits picked up* (PRD §16, backlog 10.1) and *0 created, N updated* (backlog 7.3, architecture):
 
 | Source | Wording |
 |---|---|
 | PRD §16 | *"Importing a markdown backlog twice produces no duplicates and picks up edits"* |
 | backlog 10.1 | *"Import twice → no duplicates, edits picked up (both file shapes)."* |
+| backlog 7.3 | *"re‑import twice = 0 created, N updated."* |
 | `01-ports.md` | *"re-import twice = 0 created, N updated."* |
 | `05` §14 | *"re-import twice = 0 created, N updated is the *acceptance test* for the whole port — make it a scripted check over both file shapes, since this is the feature that broke repeatedly."* |
 | `07-ports-in-practice.md` | *"idempotent upsert — re-import twice = 0 created, N updated (the whole acceptance test)"* |

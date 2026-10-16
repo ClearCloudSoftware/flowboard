@@ -33,7 +33,7 @@ What each source contributed. There is no mockup for this component in `docs/moc
 | `docs/flowboard-ideation.drawio` — *FlowBoard ideation* | *Import & seed* group (*Markdown backlog import*, *D6 · Deterministic parser*, *Seed data … sample tasks*); board cards (*Backlog + Todo fixed in front*, *Drag only Backlog ↔ Todo*, *D1 · Auto-start on promote?*); engine card *"Tasks pin flow_id at start"*; *TaskSource adapters*; *Five ports*; an empty *Integrations* group |
 | `docs/flowboard-ideation.drawio` — *Logical components* | `TaskSource` port; *Markdown / Issues import* adapter; edges *TaskSource ↔ Markdown / Issues import*, *TaskSource → Task & run state* (*"import tasks"*) |
 | `docs/flowboard-ideation.drawio` — *Functional components* | *Intake* group: *Import backlog*, *Create / edit task*, *Promote Backlog → Todo*, *Seed project*; edge *Intake → Execution* (*"tasks"*); Execution's *"Start task / pin flow version"* |
-| `docs/flowboard-ideation.drawio` — *Harness architecture* | Board card (*"drag only Backlog ↔ Todo"*); `apps/web` *"thin: validates, calls core, enqueues"*; job loop kinds incl. `import_backlog`; *Backlog import* card (agent → five fields → upsert); *Workspace manager*; `.flowboard/worktrees/task-<id>`, `fb/task-<id>`; *Code layout* adapters; *Schedule trigger (later)*; *Injection scan (later)*; *"light, zero radius"* tech card; API card; GitHub card |
+| `docs/flowboard-ideation.drawio` — *Harness architecture* | Board card (*"drag only Backlog ↔ Todo"*); `apps/web` *"thin: validates, calls core, enqueues"*; job loop kinds incl. `import_backlog`; *Backlog import* card (agent → five fields → upsert); *Workspace manager*; `.flowboard/worktrees/task-<id>`, `fb/task-<id>`; *Code layout* adapters; *Life of one step* card A (*"You press Start"*); *Schedule trigger (later)*; *Injection scan (later)*; *"light, zero radius"* tech card; API card; GitHub card |
 | `docs/mockups/monitor.html` | Backlog count (tasks with no runs) in the pipeline readout and status bar |
 | `docs/mockups/monitor-guide.html` | Beats *In the backlog* and *You promote it*; *Why you can't drag a card*; *Idle* = *"queued or in the backlog"* |
 | `docs/mockups/task-detail.html`, `task-detail-guide.html` | *Send to backlog* button (mockup) and its description (guide); lifecycle *backlog · "no workspace yet"* → *"you promote it"* → running; *"can happen from anywhere"*; the sample workspace `~/.flowboard/ws/auth-refactor` on `flowboard/auth-refactor` |
@@ -46,7 +46,7 @@ What each source contributed. There is no mockup for this component in `docs/moc
 
 ## Not found
 
-No source mentions import or intake in `docs/old/architecture/03-execution-substrate.md`, `04-hitl-and-notify.md`, `06-cost-and-platform.md` or `09-memory.md` (beyond the word *promoted* in `09`), in `docs/mockups/inbox*.html` or `capability-library*.html` (beyond sample task ids such as `pdf-import`), in `docs/competitor-multica.md`, or in the other reference `.ts` files.
+No source mentions import or intake in `docs/old/architecture/03-execution-substrate.md`, `04-hitl-and-notify.md` or `09-memory.md` (beyond the word *promoted* in `09`), in `docs/mockups/inbox*.html` or `capability-library*.html` (beyond sample task ids such as `pdf-import`), in `docs/competitor-multica.md`, or in the other reference `.ts` files.
 
 ## Related
 

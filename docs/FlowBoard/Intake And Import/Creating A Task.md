@@ -21,7 +21,7 @@ Adding one task by hand, without a file.
 
 ## What a task carries
 
-From PRD §5 `tasks`. Fields a person writes at creation:
+**Inference:** no source gives the create body. The fields below are inferred from the PRD §5 `tasks` schema plus feature map §3 (*"Add a task with a title and description"*). Fields a person would write at creation:
 
 | Field | Required | Meaning |
 |---|---|---|
@@ -31,7 +31,7 @@ From PRD §5 `tasks`. Fields a person writes at creation:
 | `acceptance_criteria` | no | *"the exact conditions that close the task; reviewed against"* |
 | `non_goals` | no | *"what the agents must not touch or attempt"* |
 
-Set by the system: `id`, `status`, `created_at`, `updated_at`. Left empty until later: `flow_id` (*"null while in backlog, pinned on promotion"*), `branch_name`, `worktree_path`, `capability_pins`, `import_key`. Full table in [[Intake Data Model]] and [[Task Record]].
+Set by the system: `id`, `status`, `created_at`, `updated_at`. Left empty until later: `flow_id` (*"null while in backlog, pinned on promotion"*), `branch_name`, `worktree_path`, `capability_pins`. Never set for a hand-made task: `import_key` (see [[Import Key]]). Full table in [[Intake Data Model]] and [[Task Record]].
 
 > **Say what "done" means** — Each task can carry *acceptance criteria* (what has to be true to close it) and *non-goals* (what agents must leave alone). Every step sees both, and the review checks against them, so an agent can't quietly swap in an easier job and call it finished. — feature map §3
 

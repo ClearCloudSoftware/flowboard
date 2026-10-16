@@ -29,10 +29,12 @@ stateDiagram-v2
   todo --> running: Start (D1)
 ```
 
+The entry into `backlog` is inferred ([[Intake And Import Open Questions]] #6); seeded tasks are drawio-only (#19).
+
 ## Promote and Start
 
 > [!question] D1: does promote start the task?
-> Backlog decision D1, *"Auto‑start on promote vs explicit Start"*, recommends *"Explicit Start button on card + sheet; promote stays cheap"*. The drawio *FlowBoard ideation* card repeats it. Feature map §3 still asks: *"❓ Should starting a task happen automatically when you pull it out of the backlog, or be a separate "Start" button?"*
+> Backlog decision D1, *"Auto‑start on promote vs explicit Start"*, recommends *"Explicit Start button on card + sheet; promote stays cheap"*. The drawio *FlowBoard ideation* card repeats it, and the *Harness architecture* card *Life of one step* opens with an explicit Start: *"You press Start, or the engine advances a task. A server action validates the request."* Feature map §3 still asks: *"❓ Should starting a task happen automatically when you pull it out of the backlog, or be a separate "Start" button?"*
 >
 > The mockup guides draw promote as start. Monitor guide beat 2, *"You promote it"*: *"The first step is now in line. It has a private copy of the repo waiting for it, but no worker yet …"*, with rule *"**research** queued · no dependencies to satisfy, so it was eligible immediately."* Task-detail guide: `backlog` → `running`, arrow *"you promote it"*, and no `todo` box.
 >
