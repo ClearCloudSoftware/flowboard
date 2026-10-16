@@ -34,7 +34,7 @@ Cross-cutting pieces under every functional component. Better documented as arch
 | ✅      | [[Agent Providers Index\|Agent Providers]] | AgentProvider port, capability negotiation, logical models, Claude / Codex / replay | §6 Agent providers         | #5 AgentProvider, `01-ports.md`    |
 | ✅      | [[Sandboxing Index\|Sandboxing]] | Isolation tiers, ExecHost, security profile, egress allowlist and credential proxy, mounts, limits, in-agent hooks, permission gate | §10 Sandboxing (also §14, §19) | `08-sandboxing.md`, ExecHost in `01-ports.md` |
 | ✅      | [[Workspaces Index\|Workspaces]] | Git worktree per task, branches, demote and reuse, cleanup, the Workspace port and the ExecHost it hands out | §14 Workspaces             | #11 Artifact store & workspace (the Workspace port) |
-| ⬜      | Projects              | Projects, repos, check command, visibility                                          | §1 Projects                | #1 Domain model & migrations       |
+| ✅      | [[Projects Index\|Projects]] | Projects, repos, check command, visibility                                          | §1 Projects                | #1 Domain model & migrations       |
 | ⬜      | Settings And Plumbing | Settings, draft mode, API surface, DB, migrations                                   | §19 Settings, §20 Plumbing | #15 Settings, draft mode, API · #1 |
 
 ## Suggested order
