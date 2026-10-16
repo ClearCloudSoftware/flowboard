@@ -54,7 +54,7 @@ The task-detail sample memory has a task-scope entry: *"Attempt 1 died on an egr
 
 > [!question] Gaps
 > - **Is a denial an attempt?** The mockups count it (*"Attempt 3 of 3"*). PRD §7 treats a non-zero agent exit as an *"infrastructure failure, never a verdict on the work"*: either retried uncounted (transient, which includes *"network error"*) or `blocked`. Same as [[Execution Open Questions]] #22, [[Monitor Open Questions]] #11, [[Task Detail Open Questions]] #12.
-> - **Does a denial end the run at all?** The mockups say the sandbox ended it: *"the sandbox killed build attempt 1"* (task-detail cost tab), *"a build the sandbox killed"* (task-detail guide). The architecture and PRD say only that egress is default-deny; a refused connection fails a tool call, and the agent may carry on. Whether the run exits non-zero is not stated.
+> - **Does a denial end the run at all?** The mockups say the sandbox ended it: *"the sandbox killed build attempt 1"* (task-detail cost tab), *"a build the sandbox killed"* (task-detail guide). The architecture and PRD say only that egress is default-deny. (Inference: a refused connection fails a tool call, and the agent may carry on.) Whether the run exits non-zero is not stated.
 > - **Which allowlist does Allow host & retry edit?** Global `sandbox_profile`, a per-step override, or the flow version? Flows are immutable versions (PRD §4). Same as [[Flow Design Open Questions]] #14 and [[Human In The Loop Open Questions]] #26.
 > - **How does the runner learn which host was denied?** Presumably from the proxy log; not stated.
 > - **No endpoint.** See [[Sandboxing API And Routes]].

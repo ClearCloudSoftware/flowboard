@@ -13,10 +13,12 @@ PRD §17: *"**Sandboxing agent execution** in a container/microVM (§11.1) is in
 |---|---|
 | `ExecHost` seam; host and docker exec adapters | PRD §3; backlog 3.5 |
 | Container workspace: ephemeral container per run, hardened | PRD §11.1; backlog 3.5 |
+| gVisor/microVM for untrusted repos: *"(or, for untrusted repos, a gVisor/microVM)"* | PRD §11.1, §13 (*"host / container / microVM"*), §17 |
 | Egress proxy with default-deny allowlist | PRD §11.1; backlog 3.5 |
 | Credential-injecting proxy, dummy key | PRD §0, §11.1; backlog 3.5 |
 | Permission gate | PRD §7, §11.1; backlog 3.5 |
 | `PreToolUse` hooks in a per-run `settings.json` | PRD §7 |
+| `tool_hooks` provider capability; without it *"the flow editor says so"* | PRD §7 |
 | Host-side `ask_user` broker on every tier | PRD §9 |
 | Logical caps mapped to physical limits | backlog 3.5 |
 | `runs.sandbox`, `settings.sandbox_profile`, optional step override | PRD §11.1; backlog 1.1 |
@@ -31,10 +33,10 @@ PRD §17: *"**Sandboxing agent execution** in a container/microVM (§11.1) is in
 
 | Item | Source |
 |---|---|
-| `gvisor` and `microvm` tiers, opt-in for untrusted repos | `08`; backlog D8 |
+| `gvisor` as a tier value of its own; Docker baseline with *"`gvisor`/`microvm` opt-in for untrusted repos"* | `08` *Recommendation* #3; backlog D8 |
 | Codex runs through the same seam; its own OS sandbox is defense-in-depth | `08` |
 | `api.openai.com (later)` on the allowlist | drawio |
-| `tool_hooks` capability flag and *"the flow editor says so"* | `01-ports.md`; PRD §7 |
+| `tool_hooks` in the `Capability` union | `01-ports.md` |
 | Snapshot `RunSpec` to `data/runs/<id>/spec.json` | `03` §6 idea; drawio |
 | Mem0 on `fb-memory`, reachable from the host only | drawio; `09-memory.md` |
 

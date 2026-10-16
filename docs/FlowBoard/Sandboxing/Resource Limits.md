@@ -29,7 +29,7 @@ Feature map §10: *"Ceilings on memory, processing, and time, so a runaway agent
 
 *"a limit/timeout hit marks the run failed with reason."* (backlog Story 3.5)
 
-PRD §7 classes *"budget or turn cap hit"* as non-transient: the task goes to `blocked`. A physical limit is not in its list; see [[Infra Retries]].
+PRD §7 classes *"budget or turn cap hit"* as non-transient: the task goes to `blocked`. A physical limit is not named in either list. Its transient list does include *"process killed by a signal or lost on restart"*; an out-of-memory or wall-clock kill is a signal kill, so (inference) PRD §7 would retry it as transient, against backlog 3.5's *"marks the run failed with reason"*. See [[Infra Retries]]; [[Execution Open Questions]] #68.
 
 The drawio *Hardening* card says *"wall-clock kill"*.
 
@@ -37,7 +37,7 @@ A shell step's non-zero exit is an outcome, not a failure (PRD §7), so an out-o
 
 ## Why it matters without a budget
 
-The flow-designer guide on the **Budget** field: *"No ceiling means a looping agent has no financial brake — only the sandbox's time limit."* `max_budget_usd` and `max_turns` are nullable (PRD §5), and the PRD §15 seed table gives no budget or turn values. So (inference) the wall-clock limit would be the only per-run brake on the seeded flow when the sandbox is on.
+The flow-designer guide on the **Budget** field: *"No ceiling means a looping agent has no financial brake — only the sandbox's time limit."* `max_budget_usd` and `max_turns` are nullable (PRD §5), and the PRD §15 seed table gives no budget or turn values. The pitch disagrees: *"Every step has a budget and a turn cap; … the sandbox enforces *physical* limits"*. Which one holds is [[Flow Design Open Questions]] #37. If the PRD holds, (inference) the wall-clock limit would be the only per-run brake on the seeded flow when the sandbox is on.
 
 ## Defaults
 

@@ -10,7 +10,7 @@ Every place the sources disagree or leave a gap. Several overlap questions alrea
 ## Policy
 
 ### 1. What does the gate do on the host tier?
-Refuse (PRD §7, `01-ports.md`), refuse or downgrade (PRD §11.1), downgrade (`03` §6, drawio), downgrade or fail (`08`, backlog 3.5 **NEW/DEC**), or warn (`08` *Recommendation* #4). → [[Permission Gate]]; [[Execution Open Questions]] #53.
+Refuse (PRD §7, `01-ports.md`), refuse or downgrade (PRD §11.1), downgrade (`03` §6, drawio), downgrade or fail (`08`, backlog 3.5 **NEW/DEC**). Separately, with no Docker: fall back to host and disable bypass, *"(or warn)"* (`08` *Recommendation* #4). → [[Permission Gate]]; [[Execution Open Questions]] #53.
 
 ### 2. Which tiers satisfy the gate?
 `03` §6 says *"(container/microVM)"*; `08`, `01-ports.md` and the drawio include gVisor. → [[Permission Gate]]
@@ -44,7 +44,7 @@ Named in PRD §11.1, backlog 1.1 and 3.5, and the drawio, but absent from PRD §
 PRD §11.1 holds one allowlist in `settings.sandbox_profile`, overridable per step. Every mockup speaks of *"this step's allowlist"*. Merge rules (replace or union) are unstated. **Proposal** shape in [[Sandboxing Data Model]].
 
 ### 11. What does Allow host & retry edit?
-Global profile, step override, or the flow version (flows are immutable versions, PRD §4)? Does a running task see it? → [[Flow Design Open Questions]] #14; [[Human In The Loop Open Questions]] #26; **proposed** endpoint in [[Sandboxing API And Routes]].
+Global profile, step override, or the flow version (flows are immutable versions, PRD §4)? Does a running task see it? → [[Flow Design Open Questions]] #14; [[Human In The Loop Open Questions]] #26; [[Monitor Open Questions]] #13; [[Execution Open Questions]] #24; **proposed** endpoint in [[Sandboxing API And Routes]].
 
 ### 12. Limit values and the logical-to-physical mapping
 No defaults for `--memory`, `--cpus`, `--pids-limit` or wall-clock anywhere. `03` §6 says the runner *"maps"* budget and turns to them; no formula. → [[Resource Limits]]
@@ -58,7 +58,7 @@ No defaults for `--memory`, `--cpus`, `--pids-limit` or wall-clock anywhere. `03
 Mockups count it (*"Attempt 3 of 3"*); PRD §7 treats non-zero exits as infrastructure failures that never count. Does a denial even end the run, or only fail a tool call? → [[Egress Denials]]; [[Execution Open Questions]] #22; [[Monitor Open Questions]] #11; [[Task Detail Open Questions]] #12.
 
 ### 15. How does a physical limit hit get classified?
-Backlog 3.5: *"marks the run failed with reason."* PRD §7's transient list does not mention it. For a shell step a non-zero exit is an outcome, so an out-of-memory kill would loop as `fail`. → [[Resource Limits]], [[Infra Retries]]; [[Execution Open Questions]] #41.
+Backlog 3.5: *"marks the run failed with reason."* PRD §7's transient list does not name it, but does list *"process killed by a signal or lost on restart"*; an out-of-memory or wall-clock kill is a signal kill, so (inference) PRD §7 would retry it as transient. For a shell step a non-zero exit is an outcome, so an out-of-memory kill would loop as `fail`. → [[Resource Limits]], [[Infra Retries]]; [[Execution Open Questions]] #68, #41.
 
 ### 16. How does the runner learn the denied host?
 The failure cards name it; no source says where it comes from (proxy log, stderr). → [[Egress Denials]]
@@ -89,7 +89,7 @@ drawio *"ro: skills/ → /skills"* versus `08`, PRD §7 and Capability Library D
 `08` mounts it too; mode and path are not given, and artifacts live inside the worktree (`.vibe/task-<id>/`, PRD §6), so it may be redundant. PRD §11.1 says *"the only other mounts are the step's plugin dirs"*, which leaves out both this dir and the socket PRD §9 bind-mounts. → [[Sandbox Mounts]]
 
 ### 24. Empty `--settings` or the hooks file?
-Backlog D5 versus PRD §7. → [[In-Agent Hooks]]; [[Execution Open Questions]] #52.
+Backlog D5 versus PRD §7. → [[In-Agent Hooks]]; [[Execution Open Questions]] #52; [[Settings And Plumbing Open Questions]] #29; [[Agent Providers Open Questions]] #24.
 
 ### 25. The two port sketches disagree
 `tool_hooks` is in the `01-ports.md` `Capability` union, not in `agent-provider.ts`. `01-ports.md` says the runner *"passes it in `RunSpec.exec`"*, but only `agent-provider.ts` declares the field. → [[In-Agent Hooks]], [[ExecHost Port]]
@@ -133,7 +133,7 @@ Only egress and the gate have tests in the backlog; hooks, mounts, limits and no
 `08`: *"a `seccomp` profile"*. Backlog 3.5: *"seccomp default"*. Custom or Docker's default? → [[Sandbox Security Profile]]
 
 ### 38. Is Docker out of scope?
-The drawio ideation scope card: *"Not building / Auth, accounts, roles, deployment, Docker, multi-machine, plugin marketplace."* It lists *Docker* apart from *deployment*. PRD §17 rules out only *"shipping or *deploying* FlowBoard itself in a container"* and keeps sandboxing *"in scope but optional"*. Whether the card means the sandbox or only deployment is not stated. → [[Sandboxing Roadmap]]
+The drawio ideation scope card: *"Not building / Auth, accounts, roles, deployment, Docker, multi-machine, plugin marketplace."* It lists *Docker* apart from *deployment*. PRD §17 rules out only *"shipping or *deploying* FlowBoard itself in a container"* and keeps sandboxing *"in scope but optional"*. Whether the card means the sandbox or only deployment is not stated. → [[Sandboxing Roadmap]]; [[Settings And Plumbing Open Questions]] #30.
 
 ### 39. Per-step tier through a per-task call
 `execHost(task)` sees no step, but the profile is *"overridable per step"* (PRD §11.1) and PRD §7 reads *"the step's sandbox tier"*. → [[ExecHost Port]], [[Sandbox Configuration]]; [[Workspaces Open Questions]] #25.
