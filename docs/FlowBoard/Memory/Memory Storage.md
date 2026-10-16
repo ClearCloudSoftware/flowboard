@@ -31,7 +31,7 @@ The drawio places a *Mem0 OSS server (later)* container *"on fb-memory, reachabl
 | *"nothing about how you work leaves your laptop"* | feature map §21 |
 | *"Self-hosting keeps the whole store local."* | `09` |
 | *"memory adds nothing to the sandbox egress allowlist"* | PRD §11.2 |
-| Mem0 cloud is the only adapter that sends memories off the machine, and it is out of scope for v1 | PRD §17 |
+| Mem0 cloud is the only adapter that *stores* memories off the machine (inferred; extraction text may still leave with self-hosted `mem0`, see below). PRD §17 puts it out of scope: *"The Mem0 managed cloud platform is out of scope for v1"* (emphasis dropped) | PRD §17 |
 
 With `mem0`, the extraction model is called by the Mem0 server, so whatever text it extracts from goes to that model's provider (inferred; no source names the extraction model or its endpoint).
 

@@ -18,7 +18,7 @@ Every memory belongs to exactly one scope. A run recalls from the union of its f
 | `agent` | `agentId` | *what `researcher` learned about this stack; questions `/grill-me` has settled* | *that agent's own run outputs* | *that agent's next run* | [[Agent Memory Scope]] |
 | `task` | `taskId` | *why attempt 1 failed, decisions taken mid-task* | *each run in the task* | *the next attempt (rework loop)* | [[Task Memory Scope]] |
 
-The table is `09-memory.md`'s, quoted. *"Read into … every run's prompt preamble"* for `user` means part 7, not prompt part 1 (the preamble); every other source puts recalled memory in part 7.
+The table is `09-memory.md`'s, quoted. *"every run's prompt preamble"* for `user` is read here as part 7, not prompt part 1 (the preamble) (inferred; no source glosses it). Every other source puts recalled memory in part 7. The wording is logged as source drift in [[Memory Open Questions]] #27.
 
 ## The scope union
 

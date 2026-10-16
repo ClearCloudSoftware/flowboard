@@ -12,7 +12,7 @@ Every place the sources disagree or leave a gap. Nothing here is decided. Where 
 ### 1. Which adapter comes first?
 
 **`local` first:** PRD §11.2 and §14, `01-ports.md`, `09-memory.md` (opening and recommendation 1), the architecture README (*Agentic memory* and open decision 4), feature map §21, drawio *Harness architecture* (*"none (default) · local SQLite FTS5 (first) · mem0 (later)"*, and concept 3 *"local first, Mem0 later"*), PRD §3 (`adapters/memory/ # none, local`).
-**Mem0 first or Mem0 only:** the `memory-store.ts` header (*"Mem0 … is the first adapter"*), drawio *FlowBoard ideation* (*"Memory (Mem0)"*, D10), *Logical components* (Mem0 is the only adapter and store) and *Functional components* (*"contradiction resolution (Mem0)"*), `05` §11 (*"extracted and de-duplicated by Mem0"*), `03` §6 (*"the adapter (Mem0)"*), and `09-memory.md`'s own *The port* and *How it maps to Mem0* sections (*"**Self-hosted OSS is the default**"*).
+**Mem0 first or Mem0 only:** the `memory-store.ts` header (*"Mem0 … is the first adapter"*), drawio *FlowBoard ideation* (*"Memory (Mem0)"*, D10, and the *Commit after a run* card: *"Mem0 extracts facts and resolves contradictions"*), *Logical components* (Mem0 is the only adapter and store) and *Functional components* (*"contradiction resolution (Mem0)"*), `05` §11 (*"extracted and de-duplicated by Mem0"*), `03` §6 (*"the adapter (Mem0)"*), and `09-memory.md`'s own *The port* and *How it maps to Mem0* sections (*"**Self-hosted OSS is the default**"*).
 The `local`-first wording reads like a later revision that did not reach every passage (inferred; the sources carry no dates). See [[Memory Adapters]].
 
 ### 2. Is Mem0 cloud a v1 option?
@@ -21,11 +21,11 @@ PRD §17 puts it out of scope for v1. PRD §13 offers *"Mem0 cloud"* in the sett
 
 ### 3. Which scopes are on by default?
 
-Feature map §21 ❓: *"Which memory to switch on first — just *your* preferences (the cheapest win), or project memory too?"* `09` and the README recommend `user` first. PRD §11.2 and §13 make scopes a setting with no default. See [[Memory Scopes]].
+Feature map §21 ❓: *"Which memory to switch on first — just *your* preferences (the cheapest win), or project memory too?"* `09` and the README recommend `user` first. PRD §11.2 and §13 make scopes a setting with no default. Project memory in particular is [[Projects Open Questions]] #26. See [[Memory Scopes]].
 
 ### 4. Global, per flow, or per step?
 
-The PRD has one global adapter setting. `09` says *"default `none` until the first flow opts in"* and *"`project`/`agent`/`task` per step"*. No flow or step field exists for either. Same as [[Settings And Plumbing Open Questions]] #9; a per-project override is [[Projects Open Questions]] #23. See [[Memory Off By Default]].
+The PRD has one global adapter setting. `09` says *"default `none` until the first flow opts in"* and *"`project`/`agent`/`task` per step"*. No flow or step field exists for either. Same as [[Settings And Plumbing Open Questions]] #9; a per-project override is [[Projects Open Questions]] #23, and which runs get project memory is [[Projects Open Questions]] #26. See [[Memory Off By Default]].
 
 ## Recall
 
@@ -113,7 +113,7 @@ No source gives the bucket storage. Part 7's tokens are billed inside the run (i
 
 ### 24. Mem0 deployment
 
-The drawio places it on `fb-memory`, host-only. The monitor sample shows `docker compose up -d mem0` on `:8088`. No source names the extraction model, its endpoint, or how its spend is captured. See [[Mem0 Adapter]].
+The drawio places it on `fb-memory`, host-only. The monitor sample shows `docker compose up -d mem0` on `:8088`. No source names the extraction model, its endpoint, or how its spend is captured. The spend side is [[Cost And Control Open Questions]] #23. See [[Mem0 Adapter]].
 
 ## Measurement
 
@@ -136,6 +136,8 @@ No M9 epic, no memory section in Story 8.3, no part 7 in Story 3.2, none of the 
 - `09`'s scope table reads `user` into *"every run's prompt preamble"*; everything else puts recalled memory in part 7, not part 1.
 - PRD §7 puts its only commit sentence (*"after a success the runner also `write()`s …"*) at the end of the *"Anything else … `blocked`"* failure bullet, not with the success path. See [[Memory Commit]].
 
+## Runtime
+
 ### 28. When memory itself fails
 
 No source says what happens when recall or commit fails (store down, FTS error, Mem0 timeout). *"never on the critical path of a run"* (PRD §11.2) suggests the run goes ahead without memory, and a failed commit doesn't fail the run (inferred). Nothing says whether either is logged, retried, or shown. See [[Memory Off By Default]].
@@ -143,6 +145,10 @@ No source says what happens when recall or commit fails (store down, FTS error, 
 ### 29. Building the adapter, and settings changes
 
 Settings name the adapter (PRD §13). No source says how the worker constructs it, or whether a change to the memory block reaches a worker that is already running or a run already queued. The general question is [[Settings And Plumbing Open Questions]] #10. See [[Memory Runtime]].
+
+### 30. Recall before or after the prompt is built?
+
+The drawio *Life of one step* builds the RunSpec and the prompt in **C** and recalls in **D**. The Execution set's [[Runner Pipeline]] puts recall first (stage 2, before the prompt and the `RunSpec`), *"because part 7 goes into the prompt"*. PRD §11.2 and `03` §6 say only that recall comes before the run; PRD §7 says only that part 7 comes *"from `MemoryStore.recall`"*. See [[Memory Runtime]].
 
 ## Related
 

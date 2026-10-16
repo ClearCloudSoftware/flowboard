@@ -12,10 +12,10 @@ All memory configuration lives in one **memory block** in `settings`.
 | Field | Values | Default | Source |
 |---|---|---|---|
 | Adapter | `none` / `local` / self-hosted Mem0 / Mem0 cloud | `none` | PRD §13, §11.2 |
-| Endpoint or key ref | *"self-host URL / cloud key ref"* | — | PRD §11.2, §13; `09` |
+| Endpoint or key ref | *"self-host URL / cloud key ref"* (`09`); *"endpoint / key ref"* (PRD §11.2); *"endpoint or key ref"* (PRD §13) | — | `09`; PRD §11.2, §13 |
 | Enabled scopes | user / project / agent / task | not stated | PRD §11.2, §13 |
 | Recall `limit` | a number of hits | not stated | PRD §11.2, §13 |
-| `max_recall_chars` | characters | 6,000 | PRD §7, §11.2 |
+| `max_recall_chars` | characters | 6,000 | PRD §7 (*"default 6,000"*), `09`; PRD §11.2 names the field without a default |
 
 ## How each source lists it
 
@@ -45,7 +45,7 @@ PRD §7 names the cap `settings.memory.max_recall_chars`, a path into a nested b
 > ```json
 > { "adapter": "none", "endpoint": null, "key_ref": null, "scopes": ["user"], "recall_limit": null, "max_recall_chars": 6000 }
 > ```
-> The field names match the Settings And Plumbing proposal ([[Settings Data Model]]), which gives `scopes` no default. `scopes: ["user"]` follows the README's *"`user` scope first"*; the sources give no default. A key ref names a secret, it does not hold one. See [[Memory Open Questions]] #3, #21.
+> Settings And Plumbing does not define these fields: its [[Settings Data Model]] types the block as `memory: MemorySettingsSchema` with the comment *"shape proposed by Memory"*, deferring the shape to this note. Its [[Settings Defaults]] lists *Memory scopes* as *"`user` first"*, marked as a recommendation, which matches `scopes: ["user"]`. `scopes: ["user"]` follows the README's *"`user` scope first"*; the sources give no default. A key ref names a secret, it does not hold one. See [[Memory Open Questions]] #3, #21.
 
 ## Not in settings
 

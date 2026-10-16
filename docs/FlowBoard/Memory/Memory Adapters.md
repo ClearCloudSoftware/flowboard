@@ -33,7 +33,7 @@ The drawio *Harness architecture* card agrees: *"adapters: none (default) · loc
 
 > [!warning] Sources that still put Mem0 first
 > - `memory-store.ts` header: *"Mem0 (self-hosted OSS by default, managed cloud as the remote tier) is the first adapter"*.
-> - Drawio *FlowBoard ideation*: the group is titled *"Memory (Mem0) · additive"*, and *D10* reads *"Default self-hosted Mem0 (local-first)"*.
+> - Drawio *FlowBoard ideation*: the group is titled *"Memory (Mem0) · additive"*, *D10* reads *"Default self-hosted Mem0 (local-first)"*, and the *Commit after a run* card reads *"Mem0 extracts facts and resolves contradictions — from declared artifacts and answers only."*
 > - Drawio *Logical components*: the only adapter card is *Mem0 memory* (*"self-host (default) · managed cloud"*), the only store *"Mem0 vectors + history (self-hosted)"*.
 > - Drawio *Functional components*: *Distil after a step* reads *"facts + contradiction resolution (Mem0)"*.
 > - `09-memory.md` itself is split. Its opening and recommendation 1 put `local` first, but *The port* names *"Mem0 (self-host / cloud), a trivial `local` SQLite adapter, and a `none` no-op"* as the adapters, and *How it maps to Mem0* says *"**Self-hosted OSS is the default**"*.

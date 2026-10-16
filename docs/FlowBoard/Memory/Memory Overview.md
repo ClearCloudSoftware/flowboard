@@ -26,7 +26,7 @@ It is a cost feature as much as a quality one: *"That re-derivation is not free 
 flowchart LR
   EX[Execution] -- "run output → memory" --> MEM[Memory]
   HITL[Human in the loop] -- "answers → memory" --> MEM
-  MEM -. "recall: 7th prompt part (no drawio edge)" .-> EX
+  MEM -. "recall: 7th prompt part (no edge on the Functional page)" .-> EX
   MEM -. "memory bucket" .-> COST[Cost & control]
 ```
 

@@ -19,7 +19,7 @@ The feature map §21: *"**Start warm, not cold** — Before a step runs, FlowBoa
 | 1 | Skip entirely if the adapter is `none` | PRD §7 (*"With memory off (`none`), the prompt is exactly the six parts above."*) |
 | 2 | Build the scope union: user, the task's project, the step's agent/skill, the task | PRD §11.2, `RecallQuery` |
 | 3 | Build `query`: *"The assembled task/step context to match against."* | `memory-store.ts` |
-| 4 | `recall({ scopes, query, limit })` on the host | `09`, `03` §6 |
+| 4 | `recall({ scopes, query })` on the host, plus the optional `limit` | `09`, `03` §6; `limit` from `RecallQuery` in `memory-store.ts` |
 | 5 | Rank the hits, drop the tail to fit `max_recall_chars` | PRD §7 |
 | 6 | Render them as part 7, labelled background | PRD §7, §11.2 |
 | 7 | Optionally record each recalled memory in `run_memories` | PRD §11.2 |
