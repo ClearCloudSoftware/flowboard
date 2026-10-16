@@ -5,7 +5,7 @@ module: Monitor
 
 # Monitor Sample Data
 
-The mockup opens on *"the board mid-morning"*: twelve tasks seeded in `TASKS` (`monitor.html`), nearly all of them FlowBoard working on itself (`pdf-import` is not). The real seed is separate. PRD §15 seeds *"one project and one flow, **Software delivery**"*, backlog Story 1.2 adds the agents, skills and a scratch-repo project, and neither seeds any tasks: M2 says *"Create tasks manually."* (PRD §14). Only the drawio seeds sample tasks: card *Seed data* (*FlowBoard ideation*, *"One project, default flow, sample tasks, so the app is alive on first run."*) and card *Seed project* (*Functional components*, *"default flow + sample tasks"*). The sources disagree, and none says what the sample tasks would be: [[Intake And Import Open Questions]] #19, [[Seed Data]]. Either way, the mockup's twelve tasks are its own illustration, not a seed. See [[Seeded Flows]].
+The mockup opens on *"the board mid-morning"*: twelve tasks seeded in `TASKS` (`monitor.html`), all twelve carrying `flowboard/*` repo labels. The real seed is separate. PRD §15 seeds *"one project and one flow, **Software delivery**"*, backlog Story 1.2 adds the agents, skills and a scratch-repo project, and neither seeds any tasks: M2 says *"Create tasks manually."* (PRD §14). Only the drawio seeds sample tasks: card *Seed data* (*FlowBoard ideation*, *"One project, default flow, sample tasks, so the app is alive on first run."*) and card *Seed project* (*Functional components*, *"default flow + sample tasks"*). The sources disagree, and none says what the sample tasks would be: [[Intake And Import Open Questions]] #19, [[Seed Data]]. Either way, the mockup's twelve tasks are its own illustration, not a seed. See [[Seeded Flows]].
 
 ## The flow
 

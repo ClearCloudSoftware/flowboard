@@ -57,11 +57,11 @@ interface Usage {
 - **Cost is final at the end.** *"Take the final result event's total cost as authoritative for `runs.cost_usd`. Accumulate per-message token usage as you stream so the live view shows a running number before the run ends."*
 - **Write against the probe.** PRD §0 asks for `docs/stream-sample.jsonl` before writing the parser: *"Write the parser against what you see, not against what you expect."* The file exists at `docs/old/stream-sample.jsonl`.
 - **Dedupe by `seq`** on the client (backlog 3.4 BUG).
+- **Send `end`** on a terminal run state (backlog 3.4).
 
 > [!warning] The sources disagree on the envelope and the emitter
 > - PRD §7 and `01-ports.md` say every event carries `v`; the `events.ts` type has no `v`, and only `tool_use` has a `summary` although `run_events.summary` is stored for every row ([[Monitor Open Questions]] #39).
 > - PRD §7 now specifies tailing `run_events` itself, so the *"deviation from PRD's in-memory emitter"* label above (`03` §8, backlog 3.4) is stale, and `03` §6, `agent-provider.ts` and `07` still describe teeing to an SSE emitter (#40).
-- **Send `end`** on a terminal run state (backlog 3.4).
 
 ## Other streams
 

@@ -16,14 +16,14 @@ The monitor guide says a waiting task is free:
 - Gate: *"Until you do, the task occupies no worker and costs nothing."*
 - *"leaving a question unanswered costs nothing but time."*
 
-The inbox guide agrees: *"**a parked run is not billing you.** When an agent asks, it saves its place and lets go of its worker. Leaving the inbox full costs calendar time and a worker slot's worth of throughput — not money."* The lost throughput is the stalled task's: the slot itself is free.
+The inbox guide agrees: *"**a parked run is not billing you.** When an agent asks, it saves its place and lets go of its worker. Leaving the inbox full costs calendar time and a worker slot's worth of throughput — not money."* Reading the mockups, the lost throughput is the stalled task's and the slot itself is free (inference); under PRD §9 the slot may be held for up to 20 minutes ([[Monitor Open Questions]] #8).
 
 The old design handoff disagrees: its inbox batch sub-line reads *"Blocked 4m 12s · burning idle."* ([[Monitor Open Questions]] #42).
 
 The [[Timeline View]] shows this cost in time: *"Flat, hatched stretches are the hours nobody paid for — the board waiting on a human."*
 
 > [!warning] The PRD keeps the run alive first
-> PRD §9: the broker *"holds the shim's call open. After 20 minutes with no answer, return a sentinel"*. Only then *"The runner sees the process exit, sets the run to `parked`"*. For those first 20 minutes the agent process is alive and blocked on the call, and nothing in the PRD releases its worker slot while it waits. The monitor and the inbox guide both show the slot freed at once. See [[Monitor Open Questions]] #8.
+> PRD §9: the broker *"holds the shim's call open. After 20 minutes with no answer, return a sentinel"*. Only then *"The runner sees the process exit, sets the run to `parked`"*. For those first 20 minutes the agent process is alive and blocked on the call, and no source (PRD §9, backlog 3.1, `03` §7) says a blocked run frees its `VIBE_MAX_RUNS` slot before it parks; the cap itself is not in the PRD. The monitor and the inbox guide both show the slot freed at once. See [[Monitor Open Questions]] #8.
 
 ## Escalation
 

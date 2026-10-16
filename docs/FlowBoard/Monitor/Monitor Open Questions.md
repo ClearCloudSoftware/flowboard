@@ -41,7 +41,7 @@ Monitor step states: `pending | queued | running | asking | gate | failed | done
 
 ### 8. Does an asking run free its worker at once?
 
-The monitor guide: asking is *"paused, billing stops"*, and the run *"let go of its worker"*. The inbox guide agrees: *"When an agent asks, it saves its place and lets go of its worker."* PRD §9: the broker *"holds the shim's call open"* for 20 minutes, then the run parks. For those 20 minutes the process is alive, and nothing in the PRD releases its `VIBE_MAX_RUNS` slot. Billing is likely idle (no tokens while blocked), but the slot is not obviously free. Either the monitor counts a blocked process as a busy slot, or the PRD parks sooner. See [[Waiting And Escalation]]. Same as [[Human In The Loop Open Questions]] #5, [[Escalation And Notifications Open Questions]] #21, [[Cost And Control Open Questions]] #9 and [[Task Detail Open Questions]] #17.
+The monitor guide: asking is *"paused, billing stops"*, and the run *"let go of its worker"*. The inbox guide agrees: *"When an agent asks, it saves its place and lets go of its worker."* PRD §9: the broker *"holds the shim's call open"* for 20 minutes, then the run parks. For those 20 minutes the process is alive. The PRD has no concurrency cap; the `VIBE_MAX_RUNS` cap comes from backlog 3.1, `03` §7 and the drawio *Job loop* card, and no source (PRD §9, backlog 3.1, `03` §7) says a blocked run frees its slot before it parks. Billing is likely idle (no tokens while blocked), but the slot is not obviously free. Either the monitor counts a blocked process as a busy slot, or the PRD parks sooner. See [[Waiting And Escalation]]. Same as [[Human In The Loop Open Questions]] #5, [[Escalation And Notifications Open Questions]] #21, [[Cost And Control Open Questions]] #9 and [[Task Detail Open Questions]] #17.
 
 ### 9. Escalate after 10 minutes or 5?
 
@@ -55,7 +55,7 @@ The monitor tags any waiting item as `ESCALATED`, including gates and failures. 
 
 ### 11. Is an egress denial an attempt?
 
-The monitor shows *"Attempt 3 of 3 failed — egress denied"*. PRD §7: a non-zero agent exit is *"an **infrastructure failure**, never a verdict on the work"*; it does not count toward `max_attempts`, and a non-transient one puts the task in `blocked` with no automatic retry. Attempts only grow through rework loops (§8). What does the failure card say for an infra failure, and what does *of 3* count? In the mockup *of 3* is a fixed string (`monitor.html:750`) and `retry()` has no cap, so one more failed retry would read *Attempt 4 of 3*. Whether a sandbox denial ends the run with a non-zero exit at all, or only fails the tool call, is not stated (inference). Same as [[Execution Open Questions]] #22, [[Sandboxing Open Questions]] #14 and [[Task Detail Open Questions]] #12; see [[Egress Denials]].
+The monitor shows *"Attempt 3 of 3 failed — egress denied"*. PRD §7: a non-zero agent exit is *"an **infrastructure failure**, never a verdict on the work"*. A transient one *"does **not** count toward `max_attempts`"*; a non-transient one puts the task in `blocked` with no automatic retry, and §7 does not say whether it counts. Attempts only grow through rework loops (§8). What does the failure card say for an infra failure, and what does *of 3* count? In the mockup *of 3* is a fixed string (`monitor.html:750`) and `retry()` has no cap, so one more failed retry would read *Attempt 4 of 3*. Whether a sandbox denial ends the run with a non-zero exit at all, or only fails the tool call, is not stated (inference). Same as [[Execution Open Questions]] #22, [[Sandboxing Open Questions]] #14 and [[Task Detail Open Questions]] #12; see [[Egress Denials]].
 
 ### 12. Retry with a note, and Fail task
 
@@ -113,7 +113,7 @@ Neither is in the PRD, the backlog or the feature map. The PRD's timeline is per
 
 ### 22. When did a gate start waiting?
 
-The timeline and the band's *waited* need the moment a step entered `awaiting_approval`. The PRD stores `questions.created_at` for questions but has no column for gates. **Proposal:** `step_instances.updated_at`, or a new `awaiting_since` column.
+The timeline and the band's *waited* need the moment a step entered `awaiting_approval`. The PRD stores `questions.created_at` for questions but has no column for gates. **Proposal:** `step_instances.updated_at`, or a new `awaiting_since` column. The end of the wait needs the same care: a third mockup bug (after the two in #17) is that `approve()` (`monitor.html:673-677`) never clears `r.since`, while `reject()` and `answer()` do, so an approved gate keeps drawing a growing *waiting on you* bar on the [[Timeline View]] (`monitor.html:924`).
 
 ### 23. Pipeline counters
 
@@ -151,7 +151,7 @@ The inbox mockup has a `who` per item (*dana*). The monitor has no owner. Featur
 
 ### 30. How does the monitor stay live?
 
-PRD: SSE for runs and the inbox. Backlog 2.2: a polling hook. `02` §4: a materialized view refreshed on job completion. Drawio: SSE endpoints for *"questions and task state"*. Old handoff: *"One websocket for run events"*. The drawio does pick SSE for the board: life-of-a-step beat G ends *"→ SSE → run viewer and board"*, the front-end card says *"EventSource for live updates"*, and feature map §20 keeps *"the board, the viewer, and the inbox current"*. That conflicts with backlog 2.2's polling, `02` §4's refreshed view and the old handoff's websocket, and no source names an endpoint. **Proposal** in [[Monitor API And Routes]]: one SSE stream with a snapshot then deltas. Same as [[Settings And Plumbing Open Questions]] #16; see [[Live Updates]].
+PRD §2 makes SSE the general rule: *"Server-Sent Events for live streaming (not websockets — SSE is enough and simpler in Next.js)"*; the PRD uses it for runs and the inbox. Backlog 2.2: a polling hook. `02` §4: a materialized view refreshed on job completion. Drawio: SSE endpoints for *"questions and task state"*. Old handoff: *"One websocket for run events"*, which PRD §2 rules out. The drawio does pick SSE for the board: life-of-a-step beat G ends *"→ SSE → run viewer and board"*, the front-end card says *"EventSource for live updates"*, and feature map §20 keeps *"the board, the viewer, and the inbox current"*. That conflicts with backlog 2.2's polling, `02` §4's refreshed view and the old handoff's websocket, and no source names an endpoint. **Proposal** in [[Monitor API And Routes]]: one SSE stream with a snapshot then deltas. Same as [[Settings And Plumbing Open Questions]] #16; see [[Live Updates]].
 
 ### 31. Loading, error and lost-connection states
 
@@ -179,7 +179,7 @@ PRD §7 classes *"process killed by a signal"* as a **transient** failure: *"ret
 
 ### 36. Where does Stop run?
 
-Backlog 3.4 and `03` §8: *"Stop = SIGTERM by pid from the route (same machine)"*. PRD §2: *"Next.js route handlers must never spawn a long-lived child process; they enqueue jobs and the worker picks them up"*. The ports already have a stop: `AgentRun.stop()` (*"SIGTERM the child"*, `agent-provider.ts`) and `ChildHandle.kill()` (`exec-host.ts`). On the container tier the host pid belongs to the docker client, not the agent. Should Stop be a job the worker handles through the port? Who finalises the stopped run is [[Execution Open Questions]] #56.
+Backlog 3.4 and `03` §8: *"Stop = SIGTERM by pid from the route (same machine)"*. PRD §2: *"Next.js route handlers must never spawn a long-lived child process; they enqueue jobs and the worker picks them up"*. The ports already have a stop: `AgentRun.stop()` (*"SIGTERM the child"*, `agent-provider.ts`) and `ChildHandle.kill()` (`exec-host.ts`). Inferred: on the container tier the host pid belongs to the docker client, not the agent. Should Stop be a job the worker handles through the port? Who finalises the stopped run is [[Execution Open Questions]] #56.
 
 ### 37. Retry as-is for rate limits
 

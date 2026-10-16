@@ -14,7 +14,7 @@ The home view. Guide: *"Where is every task, and which one wants me first?"* Rea
 | Icon | [[Task Status Icons]] |
 | Id + title | Task id in medium weight (regular once done), `⑂2` when two steps run, title underneath |
 | Flow bar | [[Flow Bar And Step States]] |
-| Step | `whereOf()`: the blocking step, `build ∥ tests`, `queued`, `done` or `backlog` |
+| Step | `whereOf()`: the blocking step, the running step (e.g. `build`), `build ∥ tests`, `queued`, `done` or `backlog` |
 | Time | `failed 42m`, `waiting 5m`, the longest running run's elapsed time, `71m ago` when done, `in queue`, or `—` |
 | Cost | Total in bold; `$X wasted` underneath in brick when over $0.005 |
 

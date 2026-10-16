@@ -9,6 +9,8 @@ How the screen gets and keeps its picture. The mockup simulates everything in th
 
 ## In the real system
 
+Partly a **proposal**: no source defines a stream to the monitor or board ([[Monitor Open Questions]] #30), so the SSE leg is drawn as proposed. Stop follows backlog 3.4 and `03` §8 (a SIGTERM from the route); making it a worker job instead is #36.
+
 ```mermaid
 sequenceDiagram
   participant W as apps/worker
@@ -21,9 +23,11 @@ sequenceDiagram
   Web->>DB: read tasks, step_instances, runs
   Web-->>UI: rows, needs, workers, money
   Web->>DB: tail run_events by seq
-  Web-->>UI: SSE events (live log, cost)
-  UI->>Web: approve / reject / answer / retry / stop
+  Web-->>UI: SSE events, live log and cost (proposed)
+  UI->>Web: approve / reject / answer / retry
   Web->>DB: write rows + enqueue job
+  UI->>Web: stop
+  Web->>W: SIGTERM by pid, same machine
 ```
 
 The facts behind it:
