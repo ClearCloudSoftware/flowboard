@@ -9,7 +9,7 @@ Terms used across the Projects notes. ⚠ marks a word that means different thin
 
 | Term | Meaning | Source |
 |---|---|---|
-| **Project** ⚠ | One row in `projects`: a named, slugged handle on one local git repository, with a default flow and a check command. See [[Project Record]]. **Overloaded:** the architecture also says *"the project's `@/` path alias"* (`07`, `reference/README.md`), meaning FlowBoard's **own** codebase. In these notes *project* always means a managed project. | PRD §5; `07` |
+| **Project** ⚠ | One row in `projects`: a named, slugged handle on one local git repository, with a default flow and a check command. See [[Project Record]]. **Overloaded:** the architecture also says *"the project's `@/` path alias"* (`07`) and *"the project's `@/` alias"* (`reference/README.md`), meaning FlowBoard's **own** codebase. In these notes *project* always means a managed project. | PRD §5; `07` |
 | **Managed project / managed repo** | A project FlowBoard runs agents against, as opposed to FlowBoard's own repo. Backlog wording: *"each managed project's `.flowboard/skills/`"*. | backlog Story 0.3 |
 | **Repo** ⚠ | The git repository a project points at. **Overloaded:** in the PRD it is a local absolute path (`repo_path`); in the monitor and task-detail mockups it is an `owner/name` label (`flowboard/api`); in the drawio it is also the remote (*"project remote"*). See [[Project Repository]]. | PRD §5; `monitor.html`; `task-detail.html`; drawio |
 | **`repo_path`** | *"absolute path to the git repo"*. The base for worktrees and the capability store. | PRD §5 |

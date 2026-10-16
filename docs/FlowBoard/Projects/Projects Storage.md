@@ -32,12 +32,12 @@ The file is `data/flowboard.db`, SQLite in WAL mode, `busy_timeout = 5000` (PRD 
 
 | Path | Lifetime | Cleaned up by | Source |
 |---|---|---|---|
-| `.vibe-worktrees/task-<id>` | from promotion until you clean it up | *"Cleanup worktree only via explicit action, only when done/cancelled/failed."* | backlog Story 2.1 |
+| `.vibe-worktrees/task-<id>` | from promotion (feature map §14: task start; [[Workspaces Open Questions]] #1) until you clean it up | *"Cleanup worktree only via explicit action, only when done/cancelled/failed."* | backlog Story 2.1 |
 | `.flowboard/skills/<plugin>/<commit>` | from install until garbage-collected | *"A commit dir is deleted once no non-terminal task pins it and it is not the installed commit."* | Capability Library D11 |
 | `.git/info/exclude` lines | permanent | nothing stated | backlog Stories 0.3, 2.1 |
 
 > [!warning] Other layouts in the sources
-> Drawio *Harness architecture*: worktrees at `<repo>/.flowboard/worktrees/task-<id>`. Task-detail mockup: `~/.flowboard/ws/<task>`, outside the repo. Capability-library mockup: store `~/.flowboard/capabilities`. Drawio *FlowBoard ideation* library card: *"Clone / sparse-checkout into ./skills/<slug>"*, FlowBoard's own folder. See [[Workspace Naming]], [[Task Detail Open Questions]] #20 and [[Capability Storage On Disk]].
+> Drawio *Harness architecture*: worktrees at `<repo>/.flowboard/worktrees/task-<id>`. Task-detail mockup: `~/.flowboard/ws/<task>`, outside the repo. Capability-library mockup: store `~/.flowboard/capabilities`. Drawio *FlowBoard ideation* library card: *"Clone / sparse-checkout into ./skills/<slug>"*, FlowBoard's own folder. Monitor mockup artifacts: `.flowboard/${t.id}/…` in the row detail and *"write .flowboard/artifacts/brief.md"* in the sample log, not PRD §6's `.vibe/task-<id>/`. See [[Workspace Naming]], [[Task Detail Open Questions]] #20, [[Monitor Open Questions]] #26 and [[Capability Storage On Disk]].
 
 ## In FlowBoard's own repo
 

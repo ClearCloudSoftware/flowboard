@@ -20,7 +20,7 @@ flowchart LR
 
 ## 1. Promotion pins the flow and makes the worktree
 
-`POST /api/tasks/:id/promote -- backlog -> todo, pin flow, create worktree` (PRD §12). PRD §4 instead pins *"at task start"*; see [[Flow Design Open Questions]] #7. The worktree command uses the project's path twice:
+`POST /api/tasks/:id/promote -- backlog -> todo, pin flow, create worktree` (PRD §12). PRD §4 instead pins *"at task start"*; see [[Flow Design Open Questions]] #7. The worktree splits the same way: feature map §14 has *"Its own branch and folder, created when the task starts."*; see [[Workspaces Open Questions]] #1. The worktree command uses the project's path twice:
 
 ```
 git -C <repo_path> worktree add <repo_path>/.vibe-worktrees/task-<id> -b vibe/task-<id>

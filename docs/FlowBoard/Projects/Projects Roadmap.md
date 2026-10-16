@@ -7,7 +7,7 @@ module: Projects
 
 ## v1 scope
 
-From the PRD and the backlog items tagged **PRD**.
+From the PRD, the backlog items tagged **PRD**, and the backlog **BUG** fixes to those features (Stories 1.3, 3.4).
 
 | Milestone / story | Item | Source |
 |---|---|---|
@@ -25,7 +25,7 @@ From the PRD and the backlog items tagged **PRD**.
 - [ ] Projects list page with cards
 - [ ] New-project dialog
 - [ ] Seed project on a scratch repo
-- [ ] Bugs: project links use the slug (Story 3.4); non-JSON error bodies on submit (Story 1.3)
+- [ ] Bugs: project links use the slug (Story 3.4); empty state and non-JSON error bodies on submit (Story 1.3)
 - [ ] Decide this week's spend: rolling 7 days or calendar week (Story 1.3 **DEC**)
 
 ## Designed beyond the PRD
@@ -33,7 +33,6 @@ From the PRD and the backlog items tagged **PRD**.
 | Item | Source |
 |---|---|
 | New-project dialog with a flow-type select, *Empty* allowed, creating flow v1 | backlog Story 1.3 (**NEW**) |
-| Empty state and submit error handling | backlog Story 1.3 (**BUG**) |
 | `.git/info/exclude` hygiene for `.vibe-worktrees/` and `.flowboard/skills/` | backlog Stories 0.3 (**FIX**), 2.1 (**PRD/FIX**) |
 | Saving a flow points the project at the new version; adopting a library flow | `flow-designer-guide.html` |
 | *"Reuse… picker (steps or whole flow from other projects, key uniquified)"* | backlog Story 8.2 (**NEW**) |

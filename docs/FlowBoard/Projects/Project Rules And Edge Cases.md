@@ -22,7 +22,7 @@ Every rule the sources state about projects, in their words, then the edge cases
 | R9 | The parent repo stays clean: *"append `.vibe-worktrees/` to `<repo>/.git/info/exclude`"*; *"FlowBoard adds [`.flowboard/skills/`] to that repo's `.git/info/exclude`"* | backlog Stories 2.1, 0.3 |
 | R10 | The project's git remote is not on the egress allowlist: *"the host does all git work and the agent never needs to push or fetch"* | PRD §11.1 |
 | R11 | The agent may not push or touch the base branch: the hook denies *"any `git push`, `git reset --hard` or `git checkout` of the base branch"* | PRD §7 |
-| R12 | *"Every task gets its own worktree"*, created under `repo_path` on promotion; *"never remove it automatically"* | PRD §11 |
+| R12 | *"Every task gets its own worktree"*, created under `repo_path` on promotion; *"never remove it automatically"* (feature map §14 instead: *"created when the task starts"*; see [[Workspaces Open Questions]] #1) | PRD §11 |
 | R13 | Memory writes stay in their project: *"a run writes to its own project/agent/task, not another project's"* | `09` |
 | R14 | Project links use the slug: *"Project link must use slug (today uses id → 404)."* | backlog Story 3.4 (**BUG**) |
 | R15 | *"No auth, no multi-tenancy, no user table. Do not add them "for later""* | PRD §2 |

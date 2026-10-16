@@ -32,7 +32,7 @@ FlowBoard ships with one project so the app is alive on first run. This note cov
 
 ## Why the scratch repo matters
 
-M5's proof runs against it: *"a deliberately failing test in the scratch repo sends the seeded flow from `check` back to `implement` with the raw log"* (PRD §14). So the scratch repo needs a real lint and test command that can fail on purpose. The seed skills are local *"so M5 is testable without any GitHub access"* (PRD §15).
+M5's proof runs against it: *"a deliberately failing test in the scratch repo sends the seeded flow from `check` back to `implement` with the raw log"* (PRD §14). So the scratch repo needs a test command that can fail on purpose *(inferred)*. The seed skills are local *"so M5 is testable without any GitHub access"* (PRD §15).
 
 ## Gaps
 

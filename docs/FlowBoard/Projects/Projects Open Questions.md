@@ -75,15 +75,15 @@ The hook denies *"`git checkout` of the base branch"* (PRD §7), but no column s
 
 Drawio: *"host-side push / fetch"* to the *"project remote"*, on a dashed edge the legend reads as *"optional or later"*. PRD §11.1: *"the host does all git work"*. No source says when FlowBoard pushes a task branch, opens a PR, or fetches, and no column stores the remote. Related: [[Task Detail Open Questions]] #21 and [[Workspaces Open Questions]] #20 (who commits), [[Workspaces Open Questions]] #21 (how the work gets back).
 
+### 17. Where do worktrees go?
+
+Three schemes: PRD/backlog `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>`; drawio `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`; task-detail mockup `~/.flowboard/ws/<task>` on `flowboard/<task>`. Only the first two live inside the project's repo. The main question is [[Workspaces Open Questions]] #6; also [[Task Detail Open Questions]] #20 and [[Execution Open Questions]] #3. When they are created (promote or start) is [[Workspaces Open Questions]] #1.
+
 ## Security
 
 ### 16. Per-project trust
 
 Only backlog D8 says *"per untrusted repo"*. `08` makes gVisor/microVM *"opt-in for untrusted repos"* and allows *"an explicit trusted-repo opt-out"*; D7 says *"a trusted opt-out"*; PRD §11.1 reserves gVisor/microVM *"for untrusted repos"*. The sandbox profile is global in `settings` and per step (PRD §11.1, backlog Story 1.1); nothing is per project. **Proposal:** a nullable `projects.sandbox_profile` between the two. See [[Repository Trust And Sandboxing]]; where the opt-out lives is [[Sandboxing Open Questions]] #5.
-
-### 17. Where do worktrees go?
-
-Three schemes: PRD/backlog `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>`; drawio `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`; task-detail mockup `~/.flowboard/ws/<task>` on `flowboard/<task>`. Only the first two live inside the project's repo. The main question is [[Workspaces Open Questions]] #6; also [[Task Detail Open Questions]] #20 and [[Execution Open Questions]] #3.
 
 ### 18. Visibility against a single-user tool
 

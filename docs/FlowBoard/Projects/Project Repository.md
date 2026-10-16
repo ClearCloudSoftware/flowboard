@@ -13,7 +13,7 @@ Each project names exactly one repository, by absolute path: `projects.repo_path
 
 | Path | What | Source |
 |---|---|---|
-| `<repo_path>/.vibe-worktrees/task-<id>` | One git worktree per task, on branch `vibe/task-<id>`, created *"On promotion from Backlog to Todo"* | PRD §11; backlog Story 2.1 |
+| `<repo_path>/.vibe-worktrees/task-<id>` | One git worktree per task, on branch `vibe/task-<id>`, created *"On promotion from Backlog to Todo"* (feature map §14: *"created when the task starts"*; [[Workspaces Open Questions]] #1) | PRD §11; backlog Story 2.1 |
 | `<repo_path>/.flowboard/skills/<name>/<commit_sha>/` | Installed plugins, one directory per commit, gitignored | PRD §5 (comment on `plugins`), §13 |
 | `<worktree>/.vibe/task-<task-id>/` | The task's artifacts, inside its worktree, tracked by git | PRD §6 |
 | `<repo_path>/.git/info/exclude` | Gets `.vibe-worktrees/` and `.flowboard/skills/` appended *"so the parent repo stays clean"* | backlog Stories 0.3, 2.1; `05` §11 |

@@ -35,7 +35,7 @@ The schema needs `name`, `slug` and `repo_path` (all `NOT NULL`, PRD §5). The f
 
 ## Registration, step by step
 
-Every step below is sourced; their **order** and their grouping into one request are a **proposal** (see [[Projects Open Questions]] #3 and #8).
+Every step below is sourced unless marked *(proposal)*; their **order** and their grouping into one request are a **proposal** (see [[Projects Open Questions]] #3 and #8).
 
 ```mermaid
 sequenceDiagram
