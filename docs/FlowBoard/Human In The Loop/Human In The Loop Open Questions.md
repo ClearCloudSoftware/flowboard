@@ -19,7 +19,7 @@ PRD §10 scopes the inbox to questions: *"Every pending question across all proj
 
 ### 3. Grouping
 
-By task (PRD §10, feature map §12), one card per `batch_id` (`04` §9, backlog 4.3), by `(taskId, stepRunId)` (old handoff), or one card per item (mockup). Two waiting items on one task are two cards in the mockup and one group in the PRD. Related: [[Monitor Open Questions]] #5 (batches in the monitor's band).
+By task (PRD §10, feature map §12), one card per `batch_id` (`04` §9, backlog 4.3), by `(taskId, stepRunId)` (old handoff), or one card per item (mockup). Two waiting items on one task are two cards in the mockup and one group in the PRD. The monitor mockup shows one band item per task (its first blocking run), so in effect it groups by task as the PRD does. Related: [[Monitor Open Questions]] #5 (batches in the monitor's band).
 
 ### 4. Who is "me"?
 
@@ -33,7 +33,7 @@ The mockups park on ask: *"When an agent asks, it saves its place and lets go of
 
 ### 6. Task status while a question waits
 
-Backlog Story 4.2 sets the task `blocked` on park, and tags that item **PRD**. The PRD uses `blocked` for spent or stuck loops (§8) and non-transient failures (§7). The monitor's *blocked* filter means *"everything waiting on a human"*, and the task-detail header reads *blocked on you* at any waiting gate or question. One status covers waiting on you, out of attempts, and broken. See [[Question Lifecycle]] and #39. Same as [[Execution Open Questions]] #11.
+Backlog Story 4.2 sets the task `blocked` on park, and tags that item **PRD**. The PRD uses `blocked` for spent or stuck loops (§8) and non-transient failures (§7). The monitor's *blocked* filter means *"everything waiting on a human"*, and the task-detail status bar reads *blocked on you* while a gate waits (its header pill reads *waiting on you*). The PRD doesn't say what a plain approval gate does to the task status. One status covers waiting on you, out of attempts, and broken. See [[Question Lifecycle]] and #39. Same as [[Execution Open Questions]] #11.
 
 ### 7. A `resume_step` job, or `start_run`?
 
@@ -85,7 +85,7 @@ Feature map §11 ❓, backlog Story 4.4 (**DEC/NEW**) and backlog decision **D2*
 
 ### 18. 5 or 10 minutes?
 
-5 minutes: PRD §10, §14 M6, §16; `04` §10; backlog Stories 6.1 and 10.1; drawio; old brief and handoff; the old design prototype (`Vibe Kanban.dc.html`, `escalationMinutes` default 5, range 1–30). 10 minutes: inbox mockup (`ESCALATE = 10 * MIN`, *"escalation after 10m"*), inbox guide (*"Ten minutes without an answer"*), monitor mockup, mockups README (*"one card crosses the ten-minute threshold while you watch"*). The value is a setting (`escalation_threshold_ms`), so this is only the default. The unit is also undecided. `04` and backlog Story 6.1 use milliseconds (`escalation_threshold_ms`); `06` §15 and backlog Story 8.3 say minutes. Same as [[Escalation And Notifications Open Questions]] #1 and #2, [[Monitor Open Questions]] #9, [[Execution Open Questions]] #59 and [[Settings And Plumbing Open Questions]] #6.
+5 minutes: PRD §10, §14 M6, §16; `04` §10; backlog Stories 6.1 and 10.1; drawio; old brief and handoff; the old design prototype (`Vibe Kanban.dc.html`, `escalationMinutes` default 5, range 1–30). 10 minutes: inbox mockup (`ESCALATE = 10 * MIN`, *"escalation after 10m"*), inbox guide (*"Ten minutes without an answer"*), monitor mockup, mockups README (*"one card crosses the ten-minute threshold while you watch"*). Whether it is a setting at all is disputed. PRD §10 fixes it (*"`run_after = now + 5 minutes`"*), and PRD §13's settings list (draft mode, sandbox, memory) has no threshold. It is a setting, so 5 is only a default, in `04` §10 (`settings.escalation_threshold_ms`), `06` §15 (*"escalation threshold (minutes)"*), backlog Stories 6.1 and 8.3, feature map §19 (**Nudge timing**) and the old handoff (*"Escalation threshold is a setting (default 5 minutes)"*). Where it is a setting, the unit is also undecided. `04` and backlog Story 6.1 use milliseconds (`escalation_threshold_ms`); `06` §15 and backlog Story 8.3 say minutes. Same as [[Escalation And Notifications Open Questions]] #1 and #2, [[Monitor Open Questions]] #9, [[Execution Open Questions]] #59 and [[Settings And Plumbing Open Questions]] #6.
 
 ### 19. Do gates and failures escalate?
 
@@ -99,7 +99,7 @@ The guide promises the chat message carries *"the same controls on it"*, and tha
 
 ### 21. Slack over HTTP or Socket Mode?
 
-PRD §10: `POST /api/slack/interactions` with a signing secret; backlog 6.2 details HMAC verification. The drawio harness: *"Slack Socket Mode + Block Kit, so no public URL"* and *"Socket Mode WebSocket, outbound only"*. A local-first app has no public URL for Slack to call, which favours Socket Mode. The PRD config and verification steps assume HTTP. The drawio also disagrees with itself: its ideation and functional pages keep *"Signature check on Slack interactions"* and *"Verify inbound / signature check on interactions"*, which Socket Mode doesn't use. Same as [[Escalation And Notifications Open Questions]] #6.
+PRD §10: `POST /api/slack/interactions` with a signing secret; backlog 6.2 details HMAC verification. The drawio harness: *"Slack Socket Mode + Block Kit, so no public URL"* and *"Socket Mode WebSocket, outbound only"*. A local-first app has no public URL for Slack to call, which favours Socket Mode. The PRD config and verification steps assume HTTP. The drawio also disagrees with itself: its ideation and functional pages keep *"Signature check on Slack interactions"* and *"Verify inbound / signature check on interactions"*, alongside the harness's Socket Mode. No source says how signing works over a WebSocket. Same as [[Escalation And Notifications Open Questions]] #6; how an interaction reaches the adapter's check is [[Escalation And Notifications Open Questions]] #22.
 
 ### 22. Notifier interface variants
 
@@ -131,7 +131,7 @@ Backlog Story 2.3: *"Reject asks for a reason"*. All three mockups send `needs a
 
 ### 28. Key maps disagree
 
-See the table in [[Human In The Loop Controls]]. `y`/`n`, `0`, `⌘Enter`, `g i`/`g b` and `?` are in the PRD-side sources but not the mockup. `←`/`→` exist only in the mockup. `r` is *send back* in the mockups and *Retry now* in the old handoff's error state. `Esc` clears an answer (old handoff) or cancels the reason box (mockup). `j`/`k` move between questions in the PRD and between cards in the mockup; backlog Story 4.3 tracks focus *"by question id"*. Across surfaces: task detail uses `1`–`4` for tabs, and the monitor's `a`, `r` and `1`–`9` act only when the top *Needs you* item is the matching kind, so in the seeded state (a failure on top) they do nothing. No surface puts the failure actions on a key. Related: [[Monitor Open Questions]] #44.
+See the table in [[Human In The Loop Controls]]. `y`/`n`, `0`, `⌘Enter`, `g i`/`g b` and `?` are in the PRD-side sources but not the mockup. `←`/`→` exist only in the mockup. `r` is *send back* in the mockups and *Retry now* in the old handoff's error state. `Esc` clears an answer (old handoff) or cancels the reason box (mockup). `j`/`k` move between questions in the PRD and between cards in the mockup; backlog Story 4.3 tracks focus *"by question id"*. Across surfaces: task detail uses `1`–`4` for tabs, and the monitor's `a`, `r` and `1`–`9` act only when the top *Needs you* item is the matching kind, so in the seeded state (a failure on top) they do nothing. The monitor puts no failure action on a key; the inbox puts *Allow host & retry* on `↵` (on a failure card `Enter` submits it), and *Retry as-is* has no key anywhere. Related: [[Monitor Open Questions]] #44.
 
 ### 29. `↵` approves a gate
 
@@ -173,7 +173,7 @@ PRD §3 and §9: the shim *"never opens the database"*; §11.1: it *"cannot open
 
 ### 38. Resume by fork, or by prompt replay?
 
-PRD §9 resumes with `--resume <claude_session_id> --fork-session`, as does the drawio harness (*"resume with --resume"*); `01-ports.md` keeps context-replay as the fallback without `resume_fork`. The drawio *Advance modes* card reads *"park / resume via prompt replay"*, the architecture README lists *"Park/resume via prompt replay"* as the primitive, and `04` §9 allows either. Which is the v1 mechanism for Claude? See [[Ask Park And Resume]] and [[Session Resume And Context Replay]].
+PRD §9 resumes with `--resume <claude_session_id> --fork-session`; the drawio harness says only *"resume with --resume"* and doesn't say whether it forks; `01-ports.md` keeps context-replay as the fallback without `resume_fork`. The drawio *Advance modes* card reads *"park / resume via prompt replay"*, the architecture README lists *"Park/resume via prompt replay"* as the primitive, and `04` §9 allows either. Which is the v1 mechanism for Claude? See [[Ask Park And Resume]] and [[Session Resume And Context Replay]].
 
 ### 39. An exit-0 run after the sentinel: `succeeded` or `parked`?
 

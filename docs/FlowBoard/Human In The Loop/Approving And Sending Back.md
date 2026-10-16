@@ -57,7 +57,7 @@ sequenceDiagram
 
 ## The reason box
 
-The inbox, the monitor and task detail all open a one-line form with the placeholder *"Why — this goes to the next build attempt"*, a **Send back** button (task detail: **Send back to build**) and **Cancel**. `Esc` cancels in all three. In the inbox and task-detail mockups the box opens prefilled with a sample reason: *"Finish item 2: revoke the whole token family, not just the presented token."* The monitor's opens empty. If the reason is blank, all three mockups send `needs another pass`. Whether a reason is required is open: [[Human In The Loop Open Questions]] #27.
+The inbox, the monitor and task detail all open a one-line form with the placeholder *"Why — this goes to the next build attempt"*, a **Send back** button (task detail: **Send back to build**) and **Cancel**. `Esc` cancels in the inbox; in the monitor it can't reach the focused field ([[Monitor Open Questions]] #46), and in task detail it works only after a redraw takes focus ([[Task Detail Open Questions]] #32). In the inbox and task-detail mockups the box opens prefilled with a sample reason: *"Finish item 2: revoke the whole token family, not just the presented token."* The monitor's opens empty. If the reason is blank, all three mockups send `needs another pass`. Whether a reason is required is open: [[Human In The Loop Open Questions]] #27.
 
 ## The sample gate
 

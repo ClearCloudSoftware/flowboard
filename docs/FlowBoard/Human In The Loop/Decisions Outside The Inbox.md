@@ -9,7 +9,7 @@ The inbox is not the only place to answer, approve or send back. The monitor and
 
 ## Monitor — the *Needs you* band
 
-`docs/mockups/monitor.html`. The monitor guide's region 3: *"Everything blocked on a human, oldest first. Empty most of the time."* Its header: *"needs you · N · oldest first — clear these and everything else runs itself"*.
+`docs/mockups/monitor.html`. The monitor guide's region 3: *"Everything blocked on a human, oldest first. Empty most of the time."* The mockup's header: *"needs you · N · oldest first — clear these and everything else runs itself"*.
 
 | Item | Body | Actions |
 |---|---|---|
@@ -17,7 +17,7 @@ The inbox is not the only place to answer, approve or send back. The monitor and
 | question | the question | `1`…`n` one button per option, the first primary |
 | failure | *"Attempt N of 3 failed — <err>. $X spent on the attempts so far."* | `Allow host & retry` · `Retry as-is` · `Open the log` |
 
-The keys act on the **top** item: *"`a` Approve the top gate in Needs you"*, *"`r` Send back the top gate"*, *"`1 – 9` Answer the top question with that option"* (monitor guide keyboard). They fire only if the top item is the matching kind. The band sorts oldest first, so in the seeded state the failure (`billing-webhook`, about 42m) is on top and `a`, `r` and `1`–`9` do nothing until it is cleared. No surface puts the failure actions on a key ([[Human In The Loop Open Questions]] #28). Every item past 10 minutes (gate, question and failure) shows `escalated`; the monitor guide lists *Escalated* only for a question. When empty: *"Nothing waiting on you. · N running, M queued"*.
+The keys act on the **top** item: *"`a` Approve the top gate in Needs you"*, *"`r` Send back the top gate — opens the reason box"*, *"`1 – 9` Answer the top question with that option"* (monitor guide keyboard). They fire only if the top item is the matching kind. The band sorts oldest first, so in the seeded state the failure (`billing-webhook`, about 42m) is on top and `a`, `r` and `1`–`9` do nothing until it is cleared. The monitor puts no failure action on a key ([[Monitor Open Questions]] #44); the inbox puts *Allow host & retry* on `↵` ([[Human In The Loop Controls]]), and *Retry as-is* has no key anywhere ([[Human In The Loop Open Questions]] #28). Every item past 10 minutes (gate, question and failure) shows `escalated`; the monitor guide lists *Escalated* only for a question. When empty: *"Nothing waiting on you. · N running, M queued"*.
 
 The monitor guide's status table:
 
@@ -27,7 +27,7 @@ The monitor guide's status table:
 | Waiting on you — *a question* | *"A run paused mid-job because it needs an answer it can't safely guess."* | *"Answer it. The run picks up exactly where it stopped, with your answer in hand."* |
 | Failed | *"A step errored, hit its retry limit, or you stopped it. The task is parked and spending nothing."* | *"Open it, read the error, then Allow host & retry or Retry as-is — or leave it and let the spend stop there."* |
 
-The monitor guide calls these *"the four decisions that are yours: approve, send back, answer, retry or stop"*. Its Timeline view ([[Timeline View]]) hatches the stretches a task spent waiting on a person: *"Flat, hatched stretches are the hours nobody paid for — the board waiting on a human."* Its *blocked* filter is *"everything waiting on a human, including gates and questions you scrolled past."*
+The monitor guide calls these *"the four decisions that are yours: approve, send back, answer, retry or stop"*. The mockup's Timeline view ([[Timeline View]]) hatches the stretches a task spent waiting on a person, with the caption *"Flat, hatched stretches are the hours nobody paid for — the board waiting on a human."* (the guide: *"Flat hatched stretches are hours nobody paid for — the board waiting on a human."*) Its *blocked* filter is *"everything waiting on a human, including gates and questions you scrolled past."*
 
 ## Task detail — the gate banner
 

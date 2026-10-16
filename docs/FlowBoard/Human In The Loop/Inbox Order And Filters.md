@@ -36,7 +36,7 @@ The monitor's *needs you first* sort *"ranks failed above waiting above running"
 | Backlog Story 4.3 | *"One card per batch"* |
 | Old design handoff | Batches grouped by `(taskId, stepRunId)`; *"a batch renders as one card"* |
 | Inbox mockup | One card per batch, per lone question, per gate and per failure. Two items from one task would be two cards |
-| Monitor mockup | One band item per question; a batch is not shown as one ([[Monitor Open Questions]] #5) |
+| Monitor mockup | One band item per task (its first blocking run in flow order); a batch is not shown as one ([[Monitor Open Questions]] #5) |
 
 See Open Questions #3.
 

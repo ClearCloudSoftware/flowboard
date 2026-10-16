@@ -79,7 +79,7 @@ Keys are ignored while focus is in an input or textarea, or with `⌘`/`Ctrl`/`A
 
 The drawio column combines the harness *Inbox* card (*"j / k, 1–9, Enter"*) and the ideation *Keyboard model* card (*"j/k move · 1–9 pick · Enter submit"*; *Five question types*: *"text (⌘Enter)"*).
 
-The monitor's `a`, `r` and `1`–`9` act only when the top *Needs you* item is the matching kind. The band sorts oldest first, so in the seeded state the failure is on top and all three keys do nothing until it is cleared. No surface puts the failure actions on a key.
+The monitor's `a`, `r` and `1`–`9` act only when the top *Needs you* item is the matching kind. The band sorts oldest first, so in the seeded state the failure is on top and all three keys do nothing until it is cleared. The monitor puts no failure action on a key ([[Monitor Open Questions]] #44); the inbox puts *Allow host & retry* on `↵`, and *Retry as-is* has no key anywhere.
 
 See Open Questions #28.
 

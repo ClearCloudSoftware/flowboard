@@ -7,7 +7,7 @@ module: Human In The Loop
 
 > **Escalate after a wait** — If a question isn't answered within a set time, it's posted to your chat tool with buttons to answer right there. — feature map §13
 
-The full Notifier component has its own set, [[Escalation And Notifications Index]]. This note covers the part the inbox depends on. The timer in full: [[Escalation Timer]] and [[Escalation Threshold]]; the setting: [[Nudge Timing Setting]].
+The full Notifier component has its own set, [[Escalation And Notifications Index]]. This note covers the part the inbox depends on. The timer in full: [[Escalation Timer]] and [[Escalation Threshold]]; the setting, where sources make it one: [[Nudge Timing Setting]].
 
 ## The timer
 
@@ -16,10 +16,10 @@ The full Notifier component has its own set, [[Escalation And Notifications Inde
 | *"When a question is inserted, enqueue an `escalate_question` job with `run_after = now + 5 minutes`. If the question is still `pending` when the job runs, post to Slack via `chat.postMessage` using Block Kit"* | PRD §10 |
 | *"`escalate_question` at `now + settings.escalation_threshold_ms` (default 5 min); skip if answered or already posted."* | backlog Story 6.1 (`04` §10: *"skip if already answered or posted"*) |
 | *"No token configured → log and continue (channel is optional)."* | `04` §10 (PRD §10: *"If the token is absent, log the escalation and carry on — Slack is optional."*) |
-| The threshold is a setting: *"escalation threshold (minutes)"*; feature map §19 *"Nudge timing"* | `06` §15, backlog Story 8.3 |
+| Some sources make the threshold a setting: *"escalation threshold (minutes)"* (`06` §15); feature map §19 **Nudge timing**; the old handoff (*"Escalation threshold is a setting (default 5 minutes)"*). PRD §10 fixes it at *"`now + 5 minutes`"*, and PRD §13's settings list (draft mode, sandbox, memory) has no threshold | `04` §10, `06` §15, backlog Stories 6.1 and 8.3, feature map §19, old handoff; PRD §10, §13 |
 
 > [!warning] 5 or 10 minutes?
-> Every written source says 5 minutes: PRD §10, §14 M6, §16, `04` §10, backlog Stories 6.1 and 10.1, the drawio (*"Escalate after 5 min"*, *"escalate at 5 min"*), the old brief and the old handoff. The old design prototype (`docs/old/design/Vibe Kanban.dc.html`) defaults `escalationMinutes` to 5 with a range of 1–30, the only bound any source gives. The inbox mockup uses 10 (`ESCALATE = 10 * MIN`, status bar *"escalation after 10m"*, guide *"Ten minutes without an answer…"*), and so do the monitor mockup and the mockups README (*"one card crosses the ten-minute threshold while you watch"*). See [[Human In The Loop Open Questions]] #18.
+> Every PRD-side and design-era source says 5 minutes: PRD §10, §14 M6, §16, `04` §10, backlog Stories 6.1 and 10.1, the drawio (*"Escalate after 5 min"*, *"escalate at 5 min"*), the old brief and the old handoff. The old design prototype (`docs/old/design/Vibe Kanban.dc.html`) defaults `escalationMinutes` to 5 with a range of 1–30, the only bound any source gives. The inbox mockup uses 10 (`ESCALATE = 10 * MIN`, status bar *"escalation after 10m"*, guide *"Ten minutes without an answer…"*), and so do the monitor mockup and the mockups README (*"one card crosses the ten-minute threshold while you watch"*). Whether it is a setting at all is disputed too (table above). See [[Human In The Loop Open Questions]] #18, [[Escalation And Notifications Open Questions]] #1 and [[Monitor Open Questions]] #9.
 
 ## What the inbox shows
 
@@ -74,7 +74,7 @@ The guide's two endings: *"Answer here and the chat message updates to show it's
 *"Handle interactions at `POST /api/slack/interactions` (verify the signing secret)."* (PRD §10). Detail: [[Signed Inbound Interactions]] and [[Slack Adapter]]. Backlog Story 6.2: *"v0 HMAC on the raw body, 300 s replay window, `timingSafeEqual`."* `04` §10: *"Security stays in the adapter."* Config: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_CHANNEL_ID` in `.env.local` (PRD §10).
 
 > [!warning] HTTP or Socket Mode?
-> The drawio *Harness architecture* has *"Slack Socket Mode + Block Kit, so no public URL"* and *"Socket Mode WebSocket, outbound only"*. That conflicts with the PRD's inbound HTTP endpoint. The drawio's other pages keep an HTTP-style check (*"Signature check on Slack interactions"*, *"Verify inbound / signature check on interactions"*), so the drawio disagrees with itself. See Open Questions #21.
+> The drawio *Harness architecture* has *"Slack Socket Mode + Block Kit, so no public URL"* and *"Socket Mode WebSocket, outbound only"*. That conflicts with the PRD's inbound HTTP endpoint. The drawio's other pages keep an HTTP-style check (*"Signature check on Slack interactions"*, *"Verify inbound / signature check on interactions"*), so the drawio disagrees with itself. No source says how signing works over a WebSocket. See Open Questions #21 and [[Escalation And Notifications Open Questions]] #6.
 
 ## The Notifier port
 
