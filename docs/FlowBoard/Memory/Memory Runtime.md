@@ -40,7 +40,7 @@ Only the runner, in the worker process.
 The sources disagree on where recall falls against building the prompt and the `RunSpec`:
 
 - The drawio *Life of one step* puts it after: **C** *"the runner builds the RunSpec and the prompt: contract, read-first paths, output paths"*, then **D** *"If memory is on, the runner recalls (capped) before launch and writes after success."*
-- The Execution set puts it before: [[Runner Pipeline]] stage 2 is *"Recall memory, if enabled (host-side)"*, ahead of stage 3 *"Build the prompt"* and stage 4 *"Build the `RunSpec`"*, and notes *"The drawio puts recall (D) after building the RunSpec and prompt (C); the table puts it first because part 7 goes into the prompt."*
+- The Execution set puts it before: [[Runner Pipeline]] stage 2 is *"Recall memory, if enabled (host-side)"*, ahead of stage 3 *"Build the prompt"* and stage 4 *"Build the `RunSpec`"*, and notes *"The table puts it first because part 7 goes into the prompt; that order is an inference."*
 
 PRD §11.2 and `03` §6 say only that recall comes before the run; PRD §7 says only that part 7 comes *"from `MemoryStore.recall`"*. See [[Memory Open Questions]] #30. The diagram below follows the drawio order.
 
