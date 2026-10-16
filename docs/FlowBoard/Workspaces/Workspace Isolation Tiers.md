@@ -42,7 +42,7 @@ The drawio *Harness architecture* page draws the same ladder in its *Tiers* card
 PRD §11.1: *"a `sandbox_profile` in `settings` (tier, image, egress allowlist, limits), overridable per step"*. Backlog 1.1 adds *"an optional `step_defs.sandbox_profile` override"*. PRD §13 puts a sandbox section in settings: *"the default isolation tier (host / container / microVM), the container image, the network egress allowlist, and the resource limits."* The flow-designer mockup has a per-step **Sandbox** field with the values `none`, `container` and `sealed container`. See [[Sandbox Configuration]].
 
 > [!question] Where the tier is chosen
-> PRD §5's `settings` table is a global key/value store (no `project_id`), with a per-step override. The port call is `execHost(task)`, which sees no step. The drawio *Mounts* and *Permission gate* cards describe a per-run container. Which object decides the tier for one run is not stated. The trust the tier answers to is the repo's (`08`, backlog D8 *"opt-in per untrusted repo"*), yet nothing stores a tier per project. See [[Workspaces Open Questions]] #25 and #31.
+> PRD §5's `settings` table is a global key/value store (no `project_id`), with a per-step override. The port call is `execHost(task)`, which sees no step. The drawio *Harness architecture* page describes a per-run container (its subtitle: *"one throwaway Docker container per run"*; the Docker Desktop box: *"one container per run, destroyed on exit"*). Which object decides the tier for one run is not stated. The trust the tier answers to is the repo's (`08`, backlog D8 *"opt-in per untrusted repo"*), yet nothing stores a tier per project. See [[Workspaces Open Questions]] #25 and #31.
 
 ## Two lifetimes
 

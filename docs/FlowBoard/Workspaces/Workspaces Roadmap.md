@@ -16,6 +16,8 @@ module: Workspaces
 | Optional sandboxed runs with the worktree bind-mounted | PRD §11.1, *"in scope but optional"* (§17) |
 | `tasks.branch_name`, `tasks.worktree_path` | PRD §5 |
 | Acceptance: *"Promoting a task creates a git worktree on its own branch"* | PRD §16 |
+| An `ExecHost` port and `exec/` adapters (*"host, docker"*); shell steps run *"through the same execution host"* | PRD §3, §7 |
+| `runs.sandbox` *"records the tier that actually ran"*; the `sandbox_profile` is *"overridable per step"* | PRD §11.1 |
 
 | Milestone | Workspace content |
 |---|---|
@@ -35,8 +37,8 @@ module: Workspaces
 | Cleanup also after `failed` | backlog 2.1, `05` §11, `workspace.ts` | differs from PRD §11 |
 | Cleanup removes the branch too | task-detail guide | differs from `07` |
 | **Open workspace** button | task-detail mockup | no behaviour defined |
-| `ExecHost` seam and `containerWorkspace` adapter | backlog 3.5 | **NEW** |
-| `runs.sandbox`, `step_defs.sandbox_profile` | backlog 1.1 | **NEW** |
+| `containerWorkspace` adapter | backlog 3.5 | **NEW**. Backlog 3.5 also tags the `ExecHost` seam **NEW**, but PRD §3 and §7 already have it (v1 scope above) |
+| The column name `step_defs.sandbox_profile` for the per-step override | backlog 1.1 | **NEW**. The override itself and `runs.sandbox` are in PRD §11.1 (v1 scope above) |
 | `.flowboard/worktrees/` on `fb/` branches | drawio *Harness* | competing scheme |
 
 ## Later

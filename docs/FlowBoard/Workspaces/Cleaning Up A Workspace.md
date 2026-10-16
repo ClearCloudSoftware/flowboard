@@ -46,7 +46,7 @@ The same split is [[Task Detail Open Questions]] #13 and [[Execution Open Questi
 
 ## What is lost
 
-Artifacts live in `<worktree>/.vibe/task-<id>/`. After cleanup, `artifacts.path` (*"absolute path on disk"*, PRD §5) points at nothing. Plan vs built and the artifact viewer have no files. The Task Detail set raises this: [[Task Storage On Disk]] and [[Task Detail Open Questions]] #14. If the branch is kept (the `07` behaviour) and the artifacts were committed, they survive on the branch.
+Artifacts live in `<worktree>/.vibe/task-<id>/`. After cleanup, `artifacts.path` (*"absolute path on disk"*, PRD §5) points at nothing. Plan vs built and the artifact viewer have no files. The Task Detail set raises this: [[Task Storage On Disk]] and [[Task Detail Open Questions]] #14. If the branch is kept (the `07` behaviour) and the artifacts were committed, they survive on the branch *(inferred)*.
 
 ## Where it is triggered
 

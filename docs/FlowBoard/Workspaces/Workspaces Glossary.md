@@ -15,7 +15,7 @@ module: Workspaces
 | **Worktree** | The v1 workspace: a `git worktree` under `<repo_path>/.vibe-worktrees/task-<id>` | PRD §11 |
 | **Working tree** | The task-detail Files tab's label for the files in the worktree | `task-detail.html` |
 | **Task branch** | The branch the worktree is created on: `vibe/task-<id>` | PRD §11 |
-| ⚠ **Base branch** | The branch the hooks forbid `git checkout` of; not defined anywhere | PRD §7 |
+| **Base branch** | The branch the hooks forbid `git checkout` of; not defined anywhere | PRD §7 |
 | **Workspace port** | `create`, `cwd`, `execHost`, `destroy` | `workspace.ts` |
 | **`TaskRef`** | *"A task's identity, enough to locate its isolated workspace. Shared with ArtifactStore."* | `workspace.ts` |
 | **`WorkspaceHandle`** | `{ path, branch? }` returned by `create` | `workspace.ts` |

@@ -63,7 +63,7 @@ The sketch passes `cwd` but not `exec`. `03` §6 adds it: *"the runner gets an `
 
 ## Startup
 
-*"Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`."* (PRD §11.1, backlog 0.1). The probe decides which `ExecHost` tiers the workspace can return.
+*"Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`."* (PRD §11.1, backlog 0.1). The probe decides which `ExecHost` tiers the workspace can return *(inferred)*.
 
 ## Related
 

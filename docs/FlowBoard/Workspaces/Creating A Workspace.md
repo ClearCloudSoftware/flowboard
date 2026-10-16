@@ -18,7 +18,7 @@ module: Workspaces
 | Feature map §14 | *"Its own branch and folder, created when the task starts."* |
 | Feature map §3 | *"Kicking off a task gives it a clean, private copy of the code to work in and locks in the recipe it will follow."* |
 
-Most sources say **promote**. The feature map says **start**. Backlog D1 recommends Start as a separate action (*"Explicit Start button on card + sheet; promote stays cheap"*), so the two moments would differ. The mockup guides read the other way: the task-detail guide's *"you promote it"* arrow goes from backlog straight to running, and in the monitor guide's beat 2 the promoted task's first step is already queued. See [[Starting A Task]], [[Promoting A Task]] and [[Workspaces Open Questions]] #1.
+Most sources say **promote**. The feature map says **start**, and its §3 asks: *"Should starting a task happen automatically when you pull it out of the backlog, or be a separate "Start" button?"* Backlog D1 recommends Start as a separate action (*"Explicit Start button on card + sheet; promote stays cheap"*), so the two moments would differ. The mockup guides read the other way: the task-detail guide's *"you promote it"* arrow goes from backlog straight to running, and in the monitor guide's beat 2 the promoted task's first step is already queued. See [[Starting A Task]], [[Promoting A Task]] and [[Workspaces Open Questions]] #1.
 
 ## Steps
 
@@ -51,7 +51,7 @@ The order of steps 2–4 and of pinning the flow is not specified. The diagram p
 
 ## Who runs it
 
-The drawio puts the **Workspace manager** in the worker. It also says `apps/web` is *"thin: validates, calls core, enqueues; never spawns agents"*. The job kinds are `start_run`, `advance_task`, `escalate_question`, `import_backlog` (PRD §5 `jobs.kind`; drawio *Job loop*). There is no job for creating a workspace. So either the promote route runs `git` itself, or a job kind is missing. See [[Workspaces Open Questions]] #2, [[Intake And Import Open Questions]] #15 and [[Projects Open Questions]] #24.
+The drawio puts the **Workspace manager** in the worker. It also says `apps/web` is *"thin: validates, calls core, enqueues; never spawns agents"*. The job kinds are `start_run`, `advance_task`, `escalate_question`, `import_backlog` (PRD §5 `jobs.kind`; drawio *Job loop*). There is no job for creating a workspace. So either the promote route runs `git` itself, or a job kind is missing. PRD §2 says *"Next.js route handlers must never spawn a long-lived child process; they enqueue jobs and the worker picks them up"*. It bans only long-lived processes, so a short `git worktree add` in the route is not ruled out by it *(reading of the wording)*. See [[Workspaces Open Questions]] #2, [[Intake And Import Open Questions]] #15 and [[Projects Open Questions]] #24.
 
 ## Failure
 

@@ -10,10 +10,10 @@ Every place the sources disagree or leave a gap, plus every proposal and inferen
 ## Creating
 
 ### 1. Promote or start?
-PRD §11, §12, §14 M2, §16, backlog 2.1 and the monitor guide create the workspace on **promote**. Feature map §14 says *"created when the task starts"*, and §3 says starting *"gives it a clean, private copy of the code"*. Backlog D1 recommends Start as a separate action, but the mockup guides draw promote as start (task-detail guide: *"you promote it"* from backlog to running, no `todo` box; monitor guide beat 2: the first step is queued). The flow pin splits the same way (PRD §4 and the architecture README pin *"at task start"*). → [[Creating A Workspace]], [[Execution Open Questions]] #2, [[Intake And Import Open Questions]] #14
+PRD §11, §12, §14 M2, §16, backlog 2.1 and the monitor guide create the workspace on **promote**. Feature map §14 says *"created when the task starts"*, and §3 says starting *"gives it a clean, private copy of the code"*. Backlog D1 recommends Start as a separate action, but the mockup guides draw promote as start (task-detail guide: *"you promote it"* from backlog to running, no `todo` box; monitor guide beat 2: the first step is queued). The feature map §3 asks the question itself: *"Should starting a task happen automatically when you pull it out of the backlog, or be a separate "Start" button?"* The flow pin splits the same way (PRD §4 *"version-pinned at task start"*; architecture README *"a task pins its version at start"*). → [[Creating A Workspace]], [[Execution Open Questions]] #2, [[Intake And Import Open Questions]] #14
 
 ### 2. Who runs `git worktree add`?
-The drawio puts the Workspace manager in the worker; `apps/web` *"never spawns agents"* and only enqueues. No job kind creates a workspace (PRD §5 `jobs.kind`, drawio *Job loop*). → [[Workspaces Runtime]], [[Intake And Import Open Questions]] #15, [[Projects Open Questions]] #24
+The drawio puts the Workspace manager in the worker; `apps/web` *"never spawns agents"* and only enqueues. No job kind creates a workspace (PRD §5 `jobs.kind`, drawio *Job loop*). PRD §2 says *"Next.js route handlers must never spawn a long-lived child process; they enqueue jobs and the worker picks them up"*. Its wording bans only long-lived processes, so a short `git worktree add` in the route is not ruled out by it *(reading of the wording)*. → [[Workspaces Runtime]], [[Intake And Import Open Questions]] #15, [[Projects Open Questions]] #24
 
 ### 3. What if `worktree add` fails?
 Not a git repo, path exists, branch exists. No source says what the task does. → [[Creating A Workspace]]
@@ -66,8 +66,8 @@ No column marks a workspace as removed; `worktree_path` keeps its value. → [[W
 ### 17. What does Open workspace do?
 A button in the mockup, with no behaviour anywhere. Opening a host folder from a browser needs server-side help *(inferred)*. → [[Workspaces API And Routes]]
 
-### 18. Deleting or cancelling a task with no workspace
-Deleting cascades DB rows (PRD §5) but says nothing of the worktree; PRD §12 has no delete. Cancel from the backlog has no workspace to keep. Deleting a project leaves worktrees on disk too. → [[Workspace Lifecycle]], [[Projects Open Questions]] #9
+### 18. Deleting a task, or cancelling one from the backlog
+Deleting cascades DB rows (PRD §5) but says nothing of the worktree; PRD §12 has no delete. A never-promoted backlog task has no workspace to keep, but a demoted one does (backlog 2.1 *"Demote (todo → backlog) keeps worktree"*), and no source says what cancel does to it. Deleting a project leaves worktrees on disk too. → [[Workspace Lifecycle]], [[Projects Open Questions]] #9
 
 ### 19. No limit on kept worktrees
 Workspaces are kept until you clean up, and no source caps or reports how many are kept. *(Observation.)*
@@ -92,7 +92,7 @@ PRD §7 *"inside the task's container"*; PRD §11.1, `08`, backlog 3.5, the draw
 `cwd(task)` returns the host path; the container sees `/work`. The prompt's absolute artifact paths and `{{worktree}}` are not said to be rewritten. A host path would not exist in the box *(inferred)*. → [[Workspace In A Run]], [[Sandboxing Open Questions]] #40
 
 ### 25. Per-step tier through a per-task call
-`execHost(task)` sees no step, but the profile is *"overridable per step"* (PRD §11.1) via `step_defs.sandbox_profile` (backlog 1.1), and the flow-designer mockup has a per-step **Sandbox** field (`none`, `container`, `sealed container`). PRD §5 has no column for the override. → [[ExecHost Seam]], [[Sandboxing Open Questions]] #8 and #39
+`execHost(task)` sees no step, but PRD §7 speaks of *"the step's sandbox tier"*, the profile is *"overridable per step"* (PRD §11.1) via `step_defs.sandbox_profile` (backlog 1.1), and the flow-designer mockup has a per-step **Sandbox** field (`none`, `container`, `sealed container`). PRD §5 has no column for the override. → [[ExecHost Seam]], [[Sandboxing Open Questions]] #8 and #39
 
 ## The port
 
@@ -114,7 +114,7 @@ The reference adapter recomputes the folder from the task id and never reads `ta
 ### 31. Per-repo trust, global settings
 The tier is chosen by how far the repo is trusted (`08`: *"an explicit trusted-repo opt-out"*; backlog D8: *"gVisor/Firecracker opt-in per untrusted repo"*), and the reference worktree adapter is built per repo (`worktreeWorkspace(repoPath)`, `07`). But `sandbox_profile` lives in the global `settings` table (PRD §5, §11.1) with a per-step override, and nothing stores a tier per project. → [[Workspace Isolation Tiers]], [[Sandboxing Open Questions]] #5, [[Projects Open Questions]] #16
 
-## Proposals and labels made by these notes
+## Proposals, labels and inferences made by these notes
 
 | Item | Note |
 |---|---|
@@ -128,7 +128,16 @@ The tier is chosen by how far the repo is trusted (`08`: *"an explicit trusted-r
 | `?` edges in the runtime diagram (who calls the Workspace manager) | [[Workspaces Runtime]] |
 | Status-to-phase mapping | [[Workspace Lifecycle]] |
 | M3 and M5 workspace content derived from PRD §7, §11 | [[Workspaces Roadmap]] |
-| Git behaviour: branch from `HEAD`, no worktree without a commit, `remove` refuses a dirty tree, existing branch refuses `-b` (#4, #5, #8, #13) | [[Git Worktree Adapter]], [[Seed Scratch Repo]], [[Cleaning Up A Workspace]] |
+| Git behaviour: branch from `HEAD`, no worktree without a commit, `remove` refuses a dirty tree, existing branch refuses `-b` (#4, #5, #8, #13); `.git/info/exclude` is not committed; git's own worktree bookkeeping | [[Git Worktree Adapter]], [[Seed Scratch Repo]], [[Cleaning Up A Workspace]], [[Parent Repo Hygiene]], [[Workspaces Storage]] |
+| `tasks.branch_name` is null until the worktree is created | [[Workspaces Data Model]] |
+| Running `git` belongs in an adapter or the worker, not in core | [[Workspaces Runtime]] |
+| The Docker probe decides which `ExecHost` tiers the workspace can return | [[Workspaces Runtime]] |
+| Branch prefixes name the tool | [[Workspace Naming]] |
+| FlowBoard's own `.gitignore` matters only if its repo is the managed project | [[Parent Repo Hygiene]] |
+| The parking-lot cloud and shared-tier ideas would need the remote adapter | [[Workspaces Roadmap]] |
+| Committed artifacts survive cleanup on a kept branch | [[Cleaning Up A Workspace]] |
+| The workspace choice decides whether a `bypassPermissions` step may run | [[ExecHost Seam]] |
+| PRD §2 bans only long-lived processes in a route (#2) | [[Creating A Workspace]] |
 
 ## Related
 

@@ -70,10 +70,10 @@ Shell steps use the same seam: *"A `kind='shell'` step runs `command` (or the pr
 
 ## The rule it carries
 
-*"The gate: the runner refuses `permission_mode='bypassPermissions'` unless the tier is a sandbox (`container`/`gvisor`/`microvm`)."* (`01-ports.md`). The tier comes from the `ExecHost` the workspace returned, so the workspace choice decides whether a fully autonomous step may run. See [[Workspace Isolation Tiers]] and [[Permission Gate]].
+*"The gate: the runner refuses `permission_mode='bypassPermissions'` unless the tier is a sandbox (`container`/`gvisor`/`microvm`)."* (`01-ports.md`). The tier comes from the `ExecHost` the workspace returned, so the workspace choice decides whether a fully autonomous step may run *(inferred)*. See [[Workspace Isolation Tiers]] and [[Permission Gate]].
 
 > [!question] Per task or per step?
-> `execHost(task)` takes only the task. PRD §11.1 makes the sandbox profile *"overridable per step"*, backlog 1.1 adds *"an optional `step_defs.sandbox_profile` override"*, and the flow-designer mockup gives each step a **Sandbox** field (`none`, `container`, `sealed container`). A per-step tier cannot be expressed through a call that never sees the step. See [[Workspaces Open Questions]] #25 and [[Sandboxing Open Questions]] #39.
+> `execHost(task)` takes only the task. PRD §7 speaks of *"the step's sandbox tier"* (*"When the step's sandbox tier is not `host`"*), PRD §11.1 makes the sandbox profile *"overridable per step"*, backlog 1.1 adds *"an optional `step_defs.sandbox_profile` override"*, and the flow-designer mockup gives each step a **Sandbox** field (`none`, `container`, `sealed container`). A per-step tier cannot be expressed through a call that never sees the step. See [[Workspaces Open Questions]] #25 and [[Sandboxing Open Questions]] #39.
 
 ## Related
 

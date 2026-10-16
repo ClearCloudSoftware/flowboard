@@ -15,12 +15,20 @@ What the sources ask to be proven about workspaces.
 | *"Promote creates worktree + branch."* | backlog 10.1 |
 | *"Promote Backlog → Todo creates a worktree. No agents run yet."* | PRD §14 M2 |
 | README lists known constraints *"shared worktree … manual cleanup"* | backlog 10.2 |
-| Demote keeps the worktree; re-promote reuses it | backlog 2.1 (**NEW**) |
-| Cleanup only by explicit action, only when done/cancelled/failed | backlog 2.1 (**PRD**) |
 | A FIX from the first build that must not regress: *"path aliases break when spawned from the worktree cwd"* | backlog 3.2 |
 | *"integration lane runs a step in a container against the fake `claude`; assert egress denied except allowlist, and that `bypassPermissions` is refused on the `host` tier"* | backlog 3.5 (**GAP**) |
 
-PRD §16 and backlog 10.1 check only creation. Backlog 3.5's container test touches the `ExecHost` side, not the worktree. Nothing checks cleanup, demote, reuse or the exclude line. See [[Sandboxing Testing]].
+PRD §16 and backlog 10.1 check only creation. Backlog 3.5's container test touches the `ExecHost` side, not the worktree. See [[Sandboxing Testing]].
+
+## Requirements with no check
+
+Backlog 2.1 states these as requirements. No check in the sources (backlog 10.1 included) tests them.
+
+| Requirement | Source |
+|---|---|
+| Demote keeps the worktree; re-promote reuses it | backlog 2.1 (**NEW**) |
+| Cleanup only by explicit action, only when done/cancelled/failed | backlog 2.1 (**PRD**) |
+| Append `.vibe-worktrees/` to `<repo>/.git/info/exclude` | backlog 2.1 (**PRD/FIX**) |
 
 > [!note] Proposal
 > Add checks that: re-promote after demote does not fail and reuses the folder; the parent repo's `git status` stays clean after promote; cleanup is refused before an end state; cleanup never runs on its own. These notes' suggestions, listed in [[Workspaces Open Questions]].
