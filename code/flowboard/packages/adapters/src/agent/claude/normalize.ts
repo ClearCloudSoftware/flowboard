@@ -7,6 +7,7 @@
 import { ZERO_USAGE } from '@flowboard/core';
 import type { NormalizedEvent, Usage } from '@flowboard/core';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import { summarizeTool } from '../summarize.ts';
 
 type ApiUsage = {
   input_tokens?: number | null;
@@ -31,14 +32,6 @@ const add = (a: Usage, b: Usage): Usage => ({
   cacheWrite: a.cacheWrite + b.cacheWrite,
   numTurns: a.numTurns + b.numTurns,
 });
-
-/** One-line summary for the viewer, e.g. "Bash: pnpm test", "Read src/a.ts". */
-export function summarizeTool(name: string, input: unknown): string {
-  const args = (input ?? {}) as Record<string, unknown>;
-  const target = name === 'Bash' ? args.command : (args.file_path ?? args.notebook_path ?? args.pattern ?? args.url);
-  const line = typeof target !== 'string' ? name : name === 'Bash' ? `Bash: ${target}` : `${name} ${target}`;
-  return line.length > 120 ? `${line.slice(0, 119)}…` : line;
-}
 
 export function createNormalizer(): (msg: SDKMessage) => NormalizedEvent[] {
   let sessionSeen = false;
