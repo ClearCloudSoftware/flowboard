@@ -5,7 +5,7 @@ module: Agent Providers
 
 # Claude Code Adapter
 
-The v1 adapter, and the only real one. PRD §1: each step is *"a headless Claude Code session with its own model and effort setting"*. PRD §17: *"Every model call goes through the `claude` CLI."* The drawio *Logical components* page: *"Claude Code CLI / headless, stream-json"*. PRD §3 lists it under `adapters/agent/` as `claude-cli`; the architecture README's layout calls the folder `adapters/agent/claude/`.
+The v1 adapter, and the first real one ([[OpenCode Adapter]] is the second). PRD §1: each step is *"a headless Claude Code session with its own model and effort setting"*. PRD §17: *"Every model call goes through the `claude` CLI."* The drawio *Logical components* page: *"Claude Code CLI / headless, stream-json"*. PRD §3 lists it under `adapters/agent/` as `claude-cli`; the architecture README's layout calls the folder `adapters/agent/claude/`.
 
 ## The command
 

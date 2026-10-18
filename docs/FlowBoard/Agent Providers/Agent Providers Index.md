@@ -41,6 +41,7 @@ There is no mockup for this component. It is documented as architecture referenc
 ## The adapters
 
 - [[Claude Code Adapter]] — the v1 adapter: flags, fixes, stream-json
+- [[OpenCode Adapter]] — the second real provider: a per-run opencode server, non-Claude models
 - [[Codex Adapter]] — the second real provider, and the spike that validates the port
 - [[Replay Provider]] — the reference implementation and zero-spend test double
 - [[Agent Client Protocol Option]] — could the port *be* ACP?
