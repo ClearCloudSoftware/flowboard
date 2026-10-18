@@ -8,6 +8,9 @@ import { checkToolCall, renderPrompt } from '@flowboard/core';
 import type { RunSpec } from '@flowboard/core';
 import type { HookCallback, Options, SpawnedProcess, SpawnOptions } from '@anthropic-ai/claude-agent-sdk';
 
+/** The largest timer Node accepts (about 24.8 days); in practice, no limit. */
+export const NO_TIME_LIMIT_MS = 2147483647;
+
 export interface QueryBase {
   claudePath: string;
   env: NodeJS.ProcessEnv;
@@ -44,7 +47,8 @@ export function buildQuery(spec: RunSpec, base: QueryBase): { prompt: string; op
     pathToClaudeCodeExecutable: base.claudePath,
     abortController: base.abortController,
     spawnClaudeCodeProcess: base.spawnClaudeCodeProcess,
-    env: { ...env, CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1' },
+    // A tool call may wait on a human (ask_user) for as long as they take: no MCP time limit.
+    env: { ...env, CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1', MCP_TOOL_TIMEOUT: String(NO_TIME_LIMIT_MS) },
     settingSources: [],
     strictMcpConfig: true,
     includePartialMessages: true,

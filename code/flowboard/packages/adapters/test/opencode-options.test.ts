@@ -51,7 +51,7 @@ test('isolates the server and injects the config', () => {
 
 test('maps tools, skills, turns and guards into config', () => {
   const { config } = buildLaunch(spec, base);
-  assert.deepEqual(config.mcp, { vibe: { type: 'local', command: ['node', 'shim.js'], enabled: true } });
+  assert.deepEqual(config.mcp, { vibe: { type: 'local', command: ['node', 'shim.js'], enabled: true, timeout: 2147483647 } });
   assert.deepEqual(config.skills, { paths: ['/plugins/fbecho/skills'] });
   assert.deepEqual(config.agent, { build: { steps: 5 } });
   assert.deepEqual(config.plugin, ['file:///abs/guard-plugin.ts']);
@@ -96,11 +96,18 @@ test('omits the system prompt and empty config sections when unset', () => {
 test('applies the run policy to every agent, subagents included', () => {
   const out = buildLaunch(spec, base);
   assert.deepEqual(out.config.permission, rulesToConfig(out.permission));
-  assert.deepEqual(out.config.experimental, { continue_loop_on_deny: true });
+  assert.deepEqual(out.config.experimental, { continue_loop_on_deny: true, mcp_timeout: 2147483647 });
 });
 
 test("keeps the owner's extra OpenCode config out", () => {
   const { env } = buildLaunch(spec, base);
   assert.equal(env.OPENCODE_CONFIG, undefined);
   assert.equal(env.OPENCODE_CONFIG_DIR, undefined);
+});
+
+test('tool calls have no time limit', () => {
+  const { config } = buildLaunch(spec, base);
+  assert.equal((config.mcp?.vibe as { timeout?: number }).timeout, 2147483647);
+  assert.equal(config.experimental?.mcp_timeout, 2147483647);
+  assert.equal(config.experimental?.continue_loop_on_deny, true);
 });

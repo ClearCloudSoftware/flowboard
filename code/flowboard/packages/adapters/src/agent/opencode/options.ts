@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { renderPrompt } from '@flowboard/core';
 import type { Effort, RunSpec } from '@flowboard/core';
 import type { Config, PermissionRule } from '@opencode-ai/sdk/v2';
+import { NO_TIME_LIMIT_MS } from '../claude/options.ts';
 import { rulesToConfig, toPermissionRules } from './permissions.ts';
 
 export interface LaunchBase {
@@ -49,13 +50,20 @@ export function buildLaunch(
   const config: Config = {
     permission: rulesToConfig(permission),
     // A rejected permission ends the turn by default; keep the agent going so it can take another route.
-    experimental: { continue_loop_on_deny: true },
+    // A tool call may wait on a human (ask_user) for as long as they take.
+    experimental: { continue_loop_on_deny: true, mcp_timeout: NO_TIME_LIMIT_MS },
   };
   if (tools.length) {
     config.mcp = Object.fromEntries(
       tools.map((t) => [
         t.name,
-        { type: 'local' as const, command: [t.command, ...(t.args ?? [])], ...(t.env && { environment: t.env }), enabled: true },
+        {
+          type: 'local' as const,
+          command: [t.command, ...(t.args ?? [])],
+          ...(t.env && { environment: t.env }),
+          enabled: true,
+          timeout: NO_TIME_LIMIT_MS,
+        },
       ]),
     );
   }

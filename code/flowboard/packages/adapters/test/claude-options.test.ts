@@ -67,7 +67,7 @@ test('strips API keys and isolates config', () => {
     ...base,
     env: { PATH: '/bin', ANTHROPIC_API_KEY: 'k', ANTHROPIC_AUTH_TOKEN: 't' },
   });
-  assert.deepEqual(o.env, { PATH: '/bin', CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1' });
+  assert.deepEqual(o.env, { PATH: '/bin', CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1', MCP_TOOL_TIMEOUT: '2147483647' });
   assert.deepEqual(o.settingSources, []);
   assert.equal(o.strictMcpConfig, true);
 });
@@ -118,4 +118,9 @@ test('guard hook denies with a reason', async () => {
 
 test('registers no hooks without guards', () => {
   assert.equal(buildQuery({ ...spec, guards: undefined }, base).options.hooks, undefined);
+});
+
+test('tool calls have no time limit', () => {
+  const { options } = buildQuery(spec, base);
+  assert.equal(options.env?.MCP_TOOL_TIMEOUT, '2147483647');
 });
