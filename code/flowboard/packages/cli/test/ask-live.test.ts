@@ -58,3 +58,33 @@ for (const [adapter, model] of [
   test(`${adapter}: the agent asks and uses the answer`, live, async () => assertAskedAndUsed(await askRun(adapter, model)));
   test(`${adapter}: a question can wait six minutes`, slow, async () => assertAskedAndUsed(await askRun(adapter, model, 360_000)));
 }
+
+/** A run whose skill comes from a standalone `skills:` folder, as the owner's grill-me does. */
+async function skillRun(adapter: string, model: string) {
+  const base = mkdtempSync(join(tmpdir(), 'fb-skill-live-'));
+  mkdirSync(join(base, 'proj'));
+  mkdirSync(join(base, 'my-skills', 'echo'), { recursive: true });
+  writeFileSync(
+    join(base, 'my-skills', 'echo', 'SKILL.md'),
+    '---\nname: echo\ndescription: Replies with a fixed token\n---\n\nReply with exactly: ECHO-OK\n',
+  );
+  writeFileSync(join(base, 'empty.md'), '');
+  writeFileSync(
+    join(base, 'task.yaml'),
+    `adapter: ${adapter}\nmodel: ${model}\nfolder: proj\nprompt: empty.md\nskills: [my-skills/echo]\nskill: /echo\nlimits:\n  max_turns: 3\n  budget_usd: 0.2\n`,
+  );
+  const out: string[] = [];
+  const code = await runAgent(['task.yaml'], { cwd: base, print: (l) => out.push(l), signals: new EventEmitter(), answer: async () => ({}) });
+  return { code, out };
+}
+
+for (const [adapter, model] of [
+  ['claude-code', 'haiku'],
+  ['opencode', OPENCODE_MODEL],
+]) {
+  test(`${adapter}: a skills: folder is mounted and invoked`, live, async () => {
+    const { code, out } = await skillRun(adapter, model);
+    assert.equal(code, 0, out.join('\n'));
+    assert.ok(out.some((l) => l.includes('ECHO-OK')), out.join('\n'));
+  });
+}

@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { createConnection } from 'node:net';
 import { ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, AgentRun, NormalizedEvent, Question, RunResult, RunSpec } from '@flowboard/core';
 import { ReplayProvider } from '@flowboard/adapters';
@@ -386,4 +387,83 @@ test('without a terminal the agent is told no one can answer', async () => {
   deps.answer = noTerminal;
   assert.equal(await runAgent(['task.yaml'], deps), 0);
   assert.ok(out.some((l) => l.includes('No one can answer questions in this run.')));
+});
+
+test('a queued question withdrawn while another is on screen does not print over the prompt', async () => {
+  const onScreen = deferred();
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  let socket = '';
+  const { provider } = askingProvider(async function* () {
+    await onScreen.promise;
+    // A second, parallel ask that its agent gives up on while the first is still on screen.
+    const conn = createConnection(socket, () => conn.write(JSON.stringify({ questions: [{ ...COLOUR, id: 'size' }] }) + '\n'));
+    conn.on('error', () => {});
+    await sleep(20);
+    conn.destroy();
+    await sleep(20);
+  });
+  const launch = provider.launch;
+  provider.launch = (spec) => {
+    socket = spec.tools!.find((t) => t.name === 'flowboard')!.env!.FLOWBOARD_ASK_SOCKET;
+    return launch(spec);
+  };
+  const { out, deps } = setup(() => provider);
+  let printedWhileAsking: boolean | undefined;
+  deps.answer = async () => {
+    onScreen.resolve();
+    await sleep(80);
+    printedWhileAsking = out.includes(WITHDRAWN);
+    return { colour: 'teal' };
+  };
+  assert.equal(await runAgent(['task.yaml'], deps), 0);
+  assert.equal(printedWhileAsking, false);
+  assert.ok(out.includes(WITHDRAWN));
+});
+
+test('the second Ctrl+C removes the temp dir before exiting', async () => {
+  let release!: () => void;
+  const stuck = new Promise<void>((r) => (release = r));
+  const { base, out, signals, deps } = setup(() =>
+    fake(() => ({
+      sessionId: Promise.resolve('s'),
+      pid: Promise.resolve(1),
+      events: (async function* () {
+        yield { type: 'assistant_text', text: 'working' } as NormalizedEvent;
+        await stuck;
+      })(),
+      result: stuck.then(() => ({ usage: ZERO_USAGE, exitCode: 130, error: 'stopped' })),
+      stop() {},
+    })),
+  );
+  let t = Date.UTC(2026, 9, 18);
+  deps.now = () => new Date(t);
+  let tmpGoneAtExit: boolean | undefined;
+  deps.exit = () => {
+    const [start] = readLog(join(base, 'runs', readdirSync(join(base, 'runs'))[0]));
+    tmpGoneAtExit = !existsSync(dirname(start.config.tools[0].env.FLOWBOARD_ASK_SOCKET));
+  };
+  deps.print = (l) => {
+    out.push(l);
+    if (l.startsWith('assistant_text')) {
+      signals.emit('SIGINT');
+      t += 1000;
+      signals.emit('SIGINT');
+      release();
+    }
+  };
+  await runAgent(['task.yaml'], deps);
+  assert.equal(tmpGoneAtExit, true);
+});
+
+test('SIGTERM and SIGHUP stop the run like Ctrl+C', async () => {
+  for (const sig of ['SIGTERM', 'SIGHUP']) {
+    const events: NormalizedEvent[] = Array.from({ length: 50 }, (_, i) => ({ type: 'assistant_text', text: `t${i}` }));
+    const { out, signals, deps } = setup(() => new ReplayProvider({ events }));
+    deps.print = (l) => {
+      out.push(l);
+      if (l.startsWith('assistant_text') && !out.includes('-- stopping')) signals.emit(sig);
+    };
+    assert.equal(await runAgent(['task.yaml'], deps), 130, sig);
+    assert.equal(signals.listenerCount(sig), 0, sig);
+  }
 });

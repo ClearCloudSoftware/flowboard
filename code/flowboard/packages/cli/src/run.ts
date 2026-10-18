@@ -96,6 +96,8 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
   const log = (kind: string, body: object) =>
     appendFileSync(fd, JSON.stringify({ kind, at: now().toISOString(), ...body }) + '\n');
 
+  // Short and real: a Unix socket path is limited to about 104 characters, and /tmp is a link on macOS.
+  const tmp = realpathSync(mkdtempSync('/tmp/fb-'));
   let run: AgentRun | undefined;
   let firstInterrupt: number | undefined;
   const onInterrupt = () => {
@@ -105,19 +107,20 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
       print('-- stopping');
       run?.stop();
     } else if (at - firstInterrupt > 300) {
+      rmSync(tmp, { recursive: true, force: true }); // exit skips the finally below
       exit(130);
     }
     // ponytail: under `pnpm run-agent` one Ctrl+C arrives twice (the terminal's group signal plus pnpm's
     // forward); a second press within 300 ms counts as the same one.
   };
-  signals.on('SIGINT', onInterrupt);
+  // Closing the terminal (SIGHUP) or a kill (SIGTERM) stops the run like Ctrl+C, so it still cleans up.
+  const STOP_SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'];
+  for (const sig of STOP_SIGNALS) signals.on(sig, onInterrupt);
 
   // While a question is on screen, event lines wait so they do not print over the prompt.
   let asking = false;
   const held: string[] = [];
   const show = (line: string) => (asking ? held.push(line) : print(line));
-  // Short and real: a Unix socket path is limited to about 104 characters, and /tmp is a link on macOS.
-  const tmp = realpathSync(mkdtempSync('/tmp/fb-'));
   let broker: Awaited<ReturnType<typeof startBroker>> | undefined;
   try {
     broker = await startBroker(join(tmp, 'ask.sock'), deps.answer ?? (process.stdin.isTTY ? terminalAnswerer(undefined, print) : noTerminal), {
@@ -128,7 +131,7 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
       onAnswer: (answers) => log('answer', { answers }),
       onWithdrawn: () => {
         log('withdrawn', {});
-        print(WITHDRAWN);
+        show(WITHDRAWN); // another question may still be on screen
       },
       onDone: () => {
         asking = false;
@@ -176,7 +179,7 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
     return !result.error && result.exitCode === 0 ? 0 : 1;
   } finally {
     await broker?.close();
-    signals.off('SIGINT', onInterrupt);
+    for (const sig of STOP_SIGNALS) signals.off(sig, onInterrupt);
     closeSync(fd);
     rmSync(tmp, { recursive: true, force: true });
   }

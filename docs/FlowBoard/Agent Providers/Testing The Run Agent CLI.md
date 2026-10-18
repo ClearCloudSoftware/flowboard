@@ -23,7 +23,7 @@ pnpm typecheck:packages
 pnpm test:packages
 ```
 
-Expect no type errors and `fail 0`, with 12 tests skipped (the live ones). This covers YAML validation, the YAML-to-run mapping, asking and answering questions, logging, exit codes and Ctrl+C handling, using a replay provider that spends nothing.
+Expect no type errors and `fail 0`, with 14 tests skipped (the live ones). This covers YAML validation, the YAML-to-run mapping, asking and answering questions, logging, exit codes and Ctrl+C handling, using a replay provider that spends nothing.
 
 ## 2. Live tests (costs a little)
 
@@ -31,7 +31,7 @@ Expect no type errors and `fail 0`, with 12 tests skipped (the live ones). This 
 pnpm test:live
 ```
 
-Ten tests against the real CLIs: three for Claude (hello, a plugin skill, the write guard), three for OpenCode (the same three), two that run a YAML file through `run-agent` on each adapter, and two where the agent asks a question through `ask_user` and uses the answer. Expect `pass 10`, with two more skipped: the six-minute waits, which also need `FLOWBOARD_LIVE_SLOW=1` and take about twelve minutes (the model is idle while it waits, so they cost no more than the quick ones). To try another OpenCode model, set `FLOWBOARD_OPENCODE_MODEL=providerID/modelID`.
+Twelve tests against the real CLIs: three for Claude (hello, a plugin skill, the write guard), three for OpenCode (the same three), two that run a YAML file through `run-agent` on each adapter, two where the agent asks a question through `ask_user` and uses the answer, and two where a standalone `skills:` folder is mounted and its skill invoked. Expect `pass 12`, with two more skipped: the six-minute waits, which also need `FLOWBOARD_LIVE_SLOW=1` and take about twelve minutes (the model is idle while it waits, so they cost no more than the quick ones). To try another OpenCode model, set `FLOWBOARD_OPENCODE_MODEL=providerID/modelID`.
 
 ## 3. Hand-run scenarios
 
