@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:packages": "node --test \"packages/*/test/*.test.ts\"",
+    "typecheck:packages": "tsc -p packages"
   },
   "dependencies": {
     "next": "16.4.1",
@@ -15,7 +17,7 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
