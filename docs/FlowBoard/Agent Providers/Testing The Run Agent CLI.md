@@ -230,6 +230,38 @@ guards:
   deny_commands: ['(']          # guards.deny_commands.0: invalid regex
 ```
 
+## Testing with free models
+
+Free OpenRouter models work through the OpenCode adapter and cost nothing, which makes them handy for hand-run scenarios. They behave differently from paid ones, though. Findings from a grill-me run on 2026-10-18 with `openrouter/dots-studio/dots-3-note-preview:free` (task: *write a TypeScript class for an animal and a dog*):
+
+| What happened | Why | What to do |
+|---|---|---|
+| The run worked: the agent loaded grill-me, asked three questions (purpose, features, abstract or concrete), then wrote `animal.ts` and exited 0 | | |
+| Its first `ask_user` call was rejected with `MCP error -32602: … expected object, received string at question`; it fixed the call on the next step | The model sent the question as plain text, with `id`, `kind` and the options as JSON text spread beside it | Nothing: since R32 ([[Run Agent CLI Decisions]]) the question tool accepts that shape. On an older build, expect one wasted step per run |
+| A run with `max_turns: 4` stopped after one question with `max_turns: reached the limit of 4 steps` and exit 1 | Loading the skill takes a step, each question takes a step, and writing the answer takes more | Give grill-me runs at least 20 turns; 30 is comfortable |
+| `budget_usd` never stopped anything | A free model reports a cost of $0, so the budget cap never triggers (decision O12 in [[Provider Implementation Decisions]]) | Rely on `max_turns` to bound a free-model run |
+| The agent's attempt to check its work (`npx tsc --strict --noEmit animal.ts`) was refused | The YAML allowed only `Bash(ls *)` and `Bash(cat *)` | Add the command to `allow`, e.g. `"Bash(npx tsc *)"`, if you want the agent to verify |
+| Only three questions before writing code | Small free models interview far less thoroughly than grill-me asks; this is the model, not the runner | Use a stronger model to judge the skill itself; use a free one to check that asking works |
+| The agent saw `agent.yaml`, `task.md` and the `runs/` logs | `folder` was the test folder itself | Point `folder` at a subfolder such as `proj` |
+
+The YAML that worked, for reuse:
+
+```yaml
+# free-grill-me.yaml
+adapter: opencode
+model: openrouter/dots-studio/dots-3-note-preview:free
+folder: proj
+prompt: task.md
+skills:
+  - ~/.agents/repos/mattpocock-skills/skills/productivity/grill-me
+skill: /grill-me
+permissions:
+  allow: [Read, Write, Edit, "Bash(ls *)", "Bash(cat *)"]
+  deny: [WebFetch, WebSearch]
+limits:
+  max_turns: 30
+```
+
 ## Reading the logs
 
 Each run writes `runs/<YYYY-MM-DDTHH-MM-SS>-<adapter>.jsonl`: a `start` line (the YAML path and the resolved run settings), one `event` line per event with the provider's native message in `raw`, and a final `result` line. With `jq`:
