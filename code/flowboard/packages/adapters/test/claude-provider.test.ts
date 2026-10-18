@@ -120,3 +120,13 @@ test('sessionId rejects when the run dies before init', async () => {
   await assert.rejects(run.sessionId);
   assert.equal((await run.result).error, 'spawn failed');
 });
+
+test('stop() after the result does not relabel a finished run', async () => {
+  const run = new ClaudeCodeProvider({ query: fakeQuery(lines) }).launch(spec);
+  for await (const ev of run.events) {
+    if (ev.type === 'result') run.stop();
+  }
+  const res = await run.result;
+  assert.equal(res.exitCode, 0);
+  assert.equal(res.error, undefined);
+});

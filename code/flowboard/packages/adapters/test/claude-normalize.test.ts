@@ -110,3 +110,33 @@ test('reports an error result', () => {
     costUsd: 0.1,
   });
 });
+
+test('keeps usage of interleaved subagent messages apart', () => {
+  const ev = (parent: string | null, event: object) =>
+    msg({ type: 'stream_event', event, parent_tool_use_id: parent, uuid: 'u', session_id: 's' });
+  const events = [
+    ev(null, { type: 'message_start', message: { usage: { input_tokens: 100, output_tokens: 1 } } }),
+    ev('t1', { type: 'message_start', message: { usage: { input_tokens: 50, output_tokens: 1 } } }),
+    ev(null, { type: 'message_delta', usage: { output_tokens: 40 } }),
+    ev('t1', { type: 'message_delta', usage: { output_tokens: 20 } }),
+    ev('t1', { type: 'message_stop' }),
+    ev(null, { type: 'message_stop' }),
+  ].flatMap(createNormalizer());
+  assert.deepEqual(lastUsage(events), { input: 150, output: 60, cacheRead: 0, cacheWrite: 0, numTurns: 0 });
+});
+
+test('reports the result text of an is_error success', () => {
+  const events = createNormalizer()(
+    msg({
+      type: 'result',
+      subtype: 'success',
+      is_error: true,
+      result: 'API Error: 401 authentication_error',
+      num_turns: 1,
+      total_cost_usd: 0,
+      usage: {},
+      modelUsage: {},
+    }),
+  );
+  assert.equal((events[1] as { message: string }).message, 'API Error: 401 authentication_error');
+});

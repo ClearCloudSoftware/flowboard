@@ -94,9 +94,14 @@ export class ClaudeCodeProvider implements AgentProvider {
       const normalize = createNormalizer();
       let usage = ZERO_USAGE;
       let error: string | undefined;
+      let finished = false; // the result arrived: a later stop() does not relabel the run
+      let thrown = false;
       const emit = (ev: NormalizedEvent) => {
         if (ev.type === 'system' && ev.sessionId) resolveSession(ev.sessionId);
-        if (ev.type === 'result') usage = ev.usage;
+        if (ev.type === 'result') {
+          usage = ev.usage;
+          finished = true;
+        }
         if (ev.type === 'error') error ??= ev.message;
         emitter.emit('event', ev);
       };
@@ -116,6 +121,7 @@ export class ClaudeCodeProvider implements AgentProvider {
           }
         }
       } catch (e) {
+        thrown = true;
         // query() throws after yielding an error result; that result already said why.
         if (error === undefined && !stopped) emit({ type: 'error', message: e instanceof Error ? e.message : String(e) });
       } finally {
@@ -124,8 +130,12 @@ export class ClaudeCodeProvider implements AgentProvider {
 
       resolvePid(-1);
       rejectSession(new Error(error ?? 'run ended without a session id'));
-      const exitCode = exited ? await exited : error ? 1 : 0;
-      if (stopped) return { usage, exitCode: 130, error: 'stopped' };
+      const code = exited ? await exited : error ? 1 : 0;
+      if (stopped && !finished) return { usage, exitCode: 130, error: 'stopped' };
+      // After the result, a stop()'s SIGTERM is ours, not a failure: the result decides.
+      const exitCode = stopped ? (error ? 1 : 0) : code;
+      // With a custom spawn the SDK never sees stderr, so its exit error says only the code; read once the child is gone.
+      if (thrown && error && stderrTail.trim()) error = `${error}\n${stderrTail.trim()}`;
       return { usage, exitCode, error: error ?? (exitCode !== 0 ? stderrTail || `exit code ${exitCode}` : undefined) };
     };
 

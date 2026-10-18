@@ -136,7 +136,7 @@ export interface RunSpec {
   model: string;
   /** Dropped by the adapter when `effort` is unsupported. */
   effort?: Effort;
-  /** Tool allow/deny globs. The adapter appends each injected tool server so a restrictive list can't lock out HITL. */
+  /** Tool allow/deny globs. The adapter always pre-approves each injected tool server, so neither a restrictive list nor a missing one can lock out HITL. */
   toolPolicy?: { allow?: string[]; deny?: string[] };
   /** MCP servers to inject. Ignored when `mcp_tools` is absent. */
   tools?: ToolServer[];

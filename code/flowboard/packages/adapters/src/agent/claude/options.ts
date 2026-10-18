@@ -51,7 +51,8 @@ export function buildQuery(spec: RunSpec, base: QueryBase): { prompt: string; op
     systemPrompt: append ? { type: 'preset', preset: 'claude_code', append } : { type: 'preset', preset: 'claude_code' },
     permissionMode,
     allowDangerouslySkipPermissions: permissionMode === 'bypassPermissions',
-    allowedTools: allow ? [...allow, ...tools.map((t) => `mcp__${t.name}__*`)] : undefined,
+    // Injected tool servers (ask_user) are always pre-approved, or dontAsk would deny every HITL call.
+    allowedTools: allow || tools.length ? [...(allow ?? []), ...tools.map((t) => `mcp__${t.name}__*`)] : undefined,
     disallowedTools: spec.toolPolicy?.deny,
     mcpServers: Object.fromEntries(
       tools.map((t) => [t.name, { type: 'stdio' as const, command: t.command, args: t.args, env: t.env }]),

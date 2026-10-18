@@ -43,7 +43,9 @@ export function summarizeTool(name: string, input: unknown): string {
 export function createNormalizer(): (msg: SDKMessage) => NormalizedEvent[] {
   let sessionSeen = false;
   let finished: Usage = ZERO_USAGE; // messages whose message_stop arrived
-  let current: Usage = ZERO_USAGE; // the message streaming now
+  // Messages streaming now, keyed by parent_tool_use_id: parallel subagents interleave their deltas.
+  const streaming = new Map<string, Usage>();
+  const running = () => [...streaming.values()].reduce(add, finished);
 
   return (msg) => {
     const raw = msg;
@@ -59,16 +61,17 @@ export function createNormalizer(): (msg: SDKMessage) => NormalizedEvent[] {
 
       case 'stream_event': {
         const ev = msg.event as { type: string; message?: { usage?: ApiUsage }; usage?: ApiUsage };
+        const key = msg.parent_tool_use_id ?? '';
         if (ev.type === 'message_start') {
-          current = overlay(ZERO_USAGE, ev.message?.usage);
-          out.push({ type: 'usage', usage: add(finished, current), raw });
+          streaming.set(key, overlay(ZERO_USAGE, ev.message?.usage));
+          out.push({ type: 'usage', usage: running(), raw });
         } else if (ev.type === 'message_delta') {
           // message_delta.usage is cumulative for its message: overwrite, never sum.
-          current = overlay(current, ev.usage);
-          out.push({ type: 'usage', usage: add(finished, current), raw });
+          streaming.set(key, overlay(streaming.get(key) ?? ZERO_USAGE, ev.usage));
+          out.push({ type: 'usage', usage: running(), raw });
         } else if (ev.type === 'message_stop') {
-          finished = add(finished, current);
-          current = ZERO_USAGE;
+          finished = add(finished, streaming.get(key) ?? ZERO_USAGE);
+          streaming.delete(key);
         }
         break;
       }
@@ -111,8 +114,9 @@ export function createNormalizer(): (msg: SDKMessage) => NormalizedEvent[] {
           : overlay(ZERO_USAGE, msg.usage);
         out.push({ type: 'result', usage: { ...tokens, numTurns: msg.num_turns, costUsd: msg.total_cost_usd }, raw });
         if (msg.is_error) {
-          const errors = msg.subtype === 'success' ? [] : msg.errors;
-          out.push({ type: 'error', message: `${msg.subtype}: ${errors.join('; ')}`, raw });
+          // An is_error success (e.g. an API error turn) carries its text in `result`, not `errors`.
+          const message = msg.subtype === 'success' ? msg.result : `${msg.subtype}: ${msg.errors.join('; ')}`;
+          out.push({ type: 'error', message, raw });
         }
         break;
       }

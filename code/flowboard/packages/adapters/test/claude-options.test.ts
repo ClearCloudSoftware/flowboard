@@ -81,8 +81,12 @@ test('defaults to dontAsk and only bypass skips permissions', () => {
   assert.equal(bypass.allowDangerouslySkipPermissions, true);
 });
 
-test('leaves allowedTools unset without an allow list', () => {
-  assert.equal(buildQuery({ ...spec, toolPolicy: undefined }, base).options.allowedTools, undefined);
+test('leaves allowedTools unset without an allow list or tools', () => {
+  assert.equal(buildQuery({ ...spec, toolPolicy: undefined, tools: undefined }, base).options.allowedTools, undefined);
+});
+
+test('pre-approves injected tool servers without an allow list', () => {
+  assert.deepEqual(buildQuery({ ...spec, toolPolicy: undefined }, base).options.allowedTools, ['mcp__vibe__*']);
 });
 
 test('uses the bare preset without a system prompt', () => {
