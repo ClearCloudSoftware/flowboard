@@ -41,6 +41,10 @@ Code: `code/flowboard/packages/cli/src/` (`config.ts`, `run.ts`, `main.ts`), on 
 | R25 | Without a terminal, every question is answered with *"No one can answer questions in this run."* | The agent carries on instead of hanging | None |
 | R26 | `skills:` folders are copied (not linked) into a temporary plugin named `local` under `/tmp`, by its real path; `/<name>` becomes `/local:<name>`; a `SKILL.md` name must match its folder; a plugin folder named `local` is refused | The owner's grill-me is a standalone skill; both CLIs and the plugin-loaded check handle links unreliably; OpenCode may load skills by their `name:` | A skill edited mid-run is not picked up until the next run |
 | R27 | `y` / `n` on yes/no questions work through the list's type-ahead, so they need Enter; option numbers work directly | The prompt library offers both without custom key handling | One extra key press |
+| R28 | The `local` skills plugin has no `.claude-plugin/plugin.json` | A live run on both adapters loaded it and invoked its skill without one | A future Claude Code version that requires a manifest fails the run with *plugin not loaded* |
+| R29 | Closing the terminal (SIGHUP) or a kill (SIGTERM) stops the run like Ctrl+C; the second Ctrl+C deletes the temp folder before exiting | The review found both paths left the temp folder, with a full copy of each skill, behind | None |
+| R30 | A withdrawn line waits, like event lines, while another question is on screen | The review found it printed over the open prompt when parallel questions were queued | None |
+| R31 | The final review covered only this feature's commits (`bd6027b..`) | Earlier branch work was reviewed under its own plans | Earlier code not re-reviewed here |
 
 ## Deferred issues
 
@@ -55,6 +59,12 @@ Code: `code/flowboard/packages/cli/src/` (`config.ts`, `run.ts`, `main.ts`), on 
 | With `max_turns: 1` on OpenCode, R16 never fires | There is no earlier step to tell a cut-off run from a finished one, so the run always passes | `opencode/provider.ts` |
 | A run cannot say which files it must produce | Exit 0 still does not prove the task was done; an `expect_files`-style check was offered and not chosen for now | `cli/src/config.ts`, `cli/src/run.ts` |
 | The answering keys (`y`/`n`, option numbers, Space to tick) and a real grill-me run have not been tried by hand | The prompts are tested with fakes only | Manual: scenario 13 in [[Testing The Run Agent CLI]] |
+| Typing an option's number only moves the cursor; Enter is still needed. The docs ([[Run Config Reference]], R27) say the number selects | One more key press than documented | `Run Config Reference.md`, this note |
+| The broker and shim tests leave empty `/tmp/fb-*` folders behind | 14 empty private folders per suite run, until the OS cleans `/tmp` | `cli/test/broker.test.ts`, `ask-user/test/shim.test.ts` |
+| `NO_TIME_LIMIT_MS` is defined in the Claude adapter and imported by the OpenCode one | A cross-adapter import; the future worker broker will want the same value | `adapters/src/agent/claude/options.ts`, `opencode/options.ts`; move to `@flowboard/core` |
+| The broker only checks that `questions` is a list | A malformed request from anything other than the shim is logged as a question and fails in the answerer; the worker broker, as the database writer, will need `checkQuestions` itself | `cli/src/ask/broker.ts` |
+| A request arriving in the instant between `close()` waiting for the open question and the socket closing can start a prompt | A withdrawn line may print after `-- result` | `cli/src/ask/broker.ts` |
+| A failure copying a `skills:` folder (permissions) or opening the socket is not caught | A stack trace instead of an error line | `cli/src/run.ts` |
 | A single Ctrl+C through `pnpm run-agent` on a real run has not been checked by hand | The 300 ms fix (R13) is tested with simulated signals only | Manual check: a cheap haiku run, one Ctrl+C, expect exit 130 and a final `result` line in the log |
 
 ## Related
