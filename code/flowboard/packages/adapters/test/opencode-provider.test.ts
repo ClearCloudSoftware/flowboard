@@ -6,6 +6,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { NormalizedEvent, RunSpec } from '@flowboard/core';
 import { OpencodeProvider } from '../src/agent/opencode/provider.ts';
+import { startServer } from '../src/agent/opencode/server.ts';
+import { hostExecHost } from '../src/exec/host.ts';
 
 const fixture = (name: string) => fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 const FAKE = fixture('fake-opencode.mjs');
@@ -28,6 +30,7 @@ function setup(script: object[], extraEnv: Record<string, string> = {}) {
   const spec: RunSpec = { prompt: { preamble: 'say hi', inputs: [], outputs: [], closing: 'stop' }, model: 'default', cwd: dir };
   return {
     spec,
+    env,
     provider: (opencodePath = FAKE) => new OpencodeProvider({ models: { default: 'fake/m1' }, opencodePath, env }),
     requests: () => lines().filter((l) => l.method),
     envLine: () => lines().find((l) => l.env)!.env!,
@@ -256,4 +259,15 @@ test('fails when the guard plugin does not load', async () => {
   const res = await provider().launch({ ...spec, guards: { writeRoots: [spec.cwd] } }).result;
   assert.equal(res.error, 'guard plugin not loaded');
   assert.ok(!requests().some((r) => r.path?.endsWith('/prompt_async')));
+});
+
+test('a server error after start-up does not throw', async () => {
+  const { spec, env } = setup([]);
+  const server = await startServer(hostExecHost, { opencodePath: FAKE, cwd: spec.cwd, env });
+  try {
+    assert.doesNotThrow(() => server.child.emit('error', new Error('late')));
+    assert.match(server.stderrTail(), /late/);
+  } finally {
+    server.child.kill('SIGKILL');
+  }
 });

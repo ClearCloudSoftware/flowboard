@@ -68,7 +68,11 @@ export function buildLaunch(
     );
   }
   if (skills.length) config.skills = { paths: skills };
-  if (spec.limits?.maxTurns) config.agent = { build: { steps: spec.limits.maxTurns } };
+  if (spec.limits?.maxTurns) {
+    // Every agent, so subagents (general, explore) cannot loop past the run's limit.
+    const steps = spec.limits.maxTurns;
+    config.agent = { build: { steps }, plan: { steps }, general: { steps }, explore: { steps } };
+  }
   if (spec.guards) config.plugin = [pathToFileURL(base.guardPlugin).href];
   for (const p of packs) if (p.mount.kind === 'native') Object.assign(config, p.mount.config);
 

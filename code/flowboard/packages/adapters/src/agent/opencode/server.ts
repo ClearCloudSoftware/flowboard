@@ -40,6 +40,8 @@ export function startServer(
       const m = /opencode server listening on (http:\/\/\S+)/.exec(out);
       if (m) {
         done();
+        // Keep an error listener for the server's whole life: an unhandled 'error' (say, a failed kill) would throw.
+        child.on('error', (e) => (tail = `${tail}\n${e.message}`.slice(-4000)));
         resolve({ url: m[1], child, stderrTail: () => tail });
       }
     };

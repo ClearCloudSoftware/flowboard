@@ -53,7 +53,7 @@ test('maps tools, skills, turns and guards into config', () => {
   const { config } = buildLaunch(spec, base);
   assert.deepEqual(config.mcp, { vibe: { type: 'local', command: ['node', 'shim.js'], enabled: true, timeout: 2147483647 } });
   assert.deepEqual(config.skills, { paths: ['/plugins/fbecho/skills'] });
-  assert.deepEqual(config.agent, { build: { steps: 5 } });
+  assert.deepEqual(config.agent, { build: { steps: 5 }, plan: { steps: 5 }, general: { steps: 5 }, explore: { steps: 5 } });
   assert.deepEqual(config.plugin, ['file:///abs/guard-plugin.ts']);
 });
 
@@ -110,4 +110,11 @@ test('tool calls have no time limit', () => {
   assert.equal((config.mcp?.vibe as { timeout?: number }).timeout, 2147483647);
   assert.equal(config.experimental?.mcp_timeout, 2147483647);
   assert.equal(config.experimental?.continue_loop_on_deny, true);
+});
+
+test('the step limit applies to every agent', () => {
+  const { config } = buildLaunch(spec, base); // spec.limits.maxTurns === 5
+  for (const a of ['build', 'plan', 'general', 'explore']) {
+    assert.equal((config.agent as Record<string, { steps?: number }>)[a]?.steps, 5, a);
+  }
 });
