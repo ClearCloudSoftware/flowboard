@@ -66,8 +66,8 @@ function toAbs(p: string, baseDir: string): string {
 const isDir = (p: string) => existsSync(p) && statSync(p).isDirectory();
 const isFile = (p: string) => existsSync(p) && statSync(p).isFile();
 
-/** Matches an allow entry that lets the agent run any shell command. */
-const ANY_SHELL = /^bash(\(\*\))?$/i;
+/** Matches an allow entry that lets the agent run any shell command: `Bash`, or a pattern of only `*`, `:` and spaces. */
+const ANY_SHELL = /^\s*bash\s*(\(\s*[*:\s]*\))?\s*$/i;
 const SHELL_TAIL = 'lets shell commands write outside folder; set permissions.allow_unrestricted_shell: true to allow it';
 
 /** One `field: message` per zod issue; unknown keys get one line each, missing keys say `required`. */

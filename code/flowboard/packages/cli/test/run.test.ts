@@ -129,16 +129,34 @@ test('a second Ctrl+C exits immediately', async () => {
       stop() {},
     })),
   );
+  let t = Date.UTC(2026, 9, 18);
+  deps.now = () => new Date(t);
   deps.print = (l) => {
     out.push(l);
     if (l.startsWith('assistant_text')) {
       signals.emit('SIGINT');
+      t += 1000; // a human's second press
       signals.emit('SIGINT');
       release();
     }
   };
   await runAgent(['task.yaml'], deps);
   assert.deepEqual(exits, [130]);
+});
+
+test('one Ctrl+C delivered twice (pnpm forwards it) counts once', async () => {
+  const events: NormalizedEvent[] = Array.from({ length: 50 }, (_, i) => ({ type: 'assistant_text', text: `t${i}` }));
+  const { base, out, signals, exits, deps } = setup(() => new ReplayProvider({ events }));
+  deps.print = (l) => {
+    out.push(l);
+    if (l.startsWith('assistant_text') && !out.includes('-- stopping')) {
+      signals.emit('SIGINT'); // from the terminal's process group
+      signals.emit('SIGINT'); // forwarded by pnpm
+    }
+  };
+  assert.equal(await runAgent(['task.yaml'], deps), 130);
+  assert.deepEqual(exits, []);
+  assert.equal(readLog(join(base, 'runs', LOG_NAME)).at(-1).result.error, 'stopped');
 });
 
 test('two runs in the same second get separate logs', async () => {

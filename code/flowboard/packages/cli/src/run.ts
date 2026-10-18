@@ -69,11 +69,18 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
     appendFileSync(fd, JSON.stringify({ kind, at: now().toISOString(), ...body }) + '\n');
 
   let run: AgentRun | undefined;
-  let interrupts = 0;
+  let firstInterrupt: number | undefined;
   const onInterrupt = () => {
-    if (++interrupts > 1) return exit(130);
-    print('-- stopping');
-    run?.stop();
+    const at = now().getTime();
+    if (firstInterrupt === undefined) {
+      firstInterrupt = at;
+      print('-- stopping');
+      run?.stop();
+    } else if (at - firstInterrupt > 300) {
+      exit(130);
+    }
+    // ponytail: under `pnpm run-agent` one Ctrl+C arrives twice (the terminal's group signal plus pnpm's
+    // forward); a second press within 300 ms counts as the same one.
   };
   signals.on('SIGINT', onInterrupt);
   try {

@@ -198,6 +198,14 @@ test('auto mode, "Bash" and "bash(*)" each need the opt-in', () => {
   ]);
 });
 
+test('wildcard-only Bash patterns also need the opt-in', () => {
+  for (const entry of ['Bash(:*)', 'Bash(**)', 'Bash(*:*)', 'Bash( * )', 'Bash ']) {
+    assert.deepEqual(errorsOf(MINIMAL + `permissions:\n  allow: ["${entry}"]\n`).errors, [
+      `task.yaml: permissions.allow: "${entry}" ${SHELL_TAIL}`,
+    ], entry);
+  }
+});
+
 test('bypassPermissions with the opt-in loads and flags unrestrictedShell', () => {
   const r = loadConfig('task.yaml', project(MINIMAL + 'permissions:\n  mode: bypassPermissions\n  allow_unrestricted_shell: true\n'));
   assert.ok(r.ok, JSON.stringify(r));
