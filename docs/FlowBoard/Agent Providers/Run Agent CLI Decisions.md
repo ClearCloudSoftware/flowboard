@@ -31,6 +31,16 @@ Code: `code/flowboard/packages/cli/src/` (`config.ts`, `run.ts`, `main.ts`), on 
 | R15 | The final review covered only this feature's commits, not the whole branch | The provider commits were reviewed under their own plans | Provider code was not looked at again as part of this change |
 | R16 | OpenCode running out of steps fails the run with `max_turns: reached the limit of N steps`, when the main agent's step before its last still wanted tools | OpenCode takes the tools away on the last step, the agent writes a summary, and the session ends without an error, so a stuck run exited 0. Claude already fails such a run. Found on a real run that never wrote its file | A run that was really finished on its second-to-last step but called a tool once more is marked failed |
 | R17 | The runner prints `-- N tool calls failed` and `-- last message: …` before the result | A run can finish cleanly without doing the task; refused tool calls were only visible by reading every event line | None |
+| R18 | The agent asks through an `ask_user` / `ask_user_batch` tool program (`packages/ask-user`), and `run-agent` answers over a private Unix socket per run | FlowBoard's design splits asking into a tool the agent sees and a listener; building the tool as designed means the web inbox and Slack later replace only the listener | None |
+| R19 | The tool passes any reply it does not recognise straight to the agent | The worker's later "no answer yet, save your place" reply then needs no change to the tool | An unexpected reply reaches the agent as-is |
+| R20 | The run waits for an answer forever; the adapters lift their tool-call limits (`MCP_TOOL_TIMEOUT` for Claude, `mcp.<name>.timeout` and `experimental.mcp_timeout` for OpenCode) to about 24.8 days | The owner's decision: no timeout. Checked live with a six-minute wait on both adapters | A wait past 24.8 days is cut off |
+| R21 | Optional questions are skipped with an empty answer (text, number), a `Skip` entry (yes/no, pick one) or nothing ticked (pick several); a required pick-several needs a tick | An arrow-key list always has something highlighted, so it needs an explicit skip | None |
+| R22 | A question whose agent stops waiting is taken down with `-- question withdrawn: the agent stopped waiting` and logged | A question must never disappear silently | None |
+| R23 | Batches are answered one at a time, first in, first out; event lines that arrive meanwhile wait and print afterwards | Claude can ask from parallel calls and helpers; lines printed over a prompt garble it | Held lines print late |
+| R24 | Claude's `AskUserQuestion` is denied in every Claude run | The agent must ask through `ask_user`, the one tool that works everywhere | None |
+| R25 | Without a terminal, every question is answered with *"No one can answer questions in this run."* | The agent carries on instead of hanging | None |
+| R26 | `skills:` folders are copied (not linked) into a temporary plugin named `local` under `/tmp`, by its real path; `/<name>` becomes `/local:<name>`; a `SKILL.md` name must match its folder; a plugin folder named `local` is refused | The owner's grill-me is a standalone skill; both CLIs and the plugin-loaded check handle links unreliably; OpenCode may load skills by their `name:` | A skill edited mid-run is not picked up until the next run |
+| R27 | `y` / `n` on yes/no questions work through the list's type-ahead, so they need Enter; option numbers work directly | The prompt library offers both without custom key handling | One extra key press |
 
 ## Deferred issues
 
@@ -44,6 +54,7 @@ Code: `code/flowboard/packages/cli/src/` (`config.ts`, `run.ts`, `main.ts`), on 
 | Schema errors (unknown key, wrong type) are reported before the file and folder checks run | A YAML with both kinds of mistake needs two runs to see them all | `cli/src/config.ts` |
 | With `max_turns: 1` on OpenCode, R16 never fires | There is no earlier step to tell a cut-off run from a finished one, so the run always passes | `opencode/provider.ts` |
 | A run cannot say which files it must produce | Exit 0 still does not prove the task was done; an `expect_files`-style check was offered and not chosen for now | `cli/src/config.ts`, `cli/src/run.ts` |
+| The answering keys (`y`/`n`, option numbers, Space to tick) and a real grill-me run have not been tried by hand | The prompts are tested with fakes only | Manual: scenario 13 in [[Testing The Run Agent CLI]] |
 | A single Ctrl+C through `pnpm run-agent` on a real run has not been checked by hand | The 300 ms fix (R13) is tested with simulated signals only | Manual check: a cheap haiku run, one Ctrl+C, expect exit 130 and a final `result` line in the log |
 
 ## Related

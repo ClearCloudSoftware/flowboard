@@ -23,7 +23,7 @@ pnpm typecheck:packages
 pnpm test:packages
 ```
 
-Expect no type errors and `fail 0`, with 8 tests skipped (the live ones). This covers YAML validation, the YAML-to-run mapping, logging, exit codes and Ctrl+C handling, using a replay provider that spends nothing.
+Expect no type errors and `fail 0`, with 12 tests skipped (the live ones). This covers YAML validation, the YAML-to-run mapping, asking and answering questions, logging, exit codes and Ctrl+C handling, using a replay provider that spends nothing.
 
 ## 2. Live tests (costs a little)
 
@@ -31,7 +31,7 @@ Expect no type errors and `fail 0`, with 8 tests skipped (the live ones). This c
 pnpm test:live
 ```
 
-Eight tests against the real CLIs: three for Claude (hello, a plugin skill, the write guard), three for OpenCode (the same three), and two that run a YAML file through `run-agent` on each adapter. Expect `pass 8`. To try another OpenCode model, set `FLOWBOARD_OPENCODE_MODEL=providerID/modelID`.
+Ten tests against the real CLIs: three for Claude (hello, a plugin skill, the write guard), three for OpenCode (the same three), two that run a YAML file through `run-agent` on each adapter, and two where the agent asks a question through `ask_user` and uses the answer. Expect `pass 10`, with two more skipped: the six-minute waits, which also need `FLOWBOARD_LIVE_SLOW=1` and take about twelve minutes (the model is idle while it waits, so they cost no more than the quick ones). To try another OpenCode model, set `FLOWBOARD_OPENCODE_MODEL=providerID/modelID`.
 
 ## 3. Hand-run scenarios
 
@@ -84,6 +84,7 @@ Each row changes the base files as shown. "Exit" is what `echo "exit $?"` prints
 | 10 | Budget cap | `limits: { budget_usd: 0.0001 }` | The run stops early; the result has an `error` about the budget; exit 1 |
 | 11 | Effort | `effort: low` (Claude), or on OpenCode a model that has that variant | Runs as normal. OpenCode drops an effort the model has no variant for, without saying so |
 | 12 | Ctrl+C | `task.md`: *Count slowly from 1 to 50, one line per number.*; press Ctrl+C once mid-run | `-- stopping`, then `-- result` with `"error":"stopped"`; exit 130; the log ends with a `result` line. Pressing Ctrl+C again (after 300 ms) exits at once, without the result line |
+| 13 | Answering a question | `grill-me.yaml` below, from a real terminal | The event lines pause and grill-me's questions appear one at a time; answer a few; the log has `question` and `answer` lines; Ctrl+C at a question exits 130 |
 
 Scenario 12 has only been tested with simulated signals; it is the one worth doing by hand first (see [[Run Agent CLI Decisions]], deferred issues).
 
@@ -198,6 +199,22 @@ prompt: slow.md
 limits:
   max_turns: 3
   budget_usd: 0.10
+```
+
+**Your grill-me skill** (scenario 13; `topic.md` holds what you want to be grilled on, e.g. *I want to add dark mode to FlowBoard.*):
+
+```yaml
+# grill-me.yaml
+adapter: claude-code
+model: sonnet
+folder: proj
+prompt: topic.md
+skills:
+  - ~/.agents/repos/mattpocock-skills/skills/productivity/grill-me
+skill: /grill-me
+limits:
+  max_turns: 30
+  budget_usd: 1.00
 ```
 
 **Broken on purpose** (scenario 8; expect four error lines and exit 2):
