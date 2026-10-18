@@ -1,0 +1,11 @@
+{
+  "name": "@flowboard/cli",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@flowboard/adapters": "workspace:*",
+    "@flowboard/core": "workspace:*",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  }
+}
