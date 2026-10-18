@@ -271,3 +271,28 @@ test('a server error after start-up does not throw', async () => {
     server.child.kill('SIGKILL');
   }
 });
+
+test('a server that ignores SIGTERM is killed after the grace period', { timeout: 5_000 }, async () => {
+  const { spec, env, serverPid } = setup([step(0.01), idle], { FAKE_IGNORE_TERM: '1' });
+  const provider = new OpencodeProvider({ models: { default: 'fake/m1' }, opencodePath: FAKE, env, killGraceMs: 200 });
+  const res = await provider.launch(spec).result;
+  assert.equal(res.exitCode, 0);
+  assert.throws(() => process.kill(serverPid()!, 0), 'the server is gone');
+});
+
+test('a server that exits on SIGTERM is not sent SIGKILL', async () => {
+  const { spec, provider } = setup([step(0.01), idle]);
+  const kills: (NodeJS.Signals | number | undefined)[] = [];
+  const exec = {
+    ...hostExecHost,
+    spawn: (...a: Parameters<typeof hostExecHost.spawn>) => {
+      const child = hostExecHost.spawn(...a);
+      const kill = child.kill.bind(child);
+      child.kill = (sig) => (kills.push(sig), kill(sig));
+      return child;
+    },
+  };
+  await provider().launch({ ...spec, exec }).result;
+  await new Promise((r) => setTimeout(r, 300));
+  assert.deepEqual(kills, ['SIGTERM']);
+});

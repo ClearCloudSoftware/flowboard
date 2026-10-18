@@ -1,5 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { ExecHost } from '@flowboard/core';
+import { terminate } from '../../exec/terminate.ts';
 
 export interface StartedServer {
   url: string;
@@ -19,7 +20,7 @@ export class ServerStartError extends Error {
 /** Spawn `opencode serve` on loopback and resolve once it prints its URL. */
 export function startServer(
   exec: ExecHost,
-  opts: { opencodePath: string; cwd: string; env: NodeJS.ProcessEnv; timeoutMs?: number },
+  opts: { opencodePath: string; cwd: string; env: NodeJS.ProcessEnv; timeoutMs?: number; killGraceMs?: number },
 ): Promise<StartedServer> {
   const { timeoutMs = 30_000 } = opts;
   const child = exec.spawn(opts.opencodePath, ['serve', '--hostname', '127.0.0.1', '--port', '0'], { cwd: opts.cwd, env: opts.env });
@@ -56,7 +57,7 @@ export function startServer(
     };
     const timer = setTimeout(() => {
       done();
-      child.kill('SIGTERM');
+      terminate(child, opts.killGraceMs);
       reject(new ServerStartError(`opencode server did not start within ${timeoutMs} ms`, 1));
     }, timeoutMs);
     child.stdout.on('data', onData);

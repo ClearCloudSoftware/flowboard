@@ -15,6 +15,7 @@ import type { AgentProvider, AgentRun, Capability, NormalizedEvent, RunResult, R
 import { hostExecHost } from '../../exec/host.ts';
 import { createNormalizer } from './normalize.ts';
 import { buildQuery } from './options.ts';
+import { KILL_GRACE_MS, terminate } from '../../exec/terminate.ts';
 
 export type QueryFn = (p: { prompt: string; options: Options }) => AsyncIterable<SDKMessage>;
 
@@ -38,7 +39,10 @@ export class ClaudeCodeProvider implements AgentProvider {
   private readonly env: NodeJS.ProcessEnv;
   private readonly queryFn: QueryFn;
 
-  constructor(opts: { claudePath?: string; env?: NodeJS.ProcessEnv; query?: QueryFn } = {}) {
+  private readonly killGraceMs: number;
+
+  constructor(opts: { claudePath?: string; env?: NodeJS.ProcessEnv; query?: QueryFn; killGraceMs?: number } = {}) {
+    this.killGraceMs = opts.killGraceMs ?? KILL_GRACE_MS;
     this.claudePath = opts.claudePath ?? 'claude';
     this.env = opts.env ?? process.env;
     this.queryFn = opts.query ?? query;
@@ -78,7 +82,7 @@ export class ClaudeCodeProvider implements AgentProvider {
         child.once('error', () => r(127));
       });
       child.stderr.on('data', (d) => (stderrTail = (stderrTail + d).slice(-4000))); // also drains the pipe
-      o.signal.addEventListener('abort', () => child.kill('SIGTERM'), { once: true });
+      o.signal.addEventListener('abort', () => terminate(child, this.killGraceMs), { once: true });
       return child;
     };
 

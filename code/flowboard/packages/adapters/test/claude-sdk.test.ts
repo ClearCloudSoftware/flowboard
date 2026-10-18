@@ -38,3 +38,11 @@ test('stop() kills a hung CLI', { timeout: 10_000 }, async () => {
   assert.equal(res.exitCode, 130);
   assert.equal(res.error, 'stopped');
 });
+
+test('stop() kills a CLI that ignores SIGTERM', { timeout: 5_000 }, async () => {
+  const run = new ClaudeCodeProvider({ claudePath: fake('ignore-term.sh'), killGraceMs: 200 }).launch(spec);
+  assert.ok((await run.pid) > 0);
+  await new Promise((r) => setTimeout(r, 100));
+  run.stop();
+  assert.equal((await run.result).error, 'stopped');
+});

@@ -23,6 +23,7 @@ import { buildLaunch, pickVariant } from './options.ts';
 import { replyFor } from './permissions.ts';
 import { ServerStartError, startServer } from './server.ts';
 import type { StartedServer } from './server.ts';
+import { KILL_GRACE_MS, terminate } from '../../exec/terminate.ts';
 
 const GUARD_PLUGIN = fileURLToPath(new URL('./guard-plugin.ts', import.meta.url));
 
@@ -45,9 +46,11 @@ export class OpencodeProvider implements AgentProvider {
   private readonly models: Record<string, string>;
   private readonly opencodePath: string;
   private readonly env: NodeJS.ProcessEnv;
+  private readonly killGraceMs: number;
 
-  constructor(opts: { models: Record<string, string>; opencodePath?: string; env?: NodeJS.ProcessEnv }) {
+  constructor(opts: { models: Record<string, string>; opencodePath?: string; env?: NodeJS.ProcessEnv; killGraceMs?: number }) {
     this.models = opts.models;
+    this.killGraceMs = opts.killGraceMs ?? KILL_GRACE_MS;
     this.opencodePath = opts.opencodePath ?? 'opencode';
     this.env = opts.env ?? process.env;
   }
@@ -115,7 +118,12 @@ export class OpencodeProvider implements AgentProvider {
         const run = buildLaunch({ ...spec, model }, { env: this.env, configHome, password, guardPlugin: GUARD_PLUGIN });
 
         // Assign before checking for a stop, so cleanup can kill a server that came up after stop().
-        server = await startServer(spec.exec ?? hostExecHost, { opencodePath: this.opencodePath, cwd: directory, env: run.env });
+        server = await startServer(spec.exec ?? hostExecHost, {
+          opencodePath: this.opencodePath,
+          cwd: directory,
+          env: run.env,
+          killGraceMs: this.killGraceMs,
+        });
         resolvePid(server.child.pid ?? -1);
         if (stopped) throw STOP;
         server.child.once('close', () => streamAbort.abort()); // a dead server ends the event stream
@@ -208,7 +216,7 @@ export class OpencodeProvider implements AgentProvider {
         streamAbort.abort();
         if (server && server.child.exitCode === null && server.child.signalCode === null) {
           const closed = new Promise((r) => server!.child.once('close', r));
-          server.child.kill('SIGTERM');
+          terminate(server.child, this.killGraceMs);
           await closed;
         }
         if (configHome) await rm(configHome, { recursive: true, force: true });

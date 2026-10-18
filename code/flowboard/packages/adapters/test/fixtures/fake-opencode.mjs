@@ -22,6 +22,9 @@ if (JSON.parse(env.OPENCODE_CONFIG_CONTENT ?? '{}').plugin?.length && !env.FAKE_
   writeFileSync(`${env.XDG_CONFIG_HOME}/flowboard-guard.loaded`, '');
 }
 
+// FAKE_IGNORE_TERM: a stuck server that only SIGKILL ends.
+if (env.FAKE_IGNORE_TERM) process.on('SIGTERM', () => {});
+
 const expectedAuth = 'Basic ' + Buffer.from(`opencode:${env.OPENCODE_SERVER_PASSWORD}`).toString('base64');
 const script = JSON.parse(readFileSync(env.FAKE_OPENCODE_SCRIPT, 'utf8'));
 const clients = new Set();
