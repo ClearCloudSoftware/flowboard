@@ -1,5 +1,8 @@
 import { beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { FlowboardGuard } from '../src/agent/opencode/guard-plugin.ts';
 
 beforeEach(() => {
@@ -31,4 +34,11 @@ test('is a no-op without FLOWBOARD_GUARDS', async () => {
   delete process.env.FLOWBOARD_GUARDS;
   const hook = await before();
   await hook({ tool: 'write' }, { args: { filePath: '/etc/x' } });
+});
+
+test('marks itself loaded in the run config home', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'fbtest-'));
+  process.env.XDG_CONFIG_HOME = home;
+  await FlowboardGuard({ directory: '/repo/wt' });
+  assert.ok(existsSync(join(home, 'flowboard-guard.loaded')));
 });

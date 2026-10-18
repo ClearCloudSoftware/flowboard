@@ -13,12 +13,12 @@ const FAKE = fixture('fake-opencode.mjs');
 type Logged = { env?: Record<string, string | undefined>; method?: string; path?: string; body?: any };
 
 /** A fake server scripted with `script`; `requests()` reads what it saw. */
-function setup(script: object[]) {
+function setup(script: object[], extraEnv: Record<string, string> = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'fbtest-'));
   writeFileSync(join(dir, 'script.json'), JSON.stringify(script));
   const log = join(dir, 'log.jsonl');
   writeFileSync(log, '');
-  const env = { ...process.env, FAKE_OPENCODE_SCRIPT: join(dir, 'script.json'), FAKE_OPENCODE_LOG: log };
+  const env = { ...process.env, FAKE_OPENCODE_SCRIPT: join(dir, 'script.json'), FAKE_OPENCODE_LOG: log, ...extraEnv };
   const lines = () =>
     readFileSync(log, 'utf8')
       .trim()
@@ -31,6 +31,7 @@ function setup(script: object[]) {
     provider: (opencodePath = FAKE) => new OpencodeProvider({ models: { default: 'fake/m1' }, opencodePath, env }),
     requests: () => lines().filter((l) => l.method),
     envLine: () => lines().find((l) => l.env)!.env!,
+    serverPid: () => (lines().find((l) => l.env) as { pid?: number } | undefined)?.pid,
   };
 }
 
@@ -178,4 +179,45 @@ test('cleans up the config dir on failure', async () => {
   assert.equal(res2.error, "no OpenCode model for logical id 'unknown-model'");
 
   assert.deepEqual([...ours()].filter((d) => !before.has(d)), []);
+});
+
+const alive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+test('stop() before the server is up still kills it', { timeout: 10_000 }, async () => {
+  const { spec, provider, serverPid } = setup([idle]);
+  const run = provider().launch(spec);
+  run.stop();
+  const res = await run.result;
+  assert.equal(res.error, 'stopped');
+  const pid = serverPid();
+  if (pid) assert.equal(alive(pid), false);
+});
+
+test('a forked session does not replay its history', async () => {
+  const { spec, provider } = setup([text, step(0.01), idle]);
+  const run = provider().launch({ ...spec, resume: { sessionId: 'ses_old', fork: true } });
+  const events = await drain(run.events);
+  assert.ok(!events.some((e) => e.type === 'assistant_text' && e.text === 'old reply'));
+  assert.equal((await run.result).usage.costUsd, 0.01);
+});
+
+test('a reply to an already-settled permission request does not fail the run', async () => {
+  const { spec, provider } = setup([asked('per_1', '$SESSION', 'edit'), asked('gone_2', '$SESSION', 'edit'), idle]);
+  const res = await provider().launch(spec).result;
+  assert.equal(res.error, undefined);
+  assert.equal(res.exitCode, 0);
+});
+
+test('fails when the guard plugin does not load', async () => {
+  const { spec, provider, requests } = setup([idle], { FAKE_SKIP_PLUGIN: '1' });
+  const res = await provider().launch({ ...spec, guards: { writeRoots: [spec.cwd] } }).result;
+  assert.equal(res.error, 'guard plugin not loaded');
+  assert.ok(!requests().some((r) => r.path?.endsWith('/prompt_async')));
 });

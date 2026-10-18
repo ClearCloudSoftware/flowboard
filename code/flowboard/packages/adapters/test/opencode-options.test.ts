@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { RunSpec } from '@flowboard/core';
 import { buildLaunch, pickVariant, splitModel } from '../src/agent/opencode/options.ts';
+import { rulesToConfig } from '../src/agent/opencode/permissions.ts';
 
 const spec: RunSpec = {
   prompt: {
@@ -24,7 +25,7 @@ const spec: RunSpec = {
 };
 
 const base = {
-  env: { PATH: '/bin', XDG_DATA_HOME: '/home/x/.local/share' },
+  env: { PATH: '/bin', XDG_DATA_HOME: '/home/x/.local/share', OPENCODE_CONFIG: '/home/x/extra.json', OPENCODE_CONFIG_DIR: '/home/x/oc' },
   configHome: '/tmp/fb-oc-cfg',
   password: 'pw',
   guardPlugin: '/abs/guard-plugin.ts',
@@ -89,5 +90,17 @@ test('joins system prompts and omits guards when unset', () => {
 test('omits the system prompt and empty config sections when unset', () => {
   const out = buildLaunch({ ...spec, systemPrompt: undefined, capabilities: [], tools: [], limits: undefined }, base);
   assert.equal(out.prompt.system, undefined);
-  assert.deepEqual(Object.keys(out.config).sort(), ['plugin']);
+  assert.deepEqual(Object.keys(out.config).sort(), ['experimental', 'permission', 'plugin']);
+});
+
+test('applies the run policy to every agent, subagents included', () => {
+  const out = buildLaunch(spec, base);
+  assert.deepEqual(out.config.permission, rulesToConfig(out.permission));
+  assert.deepEqual(out.config.experimental, { continue_loop_on_deny: true });
+});
+
+test("keeps the owner's extra OpenCode config out", () => {
+  const { env } = buildLaunch(spec, base);
+  assert.equal(env.OPENCODE_CONFIG, undefined);
+  assert.equal(env.OPENCODE_CONFIG_DIR, undefined);
 });

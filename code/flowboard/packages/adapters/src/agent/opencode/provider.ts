@@ -8,6 +8,7 @@
  */
 import { randomBytes } from 'node:crypto';
 import { EventEmitter, on } from 'node:events';
+import { existsSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -113,8 +114,10 @@ export class OpencodeProvider implements AgentProvider {
         const password = randomBytes(24).toString('hex');
         const run = buildLaunch({ ...spec, model }, { env: this.env, configHome, password, guardPlugin: GUARD_PLUGIN });
 
-        server = await live(startServer(spec.exec ?? hostExecHost, { opencodePath: this.opencodePath, cwd: directory, env: run.env }));
+        // Assign before checking for a stop, so cleanup can kill a server that came up after stop().
+        server = await startServer(spec.exec ?? hostExecHost, { opencodePath: this.opencodePath, cwd: directory, env: run.env });
         resolvePid(server.child.pid ?? -1);
+        if (stopped) throw STOP;
         server.child.once('close', () => streamAbort.abort()); // a dead server ends the event stream
         client = createOpencodeClient({
           baseUrl: server.url,
@@ -127,11 +130,6 @@ export class OpencodeProvider implements AgentProvider {
         const { providerID, modelID } = run.prompt.model;
         const variants = Object.keys(providers.find((p) => p.id === providerID)?.models[modelID]?.variants ?? {});
 
-        // The SSE stream connects on first read; wait for server.connected so no event is missed.
-        const { stream } = await client.event.subscribe({ directory }, { signal: streamAbort.signal, sseMaxRetryAttempts: 1 });
-        const events = stream[Symbol.asyncIterator]();
-        await live(events.next());
-
         const session = spec.resume?.fork
           ? await ok(client.session.fork({ sessionID: spec.resume.sessionId, directory }))
           : spec.resume
@@ -141,6 +139,15 @@ export class OpencodeProvider implements AgentProvider {
         if (spec.resume) await live(client.session.update({ sessionID: session.id, directory, permission: run.permission }));
         sessionID = session.id;
         emit({ type: 'system', sessionId: session.id, raw: session });
+
+        // OpenCode logs a plugin that fails to load and carries on; never run unguarded while claiming tool_hooks.
+        if (spec.guards && !existsSync(join(configHome, 'flowboard-guard.loaded'))) throw new Error('guard plugin not loaded');
+
+        // Subscribe only now: a fork republishes the cloned history, which must not count as this run's events.
+        // The SSE stream connects on first read; wait for server.connected so no event is missed.
+        const { stream } = await client.event.subscribe({ directory }, { signal: streamAbort.signal, sseMaxRetryAttempts: 1 });
+        const events = stream[Symbol.asyncIterator]();
+        await live(events.next());
 
         const normalize = createNormalizer(session.id);
         const cap = spec.limits?.maxBudgetUsd;
@@ -158,11 +165,12 @@ export class OpencodeProvider implements AgentProvider {
           const event = r.value as Event;
           // One server per run: every permission request is this run's, and an unanswered one hangs it.
           if (event.type === 'permission.asked') {
-            await client.permission.reply({
-              requestID: event.properties.id,
-              directory,
-              ...replyFor(spec.permissionMode, event.properties.permission),
-            });
+            // A reject settles the session's other pending requests too; replying to one of those is a 404.
+            await client.permission
+              .reply({ requestID: event.properties.id, directory, ...replyFor(spec.permissionMode, event.properties.permission) })
+              .catch((e: unknown) => {
+                if ((e as { cause?: { status?: number } }).cause?.status !== 404) throw e;
+              });
           }
           for (const ev of normalize(event)) {
             emit(ev);

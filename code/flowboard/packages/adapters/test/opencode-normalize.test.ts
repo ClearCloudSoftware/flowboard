@@ -123,3 +123,10 @@ test('ends with result on root idle only', () => {
     { type: 'result', usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, numTurns: 0, costUsd: 0 } },
   ]);
 });
+
+test('a context overflow that OpenCode compacts is not a failure', () => {
+  const out = createNormalizer(ROOT)(
+    ev('session.error', { sessionID: ROOT, error: { name: 'ContextOverflowError', data: { message: 'too long' } } }),
+  );
+  assert.deepEqual(out, []);
+});

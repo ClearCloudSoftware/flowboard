@@ -13,9 +13,9 @@ Code: `code/flowboard/packages/adapters/src/agent/opencode/` (`permissions.ts`, 
 
 OpenCode is a server, not a one-shot CLI. Each `launch()` starts its own `opencode serve` through `RunSpec.exec`, bound to `127.0.0.1`, with a random per-run password (`OPENCODE_SERVER_PASSWORD`). The run's whole config travels in `OPENCODE_CONFIG_CONTENT`. The adapter then:
 
-1. subscribes to the server's event stream and waits for `server.connected` (the SDK's stream connects lazily);
-2. creates the session, or forks or reuses one on resume, and emits `system`;
-3. sends the prompt with `promptAsync`;
+1. creates the session, or forks or reuses one on resume, and emits `system`;
+2. fails the run if `guards` are set but the guard plugin did not load (OpenCode only logs a plugin load failure; the plugin writes a marker file the adapter checks);
+3. subscribes to the server's event stream, waits for `server.connected` (the SDK's stream connects lazily), and only then sends the prompt with `promptAsync`. Subscribing after the fork matters: a fork republishes the cloned history, which must not count as this run's events or cost;
 4. answers every `permission.asked` (OpenCode waits forever on an unanswered one);
 5. stops at the root session's `session.idle`, kills the server, and deletes the scratch config dir.
 
@@ -30,7 +30,9 @@ OpenCode is a server, not a one-shot CLI. Each `launch()` starts its own `openco
 | `prompt` | the canonical render; a `/<plugin>:<slug>` invocation becomes `Use the "<slug>" skill.` |
 | `systemPrompt`, `system_prompt` packs | the prompt's `system` |
 | `toolPolicy`, `permissionMode` | session permission rules (last match wins): ask everything, allow read-only tools, then the allow list, then the deny list; `bypassPermissions` starts from allow-everything. Claude tool names map to OpenCode keys (`Write` → `edit`, `Bash(x)` → `bash` with pattern `x`) |
-| permission requests | answered `once` under `bypassPermissions` / `auto` (and for `edit` under `acceptEdits`), else rejected with *"Not permitted in this headless run."* |
+| permission requests | answered `once` under `bypassPermissions` / `auto` (and for `edit` under `acceptEdits`), else rejected with *"Not permitted in this headless run."* A reject also settles the session's other pending requests, so a reply that finds its request gone (404) is ignored, and `experimental.continue_loop_on_deny` keeps the agent going after a reject |
+| subagents | the same rules are injected as config `permission`, because a child session only inherits its parent session's deny rules. A key whose only pattern is `*` is written as a plain action, which some keys (`todowrite`, `question`) require |
+| OpenCode's `question` tool | denied last in every mode, which hides it: it blocks until answered, and a headless run asks through `ask_user` |
 | `tools` | config `mcp` (local servers), always allowed |
 | `capabilities` | `plugin_dir` → config `skills.paths` = `<dir>/skills` (OpenCode reads Claude-style `SKILL.md`); `native` → merged into config |
 | `guards` | `guard-plugin.ts` in config `plugin`, rules in `FLOWBOARD_GUARDS`; it checks `write`, `edit`, `apply_patch` and `bash` with the core `checkToolCall` |
@@ -43,6 +45,8 @@ OpenCode is a server, not a one-shot CLI. Each `launch()` starts its own `openco
 `text` and `reasoning` parts are emitted once, when they end (`time.end`); deltas are folded. A `tool` part gives one `tool_use` and one `tool_result`. Parts of user messages are skipped, so the prompt is never shown as the agent's reply. Child (subagent) sessions count as the run's own. Usage is the sum of `step-finish` parts: `output` includes reasoning tokens, `numTurns` counts steps, `costUsd` sums OpenCode's cost (priced from models.dev; 0 for an unpriced model).
 
 ## Isolation and credentials
+
+The adapter strips `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR` from the inherited env. The server password is in the server's env, which OpenCode's bash children inherit: a run that reads its env can reach its own server. Guards still hold (they run in the plugin); the sandbox tier is the floor.
 
 The server gets a fresh `XDG_CONFIG_HOME`, so `~/.config/opencode` stays out, plus `OPENCODE_DISABLE_PROJECT_CONFIG=1`, `OPENCODE_DISABLE_CLAUDE_CODE=1` and `OPENCODE_DISABLE_AUTOUPDATE=1`. `XDG_DATA_HOME` is untouched: it holds OpenCode's own `auth.json` and the session database that resume needs. OpenCode 1.19.3 has no Claude Pro/Max login, so this provider runs non-Claude models; on this machine its only credential is an OpenRouter API key, and live runs cost real money.
 

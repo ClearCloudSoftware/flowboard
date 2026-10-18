@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { renderPrompt } from '@flowboard/core';
 import type { Effort, RunSpec } from '@flowboard/core';
 import type { Config, PermissionRule } from '@opencode-ai/sdk/v2';
-import { toPermissionRules } from './permissions.ts';
+import { rulesToConfig, toPermissionRules } from './permissions.ts';
 
 export interface LaunchBase {
   env: NodeJS.ProcessEnv;
@@ -45,7 +45,12 @@ export function buildLaunch(
   const tools = spec.tools ?? [];
   const skills = packs.flatMap((p) => (p.mount.kind === 'plugin_dir' ? [`${p.mount.path}/skills`] : []));
 
-  const config: Config = {};
+  const permission = toPermissionRules(spec);
+  const config: Config = {
+    permission: rulesToConfig(permission),
+    // A rejected permission ends the turn by default; keep the agent going so it can take another route.
+    experimental: { continue_loop_on_deny: true },
+  };
   if (tools.length) {
     config.mcp = Object.fromEntries(
       tools.map((t) => [
@@ -68,8 +73,10 @@ export function buildLaunch(
     .filter(Boolean)
     .join('\n\n');
 
+  // OPENCODE_CONFIG / OPENCODE_CONFIG_DIR from the owner's shell would pull extra config into the run.
+  const { OPENCODE_CONFIG: _config, OPENCODE_CONFIG_DIR: _configDir, ...inherited } = base.env;
   const env: NodeJS.ProcessEnv = {
-    ...base.env,
+    ...inherited,
     XDG_CONFIG_HOME: base.configHome,
     OPENCODE_DISABLE_PROJECT_CONFIG: '1',
     OPENCODE_DISABLE_CLAUDE_CODE: '1',
@@ -82,7 +89,7 @@ export function buildLaunch(
   return {
     env,
     config,
-    permission: toPermissionRules(spec),
+    permission,
     prompt: { model: splitModel(spec.model), ...(system && { system }), parts: [{ type: 'text', text }] },
   };
 }

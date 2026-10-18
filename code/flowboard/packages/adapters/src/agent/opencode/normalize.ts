@@ -79,6 +79,8 @@ export function createNormalizer(rootSessionID: string): (event: Event) => Norma
       }
 
       case 'session.error':
+        // OpenCode reports a context overflow, then compacts and carries on.
+        if (event.properties.error?.name === 'ContextOverflowError') return [];
         return [{ type: 'error', message: describe(event.properties.error), raw }];
 
       case 'session.idle':

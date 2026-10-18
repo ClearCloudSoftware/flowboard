@@ -51,7 +51,35 @@ export function toPermissionRules(spec: RunSpec): PermissionRule[] {
     ...(spec.toolPolicy?.deny ?? []).map((e): PermissionRule => ({ ...parse(e), action: 'deny' })),
     // Injected tool servers (ask_user) are always allowed, so no policy can lock out HITL.
     ...(spec.tools ?? []).map((t): PermissionRule => ({ permission: `${t.name}_*`, pattern: '*', action: 'allow' })),
+    // OpenCode's own `question` tool blocks until someone answers it; a headless run asks through ask_user instead.
+    // A final deny hides the tool from the model entirely.
+    { permission: 'question', pattern: '*', action: 'deny' },
   ];
+}
+
+/**
+ * The same rules as config `permission`, which OpenCode applies to every agent, subagents included
+ * (a child session only inherits its parent session's deny rules). Config is a key-ordered object,
+ * so a repeated key moves to the end to keep the session ruleset's last-match order.
+ */
+// ponytail: approximate when a key's patterns interleave with other keys' rules; exact for the rules toPermissionRules emits.
+export function rulesToConfig(
+  rules: PermissionRule[],
+): Record<string, PermissionRule['action'] | Record<string, PermissionRule['action']>> {
+  const byKey: Record<string, Record<string, PermissionRule['action']>> = {};
+  for (const { permission, pattern, action } of rules) {
+    const patterns = byKey[permission] ?? {};
+    delete byKey[permission];
+    delete patterns[pattern];
+    byKey[permission] = { ...patterns, [pattern]: action };
+  }
+  // A key whose only pattern is '*' becomes a plain action: some keys (todowrite, question) accept nothing else.
+  return Object.fromEntries(
+    Object.entries(byKey).map(([key, patterns]) => {
+      const entries = Object.entries(patterns);
+      return [key, entries.length === 1 && entries[0][0] === '*' ? entries[0][1] : patterns];
+    }),
+  );
 }
 
 export function replyFor(
