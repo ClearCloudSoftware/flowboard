@@ -128,3 +128,71 @@ test('an unreachable broker is a tool error', async (t) => {
   assert.equal(res.isError, true);
   assert.match(res.content[0].text, /broker/);
 });
+
+// --- lenient input: some models send nested values as text -----------------
+
+/** A shim on a fake broker that answers {}, closed when the test ends. */
+async function lenient(t: { after: (fn: () => Promise<void>) => void }) {
+  const broker = await fakeBroker({ answers: {} });
+  const client = await shim(broker.socketPath);
+  t.after(async () => {
+    await client.close();
+    await broker.close();
+  });
+  return { broker, client };
+}
+
+test('a question sent as JSON text is accepted', async (t) => {
+  const { broker, client } = await lenient(t);
+  const res = await call(client, 'ask_user', { question: JSON.stringify(colour) });
+  assert.ok(!res.isError, res.content[0]?.text);
+  assert.deepEqual(broker.requests, [{ questions: [colour] }]);
+});
+
+test('a flattened question with its options as text is accepted', async (t) => {
+  // What dots-3-note-preview sent on its first try in a real run.
+  const { broker, client } = await lenient(t);
+  const res = await call(client, 'ask_user', {
+    question: 'Purpose?',
+    id: 'purpose',
+    kind: 'single_select',
+    options: JSON.stringify([{ label: 'Learning', value: 'learning' }]),
+  });
+  assert.ok(!res.isError, res.content[0]?.text);
+  assert.deepEqual(broker.requests, [
+    { questions: [{ id: 'purpose', prompt: 'Purpose?', kind: 'single_select', options: [{ label: 'Learning', value: 'learning' }] }] },
+  ]);
+});
+
+test('options sent as JSON text inside a question object are accepted', async (t) => {
+  const { broker, client } = await lenient(t);
+  const options = [{ label: 'Yes', value: 'y' }];
+  const res = await call(client, 'ask_user', { question: { id: 'q', prompt: 'Q?', kind: 'single_select', options: JSON.stringify(options) } });
+  assert.ok(!res.isError, res.content[0]?.text);
+  assert.deepEqual(broker.requests, [{ questions: [{ id: 'q', prompt: 'Q?', kind: 'single_select', options }] }]);
+});
+
+test('a batch sent as JSON text is accepted', async (t) => {
+  const { broker, client } = await lenient(t);
+  const res = await call(client, 'ask_user_batch', { questions: JSON.stringify([colour]) });
+  assert.ok(!res.isError, res.content[0]?.text);
+  assert.deepEqual(broker.requests, [{ questions: [colour] }]);
+});
+
+test('a plain-text question with no id or kind is a clear tool error', async (t) => {
+  const { broker, client } = await lenient(t);
+  const res = await call(client, 'ask_user', { question: 'Purpose?' });
+  assert.equal(res.isError, true);
+  assert.equal(res.content[0].text, 'a question given as plain text also needs id and kind');
+  assert.deepEqual(broker.requests, []);
+});
+
+test('a batch item with its options as JSON text is accepted', async (t) => {
+  const { broker, client } = await lenient(t);
+  const options = [{ label: 'Yes', value: 'y' }];
+  const res = await call(client, 'ask_user_batch', {
+    questions: [colour, { id: 'q', prompt: 'Q?', kind: 'single_select', options: JSON.stringify(options) }],
+  });
+  assert.ok(!res.isError, res.content[0]?.text);
+  assert.deepEqual(broker.requests, [{ questions: [colour, { id: 'q', prompt: 'Q?', kind: 'single_select', options }] }]);
+});

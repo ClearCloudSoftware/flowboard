@@ -45,6 +45,7 @@ Code: `code/flowboard/packages/cli/src/` (`config.ts`, `run.ts`, `main.ts`), on 
 | R29 | Closing the terminal (SIGHUP) or a kill (SIGTERM) stops the run like Ctrl+C; the second Ctrl+C deletes the temp folder before exiting | The review found both paths left the temp folder, with a full copy of each skill, behind | None |
 | R30 | A withdrawn line waits, like event lines, while another question is on screen | The review found it printed over the open prompt when parallel questions were queued | None |
 | R31 | The final review covered only this feature's commits (`bd6027b..`) | Earlier branch work was reviewed under its own plans | Earlier code not re-reviewed here |
+| R32 | The question tool also accepts a question sent as JSON text, options sent as JSON text, and a plain-text `question` with `id` and `kind` beside it; a plain-text question without them gets *"a question given as plain text also needs id and kind"* | A real run on `dots-3-note-preview` got its first `ask_user` call rejected every time for this shape, wasting a step | The advertised tool schema is looser, so a model may pick the flat shape on purpose; it works either way |
 
 ## Deferred issues
 
