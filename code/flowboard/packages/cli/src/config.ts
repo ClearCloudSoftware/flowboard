@@ -13,7 +13,11 @@ import type { RunSpec } from '@flowboard/core';
 
 export type Adapter = 'claude-code' | 'opencode';
 
-export const CLOSING = 'This is a headless run: there is no terminal to ask into. Do the task, then stop.';
+export const CLOSING =
+  'You cannot talk to the user directly. When you need their input, ask with the ask_user tool, or ask_user_batch for several questions at once, and wait for the answer. Do the task, then stop.';
+
+/** Name of the plugin run-agent builds from `skills:` folders. */
+export const SKILLS_PLUGIN = 'local';
 
 export interface RunConfig {
   /** Absolute. */
@@ -22,6 +26,8 @@ export interface RunConfig {
   spec: RunSpec;
   /** The YAML opted in to a setting that lets the agent run any shell command. */
   unrestrictedShell: boolean;
+  /** Standalone skill folders to mount as the `local` plugin (absolute paths). */
+  skills: { name: string; path: string }[];
 }
 
 export type LoadResult = { ok: true; config: RunConfig } | { ok: false; errors: string[] };
@@ -34,6 +40,7 @@ const Schema = z.strictObject({
   prompt: z.string().min(1),
   system_prompt: z.string().optional(),
   plugins: z.array(z.string().min(1)).optional(),
+  skills: z.array(z.string().min(1)).optional(),
   skill: z.string().optional(),
   permissions: z
     .strictObject({
@@ -78,6 +85,25 @@ function issueLines(issue: $ZodIssue, raw: unknown): string[] {
   return [`${path || '(root)'}: ${value === undefined ? 'required' : issue.message}`];
 }
 
+/** Why a skills: folder cannot be used, or undefined. Its SKILL.md `name:` must match the folder: OpenCode may load skills by it. */
+function checkSkill(path: string, earlier: { name: string }[]): string | undefined {
+  if (!isDir(path)) return `not a directory: ${path}`;
+  const file = join(path, 'SKILL.md');
+  if (!isFile(file)) return `no SKILL.md in ${path}`;
+  const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(readFileSync(file, 'utf8'))?.[1];
+  let name: unknown;
+  try {
+    name = front === undefined ? undefined : (parse(front) as { name?: unknown } | null)?.name;
+  } catch {
+    name = undefined;
+  }
+  const folder = basename(path);
+  if (typeof name !== 'string' || !name) return 'SKILL.md has no name';
+  if (name !== folder) return `SKILL.md name "${name}" does not match folder "${folder}"`;
+  if (earlier.some((s) => s.name === name)) return `duplicate skill name "${name}"`;
+  return undefined;
+}
+
 export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
   const fail = (lines: string[]): LoadResult => ({ ok: false, errors: lines.map((l) => `${yamlPath}: ${l}`) });
   const abs = toAbs(yamlPath, baseDir);
@@ -105,7 +131,24 @@ export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
   const preamble = isFile(promptPath) ? readFileSync(promptPath, 'utf8') : undefined;
   if (preamble === undefined) errors.push(`prompt: not a file: ${promptPath}`);
   else if (!preamble.trim() && !y.skill) errors.push('prompt: file is empty');
+  const skills: { name: string; path: string }[] = [];
+  (y.skills ?? []).forEach((p, i) => {
+    const path = toAbs(p, baseDir);
+    const problem = checkSkill(path, skills);
+    if (problem) errors.push(`skills.${i}: ${problem}`);
+    else skills.push({ name: basename(path), path });
+  });
+  if (y.skills?.length) {
+    pluginDirs.forEach((d, i) => basename(d) === SKILLS_PLUGIN && errors.push(`plugins.${i}: plugin folder name "${SKILLS_PLUGIN}" is reserved for skills`));
+  }
+  let invocation = y.skill;
   if (y.skill !== undefined && !y.skill.startsWith('/')) errors.push('skill: must start with "/"');
+  else if (y.skill !== undefined && !y.skill.includes(':')) {
+    const name = y.skill.slice(1);
+    // A skills: folder that failed its own check already has an error line.
+    if (skills.some((s) => s.name === name)) invocation = `/${SKILLS_PLUGIN}:${name}`;
+    else if (!(y.skills ?? []).some((p) => basename(toAbs(p, baseDir)) === name)) errors.push(`skill: no skill "${name}" in skills`);
+  }
   if (y.adapter === 'opencode' && !y.model.includes('/')) errors.push('model: opencode model must be "providerID/modelID"');
   (y.guards?.deny_commands ?? []).forEach((src, i) => {
     try {
@@ -127,7 +170,7 @@ export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
   const spec: RunSpec = {
     model: y.model,
     cwd: folder,
-    prompt: { preamble: preamble!, inputs: [], outputs: [], invocation: y.skill, closing: CLOSING },
+    prompt: { preamble: preamble!, inputs: [], outputs: [], invocation, closing: CLOSING },
     permissionMode: mode,
     guards: {
       writeRoots: [folder],
@@ -155,6 +198,6 @@ export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
 
   return {
     ok: true,
-    config: { yamlPath: abs, adapter: y.adapter, spec, unrestrictedShell: optIn && shellTriggers.length > 0 },
+    config: { yamlPath: abs, adapter: y.adapter, spec, unrestrictedShell: optIn && shellTriggers.length > 0, skills },
   };
 }

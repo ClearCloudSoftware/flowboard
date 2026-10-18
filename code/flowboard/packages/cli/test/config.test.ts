@@ -217,3 +217,83 @@ test('"Bash(pnpm *)" needs no opt-in', () => {
   assert.ok(r.ok, JSON.stringify(r));
   assert.equal(r.config.unrestrictedShell, false);
 });
+
+// --- closing line and skills: ----------------------------------------------
+
+test('the closing line tells the agent to ask through the tool', () => {
+  assert.equal(
+    CLOSING,
+    'You cannot talk to the user directly. When you need their input, ask with the ask_user tool, or ask_user_batch for several questions at once, and wait for the answer. Do the task, then stop.',
+  );
+});
+
+/** Adds skills/<folder>/SKILL.md to `base` with the given frontmatter name (none when null). */
+function addSkill(base: string, folder: string, name: string | null = folder) {
+  mkdirSync(join(base, 'skills', folder), { recursive: true });
+  const front = name === null ? '' : `---\nname: ${name}\ndescription: test\n---\n`;
+  writeFileSync(join(base, 'skills', folder, 'SKILL.md'), `${front}Ask the user things.\n`);
+}
+
+test('skills: entries load and a plain skill name becomes /local:<name>', () => {
+  const base = project(MINIMAL + 'skills: [skills/grill-me]\nskill: /grill-me\n');
+  addSkill(base, 'grill-me');
+  const r = loadConfig('task.yaml', base);
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.deepEqual(r.config.skills, [{ name: 'grill-me', path: join(base, 'skills/grill-me') }]);
+  assert.equal(r.config.spec.prompt.invocation, '/local:grill-me');
+});
+
+test('no skills: means an empty list', () => {
+  const r = loadConfig('task.yaml', project(MINIMAL));
+  assert.ok(r.ok);
+  assert.deepEqual(r.config.skills, []);
+});
+
+test('a skills: entry must be a directory', () => {
+  const { errors, base } = errorsOf(MINIMAL + 'skills: [skills/nope]\n');
+  assert.deepEqual(errors, [`task.yaml: skills.0: not a directory: ${join(base, 'skills/nope')}`]);
+});
+
+test('a skills: entry needs a SKILL.md', () => {
+  const base = project(MINIMAL + 'skills: [skills/empty]\n');
+  mkdirSync(join(base, 'skills', 'empty'), { recursive: true });
+  const r = loadConfig('task.yaml', base);
+  assert.deepEqual(r, { ok: false, errors: [`task.yaml: skills.0: no SKILL.md in ${join(base, 'skills/empty')}`] });
+});
+
+test('SKILL.md must have a name', () => {
+  const base = project(MINIMAL + 'skills: [skills/x]\n');
+  addSkill(base, 'x', null);
+  assert.deepEqual(loadConfig('task.yaml', base), { ok: false, errors: ['task.yaml: skills.0: SKILL.md has no name'] });
+});
+
+test('the SKILL.md name must match the folder', () => {
+  const base = project(MINIMAL + 'skills: [skills/x]\n');
+  addSkill(base, 'x', 'other');
+  assert.deepEqual(loadConfig('task.yaml', base), {
+    ok: false,
+    errors: ['task.yaml: skills.0: SKILL.md name "other" does not match folder "x"'],
+  });
+});
+
+test('two skills with the same name are refused', () => {
+  const base = project(MINIMAL + 'skills: [skills/x, more/x]\n');
+  addSkill(base, 'x');
+  mkdirSync(join(base, 'more', 'x'), { recursive: true });
+  writeFileSync(join(base, 'more', 'x', 'SKILL.md'), '---\nname: x\n---\n');
+  assert.deepEqual(loadConfig('task.yaml', base), { ok: false, errors: ['task.yaml: skills.1: duplicate skill name "x"'] });
+});
+
+test('a plain skill name must be one of the skills', () => {
+  assert.deepEqual(errorsOf(MINIMAL + 'skill: /grill-me\n').errors, ['task.yaml: skill: no skill "grill-me" in skills']);
+});
+
+test('a plugin folder named local clashes with skills:', () => {
+  const base = project(MINIMAL + 'plugins: [plugins/local]\nskills: [skills/x]\n');
+  mkdirSync(join(base, 'plugins', 'local'));
+  addSkill(base, 'x');
+  assert.deepEqual(loadConfig('task.yaml', base), {
+    ok: false,
+    errors: ['task.yaml: plugins.0: plugin folder name "local" is reserved for skills'],
+  });
+});
