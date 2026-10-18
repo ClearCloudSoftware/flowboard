@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { createConnection } from 'node:net';
@@ -466,4 +466,38 @@ test('SIGTERM and SIGHUP stop the run like Ctrl+C', async () => {
     assert.equal(await runAgent(['task.yaml'], deps), 130, sig);
     assert.equal(signals.listenerCount(sig), 0, sig);
   }
+});
+
+// --- setup failures ------------------------------------------------------------
+
+const asRoot = process.getuid?.() === 0; // root reads anything, so permission tests cannot fail
+
+test('runs existing as a file is an error line and exit 2', async () => {
+  const { base, err, deps } = setup(() => new ReplayProvider({ events: HELLO }));
+  writeFileSync(join(base, 'runs'), '');
+  assert.equal(await runAgent(['task.yaml'], deps), 2);
+  assert.equal(err.length, 1);
+  assert.match(err[0], /^task\.yaml: runs: cannot create the log: \S/);
+});
+
+test('an unreadable prompt creates no runs/ log', { skip: asRoot }, async () => {
+  const { base, err, deps } = setup(() => new ReplayProvider({ events: HELLO }));
+  chmodSync(join(base, 'task.md'), 0o000);
+  assert.equal(await runAgent(['task.yaml'], deps), 2);
+  assert.match(err[0], /^task\.yaml: prompt: cannot read: /);
+  assert.ok(!existsSync(join(base, 'runs')));
+});
+
+test('a skills folder that cannot be copied fails the run with a result', { skip: asRoot }, async () => {
+  const yaml = YAML + 'skills: [skills/grill-me]\n';
+  const { base, out, deps } = setup(() => new ReplayProvider({ events: HELLO }), yaml);
+  mkdirSync(join(base, 'skills', 'grill-me'), { recursive: true });
+  writeFileSync(join(base, 'skills', 'grill-me', 'SKILL.md'), '---\nname: grill-me\n---\nGrill.\n');
+  writeFileSync(join(base, 'skills', 'grill-me', 'locked.md'), 'x');
+  chmodSync(join(base, 'skills', 'grill-me', 'locked.md'), 0o000);
+  assert.equal(await runAgent(['task.yaml'], deps), 1);
+  const last = readLog(join(base, 'runs', LOG_NAME)).at(-1);
+  assert.equal(last.kind, 'result');
+  assert.match(last.result.error, /^cannot set up the run: /);
+  assert.match(out.at(-1)!, /^-- result /);
 });

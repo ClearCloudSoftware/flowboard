@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { DEFAULT_DENY_COMMANDS } from '@flowboard/core';
@@ -325,4 +325,15 @@ test('a plugin reached through a link resolves to its real path', () => {
 test('a missing folder is still a plain error line', () => {
   const { errors, base } = errorsOf(MINIMAL.replace('folder: proj', 'folder: nope'));
   assert.deepEqual(errors, [`task.yaml: folder: not a directory: ${join(base, 'nope')}`]);
+});
+
+const asRoot = process.getuid?.() === 0; // root reads anything, so permission tests cannot fail
+
+test('an unreadable prompt file is an error line', { skip: asRoot }, () => {
+  const base = project(MINIMAL);
+  chmodSync(join(base, 'task.md'), 0o000);
+  const r = loadConfig('task.yaml', base);
+  assert.ok(!r.ok);
+  assert.equal(r.errors.length, 1);
+  assert.match(r.errors[0], /^task\.yaml: prompt: cannot read: \S/);
 });

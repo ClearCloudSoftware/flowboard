@@ -132,9 +132,16 @@ export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
   const pluginDirs = (y.plugins ?? []).map((p) => toAbs(p, baseDir));
   pluginDirs.forEach((d, i) => isDir(d) || errors.push(`plugins.${i}: not a directory: ${d}`));
   const promptPath = toAbs(y.prompt, baseDir);
-  const preamble = isFile(promptPath) ? readFileSync(promptPath, 'utf8') : undefined;
-  if (preamble === undefined) errors.push(`prompt: not a file: ${promptPath}`);
-  else if (!preamble.trim() && !y.skill) errors.push('prompt: file is empty');
+  let preamble: string | undefined;
+  if (!isFile(promptPath)) errors.push(`prompt: not a file: ${promptPath}`);
+  else {
+    try {
+      preamble = readFileSync(promptPath, 'utf8');
+    } catch (e) {
+      errors.push(`prompt: cannot read: ${(e as Error).message}`);
+    }
+  }
+  if (preamble !== undefined && !preamble.trim() && !y.skill) errors.push('prompt: file is empty');
   const skills: { name: string; path: string }[] = [];
   (y.skills ?? []).forEach((p, i) => {
     const path = toAbs(p, baseDir);

@@ -90,14 +90,20 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
   }
   const { adapter, yamlPath, unrestrictedShell } = loaded.config;
 
-  const dir = join(deps.cwd, 'runs');
-  mkdirSync(dir, { recursive: true });
-  const { fd, path } = openLog(dir, `${stamp(now())}-${adapter}`);
+  let fd: number;
+  let path: string;
+  try {
+    const dir = join(deps.cwd, 'runs');
+    mkdirSync(dir, { recursive: true });
+    ({ fd, path } = openLog(dir, `${stamp(now())}-${adapter}`));
+  } catch (e) {
+    printErr(`${args[0]}: runs: cannot create the log: ${(e as Error).message}`);
+    return 2;
+  }
   const log = (kind: string, body: object) =>
     appendFileSync(fd, JSON.stringify({ kind, at: now().toISOString(), ...body }) + '\n');
 
-  // Short and real: a Unix socket path is limited to about 104 characters, and /tmp is a link on macOS.
-  const tmp = realpathSync(mkdtempSync('/tmp/fb-'));
+  let tmp: string | undefined; // the socket and the skills plugin; made in the setup below
   let run: AgentRun | undefined;
   let firstInterrupt: number | undefined;
   const onInterrupt = () => {
@@ -107,7 +113,7 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
       print('-- stopping');
       run?.stop();
     } else if (at - firstInterrupt > 300) {
-      rmSync(tmp, { recursive: true, force: true }); // exit skips the finally below
+      if (tmp) rmSync(tmp, { recursive: true, force: true }); // exit skips the finally below
       exit(130);
     }
     // ponytail: under `pnpm run-agent` one Ctrl+C arrives twice (the terminal's group signal plus pnpm's
@@ -123,23 +129,34 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
   const show = (line: string) => (asking ? held.push(line) : print(line));
   let broker: Awaited<ReturnType<typeof startBroker>> | undefined;
   try {
-    broker = await startBroker(join(tmp, 'ask.sock'), deps.answer ?? (process.stdin.isTTY ? terminalAnswerer(undefined, print) : noTerminal), {
-      onQuestion: (questions) => {
-        asking = true;
-        log('question', { questions });
-      },
-      onAnswer: (answers) => log('answer', { answers }),
-      onWithdrawn: () => {
-        log('withdrawn', {});
-        show(WITHDRAWN); // another question may still be on screen
-      },
-      onDone: () => {
-        asking = false;
-        held.splice(0).forEach((l) => print(l));
-      },
-      onInterrupt,
-    });
-    const spec = withAsking(loaded.config, join(tmp, 'ask.sock'), tmp);
+    let spec: RunSpec;
+    try {
+      // Short and real: a Unix socket path is limited to about 104 characters, and /tmp is a link on macOS.
+      tmp = realpathSync(mkdtempSync('/tmp/fb-'));
+      broker = await startBroker(join(tmp, 'ask.sock'), deps.answer ?? (process.stdin.isTTY ? terminalAnswerer(undefined, print) : noTerminal), {
+        onQuestion: (questions) => {
+          asking = true;
+          log('question', { questions });
+        },
+        onAnswer: (answers) => log('answer', { answers }),
+        onWithdrawn: () => {
+          log('withdrawn', {});
+          show(WITHDRAWN); // another question may still be on screen
+        },
+        onDone: () => {
+          asking = false;
+          held.splice(0).forEach((l) => print(l));
+        },
+        onInterrupt,
+      });
+      spec = withAsking(loaded.config, join(tmp, 'ask.sock'), tmp);
+    } catch (e) {
+      // Nothing launched yet; still end the log, and the output, with a result.
+      const result: RunResult = { usage: ZERO_USAGE, exitCode: 1, error: `cannot set up the run: ${(e as Error).message}` };
+      log('result', { result });
+      print(`-- result ${JSON.stringify(result)}`);
+      return 1;
+    }
     log('start', { yaml: yamlPath, config: spec });
     print(`-- ${adapter} ${spec.model} in ${spec.cwd}`);
     print(`-- log ${path}`);
@@ -181,6 +198,6 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
     await broker?.close();
     for (const sig of STOP_SIGNALS) signals.off(sig, onInterrupt);
     closeSync(fd);
-    rmSync(tmp, { recursive: true, force: true });
+    if (tmp) rmSync(tmp, { recursive: true, force: true });
   }
 }
