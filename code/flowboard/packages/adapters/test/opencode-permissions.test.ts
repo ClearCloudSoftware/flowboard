@@ -15,11 +15,14 @@ test('asks by default and allows read-only tools', () => {
 
 test('maps the tool policy after the defaults', () => {
   const rules = toPermissionRules({ ...base, toolPolicy: { allow: ['Write', 'Bash(pnpm *)'], deny: ['WebFetch'] } });
-  assert.deepEqual(rules.slice(-4, -1), [
-    { permission: 'edit', pattern: '*', action: 'allow' },
-    { permission: 'bash', pattern: 'pnpm *', action: 'allow' },
-    { permission: 'webfetch', pattern: '*', action: 'deny' },
-  ]);
+  const at = (r: object) => rules.findIndex((x) => JSON.stringify(x) === JSON.stringify(r));
+  const edit = at({ permission: 'edit', pattern: '*', action: 'allow' });
+  const bash = at({ permission: 'bash', pattern: 'pnpm *', action: 'allow' });
+  const web = at({ permission: 'webfetch', pattern: '*', action: 'deny' });
+  // allow list, then the .env rules, then the deny list (last match wins)
+  assert.ok(edit > 0 && bash === edit + 1 && web > bash, JSON.stringify(rules));
+  assert.ok(at({ permission: 'read', pattern: '*.env', action: 'ask' }) > bash);
+  assert.ok(at({ permission: 'read', pattern: '*.env', action: 'ask' }) < web);
 });
 
 test('pre-approves injected tool servers last', () => {
@@ -29,7 +32,7 @@ test('pre-approves injected tool servers last', () => {
 
 test('maps mcp tool globs to OpenCode names', () => {
   const rules = toPermissionRules({ ...base, toolPolicy: { allow: ['mcp__vibe__*'] } });
-  assert.deepEqual(rules.at(-2), { permission: 'vibe_*', pattern: '*', action: 'allow' });
+  assert.ok(rules.some((r) => r.permission === 'vibe_*' && r.pattern === '*' && r.action === 'allow'));
 });
 
 test('bypassPermissions allows everything but keeps denies', () => {
@@ -67,4 +70,17 @@ test('rulesToConfig keeps last-match order', () => {
   );
   // a repeated key moves to the end, so a later wildcard still wins as it does in the session ruleset
   assert.deepEqual(Object.keys(rulesToConfig([{ permission: '*', pattern: '*', action: 'ask' }, { permission: 'read', pattern: '*', action: 'allow' }])), ['*', 'read']);
+});
+
+test('reading .env files asks, .env.example stays allowed', () => {
+  const rules = toPermissionRules({ ...base, toolPolicy: { allow: ['Read'], deny: ['Read(secret.env)'] } });
+  const i = (p: string, pattern: string) => rules.findIndex((r) => r.permission === p && r.pattern === pattern);
+  // after the allow list's read *, so allowing Read does not re-open .env; before the deny list, so it still applies
+  const lastReadAll = rules.findLastIndex((r) => r.permission === 'read' && r.pattern === '*');
+  assert.ok(lastReadAll < i('read', '*.env'), "after the allow list's read *");
+  assert.ok(i('read', '*.env.example') < i('read', 'secret.env'), 'before the deny list');
+  assert.equal(rules[i('read', '*.env')].action, 'ask');
+  assert.equal(rules[i('read', '*.env.*')].action, 'ask');
+  assert.equal(rules[i('read', '*.env.example')].action, 'allow');
+  assert.ok(i('read', '*.env.*') < i('read', '*.env.example'), '.env.example wins over *.env.*');
 });

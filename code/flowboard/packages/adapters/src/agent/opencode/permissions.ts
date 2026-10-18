@@ -26,6 +26,11 @@ export const TOOL_NAMES: Record<string, string> = {
 
 const READ_ONLY = ['read', 'glob', 'grep', 'list', 'todowrite', 'skill', 'question', 'lsp'];
 const REJECT_MESSAGE = 'Not permitted in this headless run.';
+const ENV_FILES: PermissionRule[] = [
+  { permission: 'read', pattern: '*.env', action: 'ask' },
+  { permission: 'read', pattern: '*.env.*', action: 'ask' },
+  { permission: 'read', pattern: '*.env.example', action: 'allow' },
+];
 
 /** `Name`, `Name(pattern)` or `mcp__server__tool` -> an OpenCode permission and pattern. */
 function parse(entry: string): { permission: string; pattern: string } {
@@ -48,6 +53,9 @@ export function toPermissionRules(spec: RunSpec): PermissionRule[] {
   return [
     ...base,
     ...(spec.toolPolicy?.allow ?? []).map((e): PermissionRule => ({ ...parse(e), action: 'allow' })),
+    // OpenCode's own default: ask before reading .env files. After the allow list, so allowing Read does not
+    // re-open them; a headless run refuses the ask unless the mode answers everything.
+    ...ENV_FILES,
     ...(spec.toolPolicy?.deny ?? []).map((e): PermissionRule => ({ ...parse(e), action: 'deny' })),
     // Injected tool servers (ask_user) are always allowed, so no policy can lock out HITL.
     ...(spec.tools ?? []).map((t): PermissionRule => ({ permission: `${t.name}_*`, pattern: '*', action: 'allow' })),
