@@ -2,7 +2,7 @@
  * One YAML file -> one validated RunSpec. See
  * docs/superpowers/specs/2026-10-18-yaml-run-config-design.md.
  */
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { parse } from 'yaml';
@@ -123,8 +123,12 @@ export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
 
   // File-system and semantic checks; all failures are collected.
   const errors: string[] = [];
-  const folder = toAbs(y.folder, baseDir);
-  if (!isDir(folder)) errors.push(`folder: not a directory: ${folder}`);
+  // Real paths: the write guard compares path text, and the agent's CLI works in the resolved folder
+  // (on macOS /tmp is a link to /private/tmp, so writes there looked like writes outside the folder).
+  const real = (p: string) => (isDir(p) ? realpathSync(p) : p);
+  const folderPath = toAbs(y.folder, baseDir);
+  if (!isDir(folderPath)) errors.push(`folder: not a directory: ${folderPath}`);
+  const folder = real(folderPath);
   const pluginDirs = (y.plugins ?? []).map((p) => toAbs(p, baseDir));
   pluginDirs.forEach((d, i) => isDir(d) || errors.push(`plugins.${i}: not a directory: ${d}`));
   const promptPath = toAbs(y.prompt, baseDir);
@@ -181,7 +185,7 @@ export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
   if (y.effort) spec.effort = y.effort;
   if (y.system_prompt !== undefined) spec.systemPrompt = y.system_prompt;
   if (y.plugins) {
-    spec.capabilities = pluginDirs.map((path) => ({ id: basename(path), provider: y.adapter, mount: { kind: 'plugin_dir', path } }));
+    spec.capabilities = pluginDirs.map((p) => ({ id: basename(p), provider: y.adapter, mount: { kind: 'plugin_dir', path: real(p) } }));
   }
   if (y.permissions?.allow || y.permissions?.deny) {
     spec.toolPolicy = {

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { createConnection } from 'node:net';
@@ -24,7 +24,7 @@ const HELLO: NormalizedEvent[] = [
 
 /** A temp project, plus deps that capture output and use `provider`. */
 function setup(provider: () => AgentProvider, yaml = YAML) {
-  const base = mkdtempSync(join(tmpdir(), 'fb-run-'));
+  const base = realpathSync(mkdtempSync(join(tmpdir(), 'fb-run-'))); // macOS's temp folder is a link
   mkdirSync(join(base, 'proj'));
   writeFileSync(join(base, 'task.md'), 'Say hi.');
   writeFileSync(join(base, 'task.yaml'), yaml);

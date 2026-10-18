@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { DEFAULT_DENY_COMMANDS } from '@flowboard/core';
@@ -8,7 +8,8 @@ import { CLOSING, loadConfig } from '../src/config.ts';
 
 /** A temp base dir holding proj/, task.md, plugins/fbecho/ and the given task.yaml. */
 function project(yaml: string, prompt = 'Fix the bug.') {
-  const base = mkdtempSync(join(tmpdir(), 'fb-cli-'));
+  // Real path: macOS's temp folder is a link, and loadConfig resolves folders to real paths.
+  const base = realpathSync(mkdtempSync(join(tmpdir(), 'fb-cli-')));
   mkdirSync(join(base, 'proj'));
   mkdirSync(join(base, 'plugins', 'fbecho'), { recursive: true });
   writeFileSync(join(base, 'task.md'), prompt);
@@ -74,7 +75,7 @@ test('minimal YAML gets the defaults', () => {
 });
 
 test('absolute paths are used as written', () => {
-  const elsewhere = mkdtempSync(join(tmpdir(), 'fb-cli-abs-'));
+  const elsewhere = realpathSync(mkdtempSync(join(tmpdir(), 'fb-cli-abs-')));
   const base = project(MINIMAL.replace('folder: proj', `folder: ${elsewhere}`));
   const r = loadConfig('task.yaml', base);
   assert.ok(r.ok, JSON.stringify(r));
@@ -296,4 +297,32 @@ test('a plugin folder named local clashes with skills:', () => {
     ok: false,
     errors: ['task.yaml: plugins.0: plugin folder name "local" is reserved for skills'],
   });
+});
+
+// --- links resolve to real paths --------------------------------------------
+
+test('a folder reached through a link resolves to its real path', () => {
+  const real = mkdtempSync(join(tmpdir(), 'fb-cli-real-'));
+  const base = project(MINIMAL.replace('folder: proj', 'folder: link'));
+  symlinkSync(real, join(base, 'link'));
+  const r = loadConfig('task.yaml', base);
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.equal(r.config.spec.cwd, realpathSync(real));
+  assert.deepEqual(r.config.spec.guards?.writeRoots, [realpathSync(real)]);
+});
+
+test('a plugin reached through a link resolves to its real path', () => {
+  const target = mkdtempSync(join(tmpdir(), 'fb-cli-plugin-'));
+  const base = project(MINIMAL + 'plugins: [plink]\n');
+  symlinkSync(target, join(base, 'plink'));
+  const r = loadConfig('task.yaml', base);
+  assert.ok(r.ok, JSON.stringify(r));
+  const mount = r.config.spec.capabilities?.[0].mount;
+  assert.ok(mount?.kind === 'plugin_dir');
+  assert.equal(mount.path, realpathSync(target));
+});
+
+test('a missing folder is still a plain error line', () => {
+  const { errors, base } = errorsOf(MINIMAL.replace('folder: proj', 'folder: nope'));
+  assert.deepEqual(errors, [`task.yaml: folder: not a directory: ${join(base, 'nope')}`]);
 });
