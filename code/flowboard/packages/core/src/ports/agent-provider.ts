@@ -24,7 +24,7 @@ import type { ExecHost } from './exec-host.ts';
 // ---------------------------------------------------------------------------
 
 /** Well-known provider ids; the `(string & {})` keeps autocomplete without closing the set. */
-export type ProviderId = 'claude-code' | 'codex' | 'replay' | (string & {});
+export type ProviderId = 'claude-code' | 'codex' | 'opencode' | 'replay' | (string & {});
 
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
