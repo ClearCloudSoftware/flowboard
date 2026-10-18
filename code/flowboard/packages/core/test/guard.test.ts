@@ -42,3 +42,12 @@ test('denies destructive commands', () => {
 test('ignores read-only tools', () => {
   assert.equal(checkToolCall(rules, 'Read', { file_path: '/etc/passwd' }, cwd), undefined);
 });
+
+test('denies recursive rm of /, ~ or .. however the flags are written', () => {
+  for (const command of ['rm -rf /', 'rm -r -f /', 'rm -f -r ~', 'rm -R ..', 'rm --recursive --force /', 'rm -f -r -- /']) {
+    assert.match(checkToolCall(rules, 'Bash', { command }, cwd) ?? '', /^Command blocked by policy/, command);
+  }
+  for (const command of ['rm -r build', 'rm -rf ./dist', 'rm -f notes.txt']) {
+    assert.equal(checkToolCall(rules, 'Bash', { command }, cwd), undefined, command);
+  }
+});

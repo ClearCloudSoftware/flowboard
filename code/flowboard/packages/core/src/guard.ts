@@ -6,7 +6,8 @@ export const DEFAULT_DENY_COMMANDS: string[] = [
   String.raw`\bgit\s+push\b`,
   String.raw`\bgit\s+reset\s+--hard\b`,
   String.raw`\b(curl|wget)\b[^|]*\|\s*(ba|z)?sh\b`,
-  String.raw`\brm\s+-\w*r\w*\s+(\/|~|\.\.)`,
+  // Recursive rm of /, ~ or ..; option words may come before and after the recursive flag (`rm -f -r -- /`).
+  String.raw`\brm\s+(?:-\S*\s+)*(?:-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)\s+(?:-\S*\s+)*(?:\/|~|\.\.)`,
 ];
 
 const WRITE_TOOLS: Record<string, string> = {
