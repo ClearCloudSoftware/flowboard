@@ -74,6 +74,7 @@ Port-level decisions (new `RunSpec` fields, the `usage` event, `pid` as a promis
 
 ## Related
 
+- [[Run Agent CLI Decisions]]
 - [[Claude Code Adapter]]
 - [[OpenCode Adapter]]
 - [[Provider SDK Fit Analysis]]

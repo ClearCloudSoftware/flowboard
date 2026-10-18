@@ -47,6 +47,9 @@ There is no mockup for this component. It is documented as architecture referenc
 - [[Agent Client Protocol Option]] — could the port *be* ACP?
 - [[Provider SDK Fit Analysis]] — can the Claude Agent SDK and the OpenCode SDK implement the port?
 - [[Provider Implementation Decisions]] — the calls made while building both providers, and the review findings left for later
+- [[Run Agent CLI Decisions]] — `pnpm run-agent <task.yaml>`: one YAML file runs either provider; the calls made and the issues left for later
+- [[Run Config Reference]] — every field of the `run-agent` YAML file: type, default, checks, and how it behaves on each adapter
+- [[Testing The Run Agent CLI]] — how to test the providers and `run-agent`: the free suite, the live tests, and hand-run scenarios
 
 ## Under the hood
 
