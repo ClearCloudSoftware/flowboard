@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test:packages": "node --test \"packages/*/test/*.test.ts\"",
     "typecheck:packages": "tsc -p packages",
-    "test:live": "FLOWBOARD_LIVE=1 node --test packages/adapters/test/claude-live.test.ts packages/adapters/test/opencode-live.test.ts"
+    "test:live": "FLOWBOARD_LIVE=1 node --test packages/adapters/test/claude-live.test.ts packages/adapters/test/opencode-live.test.ts",
+    "run-agent": "node packages/cli/src/main.ts"
   },
   "dependencies": {
     "next": "16.4.1",
