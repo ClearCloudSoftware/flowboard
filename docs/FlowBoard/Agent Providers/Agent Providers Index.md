@@ -44,6 +44,7 @@ There is no mockup for this component. It is documented as architecture referenc
 - [[Codex Adapter]] — the second real provider, and the spike that validates the port
 - [[Replay Provider]] — the reference implementation and zero-spend test double
 - [[Agent Client Protocol Option]] — could the port *be* ACP?
+- [[Provider SDK Fit Analysis]] — can the Claude Agent SDK and the OpenCode SDK implement the port?
 
 ## Under the hood
 
