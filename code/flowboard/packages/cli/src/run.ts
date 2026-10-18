@@ -2,13 +2,17 @@
  * `pnpm run-agent <task.yaml>`: launch the configured provider, print its
  * events live and append them to runs/<stamp>-<adapter>.jsonl as they come.
  */
-import { appendFileSync, closeSync, mkdirSync, openSync } from 'node:fs';
+import { appendFileSync, closeSync, cpSync, mkdirSync, mkdtempSync, openSync, realpathSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { ZERO_USAGE } from '@flowboard/core';
-import type { AgentProvider, AgentRun, RunResult } from '@flowboard/core';
+import type { AgentProvider, AgentRun, RunResult, RunSpec } from '@flowboard/core';
 import { ClaudeCodeProvider, OpencodeProvider } from '@flowboard/adapters';
-import { loadConfig } from './config.ts';
-import type { Adapter } from './config.ts';
+import { SHIM_ENTRY } from '@flowboard/ask-user';
+import { startBroker } from './ask/broker.ts';
+import type { Answerer } from './ask/broker.ts';
+import { noTerminal, terminalAnswerer } from './ask/terminal.ts';
+import { loadConfig, SKILLS_PLUGIN } from './config.ts';
+import type { Adapter, RunConfig } from './config.ts';
 
 export interface RunDeps {
   /** Base for every relative path. */
@@ -21,6 +25,30 @@ export interface RunDeps {
   /** Used by the second Ctrl+C. */
   exit?: (code: number) => void;
   now?: () => Date;
+  /** Answers the agent's questions; default: the terminal, or a refusal when stdin is not one. */
+  answer?: Answerer;
+}
+
+const WITHDRAWN = '-- question withdrawn: the agent stopped waiting';
+
+/**
+ * The spec as launched: the ask_user shim on `socket`, Claude's own question tool off (so the agent asks
+ * through ask_user), and the `skills:` folders copied into a `local` plugin under `tmp`.
+ */
+function withAsking(config: RunConfig, socket: string, tmp: string): RunSpec {
+  const { adapter, spec, skills } = config;
+  const out: RunSpec = {
+    ...spec,
+    tools: [...(spec.tools ?? []), { name: 'flowboard', command: process.execPath, args: [SHIM_ENTRY], env: { FLOWBOARD_ASK_SOCKET: socket } }],
+  };
+  if (adapter === 'claude-code') out.toolPolicy = { ...spec.toolPolicy, deny: [...(spec.toolPolicy?.deny ?? []), 'AskUserQuestion'] };
+  if (skills.length) {
+    const plugin = join(tmp, SKILLS_PLUGIN);
+    // ponytail: copied, not linked: both CLIs and the plugin-loaded check handle links unreliably.
+    for (const s of skills) cpSync(s.path, join(plugin, 'skills', s.name), { recursive: true });
+    out.capabilities = [...(spec.capabilities ?? []), { id: SKILLS_PLUGIN, provider: adapter, mount: { kind: 'plugin_dir', path: plugin } }];
+  }
+  return out;
 }
 
 const defaultProvider = (adapter: Adapter): AgentProvider =>
@@ -60,7 +88,7 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
     loaded.errors.forEach((l) => printErr(l));
     return 2;
   }
-  const { adapter, spec, yamlPath, unrestrictedShell } = loaded.config;
+  const { adapter, yamlPath, unrestrictedShell } = loaded.config;
 
   const dir = join(deps.cwd, 'runs');
   mkdirSync(dir, { recursive: true });
@@ -83,7 +111,32 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
     // forward); a second press within 300 ms counts as the same one.
   };
   signals.on('SIGINT', onInterrupt);
+
+  // While a question is on screen, event lines wait so they do not print over the prompt.
+  let asking = false;
+  const held: string[] = [];
+  const show = (line: string) => (asking ? held.push(line) : print(line));
+  // Short and real: a Unix socket path is limited to about 104 characters, and /tmp is a link on macOS.
+  const tmp = realpathSync(mkdtempSync('/tmp/fb-'));
+  let broker: Awaited<ReturnType<typeof startBroker>> | undefined;
   try {
+    broker = await startBroker(join(tmp, 'ask.sock'), deps.answer ?? (process.stdin.isTTY ? terminalAnswerer(undefined, print) : noTerminal), {
+      onQuestion: (questions) => {
+        asking = true;
+        log('question', { questions });
+      },
+      onAnswer: (answers) => log('answer', { answers }),
+      onWithdrawn: () => {
+        log('withdrawn', {});
+        print(WITHDRAWN);
+      },
+      onDone: () => {
+        asking = false;
+        held.splice(0).forEach((l) => print(l));
+      },
+      onInterrupt,
+    });
+    const spec = withAsking(loaded.config, join(tmp, 'ask.sock'), tmp);
     log('start', { yaml: yamlPath, config: spec });
     print(`-- ${adapter} ${spec.model} in ${spec.cwd}`);
     print(`-- log ${path}`);
@@ -101,7 +154,7 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
         if (ev.type === 'assistant_text') lastText = ev.text;
         if (ev.type === 'thinking') lastThinking = ev.text;
         const { raw: _raw, ...shown } = ev;
-        print(`${ev.type.padEnd(14)} ${JSON.stringify(shown).slice(0, 160)}`);
+        show(`${ev.type.padEnd(14)} ${JSON.stringify(shown).slice(0, 160)}`);
       }
       result = await run.result;
     } catch (e) {
@@ -109,6 +162,9 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
       run?.stop();
       result = { usage: ZERO_USAGE, exitCode: 1, error: e instanceof Error ? e.message : String(e) };
     }
+    // Withdraw any question still open before the result, so the log ends with it.
+    await broker.close();
+    broker = undefined;
 
     log('result', { result });
     // A run can finish cleanly without doing the task; these two lines make that visible.
@@ -119,7 +175,9 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
     if (result.error === 'stopped') return 130;
     return !result.error && result.exitCode === 0 ? 0 : 1;
   } finally {
+    await broker?.close();
     signals.off('SIGINT', onInterrupt);
     closeSync(fd);
+    rmSync(tmp, { recursive: true, force: true });
   }
 }

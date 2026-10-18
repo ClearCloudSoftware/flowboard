@@ -5,8 +5,10 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ZERO_USAGE } from '@flowboard/core';
-import type { AgentProvider, AgentRun, NormalizedEvent, RunResult } from '@flowboard/core';
+import type { AgentProvider, AgentRun, NormalizedEvent, Question, RunResult, RunSpec } from '@flowboard/core';
 import { ReplayProvider } from '@flowboard/adapters';
+import { askBroker, SHIM_ENTRY } from '@flowboard/ask-user';
+import { noTerminal } from '../src/ask/terminal.ts';
 import { CLOSING } from '../src/config.ts';
 import { runAgent } from '../src/run.ts';
 import type { RunDeps } from '../src/run.ts';
@@ -223,4 +225,165 @@ test('the summary falls back to the last thinking and skips a zero failure count
   await runAgent(['task.yaml'], deps);
   assert.equal(out.at(-2), '-- last message: I reached the step limit.');
   assert.ok(!out.some((l) => l.includes('tool calls failed')));
+});
+
+// --- asking ------------------------------------------------------------------
+
+const COLOUR: Question = { id: 'colour', prompt: 'Colour?', kind: 'text' };
+const WITHDRAWN = '-- question withdrawn: the agent stopped waiting';
+
+/**
+ * A fake agent that asks `questions` through the run's broker socket, as the shim would, then reports
+ * the reply as its text. `during` runs after the ask is sent and before the reply is awaited.
+ */
+function askingProvider(during?: () => AsyncGenerator<NormalizedEvent>) {
+  const seen: { spec?: RunSpec } = {};
+  const provider = fake(() => {
+    throw new Error('replaced below');
+  });
+  provider.launch = (spec) => {
+    seen.spec = spec;
+    const socket = spec.tools?.find((t) => t.name === 'flowboard')?.env?.FLOWBOARD_ASK_SOCKET;
+    let stopped = false;
+    let settle!: (r: RunResult) => void;
+    const result = new Promise<RunResult>((r) => (settle = r));
+    return {
+      sessionId: Promise.resolve('s'),
+      pid: Promise.resolve(1),
+      events: (async function* () {
+        const pending = askBroker(socket!, { questions: [COLOUR] });
+        pending.catch(() => {}); // an agent that crashes mid-question never reads its reply
+        if (during) yield* during();
+        const reply = await pending;
+        yield { type: 'assistant_text', text: JSON.stringify(reply) } as NormalizedEvent;
+        settle(stopped ? { usage: ZERO_USAGE, exitCode: 130, error: 'stopped' } : { usage: ZERO_USAGE, exitCode: 0 });
+      })(),
+      result,
+      stop() {
+        stopped = true;
+      },
+    };
+  };
+  return { provider, seen };
+}
+
+/** A promise with its resolve exposed. */
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((r) => (resolve = r));
+  return { promise, resolve };
+}
+
+test('the agent gets the answer and the log records question and answer', async () => {
+  const { provider } = askingProvider();
+  const { base, out, deps } = setup(() => provider);
+  deps.answer = async () => ({ colour: 'teal' });
+  assert.equal(await runAgent(['task.yaml'], deps), 0);
+  assert.ok(out.some((l) => l.startsWith('assistant_text') && l.includes('teal')));
+  const kinds = readLog(join(base, 'runs', LOG_NAME)).map((l) => l.kind);
+  assert.ok(kinds.indexOf('question') < kinds.indexOf('answer') && kinds.indexOf('answer') < kinds.indexOf('result'), kinds.join());
+});
+
+test("the shim is injected and Claude's built-in question tool is denied", async () => {
+  const { provider } = askingProvider();
+  const { base, deps } = setup(() => provider);
+  deps.answer = async () => ({ colour: 'teal' });
+  await runAgent(['task.yaml'], deps);
+  const { config } = readLog(join(base, 'runs', LOG_NAME))[0];
+  assert.equal(config.tools[0].name, 'flowboard');
+  assert.equal(config.tools[0].command, process.execPath);
+  assert.deepEqual(config.tools[0].args, [SHIM_ENTRY]);
+  assert.match(config.tools[0].env.FLOWBOARD_ASK_SOCKET, /^\/(private\/)?tmp\/fb-.+\/ask\.sock$/);
+  assert.ok(config.toolPolicy.deny.includes('AskUserQuestion'));
+});
+
+test('opencode runs get the shim but no AskUserQuestion deny', async () => {
+  const { provider } = askingProvider();
+  const yaml = 'adapter: opencode\nmodel: x/y\nfolder: proj\nprompt: task.md\n';
+  const { base, deps } = setup(() => provider, yaml);
+  deps.answer = async () => ({ colour: 'teal' });
+  await runAgent(['task.yaml'], deps);
+  const { config } = readLog(join(base, 'runs', '2026-10-18T09-05-07-opencode.jsonl'))[0];
+  assert.equal(config.tools[0].name, 'flowboard');
+  assert.equal(config.toolPolicy, undefined);
+});
+
+test('events during a question print after it is answered', async () => {
+  const onScreen = deferred();
+  const { provider } = askingProvider(async function* () {
+    await onScreen.promise;
+    yield { type: 'assistant_text', text: 'during' } as NormalizedEvent;
+  });
+  const { out, deps } = setup(() => provider);
+  let printedWhileAsking: boolean | undefined;
+  deps.answer = async () => {
+    onScreen.resolve();
+    await new Promise((r) => setTimeout(r, 30));
+    printedWhileAsking = out.some((l) => l.includes('during'));
+    return { colour: 'teal' };
+  };
+  assert.equal(await runAgent(['task.yaml'], deps), 0);
+  assert.equal(printedWhileAsking, false);
+  assert.ok(out.some((l) => l.includes('during')));
+});
+
+test('a run that ends mid-question withdraws it and still exits with a result', async () => {
+  const onScreen = deferred();
+  const { provider } = askingProvider(async function* () {
+    await onScreen.promise;
+    throw new Error('crashed');
+  });
+  const { base, out, deps } = setup(() => provider);
+  let signal: AbortSignal | undefined;
+  deps.answer = (_qs, s) =>
+    new Promise((_r, reject) => {
+      signal = s;
+      onScreen.resolve();
+      s.addEventListener('abort', () => reject(new Error('aborted')));
+    });
+  assert.equal(await runAgent(['task.yaml'], deps), 1);
+  assert.ok(out.includes(WITHDRAWN));
+  assert.equal(signal?.aborted, true);
+  const kinds = readLog(join(base, 'runs', LOG_NAME)).map((l) => l.kind);
+  assert.ok(kinds.includes('withdrawn'));
+  assert.equal(kinds.at(-1), 'result');
+});
+
+test('Ctrl+C at a question stops the run with 130', async () => {
+  const { provider } = askingProvider();
+  const { out, deps } = setup(() => provider);
+  deps.answer = async () => Promise.reject(Object.assign(new Error('User force closed the prompt'), { name: 'ExitPromptError' }));
+  assert.equal(await runAgent(['task.yaml'], deps), 130);
+  assert.ok(out.includes('-- stopping'));
+});
+
+test('skills are copied into a local plugin and the temp dir is removed afterwards', async () => {
+  const { provider, seen } = askingProvider();
+  let skillCopied = false;
+  const launch = provider.launch;
+  provider.launch = (spec) => {
+    const plugin = spec.capabilities?.find((c) => c.id === 'local');
+    if (plugin?.mount.kind === 'plugin_dir') skillCopied = existsSync(join(plugin.mount.path, 'skills/grill-me/SKILL.md'));
+    return launch(spec);
+  };
+  const yaml = YAML + 'skills: [skills/grill-me]\nskill: /grill-me\n';
+  const { base, deps } = setup(() => provider, yaml);
+  mkdirSync(join(base, 'skills', 'grill-me'), { recursive: true });
+  writeFileSync(join(base, 'skills', 'grill-me', 'SKILL.md'), '---\nname: grill-me\n---\nGrill.\n');
+  deps.answer = async () => ({ colour: 'teal' });
+  assert.equal(await runAgent(['task.yaml'], deps), 0);
+  const plugin = seen.spec!.capabilities!.find((c) => c.id === 'local')!;
+  assert.equal(plugin.provider, 'claude-code');
+  assert.ok(plugin.mount.kind === 'plugin_dir' && plugin.mount.path.endsWith('/local'));
+  assert.ok(skillCopied);
+  assert.equal(seen.spec!.prompt.invocation, '/local:grill-me');
+  assert.ok(plugin.mount.kind === 'plugin_dir' && !existsSync(join(plugin.mount.path, '..')), 'temp dir removed');
+});
+
+test('without a terminal the agent is told no one can answer', async () => {
+  const { provider } = askingProvider();
+  const { out, deps } = setup(() => provider);
+  deps.answer = noTerminal;
+  assert.equal(await runAgent(['task.yaml'], deps), 0);
+  assert.ok(out.some((l) => l.includes('No one can answer questions in this run.')));
 });
