@@ -77,6 +77,30 @@ PRD §0 makes three things probes, not assumptions: the `stream-json` shape, `cl
 
 Backlog Story 0.1 adds: verify the flags exist (*"`--effort`, `--session-id`, `--strict-mcp-config`, `--plugin-dir`, `--allowedTools`, `--tools`, `--max-turns`, `--max-budget-usd`, `--append-system-prompt`, `--resume`, `--fork-session`"*), confirm `/<plugin>:<slug>` in `-p` mode (**DEC**), and *"Decide how to isolate headless runs from `~/.claude` hooks/settings (e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`)"* (**DEC**). Decision D5's default: *"Empty `--settings` file per run"*. [[Agent Providers Open Questions]] #24; also [[Execution Open Questions]] #52 and [[Sandboxing Open Questions]] #24.
 
+## Built on the Agent SDK
+
+> [!check] Implemented 2026-10-18
+> The adapter is built on `@anthropic-ai/claude-agent-sdk` 0.3.302, not on hand-built `claude -p` flags. The SDK still runs the installed `claude` CLI (2.1.302) as a child process, so PRD §17 holds. Code: `code/flowboard/packages/adapters/src/agent/claude/` (`options.ts`, `normalize.ts`, `provider.ts`). Why: [[Provider SDK Fit Analysis]]. The flag tables above remain the PRD's CLI form; this table supersedes them.
+
+| `RunSpec` field | SDK option |
+|---|---|
+| `prompt` | the canonical render, with `invocation` moved first: the CLI only treats a leading `/` as a slash command |
+| `model`, `effort`, `cwd` | same names; `resolveModel` is the identity (D20) |
+| `toolPolicy.allow` | `allowedTools`, plus `mcp__<name>__*` for each `tools` entry |
+| `toolPolicy.deny` | `disallowedTools` |
+| `tools` | `mcpServers` (stdio) with `strictMcpConfig: true` |
+| `capabilities` | `plugin_dir` → `plugins: [{ type: 'local', path }]`; `system_prompt` → appended to the system prompt; `native` ignored |
+| `systemPrompt` | `systemPrompt: { type: 'preset', preset: 'claude_code', append }` |
+| `permissionMode` | `permissionMode`, default `dontAsk`; `bypassPermissions` also sets `allowDangerouslySkipPermissions` |
+| `guards` | an in-process `PreToolUse` hook that denies with a reason ([[In-Agent Hooks]]) |
+| `resume` | `resume` + `forkSession` |
+| `limits` | `maxTurns`, `maxBudgetUsd` |
+| `exec` | `spawnClaudeCodeProcess` spawns through `exec.spawn` (host tier by default) |
+
+Fixed on every run: `pathToClaudeCodeExecutable` (the installed `claude`), `settingSources: []`, `includePartialMessages: true`, and an env without `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` plus `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`. Runs use the owner's own CLI login, never an API key, and never relocate `CLAUDE_CONFIG_DIR`. This settles [[Agent Providers Open Questions]] #24 for the host tier.
+
+Verified live (`pnpm test:live`) against the installed CLI: `apiKeySource` is `none` (the subscription login), `/<plugin>:<slug>` runs headless from a mounted plugin dir, and the guard hook denies a write outside the worktree even under `bypassPermissions`. A plugin dir missing from `system/init` fails the run, since the CLI skips it silently.
+
 ## Milestone
 
 M3 is this adapter: *"spawn `claude -p` for one hardcoded step, parse stream-json into `run_events`, SSE session viewer, cost captured on the run. **This is the milestone that proves the whole idea.**"* (PRD §14)
