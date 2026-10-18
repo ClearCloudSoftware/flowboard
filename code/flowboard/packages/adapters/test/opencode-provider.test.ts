@@ -281,7 +281,9 @@ test('a server that ignores SIGTERM is killed after the grace period', { timeout
 });
 
 test('a server that exits on SIGTERM is not sent SIGKILL', async () => {
-  const { spec, provider } = setup([step(0.01), idle]);
+  const { spec, env } = setup([step(0.01), idle]);
+  // A short grace, so a stray SIGKILL would land inside the wait below.
+  const provider = () => new OpencodeProvider({ models: { default: 'fake/m1' }, opencodePath: FAKE, env, killGraceMs: 100 });
   const kills: (NodeJS.Signals | number | undefined)[] = [];
   const exec = {
     ...hostExecHost,

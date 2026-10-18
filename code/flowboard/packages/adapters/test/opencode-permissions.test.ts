@@ -19,10 +19,9 @@ test('maps the tool policy after the defaults', () => {
   const edit = at({ permission: 'edit', pattern: '*', action: 'allow' });
   const bash = at({ permission: 'bash', pattern: 'pnpm *', action: 'allow' });
   const web = at({ permission: 'webfetch', pattern: '*', action: 'deny' });
-  // allow list, then the .env rules, then the deny list (last match wins)
-  assert.ok(edit > 0 && bash === edit + 1 && web > bash, JSON.stringify(rules));
-  assert.ok(at({ permission: 'read', pattern: '*.env', action: 'ask' }) > bash);
-  assert.ok(at({ permission: 'read', pattern: '*.env', action: 'ask' }) < web);
+  const env = at({ permission: 'read', pattern: '*.env', action: 'ask' });
+  // plain allows, then the .env rules, then specific allows, then the deny list (last match wins)
+  assert.ok(edit > 0 && edit < env && env < bash && bash < web, JSON.stringify(rules));
 });
 
 test('pre-approves injected tool servers last', () => {
@@ -83,4 +82,11 @@ test('reading .env files asks, .env.example stays allowed', () => {
   assert.equal(rules[i('read', '*.env.*')].action, 'ask');
   assert.equal(rules[i('read', '*.env.example')].action, 'allow');
   assert.ok(i('read', '*.env.*') < i('read', '*.env.example'), '.env.example wins over *.env.*');
+});
+
+test('an explicit Read(.env) allow still wins over the .env rules', () => {
+  const rules = toPermissionRules({ ...base, toolPolicy: { allow: ['Read', 'Read(.env)'] } });
+  const i = (pattern: string, action: string) => rules.findIndex((r) => r.permission === 'read' && r.pattern === pattern && r.action === action);
+  assert.ok(i('*.env', 'ask') < i('.env', 'allow'), 'the specific allow comes after the .env ask');
+  assert.ok(rules.findLastIndex((r) => r.permission === 'read' && r.pattern === '*') < i('*.env', 'ask'), 'a plain Read allow does not');
 });

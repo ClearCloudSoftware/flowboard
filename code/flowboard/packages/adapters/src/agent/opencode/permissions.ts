@@ -50,12 +50,15 @@ export function toPermissionRules(spec: RunSpec): PermissionRule[] {
           { permission: '*', pattern: '*', action: 'ask' },
           ...READ_ONLY.map((permission): PermissionRule => ({ permission, pattern: '*', action: 'allow' })),
         ];
+  const allows = (spec.toolPolicy?.allow ?? []).map((e): PermissionRule => ({ ...parse(e), action: 'allow' }));
   return [
     ...base,
-    ...(spec.toolPolicy?.allow ?? []).map((e): PermissionRule => ({ ...parse(e), action: 'allow' })),
-    // OpenCode's own default: ask before reading .env files. After the allow list, so allowing Read does not
-    // re-open them; a headless run refuses the ask unless the mode answers everything.
+    // OpenCode's own default: ask before reading .env files (a headless run refuses the ask unless the mode
+    // answers everything). After the plain allows, so allowing Read does not re-open them; before the specific
+    // ones, so an explicit Read(.env) still does.
+    ...allows.filter((r) => r.pattern === '*'),
     ...ENV_FILES,
+    ...allows.filter((r) => r.pattern !== '*'),
     ...(spec.toolPolicy?.deny ?? []).map((e): PermissionRule => ({ ...parse(e), action: 'deny' })),
     // Injected tool servers (ask_user) are always allowed, so no policy can lock out HITL.
     ...(spec.tools ?? []).map((t): PermissionRule => ({ permission: `${t.name}_*`, pattern: '*', action: 'allow' })),
