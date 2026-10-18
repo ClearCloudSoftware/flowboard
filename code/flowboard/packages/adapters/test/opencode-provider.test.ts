@@ -44,11 +44,11 @@ const text = {
   type: 'message.part.updated',
   properties: { sessionID: '$SESSION', part: { id: 'p1', sessionID: '$SESSION', messageID: 'm1', type: 'text', text: 'hi', time: { start: 1, end: 2 } } },
 };
-const step = (cost: number, id = 'sf1') => ({
+const step = (cost: number, id = 'sf1', reason = 'stop') => ({
   type: 'message.part.updated',
   properties: {
     sessionID: '$SESSION',
-    part: { id, sessionID: '$SESSION', messageID: 'm1', type: 'step-finish', reason: 'stop', cost, tokens: { input: 10, output: 5, reasoning: 0, cache: { read: 0, write: 0 } } },
+    part: { id, sessionID: '$SESSION', messageID: 'm1', type: 'step-finish', reason, cost, tokens: { input: 10, output: 5, reasoning: 0, cache: { read: 0, write: 0 } } },
   },
 });
 const idle = { type: 'session.idle', properties: { sessionID: '$SESSION' } };
@@ -129,6 +129,42 @@ test('budget cap aborts the session', async () => {
   const res = await provider().launch({ ...spec, limits: { maxBudgetUsd: 0.6 } }).result;
   assert.equal(res.error, 'max_budget: spent $1.00 of $0.60');
   assert.ok(requests().some((r) => r.path === '/session/ses_fake1/abort'));
+});
+
+test('reaching the step limit fails the run', async () => {
+  // The agent still wanted tools after step 1; OpenCode made step 2 its last.
+  const { spec, provider } = setup([step(0.01, 'a', 'tool-calls'), step(0.01, 'b'), idle]);
+  const run = provider().launch({ ...spec, limits: { maxTurns: 2 } });
+  const events = await drain(run.events);
+  const res = await run.result;
+  assert.equal(res.error, 'max_turns: reached the limit of 2 steps');
+  assert.equal(res.exitCode, 1);
+  const types = events.map((e) => e.type);
+  assert.ok(types.indexOf('error') < types.indexOf('result'), 'error comes before the result');
+});
+
+test('a run that ends under the step limit succeeds', async () => {
+  const { spec, provider } = setup([step(0.01, 'a'), idle]);
+  const res = await provider().launch({ ...spec, limits: { maxTurns: 2 } }).result;
+  assert.equal(res.error, undefined);
+  assert.equal(res.exitCode, 0);
+});
+
+test('a run that finishes on exactly its last step succeeds', async () => {
+  const { spec, provider } = setup([step(0.01, 'a'), idle]);
+  const res = await provider().launch({ ...spec, limits: { maxTurns: 1 } }).result;
+  assert.equal(res.error, undefined);
+});
+
+test('subagent steps do not count toward the step limit', async () => {
+  const child = { type: 'session.created', properties: { sessionID: 'ses_child', info: { id: 'ses_child', parentID: '$SESSION' } } };
+  const childStep = (id: string) => {
+    const s = step(0.01, id);
+    return { ...s, properties: { sessionID: 'ses_child', part: { ...s.properties.part, sessionID: 'ses_child' } } };
+  };
+  const { spec, provider } = setup([child, childStep('c1'), childStep('c2'), step(0.01, 'a', 'tool-calls'), idle]);
+  const res = await provider().launch({ ...spec, limits: { maxTurns: 2 } }).result;
+  assert.equal(res.error, undefined);
 });
 
 test('stop() aborts the session and settles as stopped', { timeout: 10_000 }, async () => {

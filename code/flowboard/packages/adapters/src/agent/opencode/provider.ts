@@ -151,6 +151,9 @@ export class OpencodeProvider implements AgentProvider {
 
         const normalize = createNormalizer(session.id);
         const cap = spec.limits?.maxBudgetUsd;
+        const maxSteps = spec.limits?.maxTurns;
+        let rootSteps = 0;
+        let cutOff = false; // the step before the latest one still wanted tools
         await live(
           client.session.promptAsync({
             sessionID,
@@ -172,7 +175,18 @@ export class OpencodeProvider implements AgentProvider {
                 if ((e as { cause?: { status?: number } }).cause?.status !== 404) throw e;
               });
           }
+          const part = event.type === 'message.part.updated' ? event.properties.part : undefined;
+          if (part?.type === 'step-finish' && part.sessionID === sessionID) {
+            rootSteps += 1;
+            if (rootSteps < (maxSteps ?? Infinity)) cutOff = part.reason === 'tool-calls';
+          }
           for (const ev of normalize(event)) {
+            // On its last allowed step OpenCode takes the tools away, the agent writes a summary, and the session
+            // goes idle without an error; Claude fails such a run, so do the same. A run that was done anyway passes.
+            // ponytail: with max_turns 1 there is no earlier step to tell, so it always passes.
+            if (ev.type === 'result' && maxSteps !== undefined && rootSteps >= maxSteps && cutOff && error === undefined) {
+              emit({ type: 'error', message: `max_turns: reached the limit of ${maxSteps} steps` });
+            }
             emit(ev);
             if (ev.type === 'usage' && cap !== undefined && (ev.usage.costUsd ?? 0) >= cap && error === undefined) {
               emit({ type: 'error', message: `max_budget: spent $${ev.usage.costUsd!.toFixed(2)} of $${cap.toFixed(2)}` });

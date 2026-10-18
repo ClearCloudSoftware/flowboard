@@ -197,3 +197,30 @@ test('the unrestricted-shell warning is printed', async () => {
   assert.equal(await runAgent(['task.yaml'], deps), 0);
   assert.equal(out[2], `-- warning: unrestricted shell: commands can write outside ${join(base, 'proj')}`);
 });
+
+test('the end summary counts failed tool calls and shows the last message', async () => {
+  const events: NormalizedEvent[] = [
+    { type: 'tool_use', name: 'write', input: {}, summary: 'write a' },
+    { type: 'tool_result', ok: false, output: 'Write outside the worktree: a' },
+    { type: 'tool_result', ok: false, output: 'Not permitted in this headless run.' },
+    { type: 'tool_result', ok: true, output: 'fine' },
+    { type: 'assistant_text', text: 'first' },
+    { type: 'assistant_text', text: 'Could not write.\nGave up.' },
+    { type: 'result', usage: ZERO_USAGE },
+  ];
+  const { out, deps } = setup(() => new ReplayProvider({ events }));
+  await runAgent(['task.yaml'], deps);
+  assert.deepEqual(out.slice(-3, -1), ['-- 2 tool calls failed', '-- last message: Could not write. Gave up.']);
+  assert.match(out.at(-1)!, /^-- result /);
+});
+
+test('the summary falls back to the last thinking and skips a zero failure count', async () => {
+  const events: NormalizedEvent[] = [
+    { type: 'thinking', text: 'I reached the step limit.' },
+    { type: 'result', usage: ZERO_USAGE },
+  ];
+  const { out, deps } = setup(() => new ReplayProvider({ events }));
+  await runAgent(['task.yaml'], deps);
+  assert.equal(out.at(-2), '-- last message: I reached the step limit.');
+  assert.ok(!out.some((l) => l.includes('tool calls failed')));
+});

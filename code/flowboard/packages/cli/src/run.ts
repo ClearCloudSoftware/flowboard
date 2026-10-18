@@ -90,10 +90,16 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
     if (unrestrictedShell) print(`-- warning: unrestricted shell: commands can write outside ${spec.cwd}`);
 
     let result: RunResult;
+    let failedTools = 0;
+    let lastText: string | undefined;
+    let lastThinking: string | undefined;
     try {
       run = (deps.makeProvider ?? defaultProvider)(adapter).launch(spec);
       for await (const ev of run.events) {
         log('event', { event: ev });
+        if (ev.type === 'tool_result' && !ev.ok) failedTools += 1;
+        if (ev.type === 'assistant_text') lastText = ev.text;
+        if (ev.type === 'thinking') lastThinking = ev.text;
         const { raw: _raw, ...shown } = ev;
         print(`${ev.type.padEnd(14)} ${JSON.stringify(shown).slice(0, 160)}`);
       }
@@ -105,6 +111,10 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
     }
 
     log('result', { result });
+    // A run can finish cleanly without doing the task; these two lines make that visible.
+    if (failedTools) print(`-- ${failedTools} tool call${failedTools === 1 ? '' : 's'} failed`);
+    const last = lastText ?? lastThinking;
+    if (last) print(`-- last message: ${last.replace(/\s+/g, ' ').trim().slice(0, 300)}`);
     print(`-- result ${JSON.stringify(result)}`);
     if (result.error === 'stopped') return 130;
     return !result.error && result.exitCode === 0 ? 0 : 1;
