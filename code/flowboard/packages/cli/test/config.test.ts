@@ -89,3 +89,123 @@ test('a leading ~ expands to the home directory', (t) => {
   assert.ok(r.ok, JSON.stringify(r));
   assert.equal(r.config.spec.cwd, inHome);
 });
+
+// --- validation ---------------------------------------------------------
+
+const SHELL_TAIL = 'lets shell commands write outside folder; set permissions.allow_unrestricted_shell: true to allow it';
+
+/** Load `yaml` from a fresh project and return the error lines (fails the test if it loaded). */
+function errorsOf(yaml: string, prompt?: string) {
+  const base = project(yaml, prompt);
+  const r = loadConfig('task.yaml', base);
+  assert.ok(!r.ok, 'expected errors');
+  return { errors: r.errors, base };
+}
+
+test('a missing YAML file is reported', () => {
+  const r = loadConfig('nope.yaml', project(MINIMAL));
+  assert.deepEqual(r, { ok: false, errors: ['nope.yaml: file: not found'] });
+});
+
+test('a YAML syntax error is reported', () => {
+  const { errors } = errorsOf('adapter: [claude-code\n');
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /^task\.yaml: syntax: \S/);
+});
+
+test('an empty file, a list or a scalar must be a mapping', () => {
+  for (const yaml of ['', '- a\n- b\n', 'hello\n']) {
+    assert.deepEqual(errorsOf(yaml).errors, ['task.yaml: (root): must be a mapping'], JSON.stringify(yaml));
+  }
+});
+
+test('unknown keys are named, nested ones by their path', () => {
+  assert.deepEqual(errorsOf(MINIMAL + 'colour: red\n').errors, ['task.yaml: colour: unknown key']);
+  assert.deepEqual(errorsOf(MINIMAL + 'permissions:\n  mood: calm\n').errors, ['task.yaml: permissions.mood: unknown key']);
+});
+
+test('a missing required field is reported', () => {
+  assert.deepEqual(errorsOf(MINIMAL.replace('model: sonnet\n', '')).errors, ['task.yaml: model: required']);
+});
+
+test('enum fields reject unknown values', () => {
+  assert.match(errorsOf(MINIMAL.replace('claude-code', 'codex')).errors.join('\n'), /^task\.yaml: adapter: /);
+  assert.match(errorsOf(MINIMAL + 'effort: extreme\n').errors.join('\n'), /^task\.yaml: effort: /);
+  assert.match(errorsOf(MINIMAL + 'permissions:\n  mode: yolo\n').errors.join('\n'), /^task\.yaml: permissions\.mode: /);
+});
+
+test('limits must be positive', () => {
+  assert.match(errorsOf(MINIMAL + 'limits:\n  budget_usd: -1\n').errors.join('\n'), /^task\.yaml: limits\.budget_usd: /);
+  assert.match(errorsOf(MINIMAL + 'limits:\n  max_turns: 1.5\n').errors.join('\n'), /^task\.yaml: limits\.max_turns: /);
+});
+
+test('folder and plugins must be directories', () => {
+  const a = errorsOf(MINIMAL.replace('folder: proj', 'folder: nope'));
+  assert.deepEqual(a.errors, [`task.yaml: folder: not a directory: ${join(a.base, 'nope')}`]);
+  const b = errorsOf(MINIMAL + 'plugins: [plugins/fbecho, plugins/nope]\n');
+  assert.deepEqual(b.errors, [`task.yaml: plugins.1: not a directory: ${join(b.base, 'plugins/nope')}`]);
+});
+
+test('prompt must be a file', () => {
+  const { errors, base } = errorsOf(MINIMAL.replace('prompt: task.md', 'prompt: nope.md'));
+  assert.deepEqual(errors, [`task.yaml: prompt: not a file: ${join(base, 'nope.md')}`]);
+});
+
+test('a blank prompt with no skill is reported', () => {
+  assert.deepEqual(errorsOf(MINIMAL, '  \n').errors, ['task.yaml: prompt: file is empty']);
+});
+
+test('a blank prompt is fine when a skill is set', () => {
+  const r = loadConfig('task.yaml', project(MINIMAL + 'skill: /fbecho:echo\n', ''));
+  assert.ok(r.ok, JSON.stringify(r));
+});
+
+test('skill must start with /', () => {
+  assert.deepEqual(errorsOf(MINIMAL + 'skill: echo\n').errors, ['task.yaml: skill: must start with "/"']);
+});
+
+test('an opencode model needs a provider prefix', () => {
+  const yaml = MINIMAL.replace('claude-code', 'opencode').replace('sonnet', 'deepseek');
+  assert.deepEqual(errorsOf(yaml).errors, ['task.yaml: model: opencode model must be "providerID/modelID"']);
+});
+
+test('deny_commands must compile as regexes', () => {
+  const { errors } = errorsOf(MINIMAL + "guards:\n  deny_commands: ['ok', '(']\n");
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /^task\.yaml: guards\.deny_commands\.1: invalid regex: \S/);
+});
+
+test('several file-system problems are reported together', () => {
+  const { errors } = errorsOf(MINIMAL.replace('folder: proj', 'folder: nope').replace('prompt: task.md', 'prompt: nope.md'));
+  assert.equal(errors.length, 2);
+  assert.match(errors[0], /^task\.yaml: folder: /);
+  assert.match(errors[1], /^task\.yaml: prompt: /);
+});
+
+test('bypassPermissions without the opt-in is refused', () => {
+  assert.deepEqual(errorsOf(MINIMAL + 'permissions:\n  mode: bypassPermissions\n').errors, [
+    `task.yaml: permissions.mode: bypassPermissions ${SHELL_TAIL}`,
+  ]);
+});
+
+test('auto mode, "Bash" and "bash(*)" each need the opt-in', () => {
+  assert.deepEqual(errorsOf(MINIMAL + 'permissions:\n  mode: auto\n').errors, [`task.yaml: permissions.mode: auto ${SHELL_TAIL}`]);
+  assert.deepEqual(errorsOf(MINIMAL + 'permissions:\n  allow: [Read, Bash]\n').errors, [
+    `task.yaml: permissions.allow: "Bash" ${SHELL_TAIL}`,
+  ]);
+  assert.deepEqual(errorsOf(MINIMAL + 'permissions:\n  allow: ["bash(*)"]\n').errors, [
+    `task.yaml: permissions.allow: "bash(*)" ${SHELL_TAIL}`,
+  ]);
+});
+
+test('bypassPermissions with the opt-in loads and flags unrestrictedShell', () => {
+  const r = loadConfig('task.yaml', project(MINIMAL + 'permissions:\n  mode: bypassPermissions\n  allow_unrestricted_shell: true\n'));
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.equal(r.config.unrestrictedShell, true);
+});
+
+test('"Bash(pnpm *)" needs no opt-in', () => {
+  const r = loadConfig('task.yaml', project(MINIMAL + 'permissions:\n  allow: ["Bash(pnpm *)"]\n'));
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.equal(r.config.unrestrictedShell, false);
+});

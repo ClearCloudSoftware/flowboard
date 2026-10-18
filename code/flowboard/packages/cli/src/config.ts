@@ -2,10 +2,11 @@
  * One YAML file -> one validated RunSpec. See
  * docs/superpowers/specs/2026-10-18-yaml-run-config-design.md.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { parse } from 'yaml';
+import type { $ZodIssue } from 'zod/v4/core';
 import { z } from 'zod';
 import { DEFAULT_DENY_COMMANDS } from '@flowboard/core';
 import type { RunSpec } from '@flowboard/core';
@@ -62,24 +63,72 @@ function toAbs(p: string, baseDir: string): string {
   return resolve(baseDir, p);
 }
 
+const isDir = (p: string) => existsSync(p) && statSync(p).isDirectory();
+const isFile = (p: string) => existsSync(p) && statSync(p).isFile();
+
+/** Matches an allow entry that lets the agent run any shell command. */
+const ANY_SHELL = /^bash(\(\*\))?$/i;
+const SHELL_TAIL = 'lets shell commands write outside folder; set permissions.allow_unrestricted_shell: true to allow it';
+
+/** One `field: message` per zod issue; unknown keys get one line each, missing keys say `required`. */
+function issueLines(issue: $ZodIssue, raw: unknown): string[] {
+  const path = issue.path.join('.');
+  if (issue.code === 'unrecognized_keys') return issue.keys.map((k) => `${path ? `${path}.` : ''}${k}: unknown key`);
+  const value = issue.path.reduce<unknown>((v, k) => (v as Record<PropertyKey, unknown> | undefined)?.[k], raw);
+  return [`${path || '(root)'}: ${value === undefined ? 'required' : issue.message}`];
+}
+
 export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
+  const fail = (lines: string[]): LoadResult => ({ ok: false, errors: lines.map((l) => `${yamlPath}: ${l}`) });
   const abs = toAbs(yamlPath, baseDir);
-  const parsed = Schema.safeParse(parse(readFileSync(abs, 'utf8')));
-  if (!parsed.success) return { ok: false, errors: [] };
+  if (!isFile(abs)) return fail(['file: not found']);
+
+  let raw: unknown;
+  try {
+    raw = parse(readFileSync(abs, 'utf8'));
+  } catch (e) {
+    return fail([`syntax: ${(e instanceof Error ? e.message : String(e)).split('\n')[0]}`]);
+  }
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return fail(['(root): must be a mapping']);
+
+  const parsed = Schema.safeParse(raw);
+  if (!parsed.success) return fail(parsed.error.issues.flatMap((i) => issueLines(i, raw)));
   const y = parsed.data;
 
+  // File-system and semantic checks; all failures are collected.
+  const errors: string[] = [];
   const folder = toAbs(y.folder, baseDir);
+  if (!isDir(folder)) errors.push(`folder: not a directory: ${folder}`);
+  const pluginDirs = (y.plugins ?? []).map((p) => toAbs(p, baseDir));
+  pluginDirs.forEach((d, i) => isDir(d) || errors.push(`plugins.${i}: not a directory: ${d}`));
+  const promptPath = toAbs(y.prompt, baseDir);
+  const preamble = isFile(promptPath) ? readFileSync(promptPath, 'utf8') : undefined;
+  if (preamble === undefined) errors.push(`prompt: not a file: ${promptPath}`);
+  else if (!preamble.trim() && !y.skill) errors.push('prompt: file is empty');
+  if (y.skill !== undefined && !y.skill.startsWith('/')) errors.push('skill: must start with "/"');
+  if (y.adapter === 'opencode' && !y.model.includes('/')) errors.push('model: opencode model must be "providerID/modelID"');
+  (y.guards?.deny_commands ?? []).forEach((src, i) => {
+    try {
+      new RegExp(src);
+    } catch (e) {
+      errors.push(`guards.deny_commands.${i}: invalid regex: ${(e as Error).message}`);
+    }
+  });
+
+  const mode = y.permissions?.mode ?? 'acceptEdits';
+  const optIn = y.permissions?.allow_unrestricted_shell === true;
+  const shellTriggers = [
+    ...(mode === 'bypassPermissions' || mode === 'auto' ? [`permissions.mode: ${mode}`] : []),
+    ...(y.permissions?.allow ?? []).filter((a) => ANY_SHELL.test(a)).map((a) => `permissions.allow: "${a}"`),
+  ];
+  if (!optIn) errors.push(...shellTriggers.map((t) => `${t} ${SHELL_TAIL}`));
+  if (errors.length) return fail(errors);
+
   const spec: RunSpec = {
     model: y.model,
     cwd: folder,
-    prompt: {
-      preamble: readFileSync(toAbs(y.prompt, baseDir), 'utf8'),
-      inputs: [],
-      outputs: [],
-      invocation: y.skill,
-      closing: CLOSING,
-    },
-    permissionMode: y.permissions?.mode ?? 'acceptEdits',
+    prompt: { preamble: preamble!, inputs: [], outputs: [], invocation: y.skill, closing: CLOSING },
+    permissionMode: mode,
     guards: {
       writeRoots: [folder],
       ...(y.guards?.deny_paths && { denyPaths: y.guards.deny_paths }),
@@ -89,10 +138,7 @@ export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
   if (y.effort) spec.effort = y.effort;
   if (y.system_prompt !== undefined) spec.systemPrompt = y.system_prompt;
   if (y.plugins) {
-    spec.capabilities = y.plugins.map((p) => {
-      const path = toAbs(p, baseDir);
-      return { id: basename(path), provider: y.adapter, mount: { kind: 'plugin_dir', path } };
-    });
+    spec.capabilities = pluginDirs.map((path) => ({ id: basename(path), provider: y.adapter, mount: { kind: 'plugin_dir', path } }));
   }
   if (y.permissions?.allow || y.permissions?.deny) {
     spec.toolPolicy = {
@@ -107,5 +153,8 @@ export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
     };
   }
 
-  return { ok: true, config: { yamlPath: abs, adapter: y.adapter, spec, unrestrictedShell: false } };
+  return {
+    ok: true,
+    config: { yamlPath: abs, adapter: y.adapter, spec, unrestrictedShell: optIn && shellTriggers.length > 0 },
+  };
 }
