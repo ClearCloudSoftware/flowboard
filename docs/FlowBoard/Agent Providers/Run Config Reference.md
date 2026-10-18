@@ -73,7 +73,7 @@ Every run gives the agent two tools, `ask_user` (one question) and `ask_user_bat
 | Question type | How to answer |
 |---|---|
 | yes / no | arrow keys and Enter, or type `y` / `n` then Enter |
-| pick one | arrow keys and Enter, or type the option's number |
+| pick one | arrow keys and Enter, or type the option's number then Enter |
 | pick several | arrow keys to move, Space to tick, Enter to finish |
 | text | type, Enter |
 | number | type a number, Enter; anything else asks again |

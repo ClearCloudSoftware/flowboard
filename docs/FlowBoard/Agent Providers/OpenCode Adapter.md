@@ -29,14 +29,14 @@ OpenCode is a server, not a one-shot CLI. Each `launch()` starts its own `openco
 | `effort` | the prompt's `variant`, only when the model offers a variant of that name; else dropped |
 | `prompt` | the canonical render; a `/<plugin>:<slug>` invocation becomes `Use the "<slug>" skill.` |
 | `systemPrompt`, `system_prompt` packs | the prompt's `system` |
-| `toolPolicy`, `permissionMode` | session permission rules (last match wins): ask everything, allow read-only tools, then the allow list, then the deny list; `bypassPermissions` starts from allow-everything. Claude tool names map to OpenCode keys (`Write` → `edit`, `Bash(x)` → `bash` with pattern `x`) |
+| `toolPolicy`, `permissionMode` | session permission rules (last match wins): ask everything, allow read-only tools, then the allow list, then *ask* before reading `*.env` / `*.env.*` (`*.env.example` allowed), then the deny list; `bypassPermissions` starts from allow-everything. Claude tool names map to OpenCode keys (`Write` → `edit`, `Bash(x)` → `bash` with pattern `x`) |
 | permission requests | answered `once` under `bypassPermissions` / `auto` (and for `edit` under `acceptEdits`), else rejected with *"Not permitted in this headless run."* A reject also settles the session's other pending requests, so a reply that finds its request gone (404) is ignored, and `experimental.continue_loop_on_deny` keeps the agent going after a reject |
 | subagents | the same rules are injected as config `permission`, because a child session only inherits its parent session's deny rules. A key whose only pattern is `*` is written as a plain action, which some keys (`todowrite`, `question`) require |
 | OpenCode's `question` tool | denied last in every mode, which hides it: it blocks until answered, and a headless run asks through `ask_user` |
 | `tools` | config `mcp` (local servers), always allowed |
 | `capabilities` | `plugin_dir` → config `skills.paths` = `<dir>/skills` (OpenCode reads Claude-style `SKILL.md`); `native` → merged into config |
 | `guards` | `guard-plugin.ts` in config `plugin`, rules in `FLOWBOARD_GUARDS`; it checks `write`, `edit`, `apply_patch` and `bash` with the core `checkToolCall` |
-| `limits.maxTurns` | config `agent.build.steps` |
+| `limits.maxTurns` | `steps` on the `build`, `plan`, `general` and `explore` agents |
 | `limits.maxBudgetUsd` | enforced by the adapter: past the cap it aborts the session with `max_budget: spent $x of $y` |
 | `resume` | `fork: true` → `session.fork`; otherwise the stored session; either way the run's permission rules are re-applied |
 

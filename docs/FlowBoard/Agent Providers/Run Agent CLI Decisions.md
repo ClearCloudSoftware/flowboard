@@ -40,19 +40,19 @@ Code: `code/flowboard/packages/cli/src/` (`config.ts`, `run.ts`, `main.ts`), on 
 | R24 | Claude's `AskUserQuestion` is denied in every Claude run | The agent must ask through `ask_user`, the one tool that works everywhere | None |
 | R25 | Without a terminal, every question is answered with *"No one can answer questions in this run."* | The agent carries on instead of hanging | None |
 | R26 | `skills:` folders are copied (not linked) into a temporary plugin named `local` under `/tmp`, by its real path; `/<name>` becomes `/local:<name>`; a `SKILL.md` name must match its folder; a plugin folder named `local` is refused | The owner's grill-me is a standalone skill; both CLIs and the plugin-loaded check handle links unreliably; OpenCode may load skills by their `name:` | A skill edited mid-run is not picked up until the next run |
-| R27 | `y` / `n` on yes/no questions work through the list's type-ahead, so they need Enter; option numbers work directly | The prompt library offers both without custom key handling | One extra key press |
+| R27 | `y` / `n` on yes/no questions work through the list's type-ahead, and typing an option's number moves the cursor to it; both need Enter to confirm | The prompt library offers both without custom key handling | One extra key press |
 | R28 | The `local` skills plugin has no `.claude-plugin/plugin.json` | A live run on both adapters loaded it and invoked its skill without one | A future Claude Code version that requires a manifest fails the run with *plugin not loaded* |
 | R29 | Closing the terminal (SIGHUP) or a kill (SIGTERM) stops the run like Ctrl+C; the second Ctrl+C deletes the temp folder before exiting | The review found both paths left the temp folder, with a full copy of each skill, behind | None |
 | R30 | A withdrawn line waits, like event lines, while another question is on screen | The review found it printed over the open prompt when parallel questions were queued | None |
 | R31 | The final review covered only this feature's commits (`bd6027b..`) | Earlier branch work was reviewed under its own plans | Earlier code not re-reviewed here |
 | R32 | The question tool also accepts a question sent as JSON text, options sent as JSON text, and a plain-text `question` with `id` and `kind` beside it; a plain-text question without them gets *"a question given as plain text also needs id and kind"* | A real run on `dots-3-note-preview` got its first `ask_user` call rejected every time for this shape, wasting a step | The advertised tool schema is looser, so a model may pick the flat shape on purpose; it works either way |
+| R33 | `folder` and `plugins` resolve to their real paths (links followed) after the directory check | Found in a hand test on 2026-10-18: `folder: /tmp/fb-test` blocked every write, because on macOS `/tmp` is a link to `/private/tmp`, the agent's CLI wrote to the resolved path, and the write guard compares path text | None |
+| R34 | Setup failures are reported, not thrown: an unreadable prompt is `prompt: cannot read: …` (exit 2); `runs` that cannot be created is `runs: cannot create the log: …` (exit 2, nothing created); a temp folder, socket or skills copy that fails ends the log and the output with a result `cannot set up the run: …` (exit 1) | A stack trace says nothing to someone running a YAML file | None |
 
 ## Deferred issues
 
 | Issue | Effect | Where |
 |---|---|---|
-| An unreadable prompt file (no read permission) is not caught | A stack trace instead of a `prompt:` error line | `cli/src/config.ts` |
-| `runs` existing as a file is not caught | A stack trace instead of an error line | `cli/src/run.ts` |
 | An unquoted `folder: ~` is YAML's null value | Validation says *expected string, received null*; only a quoted `"~"` or `~/x` expands | `cli/src/config.ts` |
 | A provider result that fails after its event stream already failed is never handled | Node reports an unhandled rejection after the log's result line is written. Neither real provider does this today | `cli/src/run.ts` |
 | `pnpm run-agent` prints a pnpm *Command failed with exit code …* banner after every non-zero exit | Noise after a bad config, a failure or a stop; `pnpm -s run-agent` hides it | `package.json` script |
@@ -60,12 +60,10 @@ Code: `code/flowboard/packages/cli/src/` (`config.ts`, `run.ts`, `main.ts`), on 
 | With `max_turns: 1` on OpenCode, R16 never fires | There is no earlier step to tell a cut-off run from a finished one, so the run always passes | `opencode/provider.ts` |
 | A run cannot say which files it must produce | Exit 0 still does not prove the task was done; an `expect_files`-style check was offered and not chosen for now | `cli/src/config.ts`, `cli/src/run.ts` |
 | The answering keys (`y`/`n`, option numbers, Space to tick) and a real grill-me run have not been tried by hand | The prompts are tested with fakes only | Manual: scenario 13 in [[Testing The Run Agent CLI]] |
-| Typing an option's number only moves the cursor; Enter is still needed. The docs ([[Run Config Reference]], R27) say the number selects | One more key press than documented | `Run Config Reference.md`, this note |
 | The broker and shim tests leave empty `/tmp/fb-*` folders behind | 14 empty private folders per suite run, until the OS cleans `/tmp` | `cli/test/broker.test.ts`, `ask-user/test/shim.test.ts` |
 | `NO_TIME_LIMIT_MS` is defined in the Claude adapter and imported by the OpenCode one | A cross-adapter import; the future worker broker will want the same value | `adapters/src/agent/claude/options.ts`, `opencode/options.ts`; move to `@flowboard/core` |
 | The broker only checks that `questions` is a list | A malformed request from anything other than the shim is logged as a question and fails in the answerer; the worker broker, as the database writer, will need `checkQuestions` itself | `cli/src/ask/broker.ts` |
 | A request arriving in the instant between `close()` waiting for the open question and the socket closing can start a prompt | A withdrawn line may print after `-- result` | `cli/src/ask/broker.ts` |
-| A failure copying a `skills:` folder (permissions) or opening the socket is not caught | A stack trace instead of an error line | `cli/src/run.ts` |
 | A single Ctrl+C through `pnpm run-agent` on a real run has not been checked by hand | The 300 ms fix (R13) is tested with simulated signals only | Manual check: a cheap haiku run, one Ctrl+C, expect exit 130 and a final `result` line in the log |
 
 ## Related
