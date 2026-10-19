@@ -202,3 +202,25 @@ test('each agent run logs start, event and result lines', async () => {
   const kinds = readFileSync(join(ctx.logDir, '007-plan.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l).kind);
   assert.deepEqual(kinds, ['start', 'event', 'result']);
 });
+
+test('a step run reports its end even when its log cannot be written', async () => {
+  // No log folder: the run cannot be set up, and says so instead of throwing.
+  const missing = stepSetup({ logDir: '/nonexistent/fb-logs' });
+  const shell = await execShell('exit 0', missing.folder, RUN, ['check_output'], missing.ctx).ended;
+  assert.match(shell.error ?? '', /^cannot set up the run: /);
+  const { provider, specs } = agent({ write: ['plan'] });
+  const ai = await execAi(aiConfig(missing.folder), PLAN, ['plan'], { ...missing.ctx, makeProvider: () => provider }).ended;
+  assert.match(ai.error ?? '', /^cannot set up the run: /);
+  assert.equal(specs.length, 0);
+  // A clock that fails after the first log line: the run still ends; a check keeps its verdict.
+  let calls = 0;
+  const failing = () => {
+    if (++calls > 1) throw new Error('disk full');
+    return new Date(2026, 9, 19, 9, 5, 7);
+  };
+  const s = stepSetup({ now: failing });
+  assert.deepEqual(await execShell('exit 0', s.folder, RUN, ['check_output'], s.ctx).ended, { costUsd: 0, outcome: 'pass' });
+  calls = 0;
+  const a = stepSetup({ now: failing, makeProvider: () => agent({ write: ['plan'] }).provider });
+  assert.equal((await execAi(aiConfig(a.folder), PLAN, ['plan'], a.ctx).ended).error, 'disk full');
+});

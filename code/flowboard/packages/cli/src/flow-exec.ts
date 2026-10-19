@@ -11,6 +11,7 @@ import { startBroker } from './ask/broker.ts';
 import type { Answerer } from './ask/broker.ts';
 import type { Adapter, RunConfig } from './config.ts';
 import { openLog, streamRun, summaryLines, withAsking, WITHDRAWN } from './run.ts';
+import type { Log } from './run.ts';
 
 /** How much of a shell step's output its artifact keeps: the end, where failures are. */
 export const OUTPUT_TAIL = 20_000;
@@ -55,8 +56,15 @@ function runLog(ctx: ExecContext, run: RunCommand) {
 
 /** Runs `command` in `folder`: exit 0 is pass. The output's tail is `produces[0]`'s artifact. */
 export function execShell(command: string, folder: string, run: RunCommand, produces: string[], ctx: ExecContext): StepRun {
-  const { log, close } = runLog(ctx, run);
-  log('start', { command, run });
+  let logger: ReturnType<typeof runLog> | undefined;
+  try {
+    logger = runLog(ctx, run);
+    logger.log('start', { command, run });
+  } catch (e) {
+    logger?.close();
+    return { ended: Promise.resolve({ costUsd: 0, error: `cannot set up the run: ${(e as Error).message}` }), stop: () => {} };
+  }
+  const { log, close } = logger;
   // ponytail: spawned here, not through ExecHost, which cannot kill a process group; go through it once
   // the sandbox tier can. `detached` makes the command and everything it starts one group, so stop() reaches all.
   // stdin is /dev/null: a check never waits for input.
@@ -81,8 +89,13 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
     if (done) return;
     done = true;
     clearTimeout(killer);
-    log('result', { exitCode, ...end });
-    close();
+    try {
+      log('result', { exitCode, ...end });
+    } catch {
+      // Best effort: the end must still reach the host, whose own state writes report the disk trouble.
+    } finally {
+      close();
+    }
     settle(end);
   };
   child.on('error', (e) => finish({ costUsd: 0, error: e.message }, null));
@@ -147,7 +160,16 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
   let stopped = false;
   let agent: AgentRun | undefined;
   const ended = (async (): Promise<RunEnd> => {
-    const { log, close } = runLog(ctx, run);
+    let logger: ReturnType<typeof runLog> | undefined;
+    const log: Log = (kind, body) => logger?.log(kind, body);
+    // The broker calls these from its own code, where a throw would go unhandled: they log best effort.
+    const quietly: Log = (kind, body) => {
+      try {
+        log(kind, body);
+      } catch {
+        // the result line, or the host's next state write, reports the disk trouble
+      }
+    };
     const outcomeFile = join(ctx.logDir, `${runName(run)}.outcome.json`);
     let tmp: string | undefined;
     let broker: Awaited<ReturnType<typeof startBroker>> | undefined;
@@ -159,14 +181,15 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
     try {
       let spec: RunSpec;
       try {
+        logger = runLog(ctx, run);
         // Short and real: a Unix socket path is limited to about 104 characters, and /tmp is a link on macOS.
         tmp = realpathSync(mkdtempSync('/tmp/fb-'));
         const socket = join(tmp, 'ask.sock');
         broker = await startBroker(socket, ctx.answer, {
-          onQuestion: (questions) => log('question', { questions }),
-          onAnswer: (answers) => log('answer', { answers }),
+          onQuestion: (questions) => quietly('question', { questions }),
+          onAnswer: (answers) => quietly('answer', { answers }),
           onWithdrawn: () => {
-            log('withdrawn', {});
+            quietly('withdrawn', {});
             ctx.show(WITHDRAWN);
           },
           onDone: () => {},
@@ -212,10 +235,13 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
       return end;
     } finally {
       await broker?.close();
-      close();
+      logger?.close();
       if (tmp) rmSync(tmp, { recursive: true, force: true });
     }
-  })();
+  })().catch((e: unknown): RunEnd => {
+    agent?.stop(); // whatever failed, the agent must not go on unwatched
+    return { costUsd: 0, error: e instanceof Error ? e.message : String(e) };
+  });
   return {
     ended,
     stop() {
