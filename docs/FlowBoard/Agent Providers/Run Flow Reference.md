@@ -248,6 +248,8 @@ Left for later: the worker and queue, dynamic fan-out and worktrees, routing on 
 
 ## Related
 
+- [[Testing The Run Flow CLI]]
+- [[Run Flow Deferred Issues]]
 - [[Run Config Reference]]
 - [[Multi-Agent Orchestration Analysis]]
 - [[Run Agent CLI Decisions]]
