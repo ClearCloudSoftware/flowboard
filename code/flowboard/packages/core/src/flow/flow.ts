@@ -29,6 +29,17 @@ export function isRework(flow: FlowDef, edge: FlowEdge): boolean {
 
 const forward = (flow: FlowDef) => flow.edges.filter((e) => !isRework(flow, e));
 
+/**
+ * The steps a flow starts at: those no route points to. When every step has a route into it, those only
+ * rework routes point to, so a flow may loop back to its first step.
+ */
+export function entries(flow: FlowDef): string[] {
+  const unrouted = flow.steps.filter((s) => !flow.edges.some((e) => e.to === s.id));
+  if (unrouted.length) return unrouted.map((s) => s.id);
+  const fwd = forward(flow);
+  return flow.steps.filter((s) => !fwd.some((e) => e.to === s.id)).map((s) => s.id);
+}
+
 /** Steps reachable from `id` along non-rework routes; `id` itself excluded. */
 export function downstream(flow: FlowDef, id: string): Set<string> {
   const out = reach(forward(flow), id);
@@ -64,18 +75,18 @@ export function validateFlow(flow: FlowDef): FlowProblem[] {
   });
   if (problems.length) return problems;
 
-  const entries = flow.steps.filter((s) => !flow.edges.some((e) => e.to === s.id)).map((s) => s.id);
-  if (!entries.length) problems.push({ message: 'no entry step: every step has a route into it' });
-  if (entries.length > 1) problems.push({ message: `more than one entry step: ${entries.join(', ')}` });
+  const starts = entries(flow);
+  if (!starts.length) problems.push({ message: 'no entry step: every step has a route into it' });
+  if (starts.length > 1) problems.push({ message: `more than one entry step: ${starts.join(', ')}` });
 
   const fwd = forward(flow);
   const looped = loops([...ids], fwd);
   if (looped.length) return [...problems, { message: `routes loop without an on_fail route back: ${looped.join(', ')}` }];
 
-  if (entries.length === 1) {
-    const reached = reach(flow.edges, entries[0]);
+  if (starts.length === 1) {
+    const reached = reach(flow.edges, starts[0]);
     for (const s of flow.steps) {
-      if (!reached.has(s.id)) problems.push({ step: s.id, message: `no route leads here from the entry step "${entries[0]}"` });
+      if (!reached.has(s.id)) problems.push({ step: s.id, message: `no route leads here from the entry step "${starts[0]}"` });
     }
   }
 

@@ -172,16 +172,16 @@ test('retry at an escalation grants one more attempt with the note; the next fai
 });
 
 test("a reject's note goes to the rework target", () => {
-  const f = flow(['plan', 'impl', step('review', { approval: true, produces: ['review'] })], [e('plan', 'impl'), e('impl', 'review'), e('review', 'impl', 'on_fail')]);
-  const { commands } = play(f, [{ end: 'plan' }, { end: 'impl' }, { end: 'review' }, { type: 'decide', step: 'review', decision: 'reject', note: 'add tests' }]);
-  assert.deepEqual(commands.at(-1), { type: 'run', run: 4, step: 'impl', attempt: 2, inputs: ['review'], note: 'add tests' });
+  const f = flow(['impl', step('review', { approval: true, produces: ['review'] })], [e('impl', 'review'), e('review', 'impl', 'on_fail')]);
+  const { commands } = play(f, [{ end: 'impl' }, { end: 'review' }, { type: 'decide', step: 'review', decision: 'reject', note: 'add tests' }]);
+  assert.deepEqual(commands.at(-1), { type: 'run', run: 3, step: 'impl', attempt: 2, inputs: ['review'], note: 'add tests' });
 });
 
 test('a rework stops a downstream run that is still going and wastes it', () => {
-  const f = flow(['plan', 'impl', step('check', { produces: ['out'] }), 'lint'], [e('plan', 'impl'), e('impl', 'check'), e('impl', 'lint'), e('check', 'impl', 'on_fail')]);
-  const { log, state } = play(f, [{ end: 'plan' }, { end: 'impl' }, { end: 'check', outcome: 'fail' }]);
-  assert.deepEqual(log.slice(2), ['run:check:1 run:lint:1', 'stop:4 run:impl:2']);
-  assert.deepEqual([state.runs[3].live, state.runs[3].wasted], [false, true]);
+  const f = flow(['impl', step('check', { produces: ['out'] }), 'lint'], [e('impl', 'check'), e('impl', 'lint'), e('check', 'impl', 'on_fail')]);
+  const { log, state } = play(f, [{ end: 'impl' }, { end: 'check', outcome: 'fail' }]);
+  assert.deepEqual(log.slice(1), ['run:check:1 run:lint:1', 'stop:3 run:impl:2']);
+  assert.deepEqual([state.runs[2].live, state.runs[2].wasted], [false, true]);
   assert.equal(state.steps.lint, undefined);
 });
 

@@ -52,6 +52,12 @@ test('artifact problems: one producer per type, inputs from forward ancestors on
   assert.deepEqual(validateFlow(back), [{ step: 'implement', message: 'requires "review", and no step before it produces that' }]);
 });
 
+test('a flow may loop back to its first step; only a forward route into it means another entry', () => {
+  assert.deepEqual(validateFlow(flow(['impl', 'review'], [e('impl', 'review'), e('review', 'impl', 'on_fail')])), []);
+  // a repair step that only rework reaches is not a second entry while some step has no route into it
+  assert.deepEqual(validateFlow(flow(['impl', 'check', 'fix'], [e('impl', 'check'), e('check', 'fix', 'on_fail'), e('fix', 'check')])), []);
+});
+
 test('a join behind a conditional route is a warning', () => {
   assert.deepEqual(validateFlow(flow(['a', 'c', 'd'], [e('a', 'd', 'on_pass'), e('a', 'c'), e('c', 'd')])), [
     { step: 'd', warning: true, message: 'waits for "a", whose route here is conditional; if it does not fire, d runs without it' },

@@ -2,7 +2,7 @@
  * The flow engine: one pure function from (flow, state, event) to the next
  * state and the commands a host carries out. Every PRD §8 rule lives here.
  */
-import { downstream, isRework } from './flow.ts';
+import { downstream, entries, isRework } from './flow.ts';
 import type { FlowDef, Outcome } from './flow.ts';
 
 export type InstanceState = 'pending' | 'running' | 'awaiting_approval' | 'done' | 'failed';
@@ -152,8 +152,8 @@ export function advance(flow: FlowDef, state: FlowState, event: FlowEvent): { st
     // Once the flow has ended, only a stopped run's late cost is recorded.
   } else if (event.type === 'start') {
     if (!s.runs.length) {
-      const entry = flow.steps.find((d) => !flow.edges.some((e) => e.to === d.id))!;
-      startRun(entry.id, 1, entry.requires);
+      const entry = entries(flow)[0];
+      startRun(entry, 1, def(entry).requires);
     }
   } else if (event.type === 'decide') {
     const inst = s.steps[event.step];
