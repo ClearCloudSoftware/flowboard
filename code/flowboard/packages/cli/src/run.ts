@@ -61,7 +61,7 @@ function stamp(d: Date): string {
 }
 
 /** Create the log file; a name already taken gets -2, -3, … */
-function openLog(dir: string, name: string): { fd: number; path: string } {
+export function openLog(dir: string, name: string): { fd: number; path: string } {
   for (let n = 1; ; n++) {
     const path = join(dir, `${name}${n === 1 ? '' : `-${n}`}.jsonl`);
     try {
