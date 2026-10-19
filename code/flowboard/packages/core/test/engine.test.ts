@@ -130,3 +130,86 @@ test('advance does not change the state it is given', () => {
   advance(f, s, { type: 'run_ended', run: 1, costUsd: 0 });
   assert.deepEqual(s, copy);
 });
+
+// plan → impl → check; check on_pass → review; check and review on_fail → impl
+const loop = (max = 3) => flow(
+  ['plan', step('impl', { requires: ['plan'], produces: ['notes'], maxAttempts: max }), step('check', { produces: ['check_output'] }), step('review', { produces: ['review'] })],
+  [e('plan', 'impl'), e('impl', 'check'), e('check', 'review', 'on_pass'), e('check', 'impl', 'on_fail'), e('review', 'impl', 'on_fail')],
+);
+const SPENT: Ev[] = [
+  { end: 'plan' }, { end: 'impl' }, { end: 'check', outcome: 'fail', fp: 'A' },
+  { end: 'impl' }, { end: 'check', outcome: 'pass' }, { end: 'review', outcome: 'fail' },
+  { end: 'impl' }, { end: 'check', outcome: 'pass' }, { end: 'review', outcome: 'fail' },
+];
+
+test('a failed check reworks its target with the raw failing output and wastes the superseded runs', () => {
+  const { log, commands, state } = play(loop(), SPENT.slice(0, 3));
+  assert.equal(log.at(-1), 'run:impl:2');
+  assert.deepEqual(commands.at(-1), { type: 'run', run: 4, step: 'impl', attempt: 2, inputs: ['plan', 'check_output'] });
+  assert.deepEqual(state.runs.map((r) => r.wasted), [false, true, true, false]);
+  assert.equal(state.steps.check, undefined);
+});
+
+test('check and review share the target\'s attempts; a spent loop escalates and starts nothing', () => {
+  const { log, state } = play(loop(), SPENT);
+  assert.deepEqual(log.slice(3), ['run:impl:2', 'run:check:1', 'run:review:1', 'run:impl:3', 'run:check:1', 'run:review:1', 'gate:impl:escalation']);
+  assert.deepEqual(state.steps.impl.gate, { kind: 'escalation', reason: 'impl has used 3 of 3 attempts', evidence: ['review'], decisions: ['retry', 'fail'], from: 'review' });
+});
+
+test('a check failing like its previous failure escalates with attempts left, even across a pass', () => {
+  const twice = play(loop(5), [...SPENT.slice(0, 3), { end: 'impl' }, { end: 'check', outcome: 'fail', fp: 'A' }]);
+  assert.equal(twice.log.at(-1), 'gate:impl:escalation');
+  assert.equal(twice.state.steps.impl.gate?.reason, 'check failed the same way twice');
+  assert.equal(play(loop(5), [...SPENT.slice(0, 3), { end: 'impl' }, { end: 'check', outcome: 'fail', fp: 'B' }]).log.at(-1), 'run:impl:3');
+  assert.equal(play(loop(5), [...SPENT.slice(0, 7), { end: 'check', outcome: 'fail', fp: 'A' }]).log.at(-1), 'gate:impl:escalation');
+});
+
+test('retry at an escalation grants one more attempt with the note; the next failure escalates at once', () => {
+  const { commands, log } = play(loop(), [...SPENT, { type: 'decide', step: 'impl', decision: 'retry', note: 'use the cache' }, { end: 'impl' }, { end: 'check', outcome: 'pass' }, { end: 'review', outcome: 'fail' }]);
+  assert.deepEqual(commands.find((c) => c.type === 'run' && c.attempt === 4), { type: 'run', run: 10, step: 'impl', attempt: 4, inputs: ['plan', 'review'], note: 'use the cache' });
+  assert.equal(log.at(-1), 'gate:impl:escalation');
+  assert.equal(play(loop(), [...SPENT, { type: 'decide', step: 'impl', decision: 'fail' }]).log.at(-1), 'end:failed');
+});
+
+test("a reject's note goes to the rework target", () => {
+  const f = flow(['plan', 'impl', step('review', { approval: true, produces: ['review'] })], [e('plan', 'impl'), e('impl', 'review'), e('review', 'impl', 'on_fail')]);
+  const { commands } = play(f, [{ end: 'plan' }, { end: 'impl' }, { end: 'review' }, { type: 'decide', step: 'review', decision: 'reject', note: 'add tests' }]);
+  assert.deepEqual(commands.at(-1), { type: 'run', run: 4, step: 'impl', attempt: 2, inputs: ['review'], note: 'add tests' });
+});
+
+test('a rework stops a downstream run that is still going and wastes it', () => {
+  const f = flow(['plan', 'impl', step('check', { produces: ['out'] }), 'lint'], [e('plan', 'impl'), e('impl', 'check'), e('impl', 'lint'), e('check', 'impl', 'on_fail')]);
+  const { log, state } = play(f, [{ end: 'plan' }, { end: 'impl' }, { end: 'check', outcome: 'fail' }]);
+  assert.deepEqual(log.slice(2), ['run:check:1 run:lint:1', 'stop:4 run:impl:2']);
+  assert.deepEqual([state.runs[3].live, state.runs[3].wasted], [false, true]);
+  assert.equal(state.steps.lint, undefined);
+});
+
+test('a step may rework itself; a repair step reached only by rework starts at attempt 1', () => {
+  const self = flow(['s', step('a', { maxAttempts: 2 })], [e('s', 'a'), e('a', 'a', 'on_fail')]);
+  assert.deepEqual(play(self, [{ end: 's' }, { end: 'a', outcome: 'fail' }, { end: 'a', outcome: 'fail' }]).log, ['run:s:1', 'run:a:1', 'run:a:2', 'gate:a:escalation']);
+  const repair = flow(['impl', step('check', { produces: ['out'] }), 'fix'], [e('impl', 'check'), e('check', 'fix', 'on_fail'), e('fix', 'check')]);
+  assert.deepEqual(play(repair, [{ end: 'impl' }, { end: 'check', outcome: 'fail' }, { end: 'fix' }]).log, ['run:impl:1', 'run:check:1', 'run:fix:1', 'run:check:1']);
+});
+
+test('an interrupted run keeps its step running; resume restarts it at the same attempt and re-asks open gates', () => {
+  const f = flow(['a', 'b', step('c', { approval: true })], [e('a', 'b'), e('a', 'c')]);
+  const { state } = play(f, [{ end: 'a' }, { end: 'c' }, { end: 'b', interrupted: true, cost: 0.3 }]);
+  assert.equal(state.steps.b.state, 'running');
+  assert.deepEqual([state.runs[1].live, state.runs[1].wasted, state.runs[1].costUsd], [false, true, 0.3]);
+  assert.deepEqual(advance(f, state, { type: 'resume' }).commands.map(text), ['run:b:1', 'gate:c:verdict']);
+});
+
+test('resume after a crash wastes runs that never ended', () => {
+  const f = flow(['a'], []);
+  const r = advance(f, play(f, []).state, { type: 'resume' });
+  assert.deepEqual(r.commands.map(text), ['run:a:1']);
+  assert.deepEqual([r.state.runs[0].live, r.state.runs[0].wasted, r.state.runs[0].error], [false, true, 'interrupted']);
+});
+
+test('a stopped run reporting late only updates its cost', () => {
+  const f = flow(['a', step('b', { approval: true }), 'c'], [e('a', 'b'), e('a', 'c')]);
+  const { state } = play(f, [{ end: 'a' }, { end: 'b' }, { type: 'decide', step: 'b', decision: 'fail' }]);
+  const r = advance(f, state, { type: 'run_ended', run: 3, costUsd: 0.7, outcome: 'pass' });
+  assert.deepEqual([r.commands, r.state.runs[2].costUsd, r.state.runs[2].outcome], [[], 0.7, undefined]);
+});

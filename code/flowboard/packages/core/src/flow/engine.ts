@@ -52,15 +52,47 @@ export function advance(flow: FlowDef, state: FlowState, event: FlowEvent): { st
     commands.push({ type: 'run', run: id, step, attempt, inputs: [...inputs], ...(note !== undefined && { note }) });
   };
 
-  const openGate = (step: string, kind: GateKind, reason: string, evidence: string[]) => {
+  const openGate = (step: string, kind: GateKind, reason: string, evidence: string[], from?: string) => {
     const onFail = routes(step).some((e) => e.condition === 'on_fail');
-    const gate: Gate = { kind, reason, evidence: [...evidence], decisions: GATE_DECISIONS[kind].filter((d) => d !== 'reject' || onFail) };
+    const gate: Gate = { kind, reason, evidence: [...evidence], decisions: GATE_DECISIONS[kind].filter((d) => d !== 'reject' || onFail), ...(from !== undefined && { from }) };
+    s.steps[step] ??= { state: 'pending', attempts: 0, inputs: [] }; // a repair step reached only by rework may have none yet
     s.steps[step].state = 'awaiting_approval';
     s.steps[step].gate = gate;
     commands.push({ type: 'gate', step, gate });
   };
 
-  const complete = (step: string, outcome: Outcome | undefined) => {
+  /** Rerun `t` as `attempt`, with `from`'s output: every run of `t` and below it is wasted, live ones stopped. */
+  const redo = (t: string, from: string, attempt: number, note?: string) => {
+    const reset = new Set([t, ...downstream(flow, t)]);
+    const stopped: number[] = [];
+    for (const r of s.runs) {
+      if (!reset.has(r.step)) continue;
+      r.wasted = true;
+      if (r.live) {
+        r.live = false;
+        r.error = 'superseded';
+        stopped.push(r.id);
+      }
+    }
+    for (const id of reset) if (id !== t) delete s.steps[id];
+    if (stopped.length) commands.push({ type: 'stop', runs: stopped });
+    startRun(t, attempt, [...new Set([...def(t).requires, ...def(from).produces])], note);
+  };
+
+  /** A rework route from `from` to `t` fired: rerun `t`, or hand the loop to a person. */
+  const rework = (t: string, from: string, note?: string) => {
+    const used = s.steps[t]?.attempts ?? 0;
+    const max = def(t).maxAttempts;
+    const runs = s.runs.filter((r) => r.step === from);
+    const last = runs.at(-1);
+    const prev = runs.slice(0, -1).findLast((r) => r.outcome === 'fail' && r.fingerprint);
+    const escalate = (reason: string) => openGate(t, 'escalation', reason, def(from).produces, from);
+    if (used + 1 > max) escalate(`${t} has used ${used} of ${max} attempts`);
+    else if (last?.fingerprint && prev?.fingerprint === last.fingerprint) escalate(`${from} failed the same way twice`);
+    else redo(t, from, used + 1, note);
+  };
+
+  const complete = (step: string, outcome: Outcome | undefined, note?: string) => {
     const inst = s.steps[step];
     const out = routes(step);
     if (outcome) inst.outcome = outcome;
@@ -72,7 +104,9 @@ export function advance(flow: FlowDef, state: FlowState, event: FlowEvent): { st
     inst.state = 'done';
     delete inst.gate;
     for (const e of out) {
-      if (e.condition === 'always' || e.condition === `on_${outcome}`) s.steps[e.to] ??= { state: 'pending', attempts: 0, inputs: [] };
+      if (e.condition !== 'always' && e.condition !== `on_${outcome}`) continue;
+      if (isRework(flow, e)) rework(e.to, step, note);
+      else s.steps[e.to] ??= { state: 'pending', attempts: 0, inputs: [] };
     }
   };
 
@@ -125,13 +159,25 @@ export function advance(flow: FlowDef, state: FlowState, event: FlowEvent): { st
     const inst = s.steps[event.step];
     if (inst?.state !== 'awaiting_approval' || !inst.gate?.decisions.includes(event.decision)) return { state, commands: [] };
     if (event.decision === 'approve') complete(event.step, 'pass');
-    else if (event.decision === 'reject') complete(event.step, 'fail');
+    else if (event.decision === 'reject') complete(event.step, 'fail', event.note);
     else if (event.decision === 'fail') failFlow();
     else if (inst.gate.kind === 'run_failed') startRun(event.step, inst.attempts, inst.inputs, event.note);
+    else if (inst.gate.kind === 'escalation') redo(event.step, inst.gate.from!, inst.attempts + 1, event.note); // one more, past max_attempts
     else {
       const latest = s.runs.findLast((r) => r.step === event.step);
       if (latest) latest.wasted = true;
       startRun(event.step, inst.attempts + 1, inst.inputs, event.note);
+    }
+  } else if (event.type === 'resume') {
+    // Runs still marked live never ended: the host stopped or crashed.
+    for (const r of s.runs.filter((x) => x.live)) Object.assign(r, { live: false, wasted: true, error: 'interrupted' });
+    for (const d of flow.steps) {
+      const inst = s.steps[d.id];
+      if (inst?.state === 'running') startRun(d.id, inst.attempts, inst.inputs, inst.note);
+    }
+    for (const d of flow.steps) {
+      const inst = s.steps[d.id];
+      if (inst?.state === 'awaiting_approval' && inst.gate) commands.push({ type: 'gate', step: d.id, gate: inst.gate });
     }
   }
 
