@@ -55,6 +55,12 @@ test('only the last OUTPUT_TAIL characters of a long output are kept', async () 
   assert.equal(artifact('check_output'), `HEAD${'a\n'.repeat(15000)}TAIL`.slice(-OUTPUT_TAIL));
 });
 
+test('a check that deletes the artifacts folder, as git clean -fdx does, still gets its output saved', async () => {
+  const { run, artifact } = check('rm -rf "$FLOWBOARD_ARTIFACTS"; echo cleaned');
+  assert.deepEqual(await run.ended, { costUsd: 0, outcome: 'pass' });
+  assert.equal(artifact('check_output'), 'cleaned\n');
+});
+
 test('a shell step finds the artifacts in FLOWBOARD_ARTIFACTS', async () => {
   const { run, artifact, ctx } = check('echo "$FLOWBOARD_ARTIFACTS"');
   await run.ended;

@@ -3,7 +3,7 @@
  * with a RunEnd for the engine and never rejects.
  */
 import { spawn } from 'node:child_process';
-import { appendFileSync, closeSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fingerprint, ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, AgentRun, Outcome, RunCommand, RunEnd, RunResult, RunSpec } from '@flowboard/core';
@@ -88,7 +88,14 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
   child.on('error', (e) => finish({ costUsd: 0, error: e.message }, null));
   child.on('close', (code) => {
     if (stopped) return finish({ costUsd: 0, error: 'stopped' }, code);
-    if (produces[0]) writeFileSync(artifactPath(ctx.artifactsDir, produces[0]), tail);
+    if (produces[0]) {
+      try {
+        mkdirSync(ctx.artifactsDir, { recursive: true }); // the check may have cleaned it away (git clean -fdx)
+        writeFileSync(artifactPath(ctx.artifactsDir, produces[0]), tail);
+      } catch (e) {
+        return finish({ costUsd: 0, error: `cannot save the output: ${(e as Error).message}` }, code);
+      }
+    }
     const end: RunEnd = { costUsd: 0, outcome: code === 0 ? 'pass' : 'fail' };
     if (code !== 0 && tail.trim()) end.fingerprint = fingerprint(tail);
     finish(end, code);
