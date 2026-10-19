@@ -6,4 +6,4 @@ if (!socketPath) {
   console.error('ask-user: FLOWBOARD_ASK_SOCKET is not set');
   process.exit(1);
 }
-await createAskServer(socketPath).connect(new StdioServerTransport());
+await createAskServer(socketPath, process.env.FLOWBOARD_OUTCOME_FILE).connect(new StdioServerTransport());

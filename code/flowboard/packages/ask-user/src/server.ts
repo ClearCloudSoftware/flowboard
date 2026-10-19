@@ -4,6 +4,7 @@
  *
  * See docs/FlowBoard/Human In The Loop/Ask User MCP Server.md.
  */
+import { writeFileSync } from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { checkQuestions } from '@flowboard/core';
@@ -86,7 +87,8 @@ async function ask(socketPath: string, questions: Question[]): Promise<ToolResul
   }
 }
 
-export function createAskServer(socketPath: string): McpServer {
+/** `outcomeFile`: where set_outcome writes the step's verdict; without it the tool is not offered. */
+export function createAskServer(socketPath: string, outcomeFile?: string): McpServer {
   const server = new McpServer({ name: 'flowboard', version: '0.1.0' });
   server.registerTool(
     'ask_user',
@@ -110,6 +112,26 @@ export function createAskServer(socketPath: string): McpServer {
     ({ questions }) => {
       const qs = toQuestions(questions);
       return typeof qs === 'string' ? text(qs, true) : ask(socketPath, qs);
+    },
+  );
+  if (!outcomeFile) return server;
+  server.registerTool(
+    'set_outcome',
+    {
+      description:
+        "Report whether this step's work passed or failed; the flow follows the matching route. Call it once before you stop; a later call replaces an earlier one.",
+      // Lenient like ask_user: the value is checked below, so a bad one gets a clear tool error.
+      inputSchema: { outcome: z.string().describe('"pass" or "fail"'), reason: z.string().optional().describe('One line on why') },
+    },
+    ({ outcome, reason }) => {
+      const verdict = outcome.trim().toLowerCase();
+      if (verdict !== 'pass' && verdict !== 'fail') return text('outcome must be "pass" or "fail"', true);
+      try {
+        writeFileSync(outcomeFile, JSON.stringify({ outcome: verdict, ...(reason !== undefined && { reason }) }));
+      } catch (e) {
+        return text(e instanceof Error ? e.message : String(e), true);
+      }
+      return text(`Recorded: ${verdict}`);
     },
   );
   return server;

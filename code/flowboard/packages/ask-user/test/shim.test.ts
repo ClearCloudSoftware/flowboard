@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -25,14 +26,14 @@ async function fakeBroker(reply: AskReply | object) {
   return { socketPath, requests, close: () => new Promise((r) => server.close(r)) };
 }
 
-/** An MCP client connected to the shim, which talks to `socketPath`. */
-async function shim(socketPath: string) {
+/** An MCP client connected to the shim, which talks to `socketPath`; `env` joins the shim's environment. */
+async function shim(socketPath: string, env: Record<string, string> = {}) {
   const client = new Client({ name: 'test', version: '0' });
   await client.connect(
     new StdioClientTransport({
       command: process.execPath,
       args: [SHIM_ENTRY],
-      env: { ...process.env, FLOWBOARD_ASK_SOCKET: socketPath } as Record<string, string>,
+      env: { ...process.env, FLOWBOARD_ASK_SOCKET: socketPath, ...env } as Record<string, string>,
     }),
   );
   return client;
@@ -195,4 +196,32 @@ test('a batch item with its options as JSON text is accepted', async (t) => {
   });
   assert.ok(!res.isError, res.content[0]?.text);
   assert.deepEqual(broker.requests, [{ questions: [colour, { id: 'q', prompt: 'Q?', kind: 'single_select', options }] }]);
+});
+
+test('set_outcome is offered only with FLOWBOARD_OUTCOME_FILE, and writes the verdict', async (t) => {
+  const broker = await fakeBroker({ answers: {} });
+  const file = join(mkdtempSync(join(tmpdir(), 'fb-out-')), 'outcome.json');
+  const client = await shim(broker.socketPath, { FLOWBOARD_OUTCOME_FILE: file });
+  t.after(async () => {
+    await client.close();
+    await broker.close();
+  });
+  const { tools } = await client.listTools();
+  assert.deepEqual(tools.map((x) => x.name).sort(), ['ask_user', 'ask_user_batch', 'set_outcome']);
+  const res = await call(client, 'set_outcome', { outcome: 'fail', reason: 'two tests fail' });
+  assert.deepEqual([res.isError, res.content[0].text], [undefined, 'Recorded: fail']);
+  assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), { outcome: 'fail', reason: 'two tests fail' });
+});
+
+test('set_outcome refuses anything but pass or fail, and writes nothing', async (t) => {
+  const broker = await fakeBroker({ answers: {} });
+  const file = join(mkdtempSync(join(tmpdir(), 'fb-out-')), 'outcome.json');
+  const client = await shim(broker.socketPath, { FLOWBOARD_OUTCOME_FILE: file });
+  t.after(async () => {
+    await client.close();
+    await broker.close();
+  });
+  const res = await call(client, 'set_outcome', { outcome: 'maybe' });
+  assert.deepEqual([res.isError, res.content[0].text], [true, 'outcome must be "pass" or "fail"']);
+  assert.equal(existsSync(file), false);
 });
