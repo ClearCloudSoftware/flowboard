@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { EventEmitter } from 'node:events';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, FlowState, NormalizedEvent, Question, RunResult, RunSpec } from '@flowboard/core';
@@ -82,16 +83,20 @@ function setup(yaml = DELIVERY, plays: Record<string, Play[]> = {}) {
   const script = scripted(plays);
   const out: string[] = [];
   const err: string[] = [];
+  const signals = new EventEmitter();
+  const exits: number[] = [];
   const deps: RunDeps = {
     cwd: base,
     makeProvider: script.makeProvider,
     print: (l) => out.push(l),
     printErr: (l) => err.push(l),
+    signals,
+    exit: (c) => exits.push(c),
     now: () => new Date(2026, 9, 18, 9, 5, 7),
   };
   const runDir = join(base, 'runs', STAMPED);
   const state = () => JSON.parse(readFileSync(join(runDir, 'state.json'), 'utf8')) as FlowState;
-  return { base, out, err, deps, script, runDir, state };
+  return { base, out, err, deps, script, runDir, state, signals, exits };
 }
 
 test('--check validates the flow and prints its size', async () => {
@@ -373,4 +378,104 @@ test('an infra failure waits at a gate offering retry or fail; retry runs the sa
   assert.equal(d.gate()?.prompt, 'plan: run failed: boom');
   assert.deepEqual(d.gate()?.options?.map((o) => o.value), ['retry', 'fail']);
   assert.equal(out.filter((l) => l === '-- plan attempt 1 (claude-code sonnet)').length, 2);
+});
+
+// --- stopping and resuming
+
+const RUN_DIR = join('runs', STAMPED);
+const ONE_BUILD = `${HEAD}steps:\n  build: { prompt: prompts/build.md }\n`;
+/** Calls `then` once `ready()` holds; checks every 5 ms. */
+function when(ready: () => boolean, then: () => void) {
+  const timer = setInterval(() => {
+    if (!ready()) return;
+    clearInterval(timer);
+    then();
+  }, 5);
+}
+
+test('Ctrl+C stops the flow, and --resume reruns the step it cut off', { timeout: 10_000 }, async () => {
+  const s = setup(ONE_BUILD, { build: ['hang', 'pass'] });
+  when(() => s.script.timeline.includes('start:build'), () => s.signals.emit('SIGINT'));
+  assert.equal(await runFlow(['flow.yaml'], s.deps), 130);
+  assert.ok(s.out.includes('-- stopping'), s.out.join('\n'));
+  assert.ok(s.out.some((l) => l.startsWith('-- flow stopped: ')));
+  assert.equal(s.out.at(-1), `-- continue with: pnpm run-flow --resume ${RUN_DIR}`);
+  const stopped = s.state();
+  assert.deepEqual([stopped.steps.build.state, stopped.runs[0].live, stopped.runs[0].wasted], ['running', false, true]);
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+  assert.deepEqual(s.state().runs.map((r) => [r.step, r.attempt]), [['build', 1], ['build', 1]]);
+});
+
+test('Ctrl+C stops a hanging check at once, and --resume reruns it', { timeout: 10_000 }, async () => {
+  const s = setup(`${HEAD}steps:\n  check: { shell: 'test -f go.flag || sleep 30' }\n`);
+  when(() => s.out.includes('-- check attempt 1 (shell)'), () => setTimeout(() => s.signals.emit('SIGINT'), 100));
+  const at = Date.now();
+  assert.equal(await runFlow(['flow.yaml'], s.deps), 130);
+  assert.ok(Date.now() - at < 2000, `took ${Date.now() - at} ms`);
+  writeFileSync(join(s.base, 'proj', 'go.flag'), '');
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+});
+
+test('Ctrl+C at a gate prompt stops the flow like a first press', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  s.deps.answer = async () => {
+    throw Object.assign(new Error('User force closed the prompt'), { name: 'ExitPromptError' });
+  };
+  assert.equal(await runFlow(['flow.yaml'], s.deps), 130);
+  assert.equal(s.state().steps.review.state, 'awaiting_approval');
+});
+
+test('a paused flow resumes from its pinned copy and asks its open gate again', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow(['flow.yaml'], s.deps), 3);
+  rmSync(join(s.base, 'flow.yaml')); // --resume runs the pinned flow.json
+  s.deps.answer = deciding('approve').answer;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+  assert.ok(s.out.includes(`-- resuming ${RUN_DIR}`));
+  assert.ok(s.script.timeline.includes('start:ship'));
+});
+
+test('--resume refuses a missing state, another version, a finished flow and a held lock', { timeout: 10_000 }, async () => {
+  const done = setup(SHELL_ONLY);
+  assert.equal(await runFlow(['flow.yaml'], done.deps), 0);
+  assert.equal(await runFlow(['--resume', 'runs/nope'], done.deps), 2);
+  assert.equal(await runFlow(['--resume', RUN_DIR], done.deps), 2);
+  const pinned = join(done.runDir, 'flow.json');
+  writeFileSync(pinned, JSON.stringify({ ...JSON.parse(readFileSync(pinned, 'utf8')), version: 2 }));
+  assert.equal(await runFlow(['--resume', RUN_DIR], done.deps), 2);
+  assert.deepEqual(done.err, [
+    'runs/nope: cannot resume: no state.json',
+    `${RUN_DIR}: cannot resume: the flow already ended (done)`,
+    `${RUN_DIR}: cannot resume: made by a different version of run-flow`,
+  ]);
+  const paused = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow(['flow.yaml'], paused.deps), 3);
+  const lock = join(paused.base, 'proj', '.flowboard', 'lock');
+  writeFileSync(lock, JSON.stringify({ pid: process.pid, runDir: 'runs/other' }));
+  assert.equal(await runFlow(['--resume', RUN_DIR], paused.deps), 2);
+  assert.deepEqual(paused.err, [`${RUN_DIR}: cannot resume: another run-flow (pid ${process.pid}) is working here on runs/other; if it is not, delete ${lock}`]);
+});
+
+test('state.json is written atomically, and a stray state.json.tmp is ignored', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow(['flow.yaml'], s.deps), 3);
+  assert.equal(existsSync(join(s.runDir, 'state.json.tmp')), false);
+  writeFileSync(join(s.runDir, 'state.json.tmp'), '{ half written');
+  s.deps.answer = deciding('approve').answer;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+});
+
+test('a second Ctrl+C more than 300 ms after the first exits at once', { timeout: 10_000 }, async () => {
+  const s = setup(ONE_BUILD, { build: ['hang'] });
+  let clock = new Date(2026, 9, 18, 9, 5, 7).getTime();
+  s.deps.now = () => new Date(clock);
+  when(() => s.script.timeline.includes('start:build'), () => {
+    s.signals.emit('SIGINT');
+    clock += 100;
+    s.signals.emit('SIGINT'); // within 300 ms: the same press, forwarded twice under pnpm
+    clock += 400;
+    s.signals.emit('SIGINT');
+  });
+  assert.equal(await runFlow(['flow.yaml'], s.deps), 130);
+  assert.deepEqual(s.exits, [130]);
 });

@@ -4,8 +4,8 @@
  * process and one folder, and saves the state after every transition.
  */
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, rmSync, writeFileSync, writeSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync, writeSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { advance, newFlowState } from '@flowboard/core';
 import type { Answers, Decision, FlowCommand, FlowEvent, FlowState, Gate, Question, RunCommand, RunEnd } from '@flowboard/core';
@@ -69,10 +69,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
     maxRuns = Number(v['max-runs']);
   }
 
-  if (v.resume !== undefined) {
-    printErr('run-flow: --resume comes in Task 11');
-    return 2;
-  }
+  if (v.resume !== undefined) return resume(v.resume, maxRuns, deps);
   const yaml = positionals[0];
   const loaded = loadFlow(yaml, deps.cwd);
   if (!loaded.ok) {
@@ -112,12 +109,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
   const runDir = join(runsDir, name);
   const shown = relative(deps.cwd, runDir);
   const lockPath = join(flowboardDir, 'lock');
-  let refused: string | undefined;
-  try {
-    refused = takeLock(lockPath, shown, print);
-  } catch (e) {
-    refused = `cannot take the lock: ${(e as Error).message}`;
-  }
+  const refused = takeLock(lockPath, shown, print);
   if (refused) {
     printErr(`${yaml}: folder: ${refused}`);
     return 2;
@@ -168,15 +160,15 @@ function alive(pid: number): boolean {
 
 /** Takes the folder's lock for this process, or says why not. A lock left by a process that is gone is replaced. */
 function takeLock(path: string, runDir: string, print: (line: string) => void): string | undefined {
-  mkdirSync(join(path, '..'), { recursive: true });
   for (;;) {
     try {
+      mkdirSync(join(path, '..'), { recursive: true });
       const fd = openSync(path, 'wx');
       writeSync(fd, JSON.stringify({ pid: process.pid, runDir }));
       closeSync(fd);
       return undefined;
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+      if ((e as NodeJS.ErrnoException).code !== 'EEXIST') return `cannot take the lock: ${(e as Error).message}`;
     }
     let held: { pid?: unknown; runDir?: unknown } = {};
     try {
@@ -225,6 +217,42 @@ function terminal(answer: Answerer, print: (line: string) => void) {
   };
 }
 
+/** The parsed JSON file, or undefined when it is missing or is not JSON. */
+function readJson(path: string): unknown {
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return undefined;
+  }
+}
+
+/** `--resume <dir>`: continues a stopped, paused or crashed flow from its pinned flow.json and its state.json. */
+async function resume(typed: string, maxRuns: number, deps: RunDeps): Promise<number> {
+  const print = deps.print ?? console.log;
+  const printErr = deps.printErr ?? console.error;
+  const refuse = (why: string) => {
+    printErr(`${typed}: cannot resume: ${why}`);
+    return 2;
+  };
+  const runDir = resolve(deps.cwd, typed);
+  const state = readJson(join(runDir, 'state.json')) as FlowState | undefined;
+  if (!state) return refuse('no state.json');
+  const pinned = readJson(join(runDir, 'flow.json')) as { version?: unknown; config: FlowConfig; artifactsDir: string } | undefined;
+  if (!pinned) return refuse('no flow.json');
+  if (pinned.version !== 1) return refuse('made by a different version of run-flow');
+  if (state.status !== 'running') return refuse(`the flow already ended (${state.status})`);
+  // The YAML is not read again, and uncommitted changes are not checked: the tree holds the flow's own edits now.
+  const lockPath = join(pinned.config.folder, '.flowboard', 'lock');
+  const refused = takeLock(lockPath, typed, print);
+  if (refused) return refuse(refused);
+  try {
+    print(`-- resuming ${typed}`);
+    return await drive({ config: pinned.config, runDir, artifactsDir: pinned.artifactsDir, shown: typed, state, first: { type: 'resume' }, maxRuns }, deps);
+  } finally {
+    rmSync(lockPath, { force: true });
+  }
+}
+
 interface Drive {
   config: FlowConfig;
   runDir: string;
@@ -270,7 +298,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     now,
     makeProvider: deps.makeProvider ?? defaultProvider,
     answer: noTerminal,
-    onInterrupt: () => {},
+    onInterrupt: () => interrupt(), // Ctrl+C at an agent's question
   };
 
   /** Gate prompts open or waiting their turn, by step. */
@@ -293,7 +321,9 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     ask(questions, abort.signal)
       .then((a) => post({ type: 'decide', step, decision: a.decision as Decision, ...(typeof a.note === 'string' && a.note && { note: a.note }) }))
       .catch((e) => {
-        if (!abort.signal.aborted) crash(e);
+        if (abort.signal.aborted) return;
+        if ((e as Error).name === 'ExitPromptError') interrupt(); // Ctrl+C at the prompt
+        else crash(e);
       })
       .finally(() => {
         if (asks.get(step) === abort) asks.delete(step);
@@ -301,9 +331,12 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
       });
   };
 
+  /** Writes state.json whole or not at all: a crash mid-write leaves the last good copy. */
   const save = () => {
     mkdirSync(d.runDir, { recursive: true }); // a check may have cleaned it away (git clean -fdx)
-    writeFileSync(join(d.runDir, 'state.json'), JSON.stringify(state, null, 2) + '\n');
+    const file = join(d.runDir, 'state.json');
+    writeFileSync(`${file}.tmp`, JSON.stringify(state, null, 2) + '\n');
+    renameSync(`${file}.tmp`, file);
   };
   const feed = (event: FlowEvent) => {
     const r = advance(config.flow, state, event);
@@ -367,17 +400,46 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   const stopAll = async () => {
     stopping = true;
     const runs = [...live.values()];
+    const unlaunched = queued.splice(0);
     live.clear();
     runs.forEach((x) => x.run.stop());
     const ends = await Promise.all(runs.map((x) => x.run.ended));
     while (inbox.length) feed(inbox.shift()!); // runs that ended just before
     runs.forEach((x, i) => feed({ type: 'run_ended', run: x.cmd.run, ...ends[i], interrupted: true }));
+    unlaunched.forEach((cmd) => feed({ type: 'run_ended', run: cmd.run, costUsd: 0, interrupted: true }));
   };
+
+  // Ctrl+C, SIGTERM or SIGHUP (R13, R29): the first stops the flow so --resume can continue it; another,
+  // more than 300 ms later, quits at once.
+  let stopAsked = false;
+  let firstPress: number | undefined;
+  function interrupt() {
+    const at = now().getTime();
+    if (firstPress === undefined) {
+      firstPress = at;
+      print('-- stopping');
+      stopAsked = true;
+      for (const abort of asks.values()) abort.abort();
+      wake();
+    } else if (at - firstPress > 300) {
+      // The lock stays behind, so the next run-flow warns that this one's agents may still be running.
+      (deps.exit ?? process.exit)(130);
+    }
+    // ponytail: under `pnpm run-flow` one Ctrl+C arrives twice (the terminal's group signal plus pnpm's
+    // forward); a second press within 300 ms counts as the same one.
+  }
+  const signals = deps.signals ?? process;
+  const STOP_SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'];
+  for (const sig of STOP_SIGNALS) signals.on(sig, interrupt);
 
   try {
     feed(d.first);
     for (;;) {
       if (crashed) throw crashed.error;
+      if (stopAsked) {
+        await stopAll();
+        break;
+      }
       if (inbox.length) {
         feed(inbox.shift()!);
         continue;
@@ -395,15 +457,17 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
       print(`-- continue with: pnpm run-flow --resume ${d.shown}`);
     }
     throw e;
+  } finally {
+    for (const sig of STOP_SIGNALS) signals.off(sig, interrupt);
   }
 
-  const status = ended ?? 'paused';
+  const status = ended ?? (stopAsked ? 'stopped' : 'paused');
   const total = (runs: FlowState['runs']) => runs.reduce((sum, r) => sum + r.costUsd, 0).toFixed(2);
   print(`-- flow ${status}: ${state.runs.length} runs, $${total(state.runs)} spent, $${total(state.runs.filter((r) => r.wasted))} wasted`);
   if (status === 'paused') {
     const waiting = config.flow.steps.map((s) => s.id).filter((id) => state.steps[id]?.state === 'awaiting_approval');
     print(`-- waiting for a decision: ${waiting.join(', ')}`);
-    print(`-- continue with: pnpm run-flow --resume ${d.shown}`);
   }
-  return status === 'done' ? 0 : status === 'failed' ? 1 : 3;
+  if (status === 'paused' || status === 'stopped') print(`-- continue with: pnpm run-flow --resume ${d.shown}`);
+  return { done: 0, failed: 1, paused: 3, stopped: 130 }[status];
 }
