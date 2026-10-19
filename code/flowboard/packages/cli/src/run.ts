@@ -29,17 +29,17 @@ export interface RunDeps {
   answer?: Answerer;
 }
 
-const WITHDRAWN = '-- question withdrawn: the agent stopped waiting';
+export const WITHDRAWN = '-- question withdrawn: the agent stopped waiting';
 
 /**
  * The spec as launched: the ask_user shim on `socket`, Claude's own question tool off (so the agent asks
- * through ask_user), and the `skills:` folders copied into a `local` plugin under `tmp`.
+ * through ask_user), and the `skills:` folders copied into a `local` plugin under `tmp`. `env` joins the shim's.
  */
-function withAsking(config: RunConfig, socket: string, tmp: string): RunSpec {
+export function withAsking(config: RunConfig, socket: string, tmp: string, env: Record<string, string> = {}): RunSpec {
   const { adapter, spec, skills } = config;
   const out: RunSpec = {
     ...spec,
-    tools: [...(spec.tools ?? []), { name: 'flowboard', command: process.execPath, args: [SHIM_ENTRY], env: { FLOWBOARD_ASK_SOCKET: socket } }],
+    tools: [...(spec.tools ?? []), { name: 'flowboard', command: process.execPath, args: [SHIM_ENTRY], env: { FLOWBOARD_ASK_SOCKET: socket, ...env } }],
   };
   if (adapter === 'claude-code') out.toolPolicy = { ...spec.toolPolicy, deny: [...(spec.toolPolicy?.deny ?? []), 'AskUserQuestion'] };
   if (skills.length) {
@@ -51,11 +51,11 @@ function withAsking(config: RunConfig, socket: string, tmp: string): RunSpec {
   return out;
 }
 
-const defaultProvider = (adapter: Adapter): AgentProvider =>
+export const defaultProvider = (adapter: Adapter): AgentProvider =>
   adapter === 'claude-code' ? new ClaudeCodeProvider() : new OpencodeProvider({ models: {} });
 
 /** Local time as YYYY-MM-DDTHH-MM-SS. */
-function stamp(d: Date): string {
+export function stamp(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
 }
@@ -70,6 +70,44 @@ export function openLog(dir: string, name: string): { fd: number; path: string }
       if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
     }
   }
+}
+
+export type Log = (kind: string, body: object) => void;
+
+/** Launches and streams one run: each event is logged and shown; a launch or stream failure becomes a result with `error`. */
+export async function streamRun(
+  launch: () => AgentRun,
+  log: Log,
+  show: (line: string) => void,
+): Promise<{ result: RunResult; failedTools: number; last?: string }> {
+  let run: AgentRun | undefined;
+  let failedTools = 0;
+  let lastText: string | undefined;
+  let lastThinking: string | undefined;
+  try {
+    run = launch();
+    for await (const ev of run.events) {
+      log('event', { event: ev });
+      if (ev.type === 'tool_result' && !ev.ok) failedTools += 1;
+      if (ev.type === 'assistant_text') lastText = ev.text;
+      if (ev.type === 'thinking') lastThinking = ev.text;
+      const { raw: _raw, ...shown } = ev;
+      show(`${ev.type.padEnd(14)} ${JSON.stringify(shown).slice(0, 160)}`);
+    }
+    return { result: await run.result, failedTools, last: lastText ?? lastThinking };
+  } catch (e) {
+    // ponytail: a stream that died may never settle `result`; report it ourselves.
+    run?.stop();
+    return { result: { usage: ZERO_USAGE, exitCode: 1, error: e instanceof Error ? e.message : String(e) }, failedTools, last: lastText ?? lastThinking };
+  }
+}
+
+/** `-- N tool call(s) failed` and `-- last message: …`, each only when there is something to say. */
+export function summaryLines(failedTools: number, last?: string): string[] {
+  return [
+    ...(failedTools ? [`-- ${failedTools} tool call${failedTools === 1 ? '' : 's'} failed`] : []),
+    ...(last ? [`-- last message: ${last.replace(/\s+/g, ' ').trim().slice(0, 300)}`] : []),
+  ];
 }
 
 export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
@@ -162,35 +200,15 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
     print(`-- log ${path}`);
     if (unrestrictedShell) print(`-- warning: unrestricted shell: commands can write outside ${spec.cwd}`);
 
-    let result: RunResult;
-    let failedTools = 0;
-    let lastText: string | undefined;
-    let lastThinking: string | undefined;
-    try {
-      run = (deps.makeProvider ?? defaultProvider)(adapter).launch(spec);
-      for await (const ev of run.events) {
-        log('event', { event: ev });
-        if (ev.type === 'tool_result' && !ev.ok) failedTools += 1;
-        if (ev.type === 'assistant_text') lastText = ev.text;
-        if (ev.type === 'thinking') lastThinking = ev.text;
-        const { raw: _raw, ...shown } = ev;
-        show(`${ev.type.padEnd(14)} ${JSON.stringify(shown).slice(0, 160)}`);
-      }
-      result = await run.result;
-    } catch (e) {
-      // ponytail: a stream that died may never settle `result`; report it ourselves.
-      run?.stop();
-      result = { usage: ZERO_USAGE, exitCode: 1, error: e instanceof Error ? e.message : String(e) };
-    }
+    // `run` is set as it launches, so Ctrl+C can stop it.
+    const { result, failedTools, last } = await streamRun(() => (run = (deps.makeProvider ?? defaultProvider)(adapter).launch(spec)), log, show);
     // Withdraw any question still open before the result, so the log ends with it.
     await broker.close();
     broker = undefined;
 
     log('result', { result });
     // A run can finish cleanly without doing the task; these two lines make that visible.
-    if (failedTools) print(`-- ${failedTools} tool call${failedTools === 1 ? '' : 's'} failed`);
-    const last = lastText ?? lastThinking;
-    if (last) print(`-- last message: ${last.replace(/\s+/g, ' ').trim().slice(0, 300)}`);
+    summaryLines(failedTools, last).forEach((l) => print(l));
     print(`-- result ${JSON.stringify(result)}`);
     if (result.error === 'stopped') return 130;
     return !result.error && result.exitCode === 0 ? 0 : 1;
