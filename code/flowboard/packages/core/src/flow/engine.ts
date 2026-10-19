@@ -44,6 +44,8 @@ export function advance(flow: FlowDef, state: FlowState, event: FlowEvent): { st
   const commands: FlowCommand[] = [];
   const def = (id: string) => flow.steps.find((d) => d.id === id)!;
   const routes = (id: string) => flow.edges.filter((e) => e.from === id);
+  // Own properties only: a step named `constructor` must not find Object.prototype's.
+  const instance = (id: string): StepInstance | undefined => (Object.hasOwn(s.steps, id) ? s.steps[id] : undefined);
 
   const startRun = (step: string, attempt: number, inputs: string[], note?: string) => {
     const id = s.runs.length + 1;
@@ -55,7 +57,7 @@ export function advance(flow: FlowDef, state: FlowState, event: FlowEvent): { st
   const openGate = (step: string, kind: GateKind, reason: string, evidence: string[], from?: string) => {
     const onFail = routes(step).some((e) => e.condition === 'on_fail');
     const gate: Gate = { kind, reason, evidence: [...evidence], decisions: GATE_DECISIONS[kind].filter((d) => d !== 'reject' || onFail), ...(from !== undefined && { from }) };
-    s.steps[step] ??= { state: 'pending', attempts: 0, inputs: [] }; // a repair step reached only by rework may have none yet
+    if (!instance(step)) s.steps[step] = { state: 'pending', attempts: 0, inputs: [] }; // a repair step reached only by rework may have none yet
     s.steps[step].state = 'awaiting_approval';
     s.steps[step].gate = gate;
     commands.push({ type: 'gate', step, gate });
@@ -81,7 +83,7 @@ export function advance(flow: FlowDef, state: FlowState, event: FlowEvent): { st
 
   /** A rework route from `from` to `t` fired: rerun `t`, or hand the loop to a person. */
   const rework = (t: string, from: string, note?: string) => {
-    const used = s.steps[t]?.attempts ?? 0;
+    const used = instance(t)?.attempts ?? 0;
     const max = def(t).maxAttempts;
     const runs = s.runs.filter((r) => r.step === from);
     const last = runs.at(-1);
@@ -106,7 +108,7 @@ export function advance(flow: FlowDef, state: FlowState, event: FlowEvent): { st
     for (const e of out) {
       if (e.condition !== 'always' && e.condition !== `on_${outcome}`) continue;
       if (isRework(flow, e)) rework(e.to, step, note);
-      else s.steps[e.to] ??= { state: 'pending', attempts: 0, inputs: [] };
+      else if (!instance(e.to)) s.steps[e.to] = { state: 'pending', attempts: 0, inputs: [] };
     }
   };
 
@@ -156,7 +158,7 @@ export function advance(flow: FlowDef, state: FlowState, event: FlowEvent): { st
       startRun(entry, 1, def(entry).requires);
     }
   } else if (event.type === 'decide') {
-    const inst = s.steps[event.step];
+    const inst = instance(event.step);
     if (inst?.state !== 'awaiting_approval' || !inst.gate?.decisions.includes(event.decision)) return { state, commands: [] };
     if (event.decision === 'approve') complete(event.step, 'pass');
     else if (event.decision === 'reject') complete(event.step, 'fail', event.note);
@@ -172,11 +174,11 @@ export function advance(flow: FlowDef, state: FlowState, event: FlowEvent): { st
     // Runs still marked live never ended: the host stopped or crashed.
     for (const r of s.runs.filter((x) => x.live)) Object.assign(r, { live: false, wasted: true, error: 'interrupted' });
     for (const d of flow.steps) {
-      const inst = s.steps[d.id];
+      const inst = instance(d.id);
       if (inst?.state === 'running') startRun(d.id, inst.attempts, inst.inputs, inst.note);
     }
     for (const d of flow.steps) {
-      const inst = s.steps[d.id];
+      const inst = instance(d.id);
       if (inst?.state === 'awaiting_approval' && inst.gate) commands.push({ type: 'gate', step: d.id, gate: inst.gate });
     }
   }
@@ -185,7 +187,7 @@ export function advance(flow: FlowDef, state: FlowState, event: FlowEvent): { st
   if (s.status === 'running' && s.runs.length) {
     const live = Object.keys(s.steps).filter((id) => LIVE.includes(s.steps[id].state));
     for (const d of flow.steps) {
-      if (s.steps[d.id]?.state !== 'pending') continue;
+      if (instance(d.id)?.state !== 'pending') continue;
       const others = live.filter((x) => x !== d.id);
       const blocking = new Set([...others, ...others.flatMap((x) => [...downstream(flow, x)])]);
       const upstream = flow.edges.filter((e) => e.to === d.id && !isRework(flow, e)).map((e) => e.from);

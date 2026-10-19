@@ -213,3 +213,7 @@ test('a stopped run reporting late only updates its cost', () => {
   const r = advance(f, state, { type: 'run_ended', run: 3, costUsd: 0.7, outcome: 'pass' });
   assert.deepEqual([r.commands, r.state.runs[2].costUsd, r.state.runs[2].outcome], [[], 0.7, undefined]);
 });
+
+test('a step named like an object property (constructor) runs like any other', () => {
+  assert.deepEqual(play(flow(['a', 'constructor'], [e('a', 'constructor')]), [{ end: 'a' }, { end: 'constructor' }]).log, ['run:a:1', 'run:constructor:1', 'end:done']);
+});
