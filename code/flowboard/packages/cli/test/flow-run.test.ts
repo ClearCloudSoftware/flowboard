@@ -509,3 +509,30 @@ test('a run that ends as Ctrl+C lands is fed before stopping: what it would star
     assert.equal(asked, 0, `${b}: a gate was asked after stopping`);
   }
 });
+
+test('a gate prompt the engine moves past is taken down', { timeout: 10_000 }, async () => {
+  const s = setup(`${HEAD}steps:
+  build: { prompt: prompts/build.md, produces: [notes] }
+  check: { shell: 'sleep 0.3; test -f done.flag || { touch done.flag; exit 1; }', produces: [check_output] }
+  lint: { prompt: prompts/lint.md }
+  ship: { prompt: prompts/ship.md }
+edges:
+  - { from: build, to: check }
+  - { from: build, to: lint }
+  - { from: check, to: build, condition: on_fail }
+  - { from: lint, to: ship, condition: on_pass }
+`, { lint: ['none', 'pass'] });
+  const answers: string[] = [];
+  // lint's first run reports no outcome and waits at a gate; check's rework then replaces lint before anyone answers.
+  s.deps.answer = (_questions, signal) => {
+    answers.push('open');
+    return new Promise((_resolve, reject) => {
+      signal.addEventListener('abort', () => {
+        answers[answers.length - 1] = 'taken down';
+        reject(signal.reason);
+      });
+    });
+  };
+  assert.equal(await runFlow(['flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.deepEqual(answers, ['taken down']);
+});
