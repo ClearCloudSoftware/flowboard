@@ -5,7 +5,7 @@ module: Agent Providers
 
 # Claude Code Adapter
 
-The v1 adapter, and the only real one. PRD §1: each step is *"a headless Claude Code session with its own model and effort setting"*. PRD §17: *"Every model call goes through the `claude` CLI."* The drawio *Logical components* page: *"Claude Code CLI / headless, stream-json"*. PRD §3 lists it under `adapters/agent/` as `claude-cli`; the architecture README's layout calls the folder `adapters/agent/claude/`.
+The v1 adapter, and the first real one ([[OpenCode Adapter]] is the second). PRD §1: each step is *"a headless Claude Code session with its own model and effort setting"*. PRD §17: *"Every model call goes through the `claude` CLI."* The drawio *Logical components* page: *"Claude Code CLI / headless, stream-json"*. PRD §3 lists it under `adapters/agent/` as `claude-cli`; the architecture README's layout calls the folder `adapters/agent/claude/`.
 
 ## The command
 
@@ -76,6 +76,30 @@ The drawio *Harness architecture* draws the sandboxed form: *"claude -p … --ou
 PRD §0 makes three things probes, not assumptions: the `stream-json` shape, `claude --version` on PATH, and that the CLI works through a credential-injecting proxy. *"If any part of this spec turns out to be impossible or wrong given the actual CLI behaviour, stop and say so rather than silently substituting something else."*
 
 Backlog Story 0.1 adds: verify the flags exist (*"`--effort`, `--session-id`, `--strict-mcp-config`, `--plugin-dir`, `--allowedTools`, `--tools`, `--max-turns`, `--max-budget-usd`, `--append-system-prompt`, `--resume`, `--fork-session`"*), confirm `/<plugin>:<slug>` in `-p` mode (**DEC**), and *"Decide how to isolate headless runs from `~/.claude` hooks/settings (e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`)"* (**DEC**). Decision D5's default: *"Empty `--settings` file per run"*. [[Agent Providers Open Questions]] #24; also [[Execution Open Questions]] #52 and [[Sandboxing Open Questions]] #24.
+
+## Built on the Agent SDK
+
+> [!check] Implemented 2026-10-18
+> The adapter is built on `@anthropic-ai/claude-agent-sdk` 0.3.302, not on hand-built `claude -p` flags. The SDK still runs the installed `claude` CLI (2.1.302) as a child process, so PRD §17 holds. Code: `code/flowboard/packages/adapters/src/agent/claude/` (`options.ts`, `normalize.ts`, `provider.ts`). Why: [[Provider SDK Fit Analysis]]. The flag tables above remain the PRD's CLI form; this table supersedes them.
+
+| `RunSpec` field | SDK option |
+|---|---|
+| `prompt` | the canonical render, with `invocation` moved first: the CLI only treats a leading `/` as a slash command |
+| `model`, `effort`, `cwd` | same names; `resolveModel` is the identity (D20) |
+| `toolPolicy.allow` | `allowedTools`, plus `mcp__<name>__*` for each `tools` entry |
+| `toolPolicy.deny` | `disallowedTools` |
+| `tools` | `mcpServers` (stdio) with `strictMcpConfig: true` |
+| `capabilities` | `plugin_dir` → `plugins: [{ type: 'local', path }]`; `system_prompt` → appended to the system prompt; `native` ignored |
+| `systemPrompt` | `systemPrompt: { type: 'preset', preset: 'claude_code', append }` |
+| `permissionMode` | `permissionMode`, default `dontAsk`; `bypassPermissions` also sets `allowDangerouslySkipPermissions` |
+| `guards` | an in-process `PreToolUse` hook that denies with a reason ([[In-Agent Hooks]]) |
+| `resume` | `resume` + `forkSession` |
+| `limits` | `maxTurns`, `maxBudgetUsd` |
+| `exec` | `spawnClaudeCodeProcess` spawns through `exec.spawn` (host tier by default) |
+
+Fixed on every run: `pathToClaudeCodeExecutable` (the installed `claude`), `settingSources: []`, `includePartialMessages: true`, and an env without `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` plus `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`. Runs use the owner's own CLI login, never an API key, and never relocate `CLAUDE_CONFIG_DIR`. This settles [[Agent Providers Open Questions]] #24 for the host tier.
+
+Verified live (`pnpm test:live`) against the installed CLI: `apiKeySource` is `none` (the subscription login), `/<plugin>:<slug>` runs headless from a mounted plugin dir, and the guard hook denies a write outside the worktree even under `bypassPermissions`. A plugin dir missing from `system/init` fails the run, since the CLI skips it silently.
 
 ## Milestone
 

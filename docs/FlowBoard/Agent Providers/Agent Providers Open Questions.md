@@ -12,6 +12,8 @@ Every place the sources disagree or leave a gap. Items marked **proposal** are i
 ### 1. Is `tool_hooks` a capability?
 `01-ports.md` and PRD §7 (*"Hooks are a provider capability (`tool_hooks`)"*) say yes; `agent-provider.ts` omits it. Listed as open drift in [[Capability Library Decisions]]; also [[Execution Open Questions]] #42 and [[Sandboxing Open Questions]] #25. → [[Provider Capabilities]]
 
+**Decided 2026-10-18** (Claude adapter implementation, [[Provider SDK Fit Analysis]]): yes. `Capability` gains `tool_hooks`; it means the provider enforces `RunSpec.guards` inside the agent.
+
 ### 2. `CapabilityPack`: data or behaviour?
 `agent-provider.ts`: a `mount` data union. `05` §13: `mount(spec: RunSpec): void`. **Resolved** by [[Capability Library Decisions]] D2: data. → [[Run Spec]]
 
@@ -21,8 +23,12 @@ Every place the sources disagree or leave a gap. Items marked **proposal** are i
 ### 4. Launch inputs `RunSpec` has no field for
 PRD §7's command needs `--permission-mode`, `--settings` (hooks), `--append-system-prompt` (agent prompt) and `--session-id`. The tier is only implicit in `exec`. The runner, not the adapter, writes the Claude-format `mcp.json` and hook `settings.json` (`03` §6; PRD §9; drawio *Runner*). **Proposal:** add `permissionMode` and `systemPrompt` to `RunSpec`, and treat hook settings as adapter-generated from a provider-neutral rule set. → [[Run Spec]], [[Claude Code Adapter]]
 
+**Decided 2026-10-18** (Claude adapter implementation, [[Provider SDK Fit Analysis]]): `RunSpec` gains `permissionMode`, `systemPrompt` and `guards: GuardRules` (provider-neutral rules; `core/guard.ts` checks them). The SDK takes all three as options, so the runner writes no Claude-format `settings.json`.
+
 ### 5. Who creates the session id?
 `agent-provider.ts`: `sessionId` *"Resolves once the provider emits its session id (from system/init)"*. PRD §7: the runner generates a uuid and passes `--session-id`. → [[Session Resume And Context Replay]]
+
+**Decided 2026-10-18** (Claude adapter implementation, [[Provider SDK Fit Analysis]]): the provider reports it. The session id is always read from `system/init`; the adapter passes none, which also fits providers that cannot take a caller-chosen id (OpenCode).
 
 ## Events
 
@@ -32,11 +38,15 @@ PRD §7's command needs `--permission-mode`, `--settings` (hooks), `--append-sys
 ### 7. Native events with no normalized kind
 The stream sample has `system/hook_started`, `hook_response`, `status` and `rate_limit_event` lines. No source says whether they map to `system`, are dropped, or are kept only as raw. → [[Stream Parsing And Normalization]]
 
+**Decided 2026-10-18** (Claude adapter implementation, [[Provider SDK Fit Analysis]]): dropped. They produce no normalized event; partial text deltas are folded into the final `assistant_text`.
+
 ### 8. Where `summary` lives
 `events.ts` puts `summary` on `tool_use` only; PRD §5/§7 give every `run_events` row a `summary` *"for the viewer"*. Adapter or runner? Also [[Monitor Open Questions]] #39. → [[Normalized Event Envelope]]
 
 ### 9. Live usage mid-run
 `Usage` arrives only on `result`; PRD §7 wants a running number from per-message usage; `partial_stream` promises *"live token counts"*. No kind carries them. Same as [[Monitor Open Questions]] #38, [[Execution Open Questions]] #62 and [[Cost And Control Open Questions]] #2. **Proposal:** a `usage_delta` kind, or `Usage` on `assistant_text`. → [[Normalized Event Envelope]]
+
+**Decided 2026-10-18** (Claude adapter implementation, [[Provider SDK Fit Analysis]]): a `usage` kind carrying running totals for the run, emitted on `message_start` and `message_delta`. Every event also carries `raw`, the native message it came from.
 
 ### 10. Who sets `outcome`?
 `RunResult.outcome` is *"read from the produced JSON or set_outcome"* (runner-side facts), yet the adapter-emitted `result` event carries `outcome?`. Claude's native `result` has no outcome field. → [[Agent Run Handle And Result]]
@@ -76,6 +86,8 @@ Unresolved: (a) resume semantics, (b) cost, (c) MCP injection. `04` §9 already 
 
 ### 20. Which replay harness?
 A `NormalizedEvent` script (`replay-provider.ts`), a raw `stream-sample.jsonl` (`01-ports.md`; drawio *"Replays recorded stream-json"*), or a fake `claude` binary (backlog 0.2). The binary exercises the whole Claude adapter; the script skips parsing; the raw replay needs a parser inside the replay adapter that no source describes. → [[Replay Provider]]
+
+**Decided 2026-10-18** (Claude adapter implementation, [[Provider SDK Fit Analysis]]): the replay provider stays a `NormalizedEvent` script; the Claude normalizer is tested against the recorded `stream-sample.jsonl`, and the provider against a fake `query()` that spawns a real child.
 
 ### 21. Replay's fixed capability set
 `sessions`, `partial_stream`, `native_cost` only, so replayed park/resume and HITL take the fallback paths. **Proposal:** let `ReplayScript` declare capabilities. → [[Replay Provider]]
@@ -123,6 +135,8 @@ No source writes out the Claude adapter's `capabilities` set or a `RunSpec` → 
 
 ### 33. `is_error` on a zero exit
 Backlog 3.2: *"non‑zero or `is_error` → failed"*. `RunResult` has `exitCode` and `error` but no flag for a CLI-reported error on exit 0. **Proposal:** the adapter emits an `error` event and sets `error` on `RunResult`, and the runner treats a set `error` as failed. → [[Agent Run Handle And Result]]
+
+**Decided 2026-10-18** (Claude adapter implementation, [[Provider SDK Fit Analysis]]): the proposal. A set `RunResult.error` means failed, even when `exitCode` is 0.
 
 ## Placement and inference
 
