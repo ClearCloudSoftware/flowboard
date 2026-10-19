@@ -4,7 +4,7 @@ import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, w
 import { homedir, tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { DEFAULT_DENY_COMMANDS } from '@flowboard/core';
-import { CLOSING, loadConfig } from '../src/config.ts';
+import { CLOSING, configFromObject, loadConfig, readYaml } from '../src/config.ts';
 
 /** A temp base dir holding proj/, task.md, plugins/fbecho/ and the given task.yaml. */
 function project(yaml: string, prompt = 'Fix the bug.') {
@@ -336,4 +336,18 @@ test('an unreadable prompt file is an error line', { skip: asRoot }, () => {
   assert.ok(!r.ok);
   assert.equal(r.errors.length, 1);
   assert.match(r.errors[0], /^task\.yaml: prompt: cannot read: \S/);
+});
+
+test('configFromObject checks a parsed mapping the way loadConfig checks a file', () => {
+  const base = project(MINIMAL);
+  const fromFile = loadConfig('task.yaml', base);
+  const fromObject = configFromObject({ adapter: 'claude-code', model: 'sonnet', folder: 'proj', prompt: 'task.md' }, base);
+  assert.ok(fromFile.ok && fromObject.ok);
+  assert.deepEqual(fromObject.config.spec, fromFile.config.spec);
+  assert.deepEqual(configFromObject({ adapter: 'claude-code', folder: 'proj', prompt: 'task.md' }, base), { ok: false, errors: ['model: required'] });
+});
+
+test('readYaml reports file problems with the path as typed', () => {
+  const base = project(MINIMAL);
+  assert.deepEqual(readYaml('nope.yaml', base), { ok: false, errors: ['nope.yaml: file: not found'] });
 });
