@@ -53,7 +53,8 @@ const FlowSchema = z.strictObject({
     .default([]),
 });
 
-const inside = (dir: string, p: string) => {
+/** True when `p` is `dir` or below it. */
+export const inside = (dir: string, p: string) => {
   const rel = relative(dir, p);
   return !isAbsolute(rel) && rel.split(sep)[0] !== '..';
 };
