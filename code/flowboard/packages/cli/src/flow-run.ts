@@ -8,11 +8,12 @@ import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSyn
 import { join, relative } from 'node:path';
 import { parseArgs } from 'node:util';
 import { advance, newFlowState } from '@flowboard/core';
-import type { FlowCommand, FlowEvent, FlowState, RunCommand, RunEnd } from '@flowboard/core';
-import { noTerminal } from './ask/terminal.ts';
+import type { Answers, Decision, FlowCommand, FlowEvent, FlowState, Gate, Question, RunCommand, RunEnd } from '@flowboard/core';
+import type { Answerer } from './ask/broker.ts';
+import { noTerminal, terminalAnswerer } from './ask/terminal.ts';
 import { inside, loadFlow, toMermaid } from './flow-config.ts';
 import type { FlowConfig } from './flow-config.ts';
-import { execAi, execShell, shellEnv } from './flow-exec.ts';
+import { artifactPath, execAi, execShell, shellEnv } from './flow-exec.ts';
 import type { ExecContext, StepRun } from './flow-exec.ts';
 import { defaultProvider, stamp } from './run.ts';
 import type { RunDeps } from './run.ts';
@@ -23,6 +24,12 @@ const USAGE = [
 ];
 /** setTimeout's longest delay; a longer one fires at once. */
 const MAX_TIMER_MS = 2 ** 31 - 1;
+const DECISION_LABELS: Record<Decision, string> = {
+  approve: 'Approve (pass)',
+  reject: 'Reject (fail)',
+  retry: 'Retry this step',
+  fail: 'Fail the flow',
+};
 
 export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
   const print = deps.print ?? console.log;
@@ -186,6 +193,38 @@ function takeLock(path: string, runDir: string, print: (line: string) => void): 
   }
 }
 
+/**
+ * The one terminal that gates and agents share: prompts take turns, first come first served, and lines shown
+ * while one is open wait until it closes.
+ */
+function terminal(answer: Answerer, print: (line: string) => void) {
+  let turn: Promise<unknown> = Promise.resolve();
+  let open = false;
+  const held: string[] = [];
+  return {
+    show(line: string) {
+      if (open) held.push(line);
+      else print(line);
+    },
+    /** Asks `questions` once the terminal is free, printing `heading` first. */
+    ask(questions: Question[], signal: AbortSignal, heading?: string): Promise<Answers> {
+      const mine = turn.then(async () => {
+        signal.throwIfAborted();
+        open = true;
+        if (heading) print(heading);
+        try {
+          return await answer(questions, signal);
+        } finally {
+          open = false;
+          held.splice(0).forEach((l) => print(l));
+        }
+      });
+      turn = mine.catch(() => {});
+      return mine;
+    },
+  };
+}
+
 interface Drive {
   config: FlowConfig;
   runDir: string;
@@ -220,14 +259,46 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     wake();
   };
 
+  // The answerer prints its own lines ("question 1 of 2") while its prompt is open, so it gets the bare print.
+  const answer = deps.answer ?? (process.stdin.isTTY ? terminalAnswerer(undefined, print) : undefined);
+  const term = answer && terminal(answer, print);
+  const show = term ? (line: string) => term.show(line) : print;
   const ctx: ExecContext = {
     artifactsDir: d.artifactsDir,
     logDir: d.runDir,
-    show: print,
+    show,
     now,
     makeProvider: deps.makeProvider ?? defaultProvider,
     answer: noTerminal,
     onInterrupt: () => {},
+  };
+
+  /** Gate prompts open or waiting their turn, by step. */
+  const asks = new Map<string, AbortController>();
+  const askGate = (step: string, gate: Gate, ask: NonNullable<typeof term>['ask']) => {
+    asks.get(step)?.abort();
+    const abort = new AbortController();
+    asks.set(step, abort);
+    const seen = gate.evidence.map((type) => artifactPath(d.artifactsDir, type)).filter((path) => existsSync(path));
+    const questions: Question[] = [
+      {
+        id: 'decision',
+        kind: 'single_select',
+        prompt: `${step}: ${gate.reason}`,
+        ...(seen.length > 0 && { help: `See: ${seen.join(', ')}` }),
+        options: gate.decisions.map((value) => ({ value, label: DECISION_LABELS[value] })),
+      },
+      { id: 'note', kind: 'text', prompt: 'Note for the next attempt (optional)', required: false },
+    ];
+    ask(questions, abort.signal)
+      .then((a) => post({ type: 'decide', step, decision: a.decision as Decision, ...(typeof a.note === 'string' && a.note && { note: a.note }) }))
+      .catch((e) => {
+        if (!abort.signal.aborted) crash(e);
+      })
+      .finally(() => {
+        if (asks.get(step) === abort) asks.delete(step);
+        wake();
+      });
   };
 
   const save = () => {
@@ -241,10 +312,15 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     appendFileSync(join(d.runDir, 'flow.jsonl'), JSON.stringify({ at: now().toISOString(), event, commands: r.commands }) + '\n');
     save();
     for (const c of r.commands) act(c);
+    // A gate the engine has moved past (a rework replaced its step, the flow ended) needs no answer.
+    for (const [step, abort] of asks) if (state.steps[step]?.state !== 'awaiting_approval') abort.abort();
   };
   const act = (c: FlowCommand) => {
     if (c.type === 'run') queued.push(c);
-    else if (c.type === 'gate') print(`-- ${c.step} needs a decision`);
+    else if (c.type === 'gate') {
+      show(`-- ${c.step} needs a decision`);
+      if (term) askGate(c.step, c.gate, term.ask);
+    }
     else if (c.type === 'stop') {
       for (const id of c.runs) {
         live.get(id)?.run.stop();
@@ -257,10 +333,11 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   const launch = (cmd: RunCommand) => {
     const step = config.steps[cmd.step];
     const produces = config.flow.steps.find((s) => s.id === cmd.step)!.produces;
-    print(`-- ${cmd.step} attempt ${cmd.attempt} (${step.kind === 'shell' ? 'shell' : `${step.run.adapter} ${step.run.spec.model}`})`);
+    show(`-- ${cmd.step} attempt ${cmd.attempt} (${step.kind === 'shell' ? 'shell' : `${step.run.adapter} ${step.run.spec.model}`})`);
     mkdirSync(d.runDir, { recursive: true });
     mkdirSync(d.artifactsDir, { recursive: true });
-    const run = step.kind === 'shell' ? execShell(step.command, config.folder, cmd, produces, ctx) : execAi(step.run, cmd, produces, ctx);
+    const runCtx: ExecContext = { ...ctx, answer: term ? (qs, signal) => term.ask(qs, signal, `-- ${cmd.step} asks:`) : noTerminal };
+    const run = step.kind === 'shell' ? execShell(step.command, config.folder, cmd, produces, runCtx) : execAi(step.run, cmd, produces, runCtx);
     live.set(cmd.run, { cmd, run });
     const minutes = step.timeoutMinutes;
     let timedOut = false;
@@ -277,7 +354,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
         if (stopping) return; // stopAll feeds it
         live.delete(cmd.run);
         const e: RunEnd = timedOut ? { costUsd: end.costUsd, error: `timed out after ${minutes} minutes` } : end;
-        print(`-- ${cmd.step} attempt ${cmd.attempt}: ${e.error ? `failed: ${e.error}` : (e.outcome ?? 'no outcome')}, $${e.costUsd.toFixed(2)}`);
+        show(`-- ${cmd.step} attempt ${cmd.attempt}: ${e.error ? `failed: ${e.error}` : (e.outcome ?? 'no outcome')}, $${e.costUsd.toFixed(2)}`);
         post({ type: 'run_ended', run: cmd.run, ...e });
       })
       .catch(crash);
@@ -306,7 +383,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
         continue;
       }
       pump();
-      if (!live.size && !queued.length) break; // ended, or waiting on a person
+      if (!live.size && !queued.length && !asks.size) break; // ended, or waiting on a person who is not here
       await new Promise<void>((r) => (wake = r));
       wake = () => {};
     }

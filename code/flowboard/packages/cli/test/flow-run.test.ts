@@ -295,3 +295,82 @@ test('a host error stops every live run, saves the state and rethrows', async ()
   assert.equal(existsSync(join(s.base, 'proj', '.flowboard', 'lock')), false);
   assert.ok(s.out.includes(`-- continue with: pnpm run-flow --resume ${join('runs', STAMPED)}`), s.out.join('\n'));
 });
+
+// --- gates and the terminal
+
+/** An answerer that picks `decision` at every gate; `asked` records each batch. */
+function deciding(decision: string) {
+  const asked: Question[][] = [];
+  const answer = async (questions: Question[]) => {
+    asked.push(questions);
+    return { decision, note: null };
+  };
+  const gate = () => asked.flat().find((q) => q.id === 'decision');
+  return { asked, answer, gate };
+}
+
+const ONE_PLAN = `${HEAD}steps:\n  plan: { prompt: prompts/plan.md, produces: [plan] }\n`;
+const ESCALATE = `${HEAD}steps:
+  build: { prompt: prompts/build.md, produces: [notes], max_attempts: 2 }
+  check: { shell: 'echo FAIL; exit 1', produces: [check_output] }
+edges:
+  - { from: build, to: check }
+  - { from: check, to: build, condition: on_fail }
+`;
+
+test('a gate asks in the terminal; approving takes the pass route', async () => {
+  const { out, deps, script } = setup(GATE, { review: ['none'] });
+  const d = deciding('approve');
+  deps.answer = d.answer;
+  assert.equal(await runFlow(['flow.yaml'], deps), 0, out.join('\n'));
+  assert.equal(d.gate()?.prompt, 'review: no outcome reported');
+  assert.deepEqual(d.gate()?.options?.map((o) => o.value), ['approve', 'retry', 'fail']); // review has no on_fail edge
+  assert.deepEqual(d.asked[0].map((q) => q.id), ['decision', 'note']);
+  assert.ok(out.includes('-- review needs a decision'));
+  assert.ok(script.timeline.includes('start:ship'));
+});
+
+test('a spent loop escalates with the failing output as evidence; failing the flow exits 1', async () => {
+  const { base, out, deps } = setup(ESCALATE);
+  const d = deciding('fail');
+  deps.answer = d.answer;
+  assert.equal(await runFlow(['flow.yaml'], deps), 1);
+  assert.equal(d.gate()?.prompt, 'build: build has used 2 of 2 attempts');
+  assert.equal(d.gate()?.help, `See: ${join(base, 'proj', '.flowboard', STAMPED, 'check_output.md')}`);
+  assert.ok(out.at(-1)?.startsWith('-- flow failed: '), out.at(-1));
+});
+
+test('parallel agents ask one at a time, each batch headed with its step', async () => {
+  const { out, deps } = setup(SPLIT, { a: ['ask'], b: ['ask'] });
+  let open = 0;
+  let most = 0;
+  deps.answer = async () => {
+    most = Math.max(most, ++open);
+    await delay(30);
+    open -= 1;
+    return { colour: 'teal' };
+  };
+  assert.equal(await runFlow(['flow.yaml'], deps), 0, out.join('\n'));
+  assert.equal(most, 1);
+  assert.ok(out.includes('-- a asks:') && out.includes('-- b asks:'), out.join('\n'));
+});
+
+test('an agent that did not write its output waits at a gate; retry runs the next attempt', async () => {
+  const { out, deps, script } = setup(ONE_PLAN, { plan: ['no-output', 'pass'] });
+  const d = deciding('retry');
+  deps.answer = d.answer;
+  assert.equal(await runFlow(['flow.yaml'], deps), 0, out.join('\n'));
+  assert.equal(d.gate()?.prompt, 'plan: did not write: plan');
+  assert.ok(out.includes('-- plan attempt 2 (claude-code sonnet)'), out.join('\n'));
+  assert.equal(script.specs.length, 2);
+});
+
+test('an infra failure waits at a gate offering retry or fail; retry runs the same attempt', async () => {
+  const { out, deps } = setup(ONE_PLAN, { plan: ['error', 'pass'] });
+  const d = deciding('retry');
+  deps.answer = d.answer;
+  assert.equal(await runFlow(['flow.yaml'], deps), 0, out.join('\n'));
+  assert.equal(d.gate()?.prompt, 'plan: run failed: boom');
+  assert.deepEqual(d.gate()?.options?.map((o) => o.value), ['retry', 'fail']);
+  assert.equal(out.filter((l) => l === '-- plan attempt 1 (claude-code sonnet)').length, 2);
+});
