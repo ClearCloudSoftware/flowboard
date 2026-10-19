@@ -352,7 +352,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     if (c.type === 'run') queued.push(c);
     else if (c.type === 'gate') {
       show(`-- ${c.step} needs a decision`);
-      if (term) askGate(c.step, c.gate, term.ask);
+      if (term && !stopping) askGate(c.step, c.gate, term.ask); // once stopping, --resume asks it again
     }
     else if (c.type === 'stop') {
       for (const id of c.runs) {
@@ -399,12 +399,13 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   /** Stops launching and stops every live run; each one's end is fed as interrupted, so --resume reruns it. */
   const stopAll = async () => {
     stopping = true;
+    // Runs that ended just before go first, so what they would start is stopped with the rest.
+    while (inbox.length) feed(inbox.shift()!);
     const runs = [...live.values()];
     const unlaunched = queued.splice(0);
     live.clear();
     runs.forEach((x) => x.run.stop());
     const ends = await Promise.all(runs.map((x) => x.run.ended));
-    while (inbox.length) feed(inbox.shift()!); // runs that ended just before
     runs.forEach((x, i) => feed({ type: 'run_ended', run: x.cmd.run, ...ends[i], interrupted: true }));
     unlaunched.forEach((cmd) => feed({ type: 'run_ended', run: cmd.run, costUsd: 0, interrupted: true }));
   };

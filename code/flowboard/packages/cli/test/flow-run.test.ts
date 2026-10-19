@@ -479,3 +479,33 @@ test('a second Ctrl+C more than 300 ms after the first exits at once', { timeout
   assert.equal(await runFlow(['flow.yaml'], s.deps), 130);
   assert.deepEqual(s.exits, [130]);
 });
+
+const FORK = (b: string) => `${HEAD}steps:
+  plan: { prompt: prompts/plan.md }
+  a: { prompt: prompts/a.md }
+  ${b}
+  c: { prompt: prompts/c.md }
+edges:
+  - { from: plan, to: a }
+  - { from: plan, to: b }
+  - { from: b, to: c }
+`;
+
+test('a run that ends as Ctrl+C lands is fed before stopping: what it would start is stopped too', { timeout: 10_000 }, async () => {
+  for (const b of ['b: { prompt: prompts/b.md }', 'b: { prompt: prompts/b.md, gate: approval }']) {
+    const s = setup(FORK(b), { a: ['hang'] });
+    let asked = 0;
+    s.deps.answer = async () => {
+      asked += 1;
+      return { decision: 'approve', note: null };
+    };
+    s.deps.print = (l) => {
+      s.out.push(l);
+      if (l.startsWith('-- b attempt 1:')) s.signals.emit('SIGINT'); // the end is about to be posted
+    };
+    assert.equal(await runFlow(['flow.yaml'], s.deps), 130, b);
+    const st = s.state();
+    assert.deepEqual(st.runs.filter((r) => r.live), [], `${b}: a run left live`);
+    assert.equal(asked, 0, `${b}: a gate was asked after stopping`);
+  }
+});
