@@ -61,6 +61,17 @@ test('a check that deletes the artifacts folder, as git clean -fdx does, still g
   assert.equal(artifact('check_output'), 'cleaned\n');
 });
 
+test('a check ends when its shell exits, and a background command it left is stopped', async () => {
+  const { run, artifact, folder } = check('sleep 5 & echo $! > bg.pid; echo started');
+  const at = Date.now();
+  assert.deepEqual(await run.ended, { costUsd: 0, outcome: 'pass' });
+  assert.ok(Date.now() - at < 2000, `took ${Date.now() - at} ms`);
+  assert.equal(artifact('check_output'), 'started\n');
+  const pid = Number(readFileSync(join(folder, 'bg.pid'), 'utf8'));
+  await new Promise((r) => setTimeout(r, 100));
+  assert.throws(() => process.kill(pid, 0), 'the background sleep is still running');
+});
+
 test('a shell step finds the artifacts in FLOWBOARD_ARTIFACTS', async () => {
   const { run, artifact, ctx } = check('echo "$FLOWBOARD_ARTIFACTS"');
   await run.ended;

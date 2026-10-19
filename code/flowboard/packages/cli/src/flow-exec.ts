@@ -16,6 +16,8 @@ import type { Log } from './run.ts';
 /** How much of a shell step's output its artifact keeps: the end, where failures are. */
 export const OUTPUT_TAIL = 20_000;
 const KILL_AFTER_MS = 2000;
+/** How long a check's output may still arrive after its shell exits. */
+const DRAIN_MS = 200;
 
 /** `ended` never rejects. */
 export interface StepRun { ended: Promise<RunEnd>; stop(): void }
@@ -99,7 +101,9 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
     settle(end);
   };
   child.on('error', (e) => finish({ costUsd: 0, error: e.message }, null));
-  child.on('close', (code) => {
+  /** The shell has exited: save its output and report its verdict. */
+  const over = (code: number | null) => {
+    if (done) return;
     if (stopped) return finish({ costUsd: 0, error: 'stopped' }, code);
     if (produces[0]) {
       try {
@@ -112,6 +116,20 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
     const end: RunEnd = { costUsd: 0, outcome: code === 0 ? 'pass' : 'fail' };
     if (code !== 0 && tail.trim()) end.fingerprint = fingerprint(tail);
     finish(end, code);
+  };
+  // The check is over when its shell exits. Output written before that drains in a moment; a background
+  // command still holding the pipes after it is the check's leftover, and is stopped with the group.
+  let drain: NodeJS.Timeout | undefined;
+  child.on('exit', (code) => {
+    drain = setTimeout(() => {
+      signal('SIGTERM');
+      setTimeout(() => signal('SIGKILL'), KILL_AFTER_MS).unref();
+      over(code);
+    }, DRAIN_MS);
+  });
+  child.on('close', (code) => {
+    clearTimeout(drain);
+    over(code);
   });
 
   const signal = (sig: NodeJS.Signals) => {

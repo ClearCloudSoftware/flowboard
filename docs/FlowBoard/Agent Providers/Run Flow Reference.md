@@ -110,7 +110,7 @@ The closing line of an agent step's prompt is `run-agent`'s. When an `on_pass` o
 - `$FLOWBOARD_ARTIFACTS` holds the artifacts folder, so a check can read what earlier steps wrote.
 - Its environment has no variable whose name ends in `_KEY`, `_TOKEN`, `_SECRET` or `_PASSWORD`, in any case. The removed names are printed at start: `-- shell steps run without: …`.
 - Its input is empty, so a command that waits for input sees end-of-file.
-- It runs in its own process group, so stopping it also stops the commands it started.
+- It runs in its own process group, so stopping it also stops the commands it started. It ends when its shell exits: a background command it left running is stopped then, so `pnpm start & pnpm e2e` ends with the tests.
 
 ## Edges, loops and joins
 
