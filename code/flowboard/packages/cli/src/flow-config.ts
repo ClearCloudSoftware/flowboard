@@ -114,6 +114,8 @@ export function loadFlow(yamlPath: string, baseDir: string): FlowLoadResult {
     const launch = Object.fromEntries(Object.entries(st).filter(([k]) => LAUNCH_KEYS.has(k)));
     if (st.shell !== undefined) {
       for (const key of Object.keys(launch)) err(4, `${at}.${key}: not used by a shell step`);
+      // write_roots guard an agent's file tools; on a check it would only look like a sandbox.
+      if (st.write_roots) err(4, `${at}.write_roots: not used by a shell step`);
       if ((st.produces ?? []).length > 1) err(5, `${at}.produces: a shell step writes one artifact`);
       steps[name] = { kind: 'shell', command: st.shell, timeoutMinutes: st.timeout_minutes ?? SHELL_TIMEOUT_MINUTES };
       continue;

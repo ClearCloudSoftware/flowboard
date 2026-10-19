@@ -46,6 +46,7 @@ const ERRORS: [string, string, string, boolean][] = [
   ['an input nothing produces', change('requires: [notes, test_notes, check_output]', 'requires: [notes, test_notes, check_output, summary]'), 'steps.review: requires "summary", and no step before it produces that', true],
   ['an opencode model without a provider', change('model: openrouter/deepseek/deepseek-v4.1-flash', 'model: deepseek'), 'steps.tests.model: opencode model must be "providerID/modelID"', true],
   ['a launch key on a shell step', change('{ shell: pnpm test,', '{ shell: pnpm test, model: sonnet,'), 'steps.check.model: not used by a shell step', true],
+  ['write_roots on a shell step', change('{ shell: pnpm test,', '{ shell: pnpm test, write_roots: [src],'), 'steps.check.write_roots: not used by a shell step', true],
   ['an ai step with nothing to do', withEdge(change('  review: {', '  x: {}\n  review: {'), '{ from: review, to: x, condition: on_pass }'), 'steps.x: an ai step needs prompt, skill or system_prompt', false],
   ['a write root outside the folder', change('write_roots: [tests]', 'write_roots: [../out]'), 'steps.tests.write_roots.0: must be inside folder', true],
   ["yamlgraph's fan-out list", change('- { from: plan, to: implement }', '- { from: plan, to: [implement, tests] }'), 'edges.0.to: one step name; write one edge per pair of steps', true],

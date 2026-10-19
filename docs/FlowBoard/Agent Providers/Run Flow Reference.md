@@ -95,7 +95,7 @@ A step is an **agent step** unless it has `shell`.
 | `gate: approval` | none | | A person approves this step's work before the flow moves on, even when the agent reports an outcome |
 | `max_attempts` | `3` | a whole number, 1 or more | How many times rework may run this step, counting the first run (see *Loops*) |
 | `shell` | none | | A command, which makes this a shell step |
-| `write_roots` | `folder` | each inside `folder` | The only folders this agent step may edit files in. Its artifacts folder is always allowed |
+| `write_roots` | `folder` | each inside `folder`; agent steps only | The only folders this agent step may edit files in. Its artifacts folder is always allowed |
 | `timeout_minutes` | shell: `30`; agent: none | above 0 | A run that lasts longer is stopped, and waits at a *run failed* gate. Agent steps are bounded by their `limits` instead |
 
 The closing line of an agent step's prompt is `run-agent`'s. When an `on_pass` or `on_fail` edge leaves the step, it gains: *"Before you stop, report your verdict with the set_outcome tool: "pass" if the work meets the task, "fail" if it does not, with a one-line reason."*
@@ -105,7 +105,7 @@ The closing line of an agent step's prompt is `run-agent`'s. When an `on_pass` o
 ### Shell steps
 
 - `sh -c <command>` runs in `folder`. Exit 0 is `pass`, anything else is `fail`.
-- It ignores `defaults`, and a `run-agent` key on the step itself is an error: `steps.check.model: not used by a shell step`.
+- It ignores `defaults`, and a `run-agent` key or `write_roots` on the step itself is an error: `steps.check.model: not used by a shell step`.
 - It writes at most one artifact (`produces: [check_output]`): the last 20,000 characters of its output, stdout and stderr in order of arrival.
 - `$FLOWBOARD_ARTIFACTS` holds the artifacts folder, so a check can read what earlier steps wrote.
 - Its environment has no variable whose name ends in `_KEY`, `_TOKEN`, `_SECRET` or `_PASSWORD`, in any case. The removed names are printed at start: `-- shell steps run without: …`.
