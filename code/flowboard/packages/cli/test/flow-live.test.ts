@@ -17,9 +17,10 @@ const OPENCODE_MODEL = process.env.FLOWBOARD_OPENCODE_MODEL ?? 'openrouter/deeps
 test('a flow writes with Claude Code, checks in the shell and judges with OpenCode', live, async () => {
   const base = realpathSync(mkdtempSync(join(tmpdir(), 'fb-flow-live-'))); // macOS's temp folder is a link
   mkdirSync(join(base, 'proj'));
-  writeFileSync(join(base, 'task.md'), 'Write the single word hello, in lowercase, into your output file. Nothing else.');
-  writeFileSync(join(base, 'write.md'), 'Write the greeting now.');
-  writeFileSync(join(base, 'judge.md'), 'Read the greeting file. Report pass if it contains the word hello, otherwise fail.');
+  // The task is every step's preamble, so it states the goal; each step's own prompt says what that step does.
+  writeFileSync(join(base, 'task.md'), 'Together, the steps of this flow produce a greeting file holding the single word hello, in lowercase.');
+  writeFileSync(join(base, 'write.md'), 'Write the single word hello, in lowercase, into your output file. Nothing else.');
+  writeFileSync(join(base, 'judge.md'), 'Read the greeting file, and write nothing. Report pass if it contains the word hello, otherwise fail.');
   writeFileSync(
     join(base, 'flow.yaml'),
     `folder: proj
