@@ -6,9 +6,10 @@ date: 2026-10-19
 
 # Run Flow Deferred Issues
 
-What `pnpm run-flow` leaves for later, as of 2026-10-19:
+What `pnpm run-flow` leaves for later, as of 2026-10-20:
 - findings from the final review that were not fixed;
 - limits accepted while building it;
+- what running the testing guide's scenarios turned up;
 - one fact the plan got wrong.
 
 None of them blocks merging. The command is described in [[Run Flow Reference]], and how to try it is in [[Testing The Run Flow CLI]]. The scope the plan left out (the worker, dynamic fan-out, routing on labels and the rest) is listed at the end of the reference, not here.
@@ -59,6 +60,7 @@ Code: `code/flowboard/packages/core/src/flow/` and `code/flowboard/packages/cli/
 | `flow.jsonl` can miss the transition during which `run-flow` crashed | `state.json` records that transition, but the log of transitions lacks its line | `cli/src/flow-run.ts` (`feed`) |
 | A gate prompt's callbacks are not routed to the crash path if printing itself fails | If the terminal goes away mid-prompt (EPIPE), Node reports an unhandled rejection instead of stopping, saving and printing the `--resume` hint | `cli/src/flow-run.ts` (`askGate`): end the chain with `.catch(crash)` |
 | No test pins `--resume` refusing a missing `flow.json` | The refusal works, but a change could break it unnoticed | `cli/test/flow-run.test.ts`, next to the other resume refusals |
+| Costs print to the cent | A haiku run costs about $0.002 and prints as `$0.00`. In the review-loop scenario, two wasted runs worth $0.005 printed as `$0.00 wasted`. `state.json` has the exact amounts | `cli/src/flow-run.ts` (`toFixed(2)` in the run-end line and the summary): print amounts under a cent with more digits |
 | Shell and agent runs shape their log's `result` line differently | An agent run logs `{"kind":"result","result":{…}}`, as `run-agent` does; a shell run puts `exitCode`, `outcome` and `fingerprint` beside `kind`. A script reading the logs needs both shapes | `cli/src/flow-exec.ts` (`execShell`'s `finish`) |
 | The plan still says the adapters expose no process ids | A reader of the plan, or of its design review, inherits the wrong fact | The plan's *Left out* list and its *Two hosts in one folder* decision; landmine #1 and the *Deferred* table in `docs/superpowers/plans/2026-10-19-run-flow-orchestration-review.md` |
 

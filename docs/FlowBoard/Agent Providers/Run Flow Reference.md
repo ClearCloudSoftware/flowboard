@@ -136,6 +136,8 @@ An edge is `{ from, to, condition }`. `condition` is `always` (the default), `on
 - **When it is spent**, the target waits at an escalation gate (`impl has used 3 of 3 attempts`), and nothing runs it.
 - **Stuck checks.** A shell step that fails with the same output as its previous failure escalates at once (`check failed the same way twice`), whatever is left of the budget. "The same" compares the last 20 non-empty lines, with absolute paths cut to their file name, hex ids of 7 or more characters and digits removed, so timings and paths don't count. A failing check that prints nothing is never stuck.
 
+A worked example, a reviewer agent that sends the work back to its implementer, is in [[Run Flow Review Loop]].
+
 ## How a step's outcome is decided
 
 - **Agent steps.** The verdict the agent reported with `set_outcome`; else the provider's own result; else none. A missing outcome is never a pass.
@@ -249,6 +251,7 @@ Left for later: the worker and queue, dynamic fan-out and worktrees, routing on 
 ## Related
 
 - [[Testing The Run Flow CLI]]
+- [[Run Flow Review Loop]]
 - [[Run Flow Deferred Issues]]
 - [[Run Config Reference]]
 - [[Multi-Agent Orchestration Analysis]]

@@ -197,7 +197,7 @@ edges:
 
 ### Agent scenarios (cost a little)
 
-These run Claude Code with haiku, and OpenCode with DeepSeek V4.1 Flash. Each flow caps its agent steps at a few turns and a small budget, so a scenario costs a cent or less.
+These run Claude Code with haiku, and OpenCode with DeepSeek V4.1 Flash. Each flow caps its agent steps at a few turns and a small budget, so a scenario costs about a cent or less.
 
 | # | What it checks | Run | Expect |
 |---|---|---|---|
@@ -206,8 +206,9 @@ These run Claude Code with haiku, and OpenCode with DeepSeek V4.1 Flash. Each fl
 | 14 | Reject, with a note | `fbflow review.yaml`; at the plan gate, choose *Reject (fail)* and type a note | plan runs again as attempt 2, and that run's prompt ends with *A person's note for this attempt: <your note>* (see *Reading a run*). Approve the second time; build prints the plan; exit 0 |
 | 15 | An output that was not written | `fbflow missing.yaml` | The prompt tells the agent not to write. `-- plan needs a decision`, then the prompt `plan: did not write: plan`. Retry runs attempt 2; Fail the flow ends it with exit 1 |
 | 16 | Two agents asking at once | `fbflow ask.yaml` | a and b both ask for a colour. The questions come one at a time, each headed `-- a asks:` or `-- b asks:`, and the other agent's lines wait until you answer. Exit 0, with each answer in its step's artifact |
+| 17 | A reviewer sends the work back | `fbflow loop.yaml` | implement writes `hello`. review reports `fail`, so implement runs again as attempt 2 and writes `hello world`; review runs again, as attempt 1, and passes. `-- flow done: 4 runs, $0.01 spent, $0.00 wasted` (the two wasted runs cost $0.005; costs print to the cent); exit 0. Run 3's only input is `review_notes`, and `proj/.flowboard/<run folder name>/review_notes.md` ends as `No issues.` See [[Run Flow Review Loop]] |
 
-So far only scenario 13 has run for real, as the live test.
+So far scenarios 13 (as the live test) and 17 have run for real. In scenario 17's run, the second review printed `-- 2 tool calls failed`: the agent first looked for a file where it wasn't, then was refused a search outside the folder. Neither changed the outcome.
 
 The prompt files for these:
 
@@ -217,6 +218,8 @@ printf 'Read the greeting file, and write nothing. Report pass if it contains th
 printf 'Write a three-line plan for the greeting into your output file.\n' > plan.md
 printf 'Reply with the single word done. Do not create or change any file.\n' > lazy.md
 printf 'Ask the user for their favourite colour with the ask_user tool, then write the answer into your output file.\n' > ask.md
+printf 'Write the word hello into greeting.txt. If a review is among your inputs, change greeting.txt as it says. Then write one line saying what you did into your output file.\n' > implement.md
+printf 'Read greeting.txt, and do not change it. It must hold exactly the two words hello world. Write what is wrong with it into your output file, or No issues. if nothing is; always write the file. Report fail unless it holds exactly hello world.\n' > critique.md
 ```
 
 The task file is every step's opening text, so keep it a goal ("Make a tiny greeting."), and leave step instructions to each step's own prompt. In one live run the task said *write it into your output file*, and the judge, which has no output file, spent its turns looking for one.
@@ -286,6 +289,20 @@ edges:
   - { from: start, to: b }
 ```
 
+```yaml
+# loop.yaml: a reviewer agent sends the work back to the implementer once. implement.md asks
+# for hello and critique.md for hello world, so the first review fails and the second passes.
+folder: proj
+task: task.md
+defaults: { adapter: claude-code, model: haiku, limits: { max_turns: 6, budget_usd: 0.2 } }
+steps:
+  implement: { prompt: implement.md, produces: [notes] }
+  review: { prompt: critique.md, requires: [notes], produces: [review_notes], guards: { deny_paths: [greeting.txt] } }
+edges:
+  - { from: implement, to: review }
+  - { from: review, to: implement, condition: on_fail }
+```
+
 ## Reading a run
 
 Each run folder, `runs/<YYYY-MM-DDTHH-MM-SS>-<flow name>/`, holds:
@@ -303,6 +320,7 @@ jq '{status, runs: [.runs[] | {id, step, attempt, outcome, error, wasted, costUs
 jq -c '[.event.type, ([.commands[].type] | join(","))]' "$run/flow.jsonl"   # each event and what the engine did
 jq '.steps | map_values(.gate // empty)' "$run/state.json"                  # open gates and their reasons
 jq -r 'select(.kind=="start") | .config.prompt.preamble' "$run"/002-plan.jsonl   # what a run was told, note included
+jq -c 'select(.kind=="start") | .config.prompt.inputs' "$run"/003-implement.jsonl  # the files a run was told to read first
 jq -c 'select(.kind=="result") | .result' "$run"/*-judge.jsonl              # how an agent run ended
 jq -c 'select(.kind=="result")' "$run"/*-check.jsonl                        # a shell run's exit code and outcome
 cat "$run"/*.outcome.json                                                  # verdicts reported with set_outcome
@@ -314,6 +332,7 @@ A run that crashed or was stopped still has every line up to that point, and `--
 ## Related
 
 - [[Run Flow Reference]]
+- [[Run Flow Review Loop]]
 - [[Run Flow Deferred Issues]]
 - [[Testing The Run Agent CLI]]
 - [[Agent Providers Index]]
