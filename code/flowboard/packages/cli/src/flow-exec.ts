@@ -6,7 +6,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, closeSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fingerprint, ZERO_USAGE } from '@flowboard/core';
-import type { AgentProvider, AgentRun, Outcome, RunCommand, RunEnd, RunResult, RunSpec } from '@flowboard/core';
+import type { AgentProvider, AgentRun, ExecHost, Outcome, RunCommand, RunEnd, RunResult, RunSpec } from '@flowboard/core';
 import { startBroker } from './ask/broker.ts';
 import type { Answerer } from './ask/broker.ts';
 import type { Adapter, RunConfig } from './config.ts';
@@ -29,6 +29,8 @@ export interface ExecContext {
   logDir: string;
   show(line: string): void;
   now(): Date;
+  /** Where shell steps run; absent, on this machine. */
+  exec?: ExecHost;
   // ai steps:
   makeProvider(adapter: Adapter): AgentProvider;
   answer: Answerer;
@@ -101,18 +103,18 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
   }
   const { log, close } = logger;
   missingInputs(run, ctx);
-  // ponytail: spawned here, not through ExecHost, which cannot kill a process group; go through it once
-  // the sandbox tier can. `detached` makes the command and everything it starts one group, so stop() reaches all.
-  // stdin is /dev/null: a check never waits for input. A person's note reaches it as FLOWBOARD_NOTE.
-  const child = spawn('sh', ['-c', command], {
-    cwd: folder,
-    env: { ...shellEnv(process.env).env, FLOWBOARD_ARTIFACTS: ctx.artifactsDir, ...(run.note !== undefined && { FLOWBOARD_NOTE: run.note }) },
-    detached: true,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  // On the host, `detached` makes the command and everything it starts one group, so stop() reaches all.
+  // In a sandbox, the container is the group: it ends with the shell, and stopping `docker` stops it.
+  // stdin is /dev/null (or closed): a check never waits for input. A person's note reaches it as FLOWBOARD_NOTE.
+  const env = { ...shellEnv(process.env).env, FLOWBOARD_ARTIFACTS: ctx.artifactsDir, ...(run.note !== undefined && { FLOWBOARD_NOTE: run.note }) };
+  const child = ctx.exec
+    ? ctx.exec.spawn('sh', ['-c', command], { cwd: folder, env })
+    : spawn('sh', ['-c', command], { cwd: folder, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  child.stdin?.end();
   try {
     // The group to stop, should this host die with the check still running; `started` tells it from a later one.
-    if (child.pid) log('pid', { pid: child.pid, group: true, started: processStart(child.pid) });
+    // ponytail: a sandboxed check is not logged: its docker client is no group, and --rm ends the container when the client goes
+    if (child.pid && !ctx.exec) log('pid', { pid: child.pid, group: true, started: processStart(child.pid) });
   } catch {
     // best effort, like the result line
   }
@@ -175,6 +177,7 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
   /** False when the group has already gone. */
   const signal = (sig: NodeJS.Signals): boolean => {
     try {
+      if (ctx.exec) return child.kill(sig);
       if (child.pid) process.kill(-child.pid, sig);
       return child.pid !== undefined;
     } catch {

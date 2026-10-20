@@ -1,8 +1,10 @@
 import { test } from 'node:test';
+import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, realpathSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { dockerExecHost } from '@flowboard/adapters';
 import { fingerprint, ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, NormalizedEvent, RunCommand, RunResult, RunSpec } from '@flowboard/core';
 import { configFromObject } from '../src/config.ts';
@@ -331,4 +333,24 @@ test('a step run reports its end even when its log cannot be written', async () 
   calls = 0;
   const a = stepSetup({ now: failing, makeProvider: () => agent({ write: ['plan'] }).provider });
   assert.equal((await execAi(aiConfig(a.folder), PLAN, ['plan'], a.ctx).ended).error, 'disk full');
+});
+
+const noDocker = spawnSync('docker', ['info'], { stdio: 'ignore' }).status !== 0 && 'docker is not running';
+
+test('a sandboxed check runs in the container: it passes, fails and keeps its output as on the host', { skip: noDocker }, async () => {
+  const s = stepSetup({ exec: dockerExecHost({ tier: 'container', image: 'alpine:latest', egressAllow: [] }) });
+  const pass = await execShell('id -u', s.folder, RUN, ['check_output'], s.ctx).ended;
+  assert.deepEqual(pass, { costUsd: 0, outcome: 'pass' });
+  assert.equal(s.artifact('check_output').trim(), '1000');
+  const fail = await execShell('echo broken; exit 3', s.folder, { ...RUN, run: 8 }, ['check_output'], s.ctx).ended;
+  assert.equal(fail.outcome, 'fail');
+  assert.equal(s.artifact('check_output').trim(), 'broken');
+});
+
+test('stopping a sandboxed check ends it as stopped', { skip: noDocker }, async () => {
+  const s = stepSetup({ exec: dockerExecHost({ tier: 'container', image: 'alpine:latest', egressAllow: [] }) });
+  const run = execShell('sleep 300', s.folder, RUN, ['check_output'], s.ctx);
+  await new Promise((r) => setTimeout(r, 1500));
+  run.stop();
+  assert.deepEqual(await run.ended, { costUsd: 0, error: 'stopped' });
 });

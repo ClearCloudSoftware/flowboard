@@ -167,3 +167,12 @@ test('toMermaid draws steps, routes and rework loops', () => {
   const forward: FlowDef = { steps: [f.steps[1], f.steps[2]], edges: [{ from: 'check', to: 'fix', condition: 'on_fail' }] };
   assert.equal(toMermaid(forward).split('\n').at(-1), '  n0 -->|fail| n1');
 });
+
+test('sandbox: shell steps go in the image; a flow with ai steps is warned they stay on the host', () => {
+  const r = loadFlow('flow.yaml', flowProject(`sandbox: { image: alpine:latest }\n${DELIVERY}`));
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.deepEqual(r.config.sandbox, { image: 'alpine:latest' });
+  assert.ok(r.config.warnings.includes('sandbox: only shell steps run in the container; ai steps run on the host'));
+  const bad = loadFlow('flow.yaml', flowProject(`sandbox: { image: alpine, network: host }\n${DELIVERY}`));
+  assert.ok(!bad.ok && bad.errors.some((e) => e.endsWith('sandbox.network: unknown key')), JSON.stringify(bad));
+});

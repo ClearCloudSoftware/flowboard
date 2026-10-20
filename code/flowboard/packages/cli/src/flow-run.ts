@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { dockerExecHost } from '@flowboard/adapters';
 import { advance, entries, GIT, newFlowState } from '@flowboard/core';
 import type { Answers, Decision, FlowCommand, FlowEvent, FlowState, Gate, Question, RunCommand } from '@flowboard/core';
 import type { Answerer } from './ask/broker.ts';
@@ -550,6 +551,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     answer: noTerminal,
     onInterrupt: () => interrupt(), // Ctrl+C at an agent's question
     temps,
+    ...(config.sandbox && { exec: dockerExecHost({ tier: 'container', image: config.sandbox.image, egressAllow: [], mounts: [{ source: d.artifactsDir, target: d.artifactsDir }] }) }),
   };
 
   /** Gate prompts open or waiting their turn, by step. */
