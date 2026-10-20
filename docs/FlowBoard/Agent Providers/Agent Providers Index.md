@@ -53,6 +53,7 @@ There is no mockup for this component. It is documented as architecture referenc
 - [[Run Flow Review Loop]] — how to have a reviewer agent send the work back to the implementer: the edge, the verdict, the file of issues, and what to get right
 - [[Testing The Run Flow CLI]] — how to test `run-flow`: the free suite, the live flow, and hand-run scenarios, most of them free shell-only flows
 - [[Run Flow Deferred Issues]] — what `run-flow` leaves for later: review findings not fixed, accepted limits, and one wrong fact in the plan
+- [[Run Flow Monitor Readiness]] — is `run-flow` ready for the Monitor? What already matches, the Monitor questions it answers, what's missing, and an order to build it in
 - [[Testing The Run Agent CLI]] — how to test the providers and `run-agent`: the free suite, the live tests, and hand-run scenarios
 
 ## Under the hood
