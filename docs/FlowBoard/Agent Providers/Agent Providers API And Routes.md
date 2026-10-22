@@ -5,6 +5,9 @@ module: Agent Providers
 
 # Agent Providers API And Routes
 
+> [!info] Design, not built
+> None of the routes below exists on `dev` as of 2026-10-22, and neither does `/runs/[id]`: `code/flowboard/app/` is still the Next.js starter page. A run is started from a terminal with `pnpm run-agent`, which prints its events live, writes a log, and stops on Ctrl+C ([[Agent Providers Runtime]], [[Agent Providers Storage]]).
+
 There are no provider routes, by design.
 
 > *"the API surface (PRD §12) is already a clean provider-neutral boundary — keep every handler a three-liner (validate → lib → JSON) and the ports stay the only place provider knowledge exists. If a route ever needs to know whether it's Claude or Codex, something leaked upward."* — `06` §15

@@ -5,6 +5,9 @@ module: Agent Providers
 
 # Agent Providers Overview
 
+> [!check] Implemented 2026-10-18
+> Built: the port (`core/src/ports/`), two real providers, the [[Claude Code Adapter]] and the [[OpenCode Adapter]], the [[Replay Provider]] test double, and `pnpm run-agent` ([[Run Config Reference]]), which stands in for the runner. Fixed on 2026-10-22 after an audit. Not built: the runner, the job queue, the flow engine, the database, capability negotiation, sandbox tiers beyond the host, and the [[Codex Adapter]]. Most of this note is the design, quoted from the sources; the callouts and the *As built* lines say where the code differs.
+
 ## Purpose
 
 FlowBoard runs every AI step as a headless coding-agent CLI session. Agent Providers is the layer that makes the CLI swappable. The architecture calls the port *"The centerpiece. Turns "run an agent" into a normalized contract so Claude Code, Codex, and a test `ReplayProvider` are interchangeable."* (`01-ports.md`, *AgentProvider*).
@@ -29,7 +32,13 @@ It is architecture component **#5, *AgentProvider abstraction ⭐*** (architectu
 
 (architecture README)
 
-The README states the goal up front: the general version is *"the one where **Claude Code and Codex are interchangeable adapters**, not the substrate"*. It counts the normalized events as something the spec already got right (*"`run_events.type` normalizes to 7 event kinds → *already the provider seam*"*) and makes the flow graph provider-agnostic: *"the graph references *logical* models and capabilities, so the same agentic graph runs on Claude Code, Codex, or a replay adapter unchanged."* The drawio *FlowBoard ideation* page labels its architecture group *"Claude Code and Codex as interchangeable adapters."*
+> [!warning] The shipped code differs
+> Since 2026-10-18 there are two real adapters: Claude Code, on the Claude Agent SDK, which runs the installed `claude` CLI; and OpenCode, which runs one `opencode serve` per run. `ReplayProvider` is the test double. Codex and Gemini CLI are not built. The plan made Codex the next adapter; whether it still is, and whether OpenCode is in v1, is open ([[Agent Providers Open Questions]]).
+
+The README states the goal up front: the general version is *"the one where **Claude Code and Codex are interchangeable adapters**, not the substrate"*. It counts the normalized events as something the spec already got right (*"`run_events.type` normalizes to 7 event kinds → *already the provider seam*"*) and makes the flow graph provider-agnostic: *"the graph references *logical* models and capabilities, so the same agentic graph runs on Claude Code, Codex, or a replay adapter unchanged."* The drawio *FlowBoard ideation* page labels its architecture group *"Claude Code and Codex as interchangeable adapters."* The shipped `events.ts` has eight kinds, not seven: `usage` was added on 2026-10-18.
+
+> [!info] Design, not built
+> The job queue, the runner, the `runs` and `run_events` tables, the flow engine and the Codex CLI in this diagram do not exist on `dev` as of 2026-10-22. What runs today is in the second diagram.
 
 ```mermaid
 flowchart LR
@@ -47,17 +56,33 @@ Drawn from the drawio *Logical components* page: edges *Run orchestrator → Age
 
 Consumers of the port's outputs (`03` §5, *Composes with*): *"the runner (6) is the generic half that consumes this port; HITL (4), cost (6), and the viewer (8) all consume its normalized outputs."* The engine *"Depends only on the AgentProvider port's `RunResult`, never on how the"* run happened (`02` §3).
 
+As built, `pnpm run-agent` is the only consumer. It launches one run from a YAML file, prints the events, appends them to a log, and answers the agent's questions in the terminal:
+
+```mermaid
+flowchart LR
+  Y[task.yaml] --> CLI[pnpm run-agent]
+  CLI -->|RunSpec| P{{AgentProvider port}}
+  P --> C[ClaudeCodeProvider<br/>Agent SDK, installed claude CLI]
+  P --> O[OpencodeProvider<br/>one opencode serve per run]
+  P -.-> RP[ReplayProvider<br/>tests only]
+  P -->|NormalizedEvent| CLI
+  CLI -->|events| L[(runs/*.jsonl)]
+  C -->|ask_user| S[ask-user MCP shim]
+  O -->|ask_user| S
+  S -->|Unix socket| CLI
+```
+
 ## Design principles
 
 1. **Two mappings, nothing else.** *"An adapter's job is exactly two mappings"* (`agent-provider.ts`). See [[AgentProvider Port]].
-2. **Core never imports an adapter.** *"`core/` and `runner/` must never import from `adapters/` — only from `core/ports/`. Enforce with a lint rule."* (architecture README). See [[Provider Boundary Rules]].
-3. **Zero provider strings downstream.** *"Components 6–8 contain **zero provider strings** once 5 is extracted — that is the test of the abstraction."* (`03` intro).
-4. **Degrade, don't fail.** Capability negotiation is *"The key trick that makes graceful degradation cheap"* (`01-ports.md`). See [[Capability Negotiation]].
-5. **Logical, not native, models.** *"A flow authored for Claude runs on Codex unchanged; only the resolution table differs."* (`01-ports.md`). See [[Logical Model Ids]].
-6. **One envelope, versioned.** *"This is the most-read contract in the system, so it carries a schema version"* (`01-ports.md`). See [[Normalized Event Envelope]].
-7. **Sandboxing is orthogonal.** *"any provider × any tier, for free (2×N, not N×M)"* (`01-ports.md`; `exec-host.ts` says *"any provider × any isolation tier"*). See [[Providers And Sandboxing]].
-8. **Prove it with a second implementation.** *"The interface is only as good as its second implementation."* (`01-ports.md`). See [[Codex Adapter]] and [[Replay Provider]].
-9. **The CLI, never the API.** *"Do not build … anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI."* (PRD §17).
+2. **Core never imports an adapter.** *"`core/` and `runner/` must never import from `adapters/` — only from `core/ports/`. Enforce with a lint rule."* (architecture README). See [[Provider Boundary Rules]]. *As built:* `core` declares no dependencies, so it cannot import an adapter. There is no lint rule and no `runner/`; the `cli` package imports the adapters and stands in for the runner.
+3. **Zero provider strings downstream.** *"Components 6–8 contain **zero provider strings** once 5 is extracted — that is the test of the abstraction."* (`03` intro). *As built:* components 6–8 are not built, and tool events keep each provider's own tool names and inputs (`core/src/ports/events.ts`).
+4. **Degrade, don't fail.** Capability negotiation is *"The key trick that makes graceful degradation cheap"* (`01-ports.md`). See [[Capability Negotiation]]. *As built:* nothing reads a provider's `capabilities` yet; both real providers declare all eleven flags.
+5. **Logical, not native, models.** *"A flow authored for Claude runs on Codex unchanged; only the resolution table differs."* (`01-ports.md`). See [[Logical Model Ids]]. *As built:* there is no shared vocabulary. The Claude adapter takes Claude aliases as they are; the OpenCode adapter takes a `provider/model` id, or a name from a table that `run-agent` leaves empty. A Claude alias such as `sonnet` fails on OpenCode.
+6. **One envelope, versioned.** *"This is the most-read contract in the system, so it carries a schema version"* (`01-ports.md`). See [[Normalized Event Envelope]]. *As built:* one envelope of eight kinds, each with an optional `raw`, but no version field `v` (decision C10 in [[Provider Implementation Decisions]]).
+7. **Sandboxing is orthogonal.** *"any provider × any tier, for free (2×N, not N×M)"* (`01-ports.md`; `exec-host.ts` says *"any provider × any isolation tier"*). See [[Providers And Sandboxing]]. *As built:* both adapters spawn through `RunSpec.exec`, but only the host tier exists (`adapters/src/exec/host.ts`).
+8. **Prove it with a second implementation.** *"The interface is only as good as its second implementation."* (`01-ports.md`). The sources meant Codex ([[Codex Adapter]], designed, not built). The second implementation actually built is the [[OpenCode Adapter]] (2026-10-18), beside the [[Replay Provider]] test double.
+9. **The CLI, never the API.** *"Do not build … anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI."* (PRD §17). *As built:* this holds on the Claude Code adapter. The Agent SDK runs the installed `claude` CLI on its own login, and the adapter strips `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` from its environment. On the OpenCode adapter, the `opencode` server calls its model provider's API directly, with OpenCode's own credentials. Since 2026-10-22 it no longer inherits an Anthropic key, but an `anthropic/...` model still runs when OpenCode's own credentials (`auth.json` or `OPENCODE_AUTH_CONTENT`) hold one.
 
 > [!quote] Why it matters to the pitch
 > *"It is also **provider-agnostic by design** (Claude *and* Codex behind one seam), so we are not betting the workflow on one vendor."* (`pitch.md`, objection 3)
