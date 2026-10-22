@@ -45,7 +45,7 @@ No source describes how a task's branch reaches the project's main line.
 - The feature map's *Software developer* starter flow ends in a step: `D -->|approved| E[Merge and integrate]`.
 - The flow-designer mockup's `sdlc` step names include *"Merge and integrate"*, and a forked flow is described as *"No approval gate — it merges itself."*
 
-So merging is imagined as a **flow step**, not a workspace action. But the hooks deny `git push` and `git checkout` of the base branch, and egress blocks the git remote. A merge step would have to run on the host. *(Inference.)* Who pushes, when and where is also [[Projects Open Questions]] #15.
+So merging is imagined as a **flow step**, not a workspace action. But the hooks deny `git push` and `git checkout` of the base branch, and egress blocks the git remote. A merge step would have to run on the host. *(Inference.)* As built on `dev` (2026-10-22), the in-agent guard denies `git push` but not the base-branch checkout, which needs a runner that knows the branch, and there is no egress control yet: see [[Run Spec]]. Who pushes, when and where is also [[Projects Open Questions]] #15.
 
 ## The base branch
 

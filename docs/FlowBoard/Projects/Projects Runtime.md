@@ -34,6 +34,9 @@ The `Workspace` port's `TaskRef` is `{ id: string }` only (`reference/core/ports
 
 `--plugin-dir <dir of each plugin the step names: its skill's plugin + extra_plugin_ids>`, and *"Each plugin dir is the commit recorded in the task's `capability_pins`"* (PRD §7). The dir is *"derived, not stored: `<repo_path>/.flowboard/skills/<name>/<commit_sha>/`"* (PRD §5). In a sandbox the drawio mounts it read-only: *"ro: skills/ → /skills"*. See [[Capability Runtime Mounting]].
 
+> [!warning] The shipped code differs
+> No FlowBoard code builds a `--plugin-dir` flag (2026-10-18). A `plugin_dir` capability in the `RunSpec` becomes the Agent SDK's `plugins` option on Claude, which the SDK passes to the CLI as `--plugin-dir`, and `skills.paths` in OpenCode's config. Each adapter mounts the folders it is given; picking them from `capability_pins` is the runner's job, and the runner is not built. See [[Claude Code Adapter]] and [[OpenCode Adapter]].
+
 ## 3. A shell step runs the project's check
 
 *"The runner executes `step.command` (or the project's `check_command`) in the task's worktree through the same execution host"* (PRD §7). Drawio *Shell executor = the sensor*: *"runs check_command in a fresh sandbox · exit 0 → pass, else fail · output tail → check_output · fingerprint → runs"*. See [[Shell Step Execution]] and [[Project Check Command]].

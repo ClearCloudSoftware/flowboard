@@ -51,7 +51,7 @@ allowed-tools: Read, Bash, WebFetch
 
 ## How a step uses a skill
 
-In the run's prompt, slot 4 of the prompt builder is the slash invocation (`/grill-me:grill-me` in v1; earlier PRD drafts and `agent-provider.ts` write `/grill-me`). The step's `prompt_template` follows in slot 5. See [[Capability Runtime Mounting]].
+In the run's prompt, slot 4 of the prompt builder is the slash invocation (`/grill-me:grill-me` in v1; earlier PRD drafts and the reference `agent-provider.ts` write `/grill-me`, the shipped port `/grill-me:grill-me`). The step's `prompt_template` follows in slot 5. As built (2026-10-18), the Claude Code adapter moves the invocation to the front of the prompt, because the CLI only treats a leading `/` as a slash command, and OpenCode rewrites it as `Use the "grill-me" skill.`. See [[Capability Runtime Mounting]].
 
 ## Detail pane
 

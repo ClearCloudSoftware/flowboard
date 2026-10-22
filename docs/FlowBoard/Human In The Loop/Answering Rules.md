@@ -21,7 +21,7 @@ The rules that decide whether an answer counts, which answer wins, and what happ
 | Source | Rule |
 |---|---|
 | PRD §5 | `required INTEGER NOT NULL DEFAULT 1`, per question |
-| `question.ts` | *"Defaults to true; a run parks only while a required question is unanswered."* |
+| the reference `question.ts` (`docs/old/reference/core/hitl/`) | *"Defaults to true; a run parks only while a required question is unanswered."* The shipped `core/src/hitl/question.ts` keeps `required?: boolean` without that comment, and nothing parks (as built, 2026-10-18). |
 | Backlog Story 4.1 | *"Return only once every required answer is present; ignore `answers.value` null."* |
 | Inbox guide | *"Free text counts as answered even when empty, because 'nothing to add' is a real answer. Every other shape has to be given a value before Submit lights up."* Submit is *"Greyed until every non-optional question has a value."* |
 | Inbox mockup | `answered()`: `text` is always answered; `many` needs one pick or more; the rest need a value |

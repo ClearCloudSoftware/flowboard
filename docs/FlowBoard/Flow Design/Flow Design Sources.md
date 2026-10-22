@@ -35,6 +35,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 | `docs/old/architecture/06-cost-and-platform.md` §12, §15 | Cost by step and flow version; draft mode as a spec transform |
 | `docs/old/architecture/08-sandboxing.md` | Tiers, the `bypassPermissions` gate, physical backstops |
 | `docs/old/reference/core/ports/agent-provider.ts` | `RunSpec`, `PromptParts`, `RunResult.outcome`, `Effort`, capability flags |
+| `code/flowboard/packages/core/src/ports/agent-provider.ts`; `adapters/src/agent/{claude,opencode}/`; `ask-user/src/` | The shipped provider layer (2026-10-18, some rules changed 2026-10-22), behind every *as built* correction: SDK options instead of CLI flags, the `flowboard` server, OpenCode as a second provider, model ids, `set_outcome` not built. Described in [[Claude Code Adapter]], [[OpenCode Adapter]] and [[Run Spec]] |
 | `docs/old/reference/core/ports/artifact-store.ts` | `scan(…, produces)`, type-graph validation |
 | `docs/old/design/brief.md` | §6 Flow editor: *"Propose the cheapest thing that communicates branching honestly"* |
 | `docs/old/design/README.md` | `standard-flow · 8 steps`, *"Plan needs approval"*, 11 columns, ≤ ~14 columns, dark artboards with a *1f — Light mode* variant |

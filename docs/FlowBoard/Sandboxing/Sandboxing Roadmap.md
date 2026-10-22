@@ -11,15 +11,15 @@ PRD §17: *"**Sandboxing agent execution** in a container/microVM (§11.1) is in
 
 | In v1 | Source |
 |---|---|
-| `ExecHost` seam; host and docker exec adapters | PRD §3; backlog 3.5 |
+| `ExecHost` seam; host and docker exec adapters. Built 2026-10-18: the seam and the host tier only (`adapters/src/exec/host.ts`); both adapters spawn through it ([[ExecHost Port]]) | PRD §3; backlog 3.5 |
 | Container workspace: ephemeral container per run, hardened | PRD §11.1; backlog 3.5 |
 | gVisor/microVM for untrusted repos: *"(or, for untrusted repos, a gVisor/microVM)"* | PRD §11.1, §13 (*"host / container / microVM"*), §17 |
 | Egress proxy with default-deny allowlist | PRD §11.1; backlog 3.5 |
 | Credential-injecting proxy, dummy key | PRD §0, §11.1; backlog 3.5 |
 | Permission gate | PRD §7, §11.1; backlog 3.5 |
-| `PreToolUse` hooks in a per-run `settings.json` | PRD §7 |
-| `tool_hooks` provider capability; without it *"the flow editor says so"* | PRD §7 |
-| Host-side `ask_user` broker on every tier | PRD §9 |
+| `PreToolUse` hooks in a per-run `settings.json`. Built 2026-10-18 without the file: an in-process `PreToolUse` callback on Claude Code, a guard plugin on OpenCode, both set up from `RunSpec.guards` ([[Claude Code Adapter]], [[OpenCode Adapter]]) | PRD §7 |
+| `tool_hooks` provider capability; without it *"the flow editor says so"*. Built 2026-10-18: Claude Code and OpenCode declare it. No flow editor reads it yet ([[Agent Providers Open Questions]] #1) | PRD §7 |
+| Host-side `ask_user` broker on every tier. Built 2026-10-18 on the host tier only: the shim is `packages/ask-user`, and its broker runs inside `run-agent`, not a worker ([[Ask User MCP Server]]) | PRD §9 |
 | Logical caps mapped to physical limits | backlog 3.5 |
 | `runs.sandbox`, `settings.sandbox_profile`, optional step override | PRD §11.1; backlog 1.1 |
 | Docker probe at startup | PRD §11.1; backlog 0.1 |
@@ -36,8 +36,8 @@ PRD §17: *"**Sandboxing agent execution** in a container/microVM (§11.1) is in
 | `gvisor` as a tier value of its own; Docker baseline with *"`gvisor`/`microvm` opt-in for untrusted repos"* | `08` *Recommendation* #3; backlog D8 |
 | Codex runs through the same seam; its own OS sandbox is defense-in-depth | `08` |
 | `api.openai.com (later)` on the allowlist | drawio |
-| `tool_hooks` in the `Capability` union | `01-ports.md` |
-| Snapshot `RunSpec` to `data/runs/<id>/spec.json` | `03` §6 idea; drawio |
+| `tool_hooks` in the `Capability` union. Built 2026-10-18 in `core/src/ports/agent-provider.ts` ([[Agent Providers Open Questions]] #1) | `01-ports.md` |
+| Snapshot `RunSpec` to `data/runs/<id>/spec.json`. Not built (no runner); `run-agent` logs the launched `RunSpec` as the `start` line of its run log ([[Agent Providers Storage]]) | `03` §6 idea; drawio |
 | Mem0 on `fb-memory`, reachable from the host only | drawio; `09-memory.md` |
 
 ## Ideas

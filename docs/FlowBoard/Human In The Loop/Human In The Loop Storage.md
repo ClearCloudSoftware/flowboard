@@ -39,6 +39,9 @@ Artifacts live in the task's worktree, `<worktree>/.vibe/task-<task-id>/`. The P
 
 *"For each run it opens a unix socket, `data/sock/<run_id>.sock`, which is bind-mounted into a sandbox as `/run/fb/ask.sock`."* (PRD §9). The sandbox mounts are the task worktree (rw), skills (ro) and this socket. Never mounted: `~/.ssh`, cloud credentials, `flowboard.db`, `docker.sock` (drawio *Mounts*; PRD §11.1).
 
+> [!warning] The shipped code differs
+> As built (2026-10-18), the only broker is `run-agent`'s. It listens on `ask.sock` in a fresh `/tmp/fb-*` folder, since a Unix socket path is limited to about 104 characters, and deletes the folder when the run ends. The shim finds the socket through `FLOWBOARD_ASK_SOCKET`. Nothing is bind-mounted: no sandbox tier is built. See [[Ask User MCP Server]].
+
 ## In chat
 
 A posted message is identified by `slack_channel` + `slack_ts` (PRD §5), generalised as `PostedRef { channel, ref }`, where `ref` is *"Slack's `ts`, a Discord message id, an email thread id"* (`notifier.ts`). The message holds only the task title and question text (PRD §10).
@@ -46,6 +49,9 @@ A posted message is identified by `slack_channel` + `slack_ts` (PRD §5), genera
 ## Run snapshots
 
 The drawio harness: *"Run records / data/runs/<id>/spec.json + raw stream, replayable at $0"*. The PRD snapshots args to `data/runs/<id>/args.json` (§7). A run that asked a question has that call in its raw stream.
+
+> [!warning] The shipped code differs
+> Neither file is written: the runner that would write them is not built. `run-agent` appends one JSON line per record to `runs/<stamp>-<adapter>.jsonl`: the launched `RunSpec` as `start`, each normalized event with its native message as `raw`, each question batch as `question`, then its `answer` or `withdrawn` under the same `batch` number, and the `result` (2026-10-18; batch numbers since 2026-10-22). See [[Agent Providers Storage]].
 
 ## Related
 

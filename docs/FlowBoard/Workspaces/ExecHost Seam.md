@@ -41,6 +41,9 @@ export interface ExecHost {
 
 `ChildHandle` is *"A spawned process, normalized so the runner tails it the same way at every tier."*
 
+> [!warning] The shipped code differs
+> On 2026-10-18 the shipped port, `core/src/ports/exec-host.ts`, replaced this reference file. `ChildHandle` is gone. The shipped method is `spawn(command: string, args: string[], opts: { cwd: string; env?: NodeJS.ProcessEnv }): ChildProcessWithoutNullStreams`: it returns Node's own child process with piped stdio, because *"Providers need stdin: the Claude Agent SDK speaks to the CLI over stdio."* `IsolationTier`, `id`, `profile` and `SandboxProfile` (below) still match the reference. Only the `host` tier is built (`adapters/src/exec/host.ts`); both adapters use it when `RunSpec.exec` is absent, and nothing passes `exec` yet. See [[ExecHost Port]].
+
 `SandboxProfile` holds `tier`, `image`, `egressAllow`, `limits`, `mounts`, `env` and `nonRoot`. Two of its comments bear on the workspace:
 
 - `mounts`: *"Extra mounts beyond the task worktree. Never mount host secrets or the Docker socket."*
@@ -61,7 +64,7 @@ sequenceDiagram
   W-->>R: ExecHost (host | container | gvisor | microvm)
   R->>P: launch(RunSpec{ cwd, exec })
   P->>X: spawn(command, args, { cwd, env })
-  X-->>P: ChildHandle (stdout, stderr, exit)
+  X-->>P: Node child process (stdin, stdout, stderr)
 ```
 
 `RunSpec.exec` in `agent-provider.ts`: *"Where the CLI process runs — host by default, or a sandbox (container/microVM). The adapter spawns through this instead of raw child_process, so sandboxing works for any provider. From `workspace.execHost(task)`."* `RunSpec.cwd`: *"Workspace path (the Workspace port owns its lifecycle)."*

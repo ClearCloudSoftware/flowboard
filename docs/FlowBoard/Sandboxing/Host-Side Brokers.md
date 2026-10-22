@@ -30,7 +30,7 @@ flowchart LR
 | *"So a host run and a sandboxed run behave identically, and there is one path to test."* | PRD §9 |
 | Fallback: *"The artifact-file exchange … remains the fallback for a provider without MCP."* | PRD §9 |
 
-Details of the protocol: [[Ask User MCP Server]].
+Details of the protocol: [[Ask User MCP Server]]. As built (2026-10-18), on the host tier only: the shim is `code/flowboard/packages/ask-user/`, an MCP server named `flowboard` that reads only `FLOWBOARD_ASK_SOCKET`. Its one broker runs inside `run-agent` (`cli/src/ask/broker.ts`), not a worker, on `ask.sock` in the run's `/tmp/fb-*` folder. There is no `questions` table, and the artifact-file fallback is not built.
 
 > [!warning] Backlog D9 is stale
 > D9 still reads *"Artifact-file park/resume by default; host-side broker over a unix socket when richer"*, and Story 3.5 offers both. The architecture README marks it *"~~HITL-in-sandbox~~ (decided: host-side broker on every tier"*. Feature map §10 still asks *"how an agent asks you questions from inside a sealed box."* Same as [[Human In The Loop Open Questions]] #9.

@@ -53,7 +53,7 @@ flowchart LR
 | Artifact contract | The graph only | *"checks *type-graph reachability*, not bytes"* (`01-ports.md`, ArtifactStore) |
 | Known types | The artifact type list | Seed list in PRD §6 (10 types); backlog Story 1.1 says *"the nine PRD types"* — [[Flow Design Open Questions]] #25 |
 | Capability contract | Each step's target provider's capability set | *"Validation (component 2) checks steps against the *target provider's* capability set"* (`01-ports.md`) |
-| Provider match | The registry's pack list | Couples pure validation to registry state — [[Capability Library Open Questions]] #6. Moot in v1, which is Claude-only ([[Capability Library Decisions\|D1]]) |
+| Provider match | The registry's pack list | Couples pure validation to registry state — [[Capability Library Open Questions]] #6. Moot in v1, which is Claude-only ([[Capability Library Decisions\|D1]]); the build overtook D1 with OpenCode on 2026-10-18 ([[Agent Providers Open Questions]] #38) |
 
 ## Consumers of a saved flow version
 

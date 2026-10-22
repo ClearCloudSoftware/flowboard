@@ -14,7 +14,7 @@ An **agent** is a named role — a *who* rather than a *how*. In a step definiti
 | name / slug | `architect`, `reviewer`, `scout` |
 | description | One line shown in the rail |
 | system prompt | The role's standing instructions |
-| default model | A Claude alias — `opus` / `sonnet` / `haiku` — treated as the logical id in v1 ([[Capability Library Decisions|D20]]). The architecture's provider-neutral ids (`reasoning-high` → `opus` / `o3`) arrive with the second provider |
+| default model | A Claude alias — `opus` / `sonnet` / `haiku` — treated as the logical id in v1 ([[Capability Library Decisions|D20]]). The architecture's provider-neutral ids (`reasoning-high` → `opus` / `o3`) arrive with the second provider. As built, OpenCode, the second provider built (2026-10-18), brought its own model table instead ([[Logical Model Ids]]) |
 | default effort | `low` · `medium` · `high` in the mockup. The PRD gives `agents.default_effort` no value list (the `low\|medium\|high\|xhigh\|max` comment is on `step_defs.effort`) |
 | allowed tools | JSON array (PRD §5). That null means unrestricted is an inference: PRD §5 says *"null = unrestricted"* only for `step_defs.allowed_tools` |
 | builtin flag | Builtin (seeded) agents are read-only in the editor; **Duplicate to edit** makes an editable copy (D21) |
@@ -31,7 +31,7 @@ The architecture wants agents provider-neutral. `05-environment-and-registry.md`
 
 The mockup still records provider packs for agents, but unevenly: `architect`, `developer`, `reviewer` and `scout` have Claude and Codex packs; `tester`, `sec-analyst` and `scribe` are Claude-only. Agent packs carry no version (an internal `'—'` sentinel that is never displayed), so the row reads *installed · 12 Sep*.
 
-At run time the Claude adapter passes the prompt with `--append-system-prompt` (PRD §7, whenever the step names an agent).
+At run time the agent's prompt is added to the provider's own system prompt whenever the step names an agent (PRD §7: `--append-system-prompt`). As built (2026-10-18) it travels as `RunSpec.systemPrompt`: the Claude Code adapter appends it to the `claude_code` preset through the Agent SDK's `systemPrompt` option, with no `--append-system-prompt` flag, and OpenCode sends it as the prompt's `system` ([[Claude Code Adapter]], [[OpenCode Adapter]]).
 
 **A task pins its agents.** At task start the agent row is copied into `tasks.capability_pins`, so editing `reviewer`'s prompt never changes a task already running (D10). Seeded agents ship as files in FlowBoard's repo and update through *update available*, like seed plugins (D12).
 

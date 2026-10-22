@@ -99,6 +99,9 @@ export interface RunResult {
 }
 ```
 
+> [!warning] The shipped code differs
+> The shipped ports (`core/src/ports/events.ts`, `agent-provider.ts`, 2026-10-18) change these comments. `costUsd` is USD as the provider reports it, Claude's only on the result and OpenCode's on every event; absent means price it from tokens. `numTurns` counts the main agent's turns. `RunResult.usage` keeps the last running totals when a run ends before its result, and a set `error` means failed even on exit 0. `AgentRun.pid` is now a promise (`-1` if nothing was spawned), and `stop()` settles the run as `{ exitCode: 130, error: 'stopped' }`. See [[Agent Run Handle And Result]] and [[Normalized Event Envelope]].
+
 And an informal shape in `docs/old/design/README.md`:
 
 ```text

@@ -22,7 +22,7 @@ From PRD §5, with the columns later sources add.
 | `cache_write_tokens` | INTEGER DEFAULT 0 | `Usage.cacheWrite` | PRD §5 |
 | `num_turns` | INTEGER DEFAULT 0 | Written per assistant turn, not only at the end | PRD §5, backlog 3.2 |
 | `wasted` | INTEGER NOT NULL DEFAULT 0 | *"1 if superseded by a rework loop or an infra retry"* | PRD §5 |
-| `error` | TEXT | Stderr on a non-zero exit (PRD §7), *"stderr tail"* (backlog 3.2). A limit or timeout hit *"marks the run failed with reason"* (backlog 3.5) | PRD §7, backlog 3.2, 3.5 |
+| `error` | TEXT | Stderr on a non-zero exit (PRD §7), *"stderr tail"* (backlog 3.2). A limit or timeout hit *"marks the run failed with reason"* (backlog 3.5). As built, `RunResult.error` is the provider's own report first (a cap hit included), else the stderr tail, and it can be set on exit 0 ([[Agent Run Handle And Result]]) | PRD §7, backlog 3.2, 3.5 |
 | `started_at`, `ended_at` | INTEGER | Day bucketing; the price-table version (idea) | PRD §5, `06` §12 |
 | `model` | TEXT | **Added.** The model that actually ran, after draft mode | backlog 1.1, `02` §1, PRD §11.1 |
 | `effort` | TEXT | **Added.** The effort that actually ran | backlog 1.1, `02` §1, PRD §11.1 |

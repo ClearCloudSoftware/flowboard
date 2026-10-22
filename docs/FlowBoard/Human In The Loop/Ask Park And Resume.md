@@ -52,12 +52,16 @@ PRD §10 says only *"When a question is inserted, enqueue an `escalate_question`
 | Test hook | Timeout *"overridable by `VIBE_ASK_TIMEOUT_MS` for tests"* (backlog Story 4.1) |
 | Chat before park | With the PRD's 5-minute threshold the question reaches chat about 15 minutes before the 20-minute park (simple arithmetic) ([[Escalation Timer]]) |
 
+> [!warning] The shipped code differs
+> As built (2026-10-18), the agent is the `claude` CLI run by the Agent SDK, or an `opencode serve` server. No adapter passes `--session-id`: the provider reports the id (Claude from its first `system/init`, OpenCode from the session it creates), and `RunSpec.resume` maps to the SDK's `resume` and `forkSession`, or to OpenCode's `session.fork` ([[Agent Providers Open Questions]] #5).
+> Nothing parks, resumes or sends the sentinel yet: both adapters lift their MCP time limits and `run-agent`'s broker has none, so a question waits until it is answered or the run is stopped ([[Run Agent CLI Decisions]] R20).
+
 ## Resume must carry the contract
 
 > [!bug] Backlog Story 3.2
 > *"Resume prompt must repeat the requires/produces paths, not only the answers."* `03` §6 repeats it under *Genericize*.
 
-Without fork support (`resume_fork` capability), *"park/resume falls back to **context-replay** (re-inject requires/produces + answers into a fresh prompt — which the spec already does anyway)"* (`01-ports.md`). v1 is Claude-only (Capability Library **D1**, [[Capability Library Decisions]]), so by the PRD every v1 resume forks. Provider detail: [[Session Resume And Context Replay]].
+Without fork support (`resume_fork` capability), *"park/resume falls back to **context-replay** (re-inject requires/produces + answers into a fresh prompt — which the spec already does anyway)"* (`01-ports.md`). v1 is Claude-only (Capability Library **D1**, [[Capability Library Decisions]]), so by the PRD every v1 resume forks. The build went further: OpenCode was built on 2026-10-18 as a second provider, and both adapters can fork ([[Agent Providers Open Questions]] #38). Provider detail: [[Session Resume And Context Replay]].
 
 > [!warning] Fork, or prompt replay?
 > Not every source treats replay as the fallback. The drawio card *Advance modes* reads *"wait for answers (park / resume via prompt replay)"*. The architecture README lists *"Park/resume via prompt replay"* as the HITL primitive, and `04` §9 allows either: *"resume (`--resume --fork-session`, or context-replay)"*. PRD §9 forks (`--resume <claude_session_id> --fork-session`); the drawio harness says only *"resume with --resume"* and doesn't say whether it forks. See [[Human In The Loop Open Questions]] #38.

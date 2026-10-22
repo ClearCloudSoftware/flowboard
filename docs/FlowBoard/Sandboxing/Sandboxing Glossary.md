@@ -28,12 +28,12 @@ module: Sandboxing
 | **`flowboard-runner`** | The sandbox image: *"node · claude CLI · codex CLI · git · pnpm · toolchains"* (drawio). |
 | **Security profile** | The hardening a container applies: non-root, `--cap-drop ALL`, `no-new-privileges`, seccomp, read-only root, limits. See [[Sandbox Security Profile]]. |
 | **Physical limits** | `--memory`, `--cpus`, `--pids-limit`, wall-clock. The backstop to the *logical* caps `max_turns` and `max_budget_usd`. See [[Resource Limits]]. |
-| **In-agent hooks** | Claude Code `PreToolUse` hooks in a per-run `settings.json` that deny out-of-scope tool calls. See [[In-Agent Hooks]]. |
-| **`tool_hooks`** | The provider capability flag meaning the provider supports such hooks (`01-ports.md`, PRD §7). |
+| **In-agent hooks** | Checks inside the agent that deny out-of-scope tool calls. PRD §7 puts them in Claude Code `PreToolUse` hooks in a per-run `settings.json`. As built (2026-10-18) no file is written: the rules travel in `RunSpec.guards`, Claude Code checks them in an in-process `PreToolUse` callback, and OpenCode in a guard plugin. See [[In-Agent Hooks]]. |
+| **`tool_hooks`** | The provider capability flag meaning the provider supports such hooks (`01-ports.md`, PRD §7). In the shipped port it means the provider enforces `RunSpec.guards`; Claude Code and OpenCode declare it. |
 | **Dual encoding** | Drawio harness concept 5: the prompt states the rules, and two gates (hooks inside, box outside) enforce them. |
 | **Host-side broker** | Work the worker does on the sealed agent's behalf, so the agent never reaches the database or the memory store: the `ask_user` broker for questions, the runner's recall and commit for memory. See [[Host-Side Brokers]]. |
-| **MCP shim** | `apps/mcp-shim`, the stdio MCP server the CLI launches; it forwards tool calls over `ask.sock` to the broker and *"never opens the database and needs no network"* (PRD §9). |
-| **`ask.sock`** | The per-run unix socket, `data/sock/<run_id>.sock` on the host, bind-mounted as `/run/fb/ask.sock` (PRD §9). |
+| **MCP shim** | The stdio MCP server the CLI launches; it forwards tool calls over `ask.sock` to the broker and *"never opens the database and needs no network"* (PRD §9). PRD §9 calls it `apps/mcp-shim`; as built (2026-10-18) it is `code/flowboard/packages/ask-user/`, a server named `flowboard` that reads only `FLOWBOARD_ASK_SOCKET`. See [[Ask User MCP Server]]. |
+| **`ask.sock`** | The per-run unix socket, `data/sock/<run_id>.sock` on the host, bind-mounted as `/run/fb/ask.sock` (PRD §9). As built, `run-agent`'s broker listens on `ask.sock` in the run's `/tmp/fb-*` folder. |
 | **Check container** | The container a shell step runs in: *"same image and mounts, no model, no API key"* (drawio). |
 | **Container workspace** | The Workspace adapter whose `execHost` returns a container `ExecHost` (`07-ports-in-practice.md`). |
 | **Trusted-repo opt-out** | The one case where `08` and backlog D7 allow `host` for a bypassing step; no field holds it. |

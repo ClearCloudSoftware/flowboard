@@ -7,7 +7,7 @@ module: Settings And Plumbing
 
 Feature map §20: *"**Live updates** — A steady stream keeps the board, the viewer, and the inbox current without you refreshing."*
 
-The run stream itself (the seven event kinds, `seq`, the parser) is documented in [[Event Stream And SSE]]. This note covers the transport as a platform rule: why SSE, why it tails the database, and how the client behaves when the connection drops.
+The run stream itself (the event kinds, `seq`, the parser) is documented in [[Event Stream And SSE]]. As built (2026-10-18) there are eight kinds, `usage` being the eighth, and no parser or `seq`: the adapters turn Agent SDK messages and OpenCode server events into events, and `run-agent` appends them to a log file ([[Normalized Event Envelope]]). This note covers the transport as a platform rule: why SSE, why it tails the database, and how the client behaves when the connection drops.
 
 ## Why SSE that tails SQLite
 

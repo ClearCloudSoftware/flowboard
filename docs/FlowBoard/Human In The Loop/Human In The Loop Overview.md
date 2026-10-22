@@ -48,7 +48,7 @@ The architecture names HITL as one of FlowBoard's three parts: *"a durable workf
 | Ask in a few fixed shapes | *"Agents can only ask in these five shapes, and the same shape looks and behaves the same everywhere you might answer it"* (inbox guide). *"One JSON shape … drives three renderers with zero divergence"* (`04` §9) |
 | Batch, don't drip | *"Answering seven questions in one screen is better than a drip feed, and it avoids the blocking problem entirely for most steps."* (PRD §9) |
 | Waiting costs time, not money | *"a parked run is not billing you."* (inbox guide) |
-| Never hang | *"This is more robust than trying to hold a session alive for hours."* (PRD §9) |
+| Never hang | *"This is more robust than trying to hold a session alive for hours."* (PRD §9). As built, the run waits for now: both adapters lift their MCP time limits, so the session stays alive until the question is answered or the run is stopped ([[Run Agent CLI Decisions]] R20) |
 | Answer anywhere, first wins | *"whoever answers first wins"* (feature map §13); *"Idempotent answers. First write wins."* (PRD §10) |
 | The queue picks the order | *"the queue decides the order, you decide the answers."* (inbox guide walkthrough) |
 | Silence isn't success | *"A missing outcome is never a pass."* (PRD §8) — the step stops at a gate and asks you |

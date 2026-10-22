@@ -82,8 +82,12 @@ Undefined. The backlog records *"non‑JSON error bodies"* (1.3) and asks for *"
 ### 19. Names: `flowboard` or `vibe`?
 `data/flowboard.db` (PRD §3, drawio) or `data/vibe.db` (backlog header); env vars `VIBE_*`; `.vibe/`, `.vibe-worktrees/`, `mcp__vibe__*` (PRD) against `.flowboard/worktrees/` and `fb/task-<id>` (drawio). Pick one prefix. Worktree paths: [[Execution Open Questions]] #3, [[Workspaces Open Questions]] #6. → [[Environment And Configuration]]
 
+Partly settled by the code (2026-10-18): the ask-user MCP server is named `flowboard` (`mcp__flowboard__*`), and the shim's one variable is `FLOWBOARD_ASK_SOCKET` ([[Ask User MCP Server]]). The database, env var and worktree names are still open.
+
 ### 20. Does the MCP process open the database?
 PRD §3, §9: never. `02` §1 and backlog 1.1: the DB path env exists so *"worker and MCP"* open the same file. See [[Execution Open Questions]] #54 and [[Human In The Loop Open Questions]] #37. → [[Process Topology]]
+
+As built (2026-10-18), the shim (`packages/ask-user`) opens no database: it reads only `FLOWBOARD_ASK_SOCKET` and talks to `run-agent`'s broker over that socket ([[Ask User MCP Server]]). The worker's broker and the database are not built.
 
 ### 21. How many tables?
 *"14 tables"* (`02` §1, backlog 1.1); PRD §5 has 15 since `plugins` was added; memory adds `memories` and `run_memories`. Same as [[Projects Open Questions]] #20. → [[Domain Schema]]
@@ -115,6 +119,8 @@ Found when these notes were checked against the sources a second time.
 
 ### 29. Empty `--settings`, or the hooks file?
 Backlog 0.1 leaves it open (**DEC**: *"e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`"*); D5 recommends *"Empty `--settings` file per run"* (also the drawio's D5 card). PRD §7 passes `--settings <generated per-run settings.json with PreToolUse hooks>`, so the file is not empty. Which one keeps `~/.claude` hooks out is unstated. See [[Agent Providers Open Questions]] #24 and [[Sandboxing Open Questions]] #24. → [[Environment And Configuration]]
+
+Answered by the code (2026-10-18): neither. No settings file is written; Claude runs get `settingSources: []` and `strictMcpConfig: true`, and the guards are an in-memory `PreToolUse` hook callback ([[Agent Providers Open Questions]] #24).
 
 ### 30. Is Docker out of scope?
 The drawio *Out of scope (v1)* card lists *"Auth, accounts, roles, deployment, Docker, multi-machine, plugin marketplace."* PRD §17 scopes out only *"shipping or *deploying* FlowBoard itself in a container"* and keeps sandboxing agents in containers in scope; the drawio's own *Harness architecture* runs *"one throwaway Docker container per run"*. Probably the card means deploying FlowBoard, but it does not say. → [[Settings And Plumbing Roadmap]]

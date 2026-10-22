@@ -21,9 +21,12 @@ Files and paths a sandboxed run touches.
 | `data/runs/<id>/args.json` | Snapshot of the final CLI args | PRD §7 |
 | `data/runs/<id>/spec.json` | Snapshot of the resolved `RunSpec` (idea) | `03` §6; drawio *Run records* |
 
+> [!warning] The shipped code differs
+> As built (2026-10-18), no `mcp.json`, `settings.json`, `args.json` or `spec.json` is written. Claude gets the ask_user server, the guard hook and `settingSources: []` as Agent SDK options in memory; OpenCode gets one per-run config in `OPENCODE_CONFIG_CONTENT` and a scratch `XDG_CONFIG_HOME` folder, removed after the run ([[Agent Providers Open Questions]] #4). `run-agent`'s broker listens on `ask.sock` in the run's `/tmp/fb-*` folder, which the shim gets as `FLOWBOARD_ASK_SOCKET` ([[Ask User MCP Server]]). `run-agent` logs the launched `RunSpec` as the `start` line of `runs/<stamp>-<adapter>.jsonl` ([[Agent Providers Storage]]).
+
 > [!question] Unstated
-> - Where the per-run `mcp.json` and `settings.json` are written, and whether they are mounted into the box or passed another way.
-> - Whether `args.json` records the `docker run` wrapper or only the CLI args.
+> - Where the per-run `mcp.json` and `settings.json` are written, and whether they are mounted into the box or passed another way. (Answered for the host tier: passed another way; see above.)
+> - Whether `args.json` records the `docker run` wrapper or only the CLI args. (No `args.json` is built.)
 > - Where the CLI's session state lives between a parked run and its resume, when each run gets a fresh container.
 > - Where proxy logs (the record of denied hosts) are kept.
 > - Where the real model credential the proxy injects is kept ([[Settings And Plumbing Open Questions]] #24).

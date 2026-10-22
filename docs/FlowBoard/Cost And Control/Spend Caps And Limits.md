@@ -30,7 +30,7 @@ PRD §11.1: resource limits *"physically backstop the logical `max_turns`/`max_b
 
 ### Enforced, or advisory
 
-The `budget_cap` capability: *"honours maxBudgetUsd; else it is advisory"* (`agent-provider.ts`). Claude passes the flag to the CLI; a provider without the capability does not stop at the cap. No source says whether FlowBoard enforces the cap itself (for example, by stopping a run whose live cost passes it) for providers without `budget_cap`. No capability covers `maxTurns` at all ([[Agent Providers Open Questions]] #25). See [[Cost And Control Open Questions]] #8.
+The `budget_cap` capability: *"honours maxBudgetUsd; else it is advisory"* (`agent-provider.ts`). Claude passes `maxBudgetUsd` to the Agent SDK, which hands the CLI `--max-budget-usd`; a provider without the capability does not stop at the cap. As built (2026-10-18), OpenCode declares `budget_cap` because its adapter stops the run itself: once the running `costUsd` reaches the cap, it emits `max_budget: spent $x of $y` and aborts the session. That never trips on a model with no listed price, which costs 0 ([[OpenCode Adapter]]). No source says whether FlowBoard enforces the cap itself for providers without `budget_cap`. No capability covers `maxTurns` at all ([[Agent Providers Open Questions]] #25), though both real adapters honour it: Claude as `maxTurns`, OpenCode as `steps` on its agents. See [[Cost And Control Open Questions]] #8.
 
 ## When a cap is hit
 

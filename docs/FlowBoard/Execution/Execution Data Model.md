@@ -44,7 +44,7 @@ The worker's broker is *"the only writer of the `questions` table"* (PRD §9); s
 | Table | Column | Meaning |
 |---|---|---|
 | `runs` | `attempt` | the attempt this run belongs to |
-| | `claude_session_id` | `--session-id`, and `--resume` on a resume (PRD §7, §9). `02` §1 proposes renaming it `agent_session_id`; PRD §5 keeps the old name |
+| | `claude_session_id` | `--session-id`, and `--resume` on a resume (PRD §7, §9). As built, no adapter passes a session id: the provider reports it, read from `AgentRun.sessionId` ([[Agent Providers Open Questions]] #5). `02` §1 proposes renaming it `agent_session_id`; PRD §5 keeps the old name |
 | | `pid` | for Stop and restart re-attach |
 | | `state` | `starting`, `running`, `parked`, `succeeded`, `failed`, `cancelled` |
 | | `exit_code`, `error` | process result; `error` holds stderr (PRD §7), *"stderr tail"* (backlog 3.2) |
@@ -89,7 +89,7 @@ erDiagram
 | Need | Why | Status |
 |---|---|---|
 | Task paused | Task-detail **Pause** | *proposal*: a status or a flag ([[Task Data Model]] proposes a `paused` status; [[Execution Open Questions]] #29) |
-| Run stop reason | Monitor: *"stopped by you"* | *proposal*: reuse `runs.error` (the replay adapter's `stop()` already sets `error: 'stopped'`) |
+| Run stop reason | Monitor: *"stopped by you"* | *proposal*: reuse `runs.error` (every shipped provider's `stop()` already sets `error: 'stopped'` on a run stopped before its result) |
 | Escalation kind on a gate | spent, stuck, no outcome, approval | *proposal*: reuse `step_instances.reason` |
 | Retry note | PRD §8 *"carries my note into it"* | not stated where it is stored ([[Execution Open Questions]] #21) |
 

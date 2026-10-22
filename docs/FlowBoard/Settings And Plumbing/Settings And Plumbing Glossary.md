@@ -6,7 +6,7 @@ module: Settings And Plumbing
 # Settings And Plumbing Glossary
 
 > [!warning] Overloaded words
-> - **settings** — (1) FlowBoard's global `settings` table; (2) the per-run Claude Code `settings.json` passed with `--settings`, which carries PreToolUse hooks (PRD §7); (3) feature map §1's *"settings for how agents work on each one"*, meaning project fields; (4) the user's own `~/.claude` settings that headless runs must not inherit (backlog 0.1). Here, unqualified, it means (1).
+> - **settings** — (1) FlowBoard's global `settings` table; (2) the per-run Claude Code `settings.json` passed with `--settings`, which carries PreToolUse hooks (PRD §7; as built none is written, and the hook is an in-memory callback, see [[Claude Code Adapter]]); (3) feature map §1's *"settings for how agents work on each one"*, meaning project fields; (4) the user's own `~/.claude` settings that headless runs must not inherit (backlog 0.1; as built, `settingSources: []` keeps them out). Here, unqualified, it means (1).
 > - **draft** — draft mode (a setting) vs `draftAnswers` (the old handoff's unsent inbox answers).
 > - **stream** — an SSE stream to the browser vs the CLI's `stream-json` output.
 > - **profile** — `sandbox_profile` (a setting) vs `SandboxProfile` (the port type) vs a seccomp profile.
@@ -42,7 +42,7 @@ module: Settings And Plumbing
 | **Lost the orchestrator** | The error state when the live connection drops | old handoff 1d |
 | **`apps/web`** | The Next.js process: routes, server actions, SSE | PRD §3 |
 | **`apps/worker`** | The Node process that runs jobs and agents | PRD §3 |
-| **`apps/mcp-shim`** | The stdio MCP server that forwards `ask_user` calls to the broker | PRD §3, §9 |
+| **`apps/mcp-shim`** | The stdio MCP server that forwards `ask_user` calls to the broker. As built: `packages/ask-user`, a server named `flowboard`, whose broker runs inside `run-agent` ([[Ask User MCP Server]]) | PRD §3, §9 |
 | **Dependency rule** | `packages/core` imports no framework, DB driver or CLI; core never imports adapters | PRD §3, architecture `README.md` |
 | **Port / adapter** | An interface the core depends on / an implementation of it | architecture `README.md` |
 | **WAL** | SQLite write-ahead logging, so readers and writers don't block | PRD §3 |

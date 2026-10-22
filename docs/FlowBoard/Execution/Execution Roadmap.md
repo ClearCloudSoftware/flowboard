@@ -69,6 +69,8 @@ From the feature map parking lot:
 
 PRD §17: *"Do not build: authentication, user accounts, roles, deployment config, multi-machine support, a plugin marketplace, or anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI."* For execution, that rules out remote workers and multi-machine runs in v1. *"**Sandboxing agent execution** … is in scope but optional — it isolates the agent on the same single machine; it is not multi-tenancy or remote execution."*
 
+The build went past the `claude` CLI: OpenCode, built on 2026-10-18 as a second provider, runs other models through `opencode`. Whether it is in v1 is [[Agent Providers Open Questions]] #38.
+
 ## Related
 
 - [[Execution Index]]

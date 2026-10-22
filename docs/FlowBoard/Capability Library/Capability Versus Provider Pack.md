@@ -7,6 +7,8 @@ module: Capability Library
 
 > [!check] v1: one provider, seam kept
 > v1 is Claude-only ([[Capability Library Decisions|D1]]): every capability has exactly one pack, a Claude plugin dir, and the library shows no per-provider packs. `CapabilityPack` stays in the port as the data union below (D2), so adding a second provider later needs no change to the flow graph. Everything in this note about multiple packs per capability describes that later state.
+>
+> The provider layer already has a second provider: OpenCode, built on 2026-10-18, reads the same Claude plugin dir's `skills/` folder, so one pack serves both for skills. Whether it is in v1 is [[Agent Providers Open Questions]] #38.
 
 ## The distinction
 
@@ -32,7 +34,7 @@ The original v1 design (PRD) hard-wired skills to Claude plugin directories moun
 
 > A "skill" is *one packaging* of a general **capability**. A Claude plugin dir (`.claude-plugin/plugin.json` + `skills/<slug>/SKILL.md`, mounted via `--plugin-dir`, invoked as `/slug`) is the Claude adapter's format.
 
-This keeps the flow graph provider-agnostic. A flow references logical capabilities and logical model ids, so it can run on Claude Code, Codex, or the replay adapter unchanged — as long as each capability it names has a pack for the provider its step runs on.
+This keeps the flow graph provider-agnostic. A flow references logical capabilities and logical model ids, so it can run on Claude Code, Codex, or the replay adapter unchanged — as long as each capability it names has a pack for the provider its step runs on. (Built so far: Claude Code, OpenCode and Replay; Codex is designed, not built.)
 
 ## The type
 
@@ -53,7 +55,7 @@ export interface CapabilityPack {
 }
 ```
 
-`ProviderId` is `'claude-code' | 'codex' | 'replay' | (string & {})` — an open set. `05-environment-and-registry.md` sketches the pack differently, with a `mount(spec: RunSpec): void` method. **Decided: the data union** (D2).
+`ProviderId` is `'claude-code' | 'codex' | 'replay' | (string & {})` — an open set; the shipped port (`core/src/ports/agent-provider.ts`) adds `'opencode'`. `05-environment-and-registry.md` sketches the pack differently, with a `mount(spec: RunSpec): void` method. **Decided: the data union** (D2).
 
 Three mount strategies cover the field:
 
@@ -62,6 +64,9 @@ Three mount strategies cover the field:
 | `plugin_dir` | The provider supports plugins (`plugins` capability flag) | Claude Code `--plugin-dir <path>` |
 | `system_prompt` | The provider has no plugin system | Inject the skill text into the system prompt |
 | `native` | The provider has its own config format | A Codex-native configuration block |
+
+> [!warning] The shipped code differs
+> As built (2026-10-18), Claude Code passes a `plugin_dir` to the Agent SDK's `plugins` option (one `--plugin-dir` each), appends `system_prompt` text to the system prompt and ignores `native`. OpenCode reads only the dir's `skills/` folder, puts `system_prompt` text in the prompt's `system` and merges `native` config. Neither checks a pack's `provider`. [[Agent Providers Open Questions]] #2.
 
 ## Consequences that show up in the UI
 

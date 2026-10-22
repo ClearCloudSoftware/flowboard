@@ -44,6 +44,9 @@ sequenceDiagram
 
 PRD §7 *Sandboxed runs*: *"When the step's sandbox tier is not `host`, the runner does not spawn `claude` directly; it launches the command *inside* the task's container (worktree bind-mounted as `cwd`) through the execution host and streams the same stdout."*
 
+> [!warning] The shipped code differs
+> No runner, worker or container tier is built (2026-10-18). For step E, nothing writes an `mcp.json` or hook settings: each adapter passes the ask_user server and the guards in memory: as Agent SDK options on Claude; on OpenCode, the server and a guard plugin in `OPENCODE_CONFIG_CONTENT`, the rules in `FLOWBOARD_GUARDS` ([[Agent Providers Open Questions]] #4). For step G, FlowBoard parses no stdout: the Agent SDK hands the Claude adapter typed messages, and OpenCode's events arrive as SSE from the `opencode serve` the adapter starts on `127.0.0.1`. There is no `run_events` table; `run-agent` appends each normalized event to `runs/<stamp>-<adapter>.jsonl` ([[Claude Code Adapter]], [[OpenCode Adapter]], [[Agent Providers Storage]]).
+
 ## Lifetime
 
 | Claim | Source |
@@ -69,11 +72,11 @@ Drawio *Check container*: *"same image and mounts, no model, no API key: runs ch
 
 ## Stop
 
-The live viewer's Stop *"kills the process"* (PRD §13). Backlog 3.4: *"Stop: SIGTERM by pid from the route (same machine)"*. Inside a container the host pid belongs to the container runtime; `ChildHandle.kill(signal?)` (`exec-host.ts`) is the normalised way. How Stop reaches a containerised run is not described.
+The live viewer's Stop *"kills the process"* (PRD §13). Backlog 3.4: *"Stop: SIGTERM by pid from the route (same machine)"*. Inside a container the host pid belongs to the container runtime. The reference port's `ChildHandle.kill(signal?)` (`exec-host.ts`) was the normalised way; the shipped port (2026-10-18) dropped `ChildHandle`: `ExecHost.spawn` returns Node's child process, and a run is stopped through `AgentRun.stop()`, which ends the process that `spawn` started (see [[ExecHost Port]]). A stop before the result settles `{ exitCode: 130, error: 'stopped' }`. A SIGTERM by pid from outside is not a stop: both adapters report it as a failure, exit 1. `AgentRun.pid` is a `Promise<number>`; on OpenCode it is the server's pid ([[Agent Run Handle And Result]]). How Stop reaches a containerised run is not described; no container tier is built.
 
 ## Restart recovery
 
-Backlog 3.3: *"prefer re‑attach by pid (still alive → keep tailing)"*. Re-attaching to a container after a worker restart is not described.
+Backlog 3.3: *"prefer re‑attach by pid (still alive → keep tailing)"*. Re-attaching to a container after a worker restart is not described. The shipped port has no way to re-attach on any tier ([[Agent Providers Open Questions]] #30).
 
 ## Related
 

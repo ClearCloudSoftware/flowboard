@@ -37,6 +37,9 @@ Feature map §10: *"Fully-autonomous mode (no approval on each action) is only a
 
 Drawio *Permission gate* card: *"bypassPermissions only when the tier is container / gVisor / microVM; host tier → approval mode"*. In the drawio's *Life of one step*, step **E**: *"The permission gate checks the tier; the runner writes mcp.json and the hook settings; the ExecHost starts a sandbox with the worktree at /work."*
 
+> [!warning] The shipped code differs
+> As of 2026-10-18 no runner or gate is built, and nothing checks a tier. No `mcp.json` or hook settings file is written: the adapters pass the ask_user server and the guard rules in memory ([[Agent Providers Open Questions]] #4). The nearest check is `run-agent`'s: it refuses `bypassPermissions` or `auto` unless `permissions.allow_unrestricted_shell: true` is set ([[Providers And Sandboxing]], *As built*).
+
 ## Where the sources disagree
 
 > [!warning] Refuse, downgrade or fail?

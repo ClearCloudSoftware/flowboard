@@ -15,7 +15,7 @@ Architecture component **#12 Cost & usage ledger + PricingService** (`06-cost-an
 
 > the ledger consumes `Usage` from the provider port and reads the append-only `runs` journal. A single new service closes the provider gap (`06` §12)
 
-- **Input:** `Usage` on the `result` event of every agent run. See [[Usage And Native Cost]].
+- **Input:** `Usage` on the `result` event of every agent run. See [[Usage And Native Cost]]. (As built, a run stopped or failed before its result has no `result` event; `RunResult.usage` then holds its last running totals, without `costUsd` on Claude. See [[Agent Run Handle And Result]].)
 - **Pricing:** the [[Pricing Service]] fills `costUsd` when the provider did not.
 - **Store:** one row per run in `runs`. See [[Cost Data Model]].
 - **Output:** the [[Spend Rollups]], the [[Wasted Spend]] figure, and the card and viewer cost. *"the board's live card cost (4) and the viewer's running estimate (8) both read the same `Usage`"* (`06` §12).

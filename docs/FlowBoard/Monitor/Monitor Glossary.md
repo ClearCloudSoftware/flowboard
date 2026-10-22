@@ -36,7 +36,7 @@ module: Monitor
 | **Wasted** | *"Only the thrown-away part"*. PRD: `runs.wasted = 1`. |
 | **Pulse / Timeline / Pipeline** | The three views. See [[Pulse View]], [[Timeline View]], [[Pipeline View]]. |
 | **Live run viewer** | PRD §13 `/runs/[id]`: one run's event stream with a sticky footer and Stop. See [[Live Run Viewer]]. |
-| **NormalizedEvent** | One of seven provider-neutral event kinds the viewer reads. See [[Event Stream And SSE]]. |
+| **NormalizedEvent** | One of the eight event kinds the viewer reads, the same for every provider; the eighth, `usage`, carries running totals (as built, 2026-10-18). Only tool events keep the provider's own tool names and inputs. See [[Event Stream And SSE]] and [[Normalized Event Envelope]]. |
 | **`run_events`** | The table the runner writes events to and the SSE endpoint tails by `seq`. |
 | **`seq`** | The per-run event sequence number; the `Last-Event-ID` for catch-up. |
 | **Summary** | *"short human-readable line for the session viewer"* (`run_events.summary`), e.g. `Read src/auth/session.ts`. |

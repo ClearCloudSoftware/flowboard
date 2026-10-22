@@ -34,9 +34,9 @@ The backlog's opening list of bugs that survived the first build includes a *"$0
 - *"`message_delta.usage` is cumulative per message — reset per `message_start`, do not sum across deltas."* (backlog 3.2)
 
 > [!bug] The path from tokens to a live dollar figure is not designed
-> 1. The Claude stream has per-message tokens ([[Usage And Native Cost]]), but `NormalizedEvent` carries `Usage` only on `result`.
+> 1. The Claude stream has per-message tokens ([[Usage And Native Cost]]), but the reference `NormalizedEvent` carried `Usage` only on `result`. As built (2026-10-18), a `usage` event carries the running totals mid-run on both real adapters.
 > 2. `07-ports-in-practice.md` updates live cost only `if (ev.type === 'result')`.
-> 3. Claude's price table is a passthrough (`06` §12), so there are no Claude rates to turn mid-run tokens into dollars.
+> 3. Claude's price table is a passthrough (`06` §12), so there are no Claude rates to turn mid-run tokens into dollars. As built, Claude's live `usage` events have tokens and turns but no `costUsd`, and no rates or PricingService exist. OpenCode's carry its own running cost, 0 for a model it has no price for.
 >
 > Monitor Open Questions #38 raised this; [[Agent Providers Open Questions]] #9 and [[Execution Open Questions]] #62 repeat it. [[Cost And Control Open Questions]] #2 has a **proposal**.
 

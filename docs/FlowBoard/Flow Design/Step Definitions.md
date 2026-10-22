@@ -60,7 +60,11 @@ Bold = control label in the flow-designer mockup. *limits\** = the generic word 
 | `requires` | prompt part 2, *"read these first"* paths |
 | `produces` | prompt part 3, exact output paths |
 
-The provider-neutral version is `RunSpec` in `agent-provider.ts`: `model` (logical id), `effort`, `toolPolicy`, `capabilities`, `limits: { maxTurns, maxBudgetUsd }`.
+> [!warning] The shipped code differs
+> - No runner maps a step yet; `pnpm run-agent` builds a `RunSpec` from its own task file ([[Run Config Reference]]). The Claude adapter passes Agent SDK options, which SDK 0.3.302 turns into the installed CLI's flags: `model`, `effort`, `permissionMode` (default `dontAsk`; `run-agent` defaults to `acceptEdits`), `allowedTools`/`disallowedTools`, `maxTurns`, `maxBudgetUsd` and `plugins`. The `systemPrompt`, appended to the `claude_code` preset, goes to the CLI over stdin in the SDK's initialize request, not as a flag. Claude puts the fully qualified skill invocation first in the prompt; OpenCode rewrites it as `Use the "<slug>" skill.` ([[Run Spec]]).
+> - The injected server is `flowboard`, not `vibe`: each adapter pre-approves it (`mcp__flowboard__*` on Claude, `flowboard_*` on OpenCode) whether or not an allow list is set, and an explicit deny still wins (2026-10-22). OpenCode maps the same `RunSpec` into its own config. See [[Claude Code Adapter]] and [[OpenCode Adapter]].
+
+The provider-neutral version is `RunSpec` in `agent-provider.ts`: `model` (logical id), `effort`, `toolPolicy`, `capabilities`, `limits: { maxTurns, maxBudgetUsd }`; since 2026-10-18 also `permissionMode`, `systemPrompt` and `guards` ([[Run Spec]]).
 
 ## Mockup defaults
 

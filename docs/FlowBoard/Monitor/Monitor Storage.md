@@ -16,6 +16,9 @@ The monitor persists nothing of its own. Everything it shows lives in the places
 | Worktrees | `<repo>/.flowboard/worktrees/task-<id>` on branch `fb/task-<id>` (drawio); `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>` (PRD §11, backlog 2.1); `~/.flowboard/ws/auth-refactor` on `flowboard/auth-refactor` (task-detail mockup). The three conflict: [[Monitor Open Questions]] #26, [[Workspace Naming]] | drawio, PRD §11, backlog, `task-detail.html` |
 | Escalation threshold, draft mode, sandbox defaults | `settings` table | PRD §11.1 (sandbox profile), §13 (draft mode); `06` §15 and backlog 6.1, 8.3 (escalation threshold) |
 
+> [!warning] The shipped code differs
+> The *Normalised events* and *Run snapshots* rows are not built (2026-10-22): the runner that would write `run_events` and `data/runs/<id>/` does not exist, and nothing writes an `args.json`. The one run record today is `pnpm run-agent`'s log, `runs/<stamp>-<adapter>.jsonl`: a `start` line with the `RunSpec` as launched, an `event` line per event with its `raw` native message (already parsed, not a line), and a `result` line. See [[Agent Providers Storage]].
+
 > [!warning] Artifact paths differ in every source
 > - PRD §6: `<worktree>/.vibe/task-<task-id>/01-research_brief.md`, `03-plan.md`, …
 > - Drawio: `artifacts: .vibe/task-<id>/*.md | *.json, committed alongside the code`

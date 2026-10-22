@@ -33,7 +33,7 @@ module: Sandboxing
 | `env` | `Record<string,string>?` | *"Run-scoped env (model/CLI auth). Never bake secrets into the image."* |
 | `nonRoot` | `boolean?` | *"Default true; `bypassPermissions` requires this."* |
 
-Other types: `ExecHost`, `ChildHandle` ([[ExecHost Port]]), `RunSpec.exec` and `RunSpec.limits` (`agent-provider.ts`), the `tool_hooks` capability flag (`01-ports.md` only).
+Other types: `ExecHost` ([[ExecHost Port]]; the reference port's `ChildHandle` is gone from the shipped port, whose `spawn` returns Node's `ChildProcessWithoutNullStreams`), `RunSpec.exec` and `RunSpec.limits` (`agent-provider.ts`), the `tool_hooks` capability flag (in the shipped port's `Capability` union since 2026-10-18).
 
 ## Proposal: the shape of `sandbox_profile`
 

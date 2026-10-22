@@ -27,6 +27,9 @@ flowchart TD
   C --> RUN
 ```
 
+> [!warning] The shipped code differs
+> No PricingService or rate table is built. The port no longer ties a missing `costUsd` to a missing `native_cost` (2026-10-22): Claude declares `native_cost`, yet its live `usage` events and a run stopped before its result carry no `costUsd`; OpenCode declares it and sets `costUsd` on every event, but to 0 for a model it has no price for, so a passthrough would record $0 for such a run (**inferred**). Absent means "price it from tokens". See [[Normalized Event Envelope]] and [[Agent Providers Open Questions]] #9.
+
 ## Adding a provider
 
 `06`, *Where a new provider actually touches the codebase*, step 2: *"A `(codex, model) → rates` row in the price table (12), because `native_cost` is absent."* Step 4: *"Zero changes to: engine, board projection, HITL protocol, notifier, cost rollups, viewer, API."*
@@ -38,7 +41,7 @@ An idea, not a requirement:
 > keep the price table **versioned and dated**. When rates change, historical cost stays reproducible because each run prices against the table in effect at its `started_at`. (`06` §12)
 
 > [!note] This only bites for priced providers
-> For Claude the result's `total_cost_usd` is authoritative and stored once, so a rate change never touches history. The versioned table matters for providers priced from tokens.
+> For Claude the result's `total_cost_usd` is authoritative and stored once, so a rate change never touches history. The versioned table matters for providers priced from tokens. As built, that includes a Claude run stopped or failed before its result: `RunResult.usage` then has its tokens but no `costUsd` ([[Agent Run Handle And Result]]).
 
 ## The mockups ask the same question
 

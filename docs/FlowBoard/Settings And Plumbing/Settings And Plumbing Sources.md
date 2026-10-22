@@ -36,7 +36,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 | `docs/mockups/README.md`, `inbox.html`, `inbox-guide.html`, `monitor.html`, `task-detail.html` | *"Light only — no dark variant"*; a 10-minute escalation (`ESCALATE = 10 * MIN` in the inbox, `> 10 * MIN` in the monitor, *"escalation after 10m"* in the inbox guide); status bars showing *"sandbox **container**, egress **default-deny**"*; *"this step's egress allowlist"* (`inbox.html`), *"this step's allowlist"* (`inbox-guide.html`), *"not in the step allowlist"* |
 | `docs/pitch.md` | *"a global **draft mode** forces the cheapest models while iterating"*; *"FlowBoard makes the safe path the default: each step runs in a **sandbox**"* |
 | `.gitignore` | `data/*.db*`, `data/runs/`, `.vibe-worktrees/` |
-| `code/flowboard/` | A stock `create-next-app` scaffold (Next.js 16.4.1, React 19.3.0, Tailwind 4; `globals.css` follows `prefers-color-scheme`); no settings or API code |
+| `code/flowboard/` | A stock `create-next-app` scaffold (Next.js 16.4.1, React 19.3.0, Tailwind 4; `globals.css` follows `prefers-color-scheme`); no settings or API code. Since 2026-10-18 also `packages/` (core, adapters, ask-user, cli), the source, with the [[Agent Providers Index\|Agent Providers]] notes, of the *as built* corrections made on 2026-10-22 |
 
 ## Sibling notes linked rather than repeated
 

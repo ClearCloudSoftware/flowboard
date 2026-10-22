@@ -131,8 +131,13 @@ Backlog 1.1 (**DEC**). PRD §9 resumes with a `start_run`. Same as [[Human In Th
 ### 38. `args.json` or `spec.json`
 PRD §7: `data/runs/<id>/args.json`. `03` §6 and the drawio: `spec.json` (+ raw stream). → [[Runner Pipeline]]
 
+As built (2026-10-18), neither exists, and the Agent SDK builds the CLI's arguments inside the Claude adapter, so a runner has no final command line to snapshot. `run-agent` logs the launched `RunSpec` as the `start` line of its run log ([[Agent Providers Storage]]).
+
 ### 39. Where per-run `mcp.json` and `settings.json` are written
 Not stated. **Proposal:** `data/runs/<id>/`.
+
+> [!check] Answered by the code, 2026-10-18
+> Nowhere: no file is written. The Claude adapter passes `mcpServers`, `settingSources: []` and the guard hook to the Agent SDK in memory; the OpenCode adapter passes one config in `OPENCODE_CONFIG_CONTENT`. See [[Agent Providers Open Questions]] #4 and #24.
 
 ### 40. Shell step: task host or a fresh container?
 PRD §7: *"through the same execution host"*. drawio: *"in a fresh sandbox"*, *"Check container"*. See also #61; [[Sandboxing Open Questions]] #17, #20. → [[Shell Step Execution]]
@@ -143,10 +148,13 @@ A shell step's non-zero exit is an outcome. A missing command, an out-of-memory 
 ## Contracts
 
 ### 42. Three versions of `RunSpec` and `Capability`
-`01-ports.md` has `tool_hooks`; `agent-provider.ts` does not. `01-ports.md`'s sketch lacks `exec`; the reference carries the sandbox tier only through `exec` (`ExecHost.id`, `SandboxProfile.tier`). Neither carries the permission mode, the agent's system prompt or the per-run hook settings. Who generates the session id also differs: PRD §7 has the runner pass a generated `--session-id`, while `AgentRun.sessionId` resolves from `system/init`. Same as [[Agent Providers Open Questions]] #1, #3, #4, #5. → [[Agent Launch Contract]]
+`01-ports.md` has `tool_hooks`; the reference `agent-provider.ts` (`docs/old/reference/`) does not. `01-ports.md`'s sketch lacks `exec`; the reference carries the sandbox tier only through `exec` (`ExecHost.id`, `SandboxProfile.tier`). Neither carries the permission mode, the agent's system prompt or the per-run hook settings. Who generates the session id also differs: PRD §7 has the runner pass a generated `--session-id`, while `AgentRun.sessionId` resolves from `system/init`. Same as [[Agent Providers Open Questions]] #1, #3, #4, #5. → [[Agent Launch Contract]]
+
+> [!check] Implemented 2026-10-18
+> The shipped port (`core/src/ports/agent-provider.ts`) has `tool_hooks` and `RunSpec.exec`, and adds `permissionMode`, `systemPrompt` and `guards`, the provider-neutral hook rules. Claude Code and OpenCode declare `tool_hooks` and enforce `guards` in-agent, so no hook settings file is written. Nothing passes `exec` yet, so runs use the host. No adapter passes a session id: the provider reports it, Claude from the first `system/init` and OpenCode from its session create or fork response. See [[Agent Providers Open Questions]] #1, #3, #4 and #5.
 
 ### 43. Step kinds
-PRD §5: `ai | shell | manual`. `02` §3: `skill | agent | shell | manual`. `agent-provider.ts`: *"kind='skill'"*.
+PRD §5: `ai | shell | manual`. `02` §3: `skill | agent | shell | manual`. The reference `agent-provider.ts`: *"kind='skill'"*; the shipped port's comment names no kind ([[Prompt Assembly]]).
 
 ### 44. Preamble and placeholders
 `agent-provider.ts`: preamble is *"task title + body"*. PRD §7 adds acceptance criteria and non-goals. Backlog 3.2's placeholder list omits `{{acceptance_criteria}}` and `{{non_goals}}`.
@@ -181,6 +189,9 @@ Before the closing instruction (PRD §7; `09-memory.md`) or appended as the fina
 ### 52. An empty `--settings` file, or the hooks file?
 Backlog D5 and the drawio D5 card: *"Empty `--settings` file per run"*. PRD §7 and the drawio *Runner* card: a per-run `settings.json` *"with PreToolUse hooks"*. Backlog 0.1 leaves the mechanism open (**DEC**): *"`--settings` with an empty file, or `CLAUDE_CONFIG_DIR`"*. Same as [[Sandboxing Open Questions]] #24, [[Agent Providers Open Questions]] #24 and [[Settings And Plumbing Open Questions]] #29. → [[Run Guardrails At Launch]]
 
+> [!check] Answered by the code for the host tier, 2026-10-18
+> Neither a `--settings` file nor `CLAUDE_CONFIG_DIR`. Claude runs get `settingSources: []` and `strictMcpConfig`, and the guards are an in-process hook; OpenCode runs get a fresh `XDG_CONFIG_HOME` and `OPENCODE_DISABLE_PROJECT_CONFIG=1`. See [[Agent Providers Open Questions]] #24.
+
 ### 53. `bypassPermissions` on the host tier
 Refuse (PRD §7, `01-ports.md`), refuse or downgrade (PRD §11.1), downgrade (`03` §6, drawio), or downgrade or fail the step (`08`, backlog 3.5 tagged **DEC**). Feature map §10 sides with refuse (*"otherwise FlowBoard refuses it"*). With no Docker, `08` adds *"(or warn)"* to disabling `bypassPermissions`. Same as [[Sandboxing Open Questions]] #1. Which tiers count also differs: `03` §6 names only *"(container/microVM)"*; `01-ports.md`, `08` and the drawio include gVisor ([[Sandboxing Open Questions]] #2). → [[Run Guardrails At Launch]]
 
@@ -188,10 +199,10 @@ Refuse (PRD §7, `01-ports.md`), refuse or downgrade (PRD §11.1), downgrade (`0
 Yes per `02` §1 and backlog 1.1 (*"so worker and MCP … hit the same file"*); never per PRD §3, §9 and the drawio *SQLite* card. Same as [[Settings And Plumbing Open Questions]] #20 and [[Human In The Loop Open Questions]] #37. → [[Worker Lifecycle]]
 
 ### 55. Would a Stop be retried automatically?
-PRD §7 lists *"process killed by a signal"* as transient. Stop and graceful shutdown are SIGTERMs; the replay adapter's `stop()` settles with `exitCode: 130`. Same as [[Monitor Open Questions]] #35. Same as [[Agent Providers Open Questions]] #22. → [[Stopping And Cancelling]]
+PRD §7 lists *"process killed by a signal"* as transient. Stop and graceful shutdown are SIGTERMs. On every shipped provider (Claude, OpenCode and Replay), `stop()` before the result settles `{ exitCode: 130, error: 'stopped' }`, while a process killed from outside is reported as exit 1. Same as [[Monitor Open Questions]] #35. Same as [[Agent Providers Open Questions]] #22. → [[Stopping And Cancelling]]
 
 ### 56. Who finalises a stopped run?
-`03` §7: the worker is *"the only writer of run lifecycle state"*. `03` §8 and backlog 3.4: the route SIGTERMs by pid and should *"finalise as cancelled"*. Same as [[Monitor Open Questions]] #36. **Inferred:** on the container tier the host pid belongs to the `docker` client, not the agent, and the ports' `stop()` / `kill()` live in the worker that holds the handle ([[Stopping And Cancelling]]).
+`03` §7: the worker is *"the only writer of run lifecycle state"*. `03` §8 and backlog 3.4: the route SIGTERMs by pid and should *"finalise as cancelled"*. Same as [[Monitor Open Questions]] #36. **Inferred:** on the container tier the host pid belongs to the `docker` client, not the agent, and the port's `stop()` lives in the worker that holds the handle ([[Stopping And Cancelling]]). As built, the port has no `kill()`, a signal from outside is reported as a failed run (exit 1), not as a stop, and OpenCode's pid is its server's ([[Agent Run Handle And Result]]).
 
 ### 57. A failing shell run's `runs.state`
 PRD §7's completion rule: non-zero → `failed`. Its shell paragraph: *"a result, not a run failure"*. Which run state a failing check records is not stated. → [[Shell Step Execution]]
@@ -210,6 +221,9 @@ PRD §7 *Sandboxed runs*: *"inside the task's container"*. PRD §11.1: *"one per
 
 ### 62. The event envelope and live cost
 `events.ts` has no `v`, which `01-ports.md` and PRD §7 require. `Usage` arrives only on `result`, yet PRD §7 wants a running cost from per-message tokens. Same as [[Monitor Open Questions]] #38, #39. `agent-provider.ts` promises *"live token counts"* from `partial_stream`, but no event kind carries them. Same as [[Agent Providers Open Questions]] #6, #9. → [[Agent Launch Contract]]
+
+> [!check] Answered by the code, 2026-10-18
+> The shipped port adds an eighth kind, `usage`, with the run's running totals; Claude's carry no cost until the result. `v` is skipped for now, waiting for the runner and `run_events`. See [[Agent Providers Open Questions]] #6 and #9.
 
 ### 63. `06` §15's file layout
 `06` §15 places routes in `src/app/api/` calling `src/lib/`; PRD §3 and §12 use `apps/web/app/api/` calling `packages/core`. Same as [[Settings And Plumbing Open Questions]] #13. → [[Execution API And Routes]]

@@ -5,7 +5,7 @@ module: Capability Library
 
 # Capability Library Open Questions
 
-Places where the sources disagree or leave a gap. Questions 1–18 were worked through on 2026-10-15; each carries its outcome, and the decisions live in [[Capability Library Decisions]]. The original question text is kept below each outcome. Question 19 needs a probe; 20–26 came out of the second grounding pass and are open.
+Places where the sources disagree or leave a gap. Questions 1–18 were worked through on 2026-10-15; each carries its outcome, and the decisions live in [[Capability Library Decisions]]. The original question text is kept below each outcome. Question 19 needed a probe, which the build ran on 2026-10-18; 20–26 came out of the second grounding pass and are open.
 
 ## 1. Where does the capability store live?
 
@@ -108,8 +108,8 @@ The harness diagram mounts `ro skills/ → /skills`. `08-sandboxing.md` says *mo
 > [!question] **Partly resolved.** The source docs were fixed on 2026-10-15; the drift below remains. See [[Capability Library Decisions#Source docs to fix]].
 
 - **Where recalled memory (prompt part 7) goes.** Before the closing headless instruction: PRD §7 (*"inserted just before the closing instruction"*) and `09-memory.md` (*"just before the closing headless instruction"*). At the end: PRD §11.2 (*"append them to the prompt as a final part"*), `03` §6 (*"append the hits as a **7th prompt part**"*) and the drawio *Prompt builder* card, which lists *"+7 recalled memory"* after *"6 headless: use ask_user"*. `PromptParts` in `agent-provider.ts` has six fields and no slot for part 7. Same as [[Execution Open Questions]] #51 and [[Memory Open Questions]] #6.
-- `01-ports.md` adds the `tool_hooks` flag; `agent-provider.ts` lacks it. Same as [[Agent Providers Open Questions]] #1.
-- `agent-provider.ts` still documents prompt part 4 as `Slash invocation for kind='skill', e.g. "/grill-me".`; PRD §7 now invokes `/<plugin>:<slug>` for any step that names a skill (D16, D27).
+- `01-ports.md` adds the `tool_hooks` flag; the reference `agent-provider.ts` (`docs/old/reference/`) lacks it. The shipped port (`core/src/ports/agent-provider.ts`, 2026-10-18) has it, and Claude Code and OpenCode declare it. Same as [[Agent Providers Open Questions]] #1, where it is decided.
+- The reference `agent-provider.ts` (`docs/old/reference/`) still documents prompt part 4 as `Slash invocation for kind='skill', e.g. "/grill-me".`; PRD §7 now invokes `/<plugin>:<slug>` for any step that names a skill (D16, D27). The shipped port (`core/src/ports/agent-provider.ts`, 2026-10-18) documents it fully qualified, e.g. `"/grill-me:grill-me"`, and drops the reference's *"adapters must not reorder"*: the Claude Code adapter moves the invocation to the front ([[Capability Runtime Mounting#The prompt]]).
 - PRD §13 blocks Remove for *"any version a running task pins"*; D17 counts versions pinned by any **non-terminal** task, which includes blocked and parked ones.
 
 ## 18. Which seeds does D22 leave out?
@@ -126,9 +126,11 @@ The PRD seed flow (§15) and backlog Story 1.2 now carry the decided names. See 
 
 ## 19. Does `/<plugin>:<slug>` invoke reliably in headless mode?
 
-> [!question] **Open — needs a probe, not a decision.** Tracked in backlog Story 0.1.
+> [!check] **Answered by the build, 2026-10-18.** It was open, needing a probe, not a decision (backlog Story 0.1).
 
 D16 invokes every plugin skill fully qualified, because Claude Code namespaces plugin skills and two plugins may ship the same slug. Nothing yet confirms that `claude -p` with `--plugin-dir` resolves `/<plugin>:<slug>` in the prompt the way interactive mode does. If it doesn't, one possible fallback (a proposal; D16 records no alternative) is bare `/slug`, with slugs unique per project and colliding installs refused. That would put a `UNIQUE (project_id, slug)` constraint back on `skills`. See [[Capability Runtime Mounting]].
+
+It does: a live test (`adapters/test/claude-live.test.ts`) runs `/fbecho:echo` headless from a plugin mounted through the Agent SDK's `plugins` option, with the invocation placed first in the prompt ([[Claude Code Adapter]]). OpenCode turns it into `Use the "echo" skill.` ([[OpenCode Adapter]]).
 
 ## 20. Can a step or flow travel to another project?
 

@@ -34,7 +34,7 @@ Flow validation is pure functions over the graph. Two design-time checks share o
 1. **Artifact contract** — every `requires` entry is produced by some ancestor; exactly one producer; known types. A violation rejects the save.
 2. **Capability contract** — every knob a step uses is supported by its target provider. `01-ports.md` calls a violation a design-time **warning**, same machinery as the artifact contract.
 
-The library adds the provider-match rule: **a pack's provider has to match the step's** (`05-environment-and-registry.md` §13, which gives no severity). The capability-library mockup and guide say the flow editor *refuses to save* that combination. The flow-designer mockup has no provider check yet, and `01-ports.md` treats capability-contract violations as warnings. Blocking vs warning is **moot in v1**, which is Claude-only (D1); it returns with the second provider — see [[Provider Coverage And Portability]].
+The library adds the provider-match rule: **a pack's provider has to match the step's** (`05-environment-and-registry.md` §13, which gives no severity). The capability-library mockup and guide say the flow editor *refuses to save* that combination. The flow-designer mockup has no provider check yet, and `01-ports.md` treats capability-contract violations as warnings. Blocking vs warning is **moot in v1**, which is Claude-only (D1); it returns with the second provider — see [[Provider Coverage And Portability]]. (The provider layer built OpenCode as a second provider on 2026-10-18; whether it is in v1 is [[Agent Providers Open Questions]] #38.)
 
 ## Versioning interaction
 

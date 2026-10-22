@@ -19,13 +19,21 @@ Four ways work stops before it finishes: Stop a run, Cancel a task, Pause a task
 | `agent-provider.ts` | `AgentRun.stop()`: `/** SIGTERM the child. */ stop(): void;` |
 | `exec-host.ts` | `ChildHandle.kill(signal?: string): void;` |
 
-The route sends the signal directly, not through the queue. *Inference:* that does not break PRD §2's *"route handlers must never spawn"* rule, since it signals a process and spawns nothing. But the ports' `stop()` and `kill()` live in the worker that holds the handle, and on the container tier the host pid belongs to the `docker` client, not the agent. Where Stop should run is [[Monitor Open Questions]] #36; see also [[Agent Run Handle And Result]].
+> [!warning] The shipped code differs
+> The two port rows quote the reference port in `docs/old/reference/core/ports/`, which the shipped port (`core/src/ports/`) replaced on 2026-10-18. `ChildHandle` is gone, and `kill(signal?)` with it: `ExecHost.spawn` returns Node's own child process ([[ExecHost Port]]). What exists is `AgentRun.stop()`, with no arguments: *"Stop the run; `result` settles as stopped."*
+> - Claude: `stop()` aborts the Agent SDK query. The SDK closes the CLI's stdin and signals the CLI itself, and the adapter terminates the child.
+> - OpenCode: `stop()` aborts the session and its event stream, then the adapter terminates its `opencode serve` child.
+> - Terminating is SIGTERM, then SIGKILL if the child is still running after a grace (`adapters/src/exec/terminate.ts`, default 5000 ms; [[Provider Implementation Decisions]] C12).
+> - A run stopped before its result settles `{ exitCode: 130, error: 'stopped' }`. Since 2026-10-22 it keeps the usage reported so far; on Claude that is tokens without a cost, because Claude prices a run only in its result.
+> - The one caller today is `run-agent`. It calls `stop()` on Ctrl+C, SIGTERM or SIGHUP ([[Run Agent CLI Decisions]] R29), and when the event stream fails.
+
+The route sends the signal directly, not through the queue. *Inference:* that does not break PRD §2's *"route handlers must never spawn"* rule, since it signals a process and spawns nothing. But the port's `stop()` lives in the worker that holds the handle, and on the container tier the host pid belongs to the `docker` client, not the agent. As built, a signal sent from outside is not reported as a stop: the run fails with exit 1, not 130 and `stopped`, and OpenCode's pid is its server's. Where Stop should run is [[Monitor Open Questions]] #36; see also [[Agent Run Handle And Result]].
 
 > [!warning] Cancelled or failed?
 > The monitor guide: *"Ends that run now. It is recorded as failed, with "stopped by you" as the reason, and the slot is handed to whatever is next in the queue."* The mockup's `stop()` sets the step to `failed` with `err = 'stopped by you'`, so it lands in the needs-you band like any failure (`monitor.html`). `03` §8 and backlog 3.4 say `cancelled`. See [[Monitor Open Questions]] #14 and [[Execution Open Questions]] #27.
 
 > [!question] Would a Stop be retried automatically?
-> PRD §7 lists *"process killed by a signal"* as transient, retried automatically up to 3 times. Stop is a SIGTERM, and the replay adapter's `stop()` settles with `exitCode: 130, error: 'stopped'`. Read literally, a stopped run would be retried. The same applies to runs SIGTERMed by a graceful shutdown. See [[Monitor Open Questions]] #35 and [[Execution Open Questions]] #55.
+> PRD §7 lists *"process killed by a signal"* as transient, retried automatically up to 3 times. Stop is a SIGTERM, and on every shipped adapter (Claude, OpenCode and Replay) a run stopped before its result settles with `exitCode: 130, error: 'stopped'`. Read literally, a stopped run would be retried. The same applies to runs SIGTERMed by a graceful shutdown. See [[Monitor Open Questions]] #35 and [[Execution Open Questions]] #55.
 
 > [!question] Who finalises a stopped run?
 > `03` §7 makes the worker *"the only writer of run lifecycle state"*. `03` §8 and backlog 3.4 have the route signal the process and *"finalise as cancelled"*. See [[Monitor Open Questions]] #36 and [[Execution Open Questions]] #56.
