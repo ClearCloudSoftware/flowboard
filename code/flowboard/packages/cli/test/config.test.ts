@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
@@ -6,10 +6,19 @@ import { basename, join } from 'node:path';
 import { DEFAULT_DENY_COMMANDS } from '@flowboard/core';
 import { CLOSING, loadConfig } from '../src/config.ts';
 
+/** Temp folders made by this file's tests, removed once they are done. */
+const temps: string[] = [];
+after(() => temps.forEach((d) => rmSync(d, { recursive: true, force: true })));
+function tempDir(prefix: string) {
+  const dir = mkdtempSync(prefix);
+  temps.push(dir);
+  return dir;
+}
+
 /** A temp base dir holding proj/, task.md, plugins/fbecho/ and the given task.yaml. */
 function project(yaml: string, prompt = 'Fix the bug.') {
   // Real path: macOS's temp folder is a link, and loadConfig resolves folders to real paths.
-  const base = realpathSync(mkdtempSync(join(tmpdir(), 'fb-cli-')));
+  const base = realpathSync(tempDir(join(tmpdir(), 'fb-cli-')));
   mkdirSync(join(base, 'proj'));
   mkdirSync(join(base, 'plugins', 'fbecho'), { recursive: true });
   writeFileSync(join(base, 'task.md'), prompt);
@@ -75,7 +84,7 @@ test('minimal YAML gets the defaults', () => {
 });
 
 test('absolute paths are used as written', () => {
-  const elsewhere = realpathSync(mkdtempSync(join(tmpdir(), 'fb-cli-abs-')));
+  const elsewhere = realpathSync(tempDir(join(tmpdir(), 'fb-cli-abs-')));
   const base = project(MINIMAL.replace('folder: proj', `folder: ${elsewhere}`));
   const r = loadConfig('task.yaml', base);
   assert.ok(r.ok, JSON.stringify(r));
@@ -219,6 +228,28 @@ test('"Bash(pnpm *)" needs no opt-in', () => {
   assert.equal(r.config.unrestrictedShell, false);
 });
 
+const OPENCODE = MINIMAL.replace('adapter: claude-code\nmodel: sonnet', 'adapter: opencode\nmodel: openrouter/x/y');
+
+test('on OpenCode, an allow entry that globs to any shell command needs the opt-in', () => {
+  // OpenCode globs both the tool name and the command, and lowercases names it does not know.
+  for (const entry of ['*', 'b*', 'ba?h', 'B*', 'Bash(?*)', 'Bash(??*)', '*(*)']) {
+    assert.deepEqual(errorsOf(OPENCODE + `permissions:\n  allow: ["${entry}"]\n`).errors, [
+      `task.yaml: permissions.allow: "${entry}" ${SHELL_TAIL}`,
+    ], entry);
+  }
+  for (const entry of ['Bash(git *)', 'Bash(?)', 'w*', 'Read']) {
+    const r = loadConfig('task.yaml', project(OPENCODE + `permissions:\n  allow: ["${entry}"]\n`));
+    assert.ok(r.ok && !r.config.unrestrictedShell, entry);
+  }
+});
+
+test('on Claude, allow entries name tools exactly, so "*" grants no shell', () => {
+  // Claude Code 2.1.302 globs tool names only in deny and ask rules.
+  const r = loadConfig('task.yaml', project(MINIMAL + 'permissions:\n  allow: ["*", "b*"]\n'));
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.equal(r.config.unrestrictedShell, false);
+});
+
 // --- closing line and skills: ----------------------------------------------
 
 test('the closing line tells the agent to ask through the tool', () => {
@@ -302,7 +333,7 @@ test('a plugin folder named local clashes with skills:', () => {
 // --- links resolve to real paths --------------------------------------------
 
 test('a folder reached through a link resolves to its real path', () => {
-  const real = mkdtempSync(join(tmpdir(), 'fb-cli-real-'));
+  const real = tempDir(join(tmpdir(), 'fb-cli-real-'));
   const base = project(MINIMAL.replace('folder: proj', 'folder: link'));
   symlinkSync(real, join(base, 'link'));
   const r = loadConfig('task.yaml', base);
@@ -312,7 +343,7 @@ test('a folder reached through a link resolves to its real path', () => {
 });
 
 test('a plugin reached through a link resolves to its real path', () => {
-  const target = mkdtempSync(join(tmpdir(), 'fb-cli-plugin-'));
+  const target = tempDir(join(tmpdir(), 'fb-cli-plugin-'));
   const base = project(MINIMAL + 'plugins: [plink]\n');
   symlinkSync(target, join(base, 'plink'));
   const r = loadConfig('task.yaml', base);

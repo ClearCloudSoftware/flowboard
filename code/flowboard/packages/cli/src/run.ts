@@ -2,7 +2,8 @@
  * `pnpm run-agent <task.yaml>`: launch the configured provider, print its
  * events live and append them to runs/<stamp>-<adapter>.jsonl as they come.
  */
-import { appendFileSync, closeSync, cpSync, mkdirSync, mkdtempSync, openSync, realpathSync, rmSync } from 'node:fs';
+import { appendFileSync, closeSync, mkdirSync, mkdtempSync, openSync, realpathSync, rmSync } from 'node:fs';
+import { cp } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, AgentRun, RunResult, RunSpec } from '@flowboard/core';
@@ -30,12 +31,13 @@ export interface RunDeps {
 }
 
 const WITHDRAWN = '-- question withdrawn: the agent stopped waiting';
+const WITHDRAWN_QUEUED = '-- question withdrawn before it was shown: the agent stopped waiting';
 
 /**
  * The spec as launched: the ask_user shim on `socket`, Claude's own question tool off (so the agent asks
  * through ask_user), and the `skills:` folders copied into a `local` plugin under `tmp`.
  */
-function withAsking(config: RunConfig, socket: string, tmp: string): RunSpec {
+async function withAsking(config: RunConfig, socket: string, tmp: string): Promise<RunSpec> {
   const { adapter, spec, skills } = config;
   const out: RunSpec = {
     ...spec,
@@ -44,8 +46,9 @@ function withAsking(config: RunConfig, socket: string, tmp: string): RunSpec {
   if (adapter === 'claude-code') out.toolPolicy = { ...spec.toolPolicy, deny: [...(spec.toolPolicy?.deny ?? []), 'AskUserQuestion'] };
   if (skills.length) {
     const plugin = join(tmp, SKILLS_PLUGIN);
-    // ponytail: copied, not linked: both CLIs and the plugin-loaded check handle links unreliably.
-    for (const s of skills) cpSync(s.path, join(plugin, 'skills', s.name), { recursive: true });
+    // ponytail: copied, not linked, links inside included: both CLIs and the plugin-loaded check handle links unreliably.
+    // fs.cp, not cpSync: Node 24's cpSync keeps the links inside a folder even with `dereference`.
+    for (const s of skills) await cp(s.path, join(plugin, 'skills', s.name), { recursive: true, dereference: true });
     out.capabilities = [...(spec.capabilities ?? []), { id: SKILLS_PLUGIN, provider: adapter, mount: { kind: 'plugin_dir', path: plugin } }];
   }
   return out;
@@ -134,14 +137,14 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
       // Short and real: a Unix socket path is limited to about 104 characters, and /tmp is a link on macOS.
       tmp = realpathSync(mkdtempSync('/tmp/fb-'));
       broker = await startBroker(join(tmp, 'ask.sock'), deps.answer ?? (process.stdin.isTTY ? terminalAnswerer(undefined, print) : noTerminal), {
-        onQuestion: (questions) => {
-          asking = true;
-          log('question', { questions });
+        onQuestion: (questions, batch) => {
+          asking = true; // a batch is on screen, or queued behind one
+          log('question', { batch, questions });
         },
-        onAnswer: (answers) => log('answer', { answers }),
-        onWithdrawn: () => {
-          log('withdrawn', {});
-          show(WITHDRAWN); // another question may still be on screen
+        onAnswer: (answers, batch) => log('answer', { batch, answers }),
+        onWithdrawn: (batch, shown) => {
+          log('withdrawn', { batch });
+          show(shown ? WITHDRAWN : WITHDRAWN_QUEUED); // another question may still be on screen
         },
         onDone: () => {
           asking = false;
@@ -149,7 +152,7 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
         },
         onInterrupt,
       });
-      spec = withAsking(loaded.config, join(tmp, 'ask.sock'), tmp);
+      spec = await withAsking(loaded.config, join(tmp, 'ask.sock'), tmp);
     } catch (e) {
       // Nothing launched yet; still end the log, and the output, with a result.
       const result: RunResult = { usage: ZERO_USAGE, exitCode: 1, error: `cannot set up the run: ${(e as Error).message}` };

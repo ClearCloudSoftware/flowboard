@@ -1,9 +1,18 @@
-import { beforeEach, test } from 'node:test';
+import { after, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FlowboardGuard } from '../src/agent/opencode/guard-plugin.ts';
+
+/** Temp folders made by this file's tests, removed once they are done. */
+const temps: string[] = [];
+after(() => temps.forEach((d) => rmSync(d, { recursive: true, force: true })));
+function tempDir(prefix: string) {
+  const dir = mkdtempSync(prefix);
+  temps.push(dir);
+  return dir;
+}
 
 beforeEach(() => {
   process.env.FLOWBOARD_GUARDS = JSON.stringify({ writeRoots: ['/repo/wt'], denyCommands: ['\\bgit\\s+push\\b'] });
@@ -24,6 +33,12 @@ test('checks every path in an apply_patch', async () => {
   await hook({ tool: 'apply_patch' }, { args: { patchText: '*** Begin Patch\n*** Update File: src/a.ts\n*** End Patch' } });
 });
 
+test('checks a bash command where its workdir puts it', async () => {
+  const hook = await before();
+  await assert.rejects(hook({ tool: 'bash' }, { args: { command: 'rm -rf foo', workdir: '/tmp' } }), /Recursive rm outside the worktree: foo/);
+  await hook({ tool: 'bash' }, { args: { command: 'rm -rf foo', workdir: 'src' } });
+});
+
 test('blocks a denied command', async () => {
   const hook = await before();
   await assert.rejects(hook({ tool: 'bash' }, { args: { command: 'git push origin main' } }), /Command blocked by policy/);
@@ -37,7 +52,7 @@ test('is a no-op without FLOWBOARD_GUARDS', async () => {
 });
 
 test('marks itself loaded in the run config home', async () => {
-  const home = mkdtempSync(join(tmpdir(), 'fbtest-'));
+  const home = tempDir(join(tmpdir(), 'fbtest-'));
   process.env.XDG_CONFIG_HOME = home;
   await FlowboardGuard({ directory: '/repo/wt' });
   assert.ok(existsSync(join(home, 'flowboard-guard.loaded')));

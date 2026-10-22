@@ -1,6 +1,6 @@
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { createConnection } from 'node:net';
 import { join } from 'node:path';
 import { askBroker } from '@flowboard/ask-user';
@@ -8,16 +8,25 @@ import type { Answers, Question } from '@flowboard/core';
 import { startBroker } from '../src/ask/broker.ts';
 import type { Answerer, BrokerEvents } from '../src/ask/broker.ts';
 
+/** Temp folders made by this file's tests, removed once they are done. */
+const temps: string[] = [];
+after(() => temps.forEach((d) => rmSync(d, { recursive: true, force: true })));
+function tempDir(prefix: string) {
+  const dir = mkdtempSync(prefix);
+  temps.push(dir);
+  return dir;
+}
+
 const q = (id: string): Question => ({ id, prompt: `${id}?`, kind: 'text' });
-const sock = () => join(mkdtempSync('/tmp/fb-'), 'ask.sock');
+const sock = () => join(tempDir('/tmp/fb-'), 'ask.sock');
 
 /** Events recorded in order, by name. */
 function recorder() {
   const seen: string[] = [];
   const events: BrokerEvents = {
-    onQuestion: (qs) => seen.push(`question:${qs.map((x) => x.id).join(',')}`),
-    onAnswer: () => seen.push('answer'),
-    onWithdrawn: () => seen.push('withdrawn'),
+    onQuestion: (qs, batch) => seen.push(`question:${batch}:${qs.map((x) => x.id).join(',')}`),
+    onAnswer: (_a, batch) => seen.push(`answer:${batch}`),
+    onWithdrawn: (batch, shown) => seen.push(`withdrawn:${batch}:${shown ? 'shown' : 'queued'}`),
     onDone: () => seen.push('done'),
     onInterrupt: () => seen.push('interrupt'),
   };
@@ -35,7 +44,7 @@ test('a request is answered by the answerer', async () => {
   const broker = await startBroker(path, async () => ({ a: 'x' }), events);
   assert.deepEqual(await askBroker(path, { questions: [q('a')] }), { answers: { a: 'x' } });
   await until(() => seen.includes('done'));
-  assert.deepEqual(seen, ['question:a', 'answer', 'done']);
+  assert.deepEqual(seen, ['question:1:a', 'answer:1', 'done']);
   await broker.close();
 });
 
@@ -69,8 +78,27 @@ test('a dropped connection withdraws its question and aborts the prompt', async 
   const conn = createConnection(path, () => conn.write(JSON.stringify({ questions: [q('a')] }) + '\n'));
   await until(() => signal !== undefined);
   conn.destroy();
-  await until(() => seen.includes('withdrawn'));
+  await until(() => seen.includes('withdrawn:1:shown'));
   assert.equal(signal!.aborted, true);
+  await broker.close();
+});
+
+test('a queued batch is reported when it arrives, and its withdrawal names it', async () => {
+  const path = sock();
+  const { seen, events } = recorder();
+  let release!: () => void;
+  const first = new Promise<void>((r) => (release = r));
+  const broker = await startBroker(path, async (qs) => (await first, { [qs[0].id]: 'x' }), events);
+  const answered = askBroker(path, { questions: [q('a')] });
+  await until(() => seen.includes('question:1:a'));
+  const conn = createConnection(path, () => conn.write(JSON.stringify({ questions: [q('b')] }) + '\n'));
+  await until(() => seen.includes('question:2:b'));
+  conn.destroy();
+  await until(() => seen.includes('withdrawn:2:queued'));
+  release();
+  assert.deepEqual(await answered, { answers: { a: 'x' } });
+  await until(() => seen.includes('done'));
+  assert.deepEqual(seen, ['question:1:a', 'question:2:b', 'withdrawn:2:queued', 'answer:1', 'done']);
   await broker.close();
 });
 
@@ -87,7 +115,7 @@ test('close() withdraws a question on screen', async () => {
   askBroker(path, { questions: [q('a')] }).catch(() => {});
   await until(() => signal !== undefined);
   await broker.close();
-  assert.ok(seen.includes('withdrawn'));
+  assert.ok(seen.includes('withdrawn:1:shown'));
   assert.equal(signal!.aborted, true);
 });
 

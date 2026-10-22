@@ -1,6 +1,6 @@
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +9,15 @@ import { OpencodeProvider } from '../src/agent/opencode/provider.ts';
 import { startServer } from '../src/agent/opencode/server.ts';
 import { hostExecHost } from '../src/exec/host.ts';
 
+/** Temp folders made by this file's tests, removed once they are done. */
+const temps: string[] = [];
+after(() => temps.forEach((d) => rmSync(d, { recursive: true, force: true })));
+function tempDir(prefix: string) {
+  const dir = mkdtempSync(prefix);
+  temps.push(dir);
+  return dir;
+}
+
 const fixture = (name: string) => fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 const FAKE = fixture('fake-opencode.mjs');
 
@@ -16,7 +25,7 @@ type Logged = { env?: Record<string, string | undefined>; method?: string; path?
 
 /** A fake server scripted with `script`; `requests()` reads what it saw. */
 function setup(script: object[], extraEnv: Record<string, string> = {}) {
-  const dir = mkdtempSync(join(tmpdir(), 'fbtest-'));
+  const dir = tempDir(join(tmpdir(), 'fbtest-'));
   writeFileSync(join(dir, 'script.json'), JSON.stringify(script));
   const log = join(dir, 'log.jsonl');
   writeFileSync(log, '');
@@ -179,6 +188,16 @@ test('stop() aborts the session and settles as stopped', { timeout: 10_000 }, as
   assert.equal(res.exitCode, 130);
   assert.equal(res.error, 'stopped');
   assert.ok(requests().some((r) => r.path === '/session/ses_fake1/abort'));
+});
+
+test('a stopped run keeps the usage reported so far', { timeout: 10_000 }, async () => {
+  const { spec, provider } = setup([step(0.25, 'a'), { hold: true }]);
+  const run = provider().launch(spec);
+  for await (const ev of run.events) if (ev.type === 'usage') run.stop();
+  const res = await run.result;
+  assert.equal(res.exitCode, 130);
+  assert.equal(res.usage.costUsd, 0.25);
+  assert.equal(res.usage.input, 10);
 });
 
 test('isolates the server from personal config', async () => {

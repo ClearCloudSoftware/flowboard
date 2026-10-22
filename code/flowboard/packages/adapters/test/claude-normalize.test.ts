@@ -48,7 +48,21 @@ test('resets per-message usage at message_start', () => {
     ev({ type: 'message_start', message: { usage: { input_tokens: 20, output_tokens: 1 } } }),
     ev({ type: 'message_delta', usage: { input_tokens: 20, output_tokens: 7 } }),
   ].flatMap(createNormalizer());
-  assert.deepEqual(lastUsage(events), { input: 30, output: 12, cacheRead: 0, cacheWrite: 0, numTurns: 0 });
+  assert.deepEqual(lastUsage(events), { input: 30, output: 12, cacheRead: 0, cacheWrite: 0, numTurns: 1 });
+});
+
+test("counts the main agent's finished messages as turns, as the result's num_turns does", () => {
+  const ev = (parent: string | null, event: object) =>
+    msg({ type: 'stream_event', event, parent_tool_use_id: parent, uuid: 'u', session_id: 's' });
+  const start = { type: 'message_start', message: { usage: { input_tokens: 1, output_tokens: 1 } } };
+  const events = [
+    ev(null, start),
+    ev('t1', start),
+    ev('t1', { type: 'message_stop' }), // a subagent's turn
+    ev(null, { type: 'message_stop' }),
+    ev(null, start),
+  ].flatMap(createNormalizer());
+  assert.equal(lastUsage(events).numTurns, 1);
 });
 
 test('maps tool_use and tool_result', () => {

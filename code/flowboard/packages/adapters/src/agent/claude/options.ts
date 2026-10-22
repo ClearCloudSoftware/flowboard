@@ -72,7 +72,8 @@ export function buildQuery(spec: RunSpec, base: QueryBase): { prompt: string; op
   if (guards) {
     const guard: HookCallback = async (input) => {
       if (input.hook_event_name !== 'PreToolUse') return {};
-      const reason = checkToolCall(guards, input.tool_name, input.tool_input, spec.cwd);
+      // input.cwd is where the shell is now: a cd persists between Bash calls.
+      const reason = checkToolCall(guards, input.tool_name, input.tool_input, spec.cwd, input.cwd);
       return reason
         ? { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } }
         : {};
