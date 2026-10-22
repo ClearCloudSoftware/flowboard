@@ -57,12 +57,19 @@ test('maps tools, skills, turns and guards into config', () => {
   assert.deepEqual(config.plugin, ['file:///abs/guard-plugin.ts']);
 });
 
-test('merges native packs last', () => {
-  const { config } = buildLaunch(
-    { ...spec, capabilities: [{ id: 'n', provider: 'opencode', mount: { kind: 'native', config: { instructions: ['RULES.md'] } } }] },
+test("merges native packs under the adapter's own settings", () => {
+  const pack = { instructions: ['RULES.md'], permission: { '*': 'allow' }, plugin: ['file:///evil.ts'], mcp: {}, agent: {}, experimental: {} };
+  const { config, permission } = buildLaunch(
+    { ...spec, capabilities: [{ id: 'n', provider: 'opencode', mount: { kind: 'native', config: pack } }] },
     base,
   );
   assert.deepEqual(config.instructions, ['RULES.md']);
+  // A pack cannot drop the permission rules, the guard plugin, ask_user, the step limits or the MCP no-timeout.
+  assert.deepEqual(config.permission, rulesToConfig(permission));
+  assert.deepEqual(config.plugin, ['file:///abs/guard-plugin.ts']);
+  assert.ok(config.mcp?.vibe);
+  assert.equal((config.agent as Record<string, { steps?: number }>).build.steps, 5);
+  assert.equal(config.experimental?.mcp_timeout, 2147483647);
 });
 
 test('renders the skill invocation as an instruction', () => {
@@ -99,10 +106,26 @@ test('applies the run policy to every agent, subagents included', () => {
   assert.deepEqual(out.config.experimental, { continue_loop_on_deny: true, mcp_timeout: 2147483647 });
 });
 
-test("keeps the owner's extra OpenCode config out", () => {
-  const { env } = buildLaunch(spec, base);
-  assert.equal(env.OPENCODE_CONFIG, undefined);
-  assert.equal(env.OPENCODE_CONFIG_DIR, undefined);
+test("keeps the owner's OpenCode settings and Anthropic key out, but not OpenCode's credentials", () => {
+  const owner = {
+    ...base.env,
+    OPENCODE_PERMISSION: '{"bash":"allow"}',
+    OPENCODE_AUTO_SHARE: '1',
+    OPENCODE_SERVER_USERNAME: 'me',
+    OPENCODE_ENABLE_QUESTION_TOOL: '1',
+    OPENCODE_EXPERIMENTAL: '1',
+    ANTHROPIC_API_KEY: 'sk-ant',
+    ANTHROPIC_AUTH_TOKEN: 'tok',
+    OPENCODE_API_KEY: 'zen',
+    OPENCODE_AUTH_CONTENT: '{}',
+  };
+  const { env } = buildLaunch(spec, { ...base, env: owner });
+  for (const k of ['OPENCODE_CONFIG', 'OPENCODE_CONFIG_DIR', 'OPENCODE_PERMISSION', 'OPENCODE_AUTO_SHARE', 'OPENCODE_SERVER_USERNAME', 'OPENCODE_ENABLE_QUESTION_TOOL', 'OPENCODE_EXPERIMENTAL', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN']) {
+    assert.equal(env[k], undefined, k);
+  }
+  assert.equal(env.OPENCODE_API_KEY, 'zen');
+  assert.equal(env.OPENCODE_AUTH_CONTENT, '{}');
+  assert.equal(env.PATH, '/bin');
 });
 
 test('tool calls have no time limit', () => {

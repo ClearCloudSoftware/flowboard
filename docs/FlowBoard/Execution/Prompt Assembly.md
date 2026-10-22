@@ -52,15 +52,23 @@ The drawio harness concept 2, **Map, not encyclopedia**: *"The prompt lists path
 
 > [!warning] Placeholders and the preamble
 > - Backlog 3.2 lists placeholders `{{task_title}} {{task_body}} {{artifact:<type>}} {{worktree}}` only; PRD §7 and `03` §6 add `{{acceptance_criteria}}` and `{{non_goals}}`.
-> - `agent-provider.ts` documents the preamble as *"Preamble: task title + body"*; PRD §7 includes acceptance criteria and non-goals.
-> - Step kinds: PRD §5 has *"'ai' | 'shell' | 'manual'"*, where an AI step names a skill, an agent or both. `02` §3 (*"`skill|agent|shell|manual`"*) and `agent-provider.ts` (*"Slash invocation for kind='skill', e.g. "/grill-me""*) use a separate `skill` kind. PRD §7 also qualifies the invocation as `/grill-me:grill-me`.
+> - `agent-provider.ts`, reference and shipped alike, documents the preamble as *"Preamble: task title + body"*; PRD §7 includes acceptance criteria and non-goals.
+> - Step kinds: PRD §5 has *"'ai' | 'shell' | 'manual'"*, where an AI step names a skill, an agent or both. `02` §3 (*"`skill|agent|shell|manual`"*) and the reference `agent-provider.ts` (*"Slash invocation for kind='skill', e.g. "/grill-me""*) use a separate `skill` kind. PRD §7 also qualifies the invocation as `/grill-me:grill-me`.
 
 > [!warning] Where part 7 goes
 > - *Before the closing instruction*: PRD §7 (*"inserted just before the closing instruction"*) and `09-memory.md` (*"just before the closing headless instruction"*).
 > - *At the end*: PRD §11.2 (*"append them to the prompt as a final part"*), `03` §6 (*"append the hits as a **7th prompt part**"*) and the drawio *Prompt builder* card (*"+7 recalled memory"*, after part 6).
-> - The port has no room for it either way: `PromptParts` (`agent-provider.ts`) has six fields, and *"adapters must not reorder"*.
+> - The port has no room for it either way: `PromptParts` has six fields, in the reference `agent-provider.ts` and in the shipped port. The reference also said *"adapters must not reorder"*; the shipped port dropped that rule (below), and the conclusion stands on the six fields alone.
 >
 > See [[Execution Open Questions]] #51.
+
+> [!warning] The shipped code differs
+> The shipped port (`core/src/ports/agent-provider.ts`, 2026-10-18) keeps the six `PromptParts` fields but drops *"adapters must not reorder"*. The parts are passed structured *"so each adapter can place the parts where its provider wants them"*, and `renderPrompt` (`core/src/prompt.ts`) renders the canonical order, skipping empty parts.
+> - Claude sends the invocation first, then the other parts in canonical order: the CLI only treats a leading `/` as a slash command.
+> - OpenCode keeps the canonical order but rewrites the invocation as `Use the "<slug>" skill.`, since it has no Claude plugin namespace.
+> - On both, the closing instruction stays last.
+> - Part 4's comment now reads *"Slash invocation for a skill, fully qualified, e.g. "/grill-me:grill-me""*: no `skill` kind, and qualified as in PRD §7.
+> - `run-agent`, the only caller today, passes its YAML's `skill:` as part 4 and turns a bare `/name` for a `skills:` folder into `/local:name` ([[Run Agent CLI Decisions]] R26).
 
 ## Related
 

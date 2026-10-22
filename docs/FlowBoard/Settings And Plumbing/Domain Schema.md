@@ -62,7 +62,7 @@ erDiagram
 | add `runs.sandbox` | the tier that ran, for audit | PRD §11.1, backlog 1.1 | **no** (only §11.1's prose). See [[Sandboxing Data Model]] |
 | add `step_instances.reason` | rejection or failure text on the card | `02` §1, backlog 1.1 | **no** |
 | add `step_defs.sandbox_profile` | per-step override | backlog 1.1 | **no**. See [[Sandboxing Data Model]] |
-| `skills` gains `provider` + `format` | a plugin dir is one packaging | `02` §1 | superseded by Capability Library D1 (Claude-only v1) |
+| `skills` gains `provider` + `format` | a plugin dir is one packaging | `02` §1 | superseded by Capability Library D1 (Claude-only v1). The build has since added OpenCode, which reads a plugin dir's `skills/` folder; whether v1 stays Claude-only is [[Agent Providers Open Questions]] #38 |
 | `jobs.kind` includes `resume_step` | park and resume | backlog 1.1 (**DEC**) | **no** ([[Execution Open Questions]] #37) |
 
 Backlog 1.1 calls `runs.model`, `runs.effort` and `step_instances.reason` *"the three columns that proved necessary"*. The `agent_session_id` rename and `runs.provider` come from `02` §1, not the backlog. See [[Settings And Plumbing Open Questions]] #22.

@@ -1,7 +1,7 @@
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { createConnection } from 'node:net';
@@ -14,6 +14,15 @@ import { CLOSING } from '../src/config.ts';
 import { runAgent } from '../src/run.ts';
 import type { RunDeps } from '../src/run.ts';
 
+/** Temp folders made by this file's tests, removed once they are done. */
+const temps: string[] = [];
+after(() => temps.forEach((d) => rmSync(d, { recursive: true, force: true })));
+function tempDir(prefix: string) {
+  const dir = mkdtempSync(prefix);
+  temps.push(dir);
+  return dir;
+}
+
 const YAML = 'adapter: claude-code\nmodel: sonnet\nfolder: proj\nprompt: task.md\n';
 const LOG_NAME = '2026-10-18T09-05-07-claude-code.jsonl';
 const HELLO: NormalizedEvent[] = [
@@ -24,7 +33,7 @@ const HELLO: NormalizedEvent[] = [
 
 /** A temp project, plus deps that capture output and use `provider`. */
 function setup(provider: () => AgentProvider, yaml = YAML) {
-  const base = realpathSync(mkdtempSync(join(tmpdir(), 'fb-run-'))); // macOS's temp folder is a link
+  const base = realpathSync(tempDir(join(tmpdir(), 'fb-run-'))); // macOS's temp folder is a link
   mkdirSync(join(base, 'proj'));
   writeFileSync(join(base, 'task.md'), 'Say hi.');
   writeFileSync(join(base, 'task.yaml'), yaml);
@@ -232,6 +241,7 @@ test('the summary falls back to the last thinking and skips a zero failure count
 
 const COLOUR: Question = { id: 'colour', prompt: 'Colour?', kind: 'text' };
 const WITHDRAWN = '-- question withdrawn: the agent stopped waiting';
+const WITHDRAWN_QUEUED = '-- question withdrawn before it was shown: the agent stopped waiting';
 
 /**
  * A fake agent that asks `questions` through the run's broker socket, as the shim would, then reports
@@ -345,9 +355,9 @@ test('a run that ends mid-question withdraws it and still exits with a result', 
   assert.equal(await runAgent(['task.yaml'], deps), 1);
   assert.ok(out.includes(WITHDRAWN));
   assert.equal(signal?.aborted, true);
-  const kinds = readLog(join(base, 'runs', LOG_NAME)).map((l) => l.kind);
-  assert.ok(kinds.includes('withdrawn'));
-  assert.equal(kinds.at(-1), 'result');
+  const lines = readLog(join(base, 'runs', LOG_NAME));
+  assert.deepEqual(lines.find((l) => l.kind === 'withdrawn'), { kind: 'withdrawn', at: lines[0].at, batch: 1 });
+  assert.equal(lines.at(-1).kind, 'result');
 });
 
 test('Ctrl+C at a question stops the run with 130', async () => {
@@ -381,6 +391,29 @@ test('skills are copied into a local plugin and the temp dir is removed afterwar
   assert.ok(plugin.mount.kind === 'plugin_dir' && !existsSync(join(plugin.mount.path, '..')), 'temp dir removed');
 });
 
+test('a skills: entry that is a link, or holds links, is copied as real files', async () => {
+  const { provider } = askingProvider();
+  const kinds: Record<string, boolean> = {};
+  const launch = provider.launch;
+  provider.launch = (spec) => {
+    const plugin = spec.capabilities?.find((c) => c.id === 'local');
+    if (plugin?.mount.kind === 'plugin_dir') {
+      for (const p of ['skills/grill-me', 'skills/grill-me/notes.md']) kinds[p] = lstatSync(join(plugin.mount.path, p)).isSymbolicLink();
+    }
+    return launch(spec);
+  };
+  const { base, deps } = setup(() => provider, YAML + 'skills: [skills/grill-me]\n');
+  mkdirSync(join(base, 'elsewhere', 'grill-me'), { recursive: true });
+  writeFileSync(join(base, 'elsewhere', 'grill-me', 'SKILL.md'), '---\nname: grill-me\n---\nGrill.\n');
+  writeFileSync(join(base, 'elsewhere', 'shared.md'), 'notes');
+  symlinkSync(join(base, 'elsewhere', 'shared.md'), join(base, 'elsewhere', 'grill-me', 'notes.md'));
+  mkdirSync(join(base, 'skills'));
+  symlinkSync(join(base, 'elsewhere', 'grill-me'), join(base, 'skills', 'grill-me'));
+  deps.answer = async () => ({ colour: 'teal' });
+  assert.equal(await runAgent(['task.yaml'], deps), 0);
+  assert.deepEqual(kinds, { 'skills/grill-me': false, 'skills/grill-me/notes.md': false });
+});
+
 test('without a terminal the agent is told no one can answer', async () => {
   const { provider } = askingProvider();
   const { out, deps } = setup(() => provider);
@@ -407,17 +440,20 @@ test('a queued question withdrawn while another is on screen does not print over
     socket = spec.tools!.find((t) => t.name === 'flowboard')!.env!.FLOWBOARD_ASK_SOCKET;
     return launch(spec);
   };
-  const { out, deps } = setup(() => provider);
+  const { base, out, deps } = setup(() => provider);
   let printedWhileAsking: boolean | undefined;
   deps.answer = async () => {
     onScreen.resolve();
     await sleep(80);
-    printedWhileAsking = out.includes(WITHDRAWN);
+    printedWhileAsking = out.includes(WITHDRAWN_QUEUED);
     return { colour: 'teal' };
   };
   assert.equal(await runAgent(['task.yaml'], deps), 0);
   assert.equal(printedWhileAsking, false);
-  assert.ok(out.includes(WITHDRAWN));
+  assert.ok(out.includes(WITHDRAWN_QUEUED) && !out.includes(WITHDRAWN));
+  // The queued batch is logged when it arrives, and the withdrawal names it.
+  const asked = readLog(join(base, 'runs', LOG_NAME)).filter((l) => l.kind !== 'event').map((l) => [l.kind, l.batch]);
+  assert.deepEqual(asked.slice(1, -1), [['question', 1], ['question', 2], ['withdrawn', 2], ['answer', 1]]);
 });
 
 test('the second Ctrl+C removes the temp dir before exiting', async () => {

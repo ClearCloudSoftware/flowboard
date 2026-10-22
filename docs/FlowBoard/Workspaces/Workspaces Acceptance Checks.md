@@ -35,7 +35,7 @@ Backlog 2.1 states these as requirements. No check in the sources (backlog 10.1 
 
 ## Testability
 
-The architecture's test double is `ReplayProvider` (*"Replays recorded stream-json in tests. No CLI, no cost."*, drawio). Backlog 0.2 adds *"an integration lane that spawns the real worker against a fake `claude` binary"* and a Playwright lane for *"sheet actions"*. All of them replace the agent, not the workspace: runs still need a real worktree. The drawio *Test lane*: *"vitest on engine rules, fingerprinting and the prompt builder · ReplayProvider drives whole flows at $0 · Playwright E2E against the real UI (v1 shipped without one)"*. No source names a fake Workspace adapter.
+The architecture's test double is `ReplayProvider` (*"Replays recorded stream-json in tests. No CLI, no cost."*, drawio; as built on 2026-10-18 it replays a script of normalized events, not stream-json, and ignores the `RunSpec`, `cwd` included: [[Replay Provider]]). Backlog 0.2 adds *"an integration lane that spawns the real worker against a fake `claude` binary"* and a Playwright lane for *"sheet actions"*. All of them replace the agent, not the workspace: runs still need a real worktree. The drawio *Test lane*: *"vitest on engine rules, fingerprinting and the prompt builder · ReplayProvider drives whole flows at $0 · Playwright E2E against the real UI (v1 shipped without one)"*. No source names a fake Workspace adapter.
 
 ## Related
 

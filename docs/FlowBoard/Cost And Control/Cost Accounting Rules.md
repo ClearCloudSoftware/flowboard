@@ -22,6 +22,9 @@ Every rule that decides what a number means, in the sources' own words. The note
 | 9 | Draft mode: *"override to haiku/low and record actual model/effort on the run."* | backlog 3.2 |
 | 10 | *"Tag memory-layer token/API cost separately so it never lands in the per-run cost rollups"* | PRD §11.2 |
 
+> [!warning] The shipped code differs
+> Rule 5 quotes the reference `events.ts`. The shipped comment (2026-10-22): `costUsd` is *"USD as the provider reports it"*; Claude reports it only on the result, OpenCode on every event (0 for a model it has no price for), and *"Absent means "price it from tokens""*. No PricingService is built, so nothing fills it yet. Rule 2 is done in the adapters, which emit running totals as `usage` events, and rule 3 in the Claude adapter. See [[Normalized Event Envelope]].
+
 ## Marking spend as wasted
 
 | # | Rule | Source |

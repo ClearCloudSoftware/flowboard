@@ -33,13 +33,19 @@ The old design brief, §4: *"The design problem is **signal density**. A raw log
 
 Story 3.2 adds the live numbers it depends on: *"persist `num_turns` per assistant turn so the viewer/board show live numbers"* (**PRD/BUG**), and *"`message_delta.usage` is cumulative per message — reset per `message_start`, do not sum across deltas."* (**BUG**)
 
+> [!warning] The shipped code differs
+> As built (2026-10-18), the live numbers come from `usage` events, the run's running totals of tokens and turns. Claude's carry no cost until the result, so its running cost still has to be estimated from tokens; OpenCode's carry its own cost. `AgentRun.stop()` settles a run as `{ exitCode: 130, error: 'stopped' }` with the usage so far, but a SIGTERM by pid from outside is not a stop: the run fails with exit 1. See [[Normalized Event Envelope]], [[Agent Run Handle And Result]] and [[Monitor Open Questions]] #36.
+
 ## What it shows
 
-Each row is a stored `run_events` row, with partial deltas folded (backlog 3.2: *"fold partial deltas"*): its `type` and a one-line `summary` *"for the viewer (e.g. `Read src/auth/session.ts`, `Bash: pnpm test`)"* (PRD §7). The seven types are `assistant_text`, `thinking`, `tool_use`, `tool_result`, `system`, `result`, `error`. See [[Event Stream And SSE]].
+Each row is a stored `run_events` row, with partial deltas folded (backlog 3.2: *"fold partial deltas"*): its `type` and a one-line `summary` *"for the viewer (e.g. `Read src/auth/session.ts`, `Bash: pnpm test`)"* (PRD §7). The eight types are `assistant_text`, `thinking`, `tool_use`, `tool_result`, `system`, `usage`, `result`, `error`; `usage`, the running totals, was added on 2026-10-18. As built, only `tool_use` carries a `summary` ([[Monitor Open Questions]] #39), and text arrives whole, one event per text block on Claude and per part on OpenCode, so the adapters leave no deltas to fold. See [[Event Stream And SSE]].
 
 ## Milestone
 
 PRD §14 **M3**: *"Worker process, job queue, spawn `claude -p` for one hardcoded step, parse stream-json into `run_events`, SSE session viewer, cost captured on the run. **This is the milestone that proves the whole idea.** Do not proceed until you can watch a real session stream in the browser and see its cost land in the database."* Acceptance (§16): *"A step runs, streams live to `/runs/[id]`, and records a non-zero cost"*; backlog 10.1 adds *"and live turns/cost during the run"*.
+
+> [!warning] The shipped code differs
+> Nothing parses `stream-json` into `run_events` (2026-10-18): the Claude adapter runs `claude` through the Agent SDK and reads its typed messages, and no worker, queue, database or viewer exists yet. The stand-in is `pnpm run-agent`, which launches one run from a YAML file and logs its events to `runs/<stamp>-<adapter>.jsonl`. See [[Agent Providers Runtime]].
 
 ## Links in
 

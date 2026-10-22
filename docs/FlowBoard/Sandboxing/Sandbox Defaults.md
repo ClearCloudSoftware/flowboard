@@ -35,7 +35,7 @@ The drawio tier card: *"container (default when autonomous)"*.
 | Egress | default-deny; model endpoint + package registries | `08`, PRD §11.1 |
 | Image | `flowboard-runner` (named only in the drawio) | drawio |
 | Limits | none given | — |
-| Hooks | always written per run | PRD §7 |
+| Hooks | always written per run. As built (2026-10-18) nothing is written: each adapter sets the guards up in memory when `RunSpec.guards` is set, and `run-agent` always sets it ([[In-Agent Hooks]]) | PRD §7 |
 
 > [!warning] Off by default, or on by default?
 > PRD §11.1 is titled *"Sandboxed execution (optional, recommended for headless runs)"*; `08` says *"Optional, off by default for trusted local repos"*. But every step defaults to `bypassPermissions` (PRD §5), and bypass needs a sandbox. So with the sandbox off, every seeded step trips the [[Permission Gate]]. The pitch says the opposite of *off by default*: *"FlowBoard makes the safe path the default: each step runs in a **sandbox**"*, and *"**Zero autonomous runs happen unsandboxed**"* (`docs/pitch.md`). The architecture README lists the default tier as open decision 3, and feature map §10 asks *"❓ How strong a box to use by default"*. See [[Sandboxing Open Questions]].

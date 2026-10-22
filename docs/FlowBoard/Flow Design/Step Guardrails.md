@@ -20,13 +20,13 @@ The flow-designer guide: *"Each field is a guardrail — the things that decide 
 | Approval | `advance_mode` | **Approval** | See [[Approval Gates]] | *"No gate on the last step before a merge means nothing human ever sees the result."* |
 | Sandbox | no column; `settings.sandbox_profile` is *"overridable per step"* (§11.1). Backlog 1.1 adds optional `step_defs.sandbox_profile` | **Sandbox** | *"How locked down the run is: none, a container, or a sealed container with no network."* | *"**none** on an unattended step is an agent with your machine and your keys, reading untrusted content."* |
 | Egress allowlist | no column; the allowlist is part of `settings.sandbox_profile`, *"overridable per step"* (§11.1) | — | Hosts the step's sandbox may reach. Four other mockups speak of a per-step allowlist (*"that step's allowlist"*, *"this step's egress allowlist"*) | — |
-| Permission mode | `permission_mode` (default `bypassPermissions`) | — | The agent CLI's permission mode | — |
+| Permission mode | `permission_mode` (default `bypassPermissions`) | — | The agent CLI's permission mode (as built: `RunSpec.permissionMode`; with none passed the adapters use `dontAsk`, and `run-agent` defaults to `acceptEdits`) | — |
 
 `docs/pitch.md` says *"Every step has a budget and a turn cap"*; in PRD §5 both are nullable with no default ([[Flow Design Open Questions]] #37).
 
 ## Logical caps, physical backstops
 
-`max_turns` and `max_budget_usd` are *logical* caps passed to the CLI (`--max-turns`, `--max-budget-usd`). The sandbox adds *physical* ones: *"resource limits (`--memory`, `--cpus`, `--pids-limit`, wall-clock) that physically backstop the logical `max_turns`/`max_budget_usd` caps"* (PRD §11.1). Backlog Story 3.5: *"a limit/timeout hit marks the run failed with reason."*
+`max_turns` and `max_budget_usd` are *logical* caps passed to the CLI (`--max-turns`, `--max-budget-usd`). As built, they are `RunSpec.limits`: Claude passes them as Agent SDK options, which become those flags; OpenCode turns `maxTurns` into `steps` on its agents, and its adapter aborts the session once the running cost reaches `maxBudgetUsd` ([[OpenCode Adapter]]). The sandbox adds *physical* ones: *"resource limits (`--memory`, `--cpus`, `--pids-limit`, wall-clock) that physically backstop the logical `max_turns`/`max_budget_usd` caps"* (PRD §11.1). Backlog Story 3.5: *"a limit/timeout hit marks the run failed with reason."*
 
 Whether a provider enforces them depends on capability flags: `budget_cap` — *"honours maxBudgetUsd; else it is advisory"*; `allowed_tools` — *"tool allow/deny is enforced, not advisory"* (`agent-provider.ts`). No `allowed_tools` → *"tool policy becomes advisory / prompt-level"* (`01-ports.md`).
 
@@ -34,6 +34,9 @@ Whether a provider enforces them depends on capability flags: `budget_cap` — *
 
 - *"When `--allowedTools` is set, always append `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`."* (PRD §7)
 - Agents carry their own allowed tools (`agents.allowed_tools`), and skills declare theirs in `SKILL.md`. A step's effective tools are the agent's ∩ the skill's, narrowed by the step's `allowed_tools` when set; the flow editor warns at design time when that drops a tool the skill declares ([[Capability Library Decisions|D28]]). Network-capable tools need hosts on the egress allowlist — see [[Capability Tools And Egress]].
+
+> [!warning] The shipped code differs
+> The injected server is named `flowboard`; its tools are `mcp__flowboard__ask_user` and `mcp__flowboard__ask_user_batch`. Each adapter pre-approves every injected server (`mcp__flowboard__*` on Claude, `flowboard_*` on OpenCode), with or without an allow list, and an explicit deny still wins (2026-10-22). See [[Run Spec]] and [[Ask User MCP Server]].
 
 ## The egress allowlist
 

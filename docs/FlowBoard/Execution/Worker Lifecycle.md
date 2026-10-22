@@ -62,8 +62,8 @@ The two branches for a dead pid come from sources that disagree.
 
 ## Other fixes recorded against the worker
 
-- *"Session‑id capture: parse once from the `system/init` event, not every line."* (backlog 3.3, **BUG (perf)**)
-- *"Per‑run `mcp.json` pointing at `mcp/ask-user.ts` via `tsx --tsconfig <root>/tsconfig.json` (path aliases break when spawned from the worktree cwd)."* (backlog 3.2, **FIX**). The PRD's layout has `apps/mcp-shim` instead, a stdio server that forwards to the worker's broker and never opens the database (PRD §3, §9).
+- *"Session‑id capture: parse once from the `system/init` event, not every line."* (backlog 3.3, **BUG (perf)**). As built, the Claude adapter does this, from the first typed `system/init` message ([[Claude Code Adapter]]).
+- *"Per‑run `mcp.json` pointing at `mcp/ask-user.ts` via `tsx --tsconfig <root>/tsconfig.json` (path aliases break when spawned from the worktree cwd)."* (backlog 3.2, **FIX**). The PRD's layout has `apps/mcp-shim` instead, a stdio server that forwards to the worker's broker and never opens the database (PRD §3, §9). As built (2026-10-18), neither: no `mcp.json` is written, the shim is `code/flowboard/packages/ask-user/`, run as `node` with the absolute path of its `main.ts` (no `tsx`, no path aliases), and its broker runs inside `run-agent` ([[Ask User MCP Server]]).
 - Backlog intro, item 6: *"agents killed port 3000 (moved to 3111)."* That is the web dev server's port: *"Dev server on port 3111; README warns agents kill :3000."* (backlog 0.3, **FIX**)
 
 ## Related

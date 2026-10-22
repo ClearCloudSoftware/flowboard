@@ -46,16 +46,16 @@ The sibling mockups show the failure this prevents:
 From `old/architecture/08-sandboxing.md` and the harness-architecture diagram:
 
 - **Egress allowlist is load-bearing.** Default-deny outbound; allow only the model/CLI endpoint and the package registries the step needs. **Not the git remote** — the host does all git work.
-- Implemented as an egress proxy (Squid / tinyproxy) on an internal Docker network, which also injects the real API key on model requests.
+- Implemented as an egress proxy (Squid / tinyproxy) on an internal Docker network, which also injects the real API key on model requests. Not built: Claude Code runs use the owner's subscription login, not an API key, which a key-injecting proxy does not fit ([[Claude Code Adapter]]).
 - **Installed skills are mounted read-only** into the sandbox (`ro: skills/ → /skills`) — harness diagram. **v1 (D14), now also in `08-sandboxing.md`:** only the step's pinned plugin dirs, read-only. The only writable mount is the task worktree.
 - **No sandbox, no git plugins.** On the host tier, a step whose plugins came from a git URL does not run (D15).
 - A default-deny allowlist holds even when tool approval is bypassed.
 
 ## Tool enforcement depends on the provider
 
-The `allowed_tools` capability flag means *tool allow/deny is enforced, not advisory*. Without it, tool policy becomes advisory / prompt-level. The runner always appends the ask-user tools (`mcp__vibe__*`) so a restrictive list cannot lock out human-in-the-loop.
+The `allowed_tools` capability flag means *tool allow/deny is enforced, not advisory*. Without it, tool policy becomes advisory / prompt-level. The adapter always pre-approves the ask-user tools, so a restrictive list cannot lock out human-in-the-loop: as built, the server is `flowboard`, allowed as `mcp__flowboard__*` on Claude Code and by a `flowboard_*` rule on OpenCode, and an explicit deny still wins (2026-10-22; [[Claude Code Adapter]], [[OpenCode Adapter]]). The design had the runner append `mcp__vibe__*`.
 
-A second layer sits inside the agent: PreToolUse **hooks** (PRD §7, `03-execution-substrate.md`) block writes outside the worktree, non-goal paths and destructive commands, and return the reason so the agent changes course. Hooks are a provider capability (`tool_hooks`): a provider without them relies on the sandbox alone, and the flow editor says so.
+A second layer sits inside the agent: PreToolUse **hooks** (PRD §7, `03-execution-substrate.md`) block writes outside the worktree, non-goal paths and destructive commands, and return the reason so the agent changes course. Hooks are a provider capability (`tool_hooks`): a provider without them relies on the sandbox alone, and the flow editor says so. As built (2026-10-18), Claude Code and OpenCode both enforce `RunSpec.guards`, but only file-edit tools and recursive `rm` are checked against paths, so a shell command an allow rule permits can still write anywhere ([[In-Agent Hooks]]).
 
 ## Where amber shows
 

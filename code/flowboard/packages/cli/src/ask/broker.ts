@@ -13,11 +13,11 @@ import type { Answers, AskReply, AskRequest, Question } from '@flowboard/core';
 export type Answerer = (questions: Question[], signal: AbortSignal) => Promise<Answers>;
 
 export interface BrokerEvents {
-  /** A batch is about to be shown. */
-  onQuestion(questions: Question[]): void;
-  onAnswer(answers: Answers): void;
-  /** A shown or queued batch's connection closed, or the broker closed, first. */
-  onWithdrawn(): void;
+  /** A batch arrived; `batch` numbers it within the run. It is shown at once, or queued behind the one on screen. */
+  onQuestion(questions: Question[], batch: number): void;
+  onAnswer(answers: Answers, batch: number): void;
+  /** The batch's connection closed, or the broker closed, before it was answered; `shown` is false while it was queued. */
+  onWithdrawn(batch: number, shown: boolean): void;
   /** No batch on screen or queued any more. */
   onDone(): void;
   /** The answerer reported Ctrl+C. */
@@ -25,6 +25,7 @@ export interface BrokerEvents {
 }
 
 interface Job {
+  id: number;
   questions: Question[];
   conn: Socket;
   abort: AbortController;
@@ -35,6 +36,7 @@ export async function startBroker(socketPath: string, answer: Answerer, events: 
   const conns = new Set<Socket>();
   let current: Job | undefined;
   let current$: Promise<void> | undefined;
+  let batches = 0;
 
   const reply = (conn: Socket, r: AskReply) => {
     if (!conn.destroyed) conn.end(JSON.stringify(r) + '\n');
@@ -45,7 +47,7 @@ export async function startBroker(socketPath: string, answer: Answerer, events: 
     const i = queue.indexOf(job);
     if (i !== -1) {
       queue.splice(i, 1);
-      events.onWithdrawn();
+      events.onWithdrawn(job.id, false);
     } else if (job === current) {
       job.abort.abort();
     }
@@ -57,16 +59,15 @@ export async function startBroker(socketPath: string, answer: Answerer, events: 
     if (!job) return;
     current = job;
     current$ = (async () => {
-      events.onQuestion(job.questions);
       try {
         const answers = await answer(job.questions, job.abort.signal);
-        if (job.abort.signal.aborted) events.onWithdrawn();
+        if (job.abort.signal.aborted) events.onWithdrawn(job.id, true);
         else {
-          events.onAnswer(answers);
+          events.onAnswer(answers, job.id);
           reply(job.conn, { answers });
         }
       } catch (e) {
-        if (job.abort.signal.aborted) events.onWithdrawn();
+        if (job.abort.signal.aborted) events.onWithdrawn(job.id, true);
         else if ((e as Error).name === 'ExitPromptError') {
           events.onInterrupt();
           reply(job.conn, { error: 'stopped' });
@@ -95,7 +96,9 @@ export async function startBroker(socketPath: string, answer: Answerer, events: 
       } catch (e) {
         return reply(conn, { error: `bad request: ${(e as Error).message}` });
       }
-      job = { questions: request.questions, conn, abort: new AbortController() };
+      job = { id: ++batches, questions: request.questions, conn, abort: new AbortController() };
+      // Logged on arrival, so a batch withdrawn while it waits in the queue is still on record.
+      events.onQuestion(job.questions, job.id);
       queue.push(job);
       next();
     });

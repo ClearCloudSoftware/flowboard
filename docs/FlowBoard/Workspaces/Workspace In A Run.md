@@ -27,7 +27,7 @@ flowchart TB
     WS --- WT
   end
   subgraph Box[Container, one per run]
-    CLI[claude -p<br/>cwd /work]
+    CLI[claude, run by the Agent SDK<br/>cwd /work]
   end
   WT == rw bind mount /work ==> CLI
   SK[(skills/)] -. ro /skills .-> CLI
@@ -49,6 +49,9 @@ flowchart TB
 ## A known fix from the first build
 
 Backlog 3.2 (**FIX**): *"Per‑run `mcp.json` pointing at `mcp/ask-user.ts` via `tsx --tsconfig <root>/tsconfig.json` (path aliases break when spawned from the worktree cwd)."* Running from the worktree means anything FlowBoard launches inside it must not depend on FlowBoard's own `cwd`. PRD §3's layout has a separate `apps/mcp-shim` instead. See [[Worker Lifecycle]].
+
+> [!warning] The shipped code differs
+> No `mcp.json` is written (2026-10-18), and the shim is `code/flowboard/packages/ask-user/`, not `apps/mcp-shim`. `run-agent` adds it to `RunSpec.tools` as a server named `flowboard` that `node` starts from the shim's absolute path, with the broker socket in `FLOWBOARD_ASK_SOCKET`. The Claude adapter passes it in memory as the Agent SDK's `mcpServers`; the OpenCode adapter puts it in the per-run `OPENCODE_CONFIG_CONTENT`. See [[Ask User MCP Server]].
 
 ## Related
 

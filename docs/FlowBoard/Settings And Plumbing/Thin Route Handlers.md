@@ -45,6 +45,9 @@ Drawio *Life of one step*, beats A–B: *"You press Start, or the engine advance
 - **Provider-blind.** Adding Codex needs *"Zero changes to: engine, board projection, HITL protocol, notifier, cost rollups, viewer, API."* (`06`, *Where a new provider actually touches the codebase*).
 - **The exception: Stop and Cancel.** *"Stop: SIGTERM by pid from the route (same machine), finalise as cancelled"* (backlog 3.4; `03` §8). Cancel (`POST /api/tasks/:id/cancel`, PRD §12) does the same: *"Cancel: SIGTERM live runs, cancel pending questions, mark instances skipped."* (backlog 2.1, **FIX**). Both act on a process from the route, and both rely on web and worker sharing a machine.
 
+> [!warning] The shipped code differs
+> The port's stop is `AgentRun.stop()`, held by whoever launched the run: a stop before the result settles `{ exitCode: 130, error: 'stopped' }`. A SIGTERM by pid from outside is reported as a failure with exit 1, not as a stop (2026-10-18). See [[Agent Run Handle And Result]] and [[Monitor Open Questions]] #36.
+
 ## Errors
 
 No source defines an error envelope. The PRD uses `409` twice: *"409 if it drops an in-use skill"* and *"409 while in use"* (§12). The backlog records the failures of the first build:

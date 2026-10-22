@@ -34,6 +34,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 | `docs/old/reference/core/ports/workspace.ts` | `execHost(task)` on the Workspace port |
 | `docs/old/reference/core/ports/agent-provider.ts` | `RunSpec.exec`, capability flags (no `tool_hooks`) |
 | `docs/old/reference/core/ports/memory-store.ts` | Memory stays off the allowlist |
+| Under `code/flowboard/packages/`: `core/src/ports/exec-host.ts`, `core/src/ports/agent-provider.ts`, `core/src/guard.ts`, `adapters/src/exec/host.ts`, `adapters/src/agent/{claude,opencode}/`, `ask-user/src/`, `cli/src/` | The shipped provider layer (2026-10-18, some rules changed 2026-10-22), behind every *as built* correction: the shipped `ExecHost` and its host tier, the in-memory guards and MCP config, credentials, stop and exit codes, the ask_user shim and `run-agent`'s broker. Described in [[ExecHost Port]], [[Providers And Sandboxing]], [[Claude Code Adapter]], [[OpenCode Adapter]] and [[Ask User MCP Server]] |
 | `docs/feature-map.md` §14, §16, §19, *Across everything*, *Parking lot* | Workspaces link, team guardrails idea, sandbox defaults setting, safety theme, cloud runs and injection scan |
 | `docs/mockups/flow-designer.html`, `flow-designer-guide.html` | `SANDBOX` values, default `sealed container`, the *unattended and unsandboxed* chip, the Sandbox and Budget rows |
 | `docs/mockups/inbox.html`, `inbox-guide.html` | `billing-webhook` egress failure, **Allow host & retry** |

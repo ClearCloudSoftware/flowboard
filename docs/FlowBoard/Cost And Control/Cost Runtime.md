@@ -17,21 +17,22 @@ The runner builds a `RunSpec` from the step definition and applies transforms be
 
 Limits are not a transform: they ride on the `RunSpec` from `step_defs` as `limits: { maxTurns, maxBudgetUsd }` (`agent-provider.ts`). The runner *"maps the logical `max_turns` / `max_budget_usd` caps to the sandbox's physical `--memory` / `--cpus` / `--pids-limit` / wall-clock backstops"* (`03` §6).
 
-It records what actually ran: *"records model, effort, tier"* (drawio *Runner*). `03` §6 suggests snapshotting *"the resolved `RunSpec` to `data/runs/<id>/spec.json"*. PRD §7 snapshots *"the final args to `data/runs/<id>/args.json`"*.
+It records what actually ran: *"records model, effort, tier"* (drawio *Runner*). `03` §6 suggests snapshotting *"the resolved `RunSpec` to `data/runs/<id>/spec.json"*. PRD §7 snapshots *"the final args to `data/runs/<id>/args.json`"*. (As built: no runner and no `args.json`; `pnpm run-agent` logs the launched `RunSpec` as the `start` line of its run log, [[Agent Providers Storage]].)
 
 ## During the run
 
 ```mermaid
 sequenceDiagram
-  participant CLI as claude -p (stream-json)
+  participant CLI as claude (via Agent SDK)
   participant AD as Claude adapter
   participant RN as Runner
   participant DB as runs / run_events
   participant UI as Card · row · viewer
   CLI->>AD: message_start usage
   AD->>AD: reset per-message counter
+  AD->>RN: usage (running totals, no costUsd)
   CLI->>AD: message_delta usage (cumulative)
-  AD->>RN: (no normalized usage event today)
+  AD->>RN: usage (running totals, no costUsd)
   RN->>DB: num_turns per assistant turn
   DB-->>UI: SSE / poll · live estimate
   CLI->>AD: result total_cost_usd
@@ -45,7 +46,10 @@ sequenceDiagram
 - The runner tees each event *"to `run_events` + the SSE emitter"* (`03` §6). The SSE endpoint tails `run_events` by `seq`, because the worker is a separate process (PRD §7).
 - The drawio *Stream parser*: *"stream-json → NormalizedEvent v1 (versioned, OTel GenAI names) → run_events · live token and cost"*. Life-of-a-step beat G: *"stream-json on stdout → parser → run_events + live cost → SSE → run viewer and board."*
 
-The dashed step, from tokens to a live dollar figure, has no normalized event and no Claude rates. See [[Live Cost]].
+> [!warning] The shipped code differs
+> No stdout is parsed and no separate stream parser exists (2026-10-18). The Claude adapter normalizes the Agent SDK's typed messages, and the OpenCode adapter its server's SSE events. Events carry no `v`, and there is no `run_events` table or `seq` until the runner is built; `run-agent` appends every event to `runs/<stamp>-<adapter>.jsonl`. See [[Stream Parsing And Normalization]].
+
+The step from tokens to a live dollar figure has a normalized event since 2026-10-18, `usage` with running totals, but on Claude no dollars: its live totals carry no `costUsd`, and there are no Claude rates. OpenCode's carry its own running cost. See [[Live Cost]].
 
 ## At the end
 
@@ -58,6 +62,8 @@ for await (const ev of run.events) {                     // normalized — provi
 }
 const result = await run.result;                         // AgentProvider port
 ```
+
+As built, the port also emits `usage` events with the running totals, so live cost can follow each of them, not only `result` ([[Normalized Event Envelope]]). The only loop like this today is `run-agent`'s (`cli/src/run.ts`): it prints and logs each event, and ends its log with the `RunResult`, usage included.
 
 Then:
 
@@ -77,7 +83,7 @@ After 20 minutes waiting on a question the run parks: *"After 20 minutes the age
 
 - *"A test stand-in — A fake provider that replays a recorded session, so the whole system can be tested without spending real money."* (feature map §6)
 - `ReplayProvider`: *"Every engine, park/resume, and cost test runs deterministic and zero-spend."* (`01-ports.md`). Its test asserts `res.usage.costUsd === 0.012` (`replay-provider.ts`).
-- A stopped replay settles with `exitCode: 130, error: 'stopped'`. Its usage is zero unless a `result` event had already arrived, because usage is only read from `result` (`replay-provider.ts`). A stopped run's spend is invisible to the port.
+- A stopped replay settles with `exitCode: 130, error: 'stopped'`. In the reference its usage was zero unless a `result` event had already arrived, so a stopped run's spend was invisible to the port. As built (2026-10-22), every provider keeps the usage reported so far: Replay from its scripted `usage` events; Claude its last running tokens and turns, without `costUsd`; OpenCode its tokens and cost ([[Agent Run Handle And Result]], [[Replay Provider]]).
 - Backlog 0.2: *"an integration lane that spawns the real worker against a fake `claude` binary … so runner/park/resume can be tested without spend."* (**GAP**)
 
 ## Related

@@ -54,6 +54,9 @@ The drawio draws the *Docker Desktop* and *Agent sandbox* boxes dashed, which it
 | Exec adapters | `packages/adapters/exec/  # host, docker` | PRD §3 |
 | Container workspace adapter | *"Container workspace / devcontainer · Docker sandbox · remote host"*, dashed (not in v1) | drawio *Logical components* |
 
+> [!warning] The shipped code differs
+> As built (2026-10-18) there is no worker, runner or sandbox; only `adapters/src/exec/host.ts` exists. The Claude adapter drives the installed `claude` through the Agent SDK, which builds the CLI's arguments from options. Nothing writes an `mcp.json` or `settings.json`, the guard hook runs in process, and the run uses the owner's subscription login, not an API key. The second provider built is OpenCode, not Codex: one `opencode serve` per run, configured through `OPENCODE_CONFIG_CONTENT`, its events read as SSE rather than stdout ([[Claude Code Adapter]], [[OpenCode Adapter]], [[Agent Providers Open Questions]] #38).
+
 ## Startup probe
 
 *"Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`."* (PRD §11.1). Backlog Story 0.1: *"Probe Docker (or Podman) availability and version; decide the runtime and whether gVisor/Firecracker are worth an opt-in tier."* `08` *Recommendation*: *"**Docker as the baseline runtime**; `gvisor`/`microvm` opt-in for untrusted repos, behind the same `ExecHost` port."*

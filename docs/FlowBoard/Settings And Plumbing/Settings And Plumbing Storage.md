@@ -22,10 +22,10 @@ Settings are read by both processes: the worker when it builds a `RunSpec` (`06`
 | What | Path | Source |
 |---|---|---|
 | Secrets (Slack) | `.env.local` | PRD §10 |
-| CLI arg snapshot per run | `data/runs/<id>/args.json` | PRD §7 |
+| CLI arg snapshot per run | `data/runs/<id>/args.json` | PRD §7. Not built: the plan left it to the runner. As built, `run-agent` logs the launched `RunSpec` as the `start` line of `runs/<stamp>-<adapter>.jsonl`, followed by every event with its native `raw` message ([[Agent Providers Storage]]) |
 | Run spec + raw stream | `data/runs/<id>/spec.json` | drawio |
-| Broker sockets | `data/sock/<run_id>.sock` | PRD §9 |
-| Per-run Claude config | generated `mcp.json` and `settings.json` | PRD §7; location open ([[Execution Open Questions]] #39) |
+| Broker sockets | `data/sock/<run_id>.sock` | PRD §9. As built: `ask.sock` in `run-agent`'s temp folder `/tmp/fb-*` |
+| Per-run Claude config | generated `mcp.json` and `settings.json` | PRD §7; location open ([[Execution Open Questions]] #39). As built (2026-10-18) neither is written: each adapter passes its config in memory, as Agent SDK options on Claude and as `OPENCODE_CONFIG_CONTENT` on OpenCode ([[Agent Providers Open Questions]] #4) |
 
 ## In the browser
 

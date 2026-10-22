@@ -14,6 +14,8 @@ module: Sandboxing
 | Logical | `max_turns` → `--max-turns`; `max_budget_usd` → `--max-budget-usd` | The agent CLI | PRD §5, §7 |
 | Physical | `--memory`, `--cpus`, `--pids-limit`, wall-clock | The container runtime | PRD §11.1, `08` |
 
+As built (2026-10-18), the logical caps are `RunSpec.limits.maxTurns` and `maxBudgetUsd`. Claude's CLI enforces both, through the Agent SDK's options. On OpenCode, `maxTurns` sets each agent's `steps`, and the adapter itself aborts the session once the running cost reaches `maxBudgetUsd`; for a model OpenCode has no price for, that never happens ([[OpenCode Adapter]]). No physical limit is built.
+
 The type: `limits?: { memoryMb?: number; cpus?: number; pids?: number; wallClockMs?: number }`, *"Physical backstop to the logical max_turns / max_budget_usd caps."* (`exec-host.ts`)
 
 Feature map §10: *"Ceilings on memory, processing, and time, so a runaway agent is stopped by the box, not just by its spending budget."*
@@ -30,6 +32,8 @@ Feature map §10: *"Ceilings on memory, processing, and time, so a runaway agent
 *"a limit/timeout hit marks the run failed with reason."* (backlog Story 3.5)
 
 PRD §7 classes *"budget or turn cap hit"* as non-transient: the task goes to `blocked`. A physical limit is not named in either list. Its transient list does include *"process killed by a signal or lost on restart"*; an out-of-memory or wall-clock kill is a signal kill, so (inference) PRD §7 would retry it as transient, against backlog 3.5's *"marks the run failed with reason"*. See [[Infra Retries]]; [[Execution Open Questions]] #68.
+
+As built (2026-10-18), a runner could not tell these apart from the result. Both adapters report a process killed from outside as exit 1 with an error text, not as a signal. A cap hit shows only as provider-specific text in `RunResult.error`: `error_max_turns:` or `error_max_budget_usd:` on Claude, `max_turns:` or `max_budget:` on OpenCode ([[Agent Run Handle And Result]], [[Providers And Sandboxing]]).
 
 The drawio *Hardening* card says *"wall-clock kill"*.
 

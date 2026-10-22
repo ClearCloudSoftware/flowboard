@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-import type { NormalizedEvent, RunSpec } from '@flowboard/core';
+import type { NormalizedEvent, RunSpec, Usage } from '@flowboard/core';
 import { ClaudeCodeProvider } from '../src/agent/claude/provider.ts';
 import type { QueryFn } from '../src/agent/claude/provider.ts';
 
@@ -98,6 +98,22 @@ test('stop() kills the child and settles as stopped', async () => {
   const res = await run.result;
   assert.equal(res.exitCode, 130);
   assert.equal(res.error, 'stopped');
+});
+
+test('a run stopped before its result keeps the usage reported so far', async () => {
+  const beforeResult = lines.filter((m) => m.type !== 'result');
+  const run = new ClaudeCodeProvider({
+    query: fakeQuery(beforeResult, { childScript: 'setTimeout(() => {}, 60000)', waitForAbort: true }),
+  }).launch(spec);
+  let last: Usage | undefined;
+  for await (const ev of run.events) {
+    if (ev.type === 'usage') last = ev.usage;
+    if (ev.type === 'assistant_text') run.stop();
+  }
+  const res = await run.result;
+  assert.equal(res.exitCode, 130);
+  assert.ok(last && last.output > 0);
+  assert.deepEqual(res.usage, last); // tokens only: Claude prices a run in its result
 });
 
 test('fails when a requested plugin is not loaded', async () => {

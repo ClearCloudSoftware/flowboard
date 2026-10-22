@@ -15,8 +15,8 @@ Where each HITL responsibility lives in the two-process design.
 | Advancement: gates, no-outcome, escalation | `packages/core/engine` | PRD §3, `02` §3 |
 | Notifier interface | `core/ports` | PRD §3, architecture README module layout; the interface sketch is in `01-ports.md` |
 | Slack adapter | `packages/adapters/notify` (`notify/slack/`) | PRD §3, architecture README |
-| `ask_user` broker, escalation timer | `apps/worker` (*"job loop, runner, ask_user broker, escalation timer"*) | PRD §3 |
-| MCP shim | `apps/mcp-shim` | PRD §3, §9 |
+| `ask_user` broker, escalation timer | `apps/worker` (*"job loop, runner, ask_user broker, escalation timer"*). As built (2026-10-18), the only broker is `run-agent`'s, `cli/src/ask/broker.ts` | PRD §3 |
+| MCP shim | `apps/mcp-shim`. As built (2026-10-18): `code/flowboard/packages/ask-user/` | PRD §3, §9 |
 | `/inbox`, SSE, answer routes | `apps/web` (*"Calls core; holds no rules"*) | PRD §3 |
 
 The dependency rule: *"the domain (flow engine, board projection, question protocol, cost ledger) depends only on **ports**"* (architecture README). *"Only `apps/web` and `apps/worker` open the SQLite file; the MCP shim never does"* (PRD §3).
@@ -96,6 +96,9 @@ async function onAnswered(notifier: Notifier, q: Question, by: string) {
 | Three overlapping pollers → one stream | **BUG (perf)** | backlog Story 4.3 |
 | Restart recovery: re-attach by pid | **BUG** | backlog Story 3.3; feature map §8 *"Survive a restart"* |
 | Slack never run against a real workspace | **GAP** | backlog Story 6.3; *What went wrong* item 1 (*"keyboard nav … and Slack were never exercised live"*) |
+
+> [!warning] The shipped code differs
+> The `mcp__vibe__*` and `mcp.json` rows were done another way on 2026-10-18. The server is named `flowboard`, and each adapter pre-approves every injected server, with or without an allow list (`mcp__flowboard__*` on Claude, `flowboard_*` on OpenCode); an explicit deny still wins (2026-10-22). No `mcp.json` is written: the adapter gets the shim's command in memory, and Node runs it by absolute path, without `tsx`. See [[Ask User MCP Server]].
 
 ## Testing
 

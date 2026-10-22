@@ -41,6 +41,9 @@ export interface ExecHost {
 
 `ChildHandle`: *"A spawned process, normalized so the runner tails it the same way at every tier."* `profile`: *"Absent for the `host` tier; present for sandboxed tiers."*
 
+> [!warning] The shipped code differs
+> On 2026-10-18 the shipped port, `core/src/ports/exec-host.ts`, replaced this reference file. `ChildHandle` is gone. The shipped method is `spawn(command: string, args: string[], opts: { cwd: string; env?: NodeJS.ProcessEnv }): ChildProcessWithoutNullStreams`, so it returns Node's own child process. Its comment: *"Every tier spawns a local process (the CLI itself, or `docker exec -i …`), so a Node child process with piped stdio is the handle. Providers need stdin: the Claude Agent SDK speaks to the CLI over stdio."* `IsolationTier`, `SandboxProfile` (every field and comment), `id` and `profile` still match the reference. Only the `host` tier is built: `hostExecHost` (`adapters/src/exec/host.ts`), a plain `child_process.spawn` with piped stdio. Both adapters use it when `RunSpec.exec` is absent, and nothing passes `exec` yet.
+
 ## Who owns it, who uses it
 
 ```mermaid
@@ -76,6 +79,8 @@ flowchart LR
 | `packages/adapters/exec/  # host, docker` | PRD §3 |
 | `adapters/workspace/worktree/  container/` | architecture README layout |
 | Workspace adapters: *"devcontainer, Docker sandbox, remote"* | architecture README port table |
+
+As built (2026-10-18), only `adapters/src/exec/host.ts` exists. Its `hostExecHost` is one constant `ExecHost`, not a factory over the worktree as in `07`: each `spawn` call names its own `cwd`. No Workspace port, `worktreeWorkspace` or docker `ExecHost` exists.
 
 ## Why a separate seam
 

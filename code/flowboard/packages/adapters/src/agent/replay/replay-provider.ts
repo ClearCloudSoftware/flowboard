@@ -35,10 +35,12 @@ export class ReplayProvider implements AgentProvider {
   launch(_spec: RunSpec): AgentRun {
     const { events, streamDelayMs = 0 } = this.script;
 
-    const sessionId =
+    const id =
       this.script.sessionId ??
-      events.find((e): e is Extract<NormalizedEvent, { type: 'system' }> => e.type === 'system')?.sessionId ??
-      'replay-session';
+      events.find((e): e is Extract<NormalizedEvent, { type: 'system' }> => e.type === 'system')?.sessionId;
+    // Like a real provider: no session id, no session.
+    const sessionId = id === undefined ? Promise.reject(new Error('run ended without a session id')) : Promise.resolve(id);
+    sessionId.catch(() => {});
 
     let stopped = false;
     let settle!: (r: RunResult) => void;
@@ -48,19 +50,23 @@ export class ReplayProvider implements AgentProvider {
     async function* stream(): AsyncGenerator<NormalizedEvent> {
       let usage: Usage = ZERO_USAGE;
       let outcome: 'pass' | 'fail' | undefined;
+      let error: string | undefined;
       for (const ev of events) {
         if (stopped) {
           settle({ usage, exitCode: 130, outcome, error: 'stopped' });
           return;
         }
         if (streamDelayMs) await delay(streamDelayMs);
+        if (ev.type === 'usage') usage = ev.usage;
         if (ev.type === 'result') {
           usage = ev.usage;
           outcome = ev.outcome;
         }
+        // A scripted error fails the run, as the first error does on a real provider.
+        if (ev.type === 'error') error ??= ev.message;
         yield ev;
       }
-      settle({ usage, exitCode: 0, outcome });
+      settle({ usage, exitCode: error ? 1 : 0, outcome, error });
     }
 
     return {

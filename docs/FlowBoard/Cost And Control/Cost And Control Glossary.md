@@ -24,10 +24,10 @@ module: Cost And Control
 | **Kept** | Spend on attempts whose output is still in the workspace. No column; it is the remainder | task-detail guide |
 | **Ledger** | The cost and usage ledger, component #12: the rollups over the `runs` journal plus the PricingService. See [[Cost Ledger]] | `06` §12 |
 | **Live cost** | A running figure during a run, from per-message token usage, replaced by the result's total at the end. See [[Live Cost]] | PRD §7 |
-| **Logical cap** | `max_turns` and `max_budget_usd`, passed to the agent CLI | PRD §11.1 |
+| **Logical cap** | `max_turns` and `max_budget_usd`, passed to the agent CLI (as built: `RunSpec.limits`; Agent SDK options on Claude, while on OpenCode the turn cap is agent `steps` and the adapter stops the run at the budget) | PRD §11.1 |
 | **Logical model id** | A provider-neutral id (`reasoning-high`, `fast-cheap`, `default`) resolved per provider. In v1 the Claude aliases serve as the logical ids (`agents.default_model`, *"a Claude alias, used as the logical model id"*; [[Capability Library Decisions]] D20). See [[Logical Model Ids]] | `01-ports.md`, PRD §5 |
 | **Memory bucket** | A separate tag for memory-layer token and API cost, kept out of per-run rollups | `06` §12 |
-| **Native cost** | The `native_cost` capability: the provider reports dollars. Claude has it; Codex does not | `01-ports.md`, `agent-provider.ts` |
+| **Native cost** | The `native_cost` capability: the provider reports dollars. Claude has it; Codex does not. As built, OpenCode has it too, and Claude reports dollars only on the result | `01-ports.md`, `agent-provider.ts` |
 | **Passthrough** | The PricingService does nothing when the provider already set `costUsd` | `06` §12 |
 | **Physical limit** | The sandbox's `--memory`, `--cpus`, `--pids-limit` and wall-clock limits, which backstop the logical caps | PRD §11.1, `08-sandboxing.md` |
 | **PricingService** | `price(provider, model, usage) → costUsd`. See [[Pricing Service]] | `06` §12 |

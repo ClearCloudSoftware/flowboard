@@ -67,6 +67,8 @@ The worker *"deletes the temp file"* (backlog 7.3). `jobs.attempts` implies retr
 
 Not stated: host or sandbox, via the AgentProvider port or a direct `claude` call. PRD §17 requires only that *"Every model call goes through the `claude` CLI."* Backlog 7.3 gives `haiku`, `--tools ""`, and *"Isolate the importer from global hooks"*; how (D5's empty `--settings` or `CLAUDE_CONFIG_DIR`) is [[Agent Providers Open Questions]] #24. Its spend has nowhere to land: `runs.step_instance_id` is `NOT NULL` (PRD §5), and an import has no step instance. See [[Backlog Importer Agent]], [[Cost And Control Index]].
 
+[[Agent Providers Open Questions]] #24 is decided for runs through the Claude adapter (2026-10-18): neither. No settings file is written, and `settingSources: []` loads no user, project or local settings. Whether the importer uses the adapter is still open.
+
 ### 13. Hand-made task, then the same item imported
 
 A hand-made task has no `import_key`, so an import of the same item makes a second task. No source covers it. See [[Idempotent Upsert]].

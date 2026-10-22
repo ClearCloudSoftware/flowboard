@@ -7,6 +7,9 @@ module: Agent Providers
 
 *"The key trick that makes graceful degradation cheap. The engine and flow editor query `capabilities` before using a knob"* (`01-ports.md`, *Capability negotiation*). Feature map §6 in plain words: *"FlowBoard checks what each can do and adapts, hiding options a tool can't handle."*
 
+> [!info] Design, not built
+> Nothing in this note exists on `dev` as of 2026-10-22. No code reads `provider.capabilities`, and there is no runner, flow editor or save-time validation. Both real providers declare all eleven flags anyway, although OpenCode honours several only in part ([[Provider Capabilities]]). What exists instead: `run-agent` launches the adapter its YAML names, and each adapter handles a knob it cannot honour by itself. OpenCode drops an `effort` that is not one of the model's variant names, and the Claude adapter ignores `native` packs. Neither checks which provider a pack was made for ([[Provider Implementation Decisions]] C7).
+
 ## Run-time: degrade, don't fail
 
 The five rules in `01-ports.md`, plus one from PRD §7. The *Who degrades* column is sourced only for `effort` (*"adapter … editor"*), `mcp_tools` (`04` §9: *"the engine watches the `produces:questions` path"*) and `tool_hooks` (*"the flow editor"*); the rest is inferred ([[Agent Providers Open Questions]] #35).
@@ -41,6 +44,8 @@ Both checks apply to the same knob: `effort` has a run-time fallback (drop it) *
 
 *"So HITL genericizes to **"MCP where available, file protocol universal."**"* (`04` §9). PRD §9 keeps it: *"The artifact-file exchange … remains the fallback for a provider without MCP."* See [[Ask Park And Resume]].
 
+As built, both providers inject the ask-user tool program as an MCP server ([[Run Agent CLI Decisions]] R18). The artifact-file fallback does not exist.
+
 ## Design-time: the capability contract
 
 *"Validation (component 2) checks steps against the *target provider's* capability set, so "step uses effort but its provider lacks it" is a design-time warning, same machinery as the artifact contract."* (`01-ports.md`)
@@ -58,7 +63,7 @@ A related check sits with packs: *"validation checks the pack's provider matches
 > [!warning] Gaps
 > - The *target provider* of a step is never stored: `step_defs` has no provider column (PRD §5). [[Agent Providers Open Questions]] #14.
 > - Validation runs on save in `apps/web` (drawio *Flow validation on save*), while providers are adapters the core may not import. How the web process gets a provider's capability set is not said. [[Agent Providers Open Questions]] #26.
-> - In v1 (Claude-only) the capability contract has one provider to check against; [[Capability Library Decisions]] D1 drops the provider-match check.
+> - The plan makes v1 Claude-only, so the capability contract would have one provider to check against, and [[Capability Library Decisions]] D1 drops the provider-match check. The build overtook the plan: OpenCode was built on 2026-10-18 as a second provider. Whether that changes v1 is open: [[Agent Providers Open Questions]].
 
 ## Related
 

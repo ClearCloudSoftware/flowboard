@@ -8,6 +8,7 @@ import { basename, join, resolve } from 'node:path';
 import { parse } from 'yaml';
 import type { $ZodIssue } from 'zod/v4/core';
 import { z } from 'zod';
+import { allowsAnyShell } from '@flowboard/adapters';
 import { DEFAULT_DENY_COMMANDS } from '@flowboard/core';
 import type { RunSpec } from '@flowboard/core';
 
@@ -73,7 +74,10 @@ function toAbs(p: string, baseDir: string): string {
 const isDir = (p: string) => existsSync(p) && statSync(p).isDirectory();
 const isFile = (p: string) => existsSync(p) && statSync(p).isFile();
 
-/** Matches an allow entry that lets the agent run any shell command: `Bash`, or a pattern of only `*`, `:` and spaces. */
+/**
+ * Matches an allow entry that lets the agent run any shell command: `Bash`, or a pattern of only `*`, `:` and spaces.
+ * That covers Claude, which names tools exactly in allow rules; OpenCode globs the name too, so its adapter decides.
+ */
 const ANY_SHELL = /^\s*bash\s*(\(\s*[*:\s]*\))?\s*$/i;
 const SHELL_TAIL = 'lets shell commands write outside folder; set permissions.allow_unrestricted_shell: true to allow it';
 
@@ -173,7 +177,9 @@ export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
   const optIn = y.permissions?.allow_unrestricted_shell === true;
   const shellTriggers = [
     ...(mode === 'bypassPermissions' || mode === 'auto' ? [`permissions.mode: ${mode}`] : []),
-    ...(y.permissions?.allow ?? []).filter((a) => ANY_SHELL.test(a)).map((a) => `permissions.allow: "${a}"`),
+    ...(y.permissions?.allow ?? [])
+      .filter((a) => ANY_SHELL.test(a) || (y.adapter === 'opencode' && allowsAnyShell(a)))
+      .map((a) => `permissions.allow: "${a}"`),
   ];
   if (!optIn) errors.push(...shellTriggers.map((t) => `${t} ${SHELL_TAIL}`));
   if (errors.length) return fail(errors);

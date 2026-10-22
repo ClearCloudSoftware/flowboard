@@ -52,7 +52,7 @@ At the cap, PRD §8 escalates rather than fails: *"Set the target step instance 
 
 A run you stop is *"recorded as failed, with "stopped by you" as the reason"*, and its spend moves to wasted. Backlog Story 3.4 finalises a stopped run as `cancelled`, and Story 3.3 says graceful shutdown should mark runs *"`cancelled`, not `failed`"*. [[Monitor Open Questions]] #14.
 
-Two more conflicts sit under Stop. PRD §7 counts *"process killed by a signal"* as a transient failure and retries it, so a SIGTERM Stop needs its own path or the run comes back (#35). And backlog 3.4 kills *"by pid from the route"*, which skips the ports' `stop()` and `kill()` and crosses the web/worker boundary (#36).
+Two more conflicts sit under Stop. PRD §7 counts *"process killed by a signal"* as a transient failure and retries it, so a SIGTERM Stop needs its own path or the run comes back (#35). And backlog 3.4 kills *"by pid from the route"*, which skips the port's `AgentRun.stop()` and crosses the web/worker boundary (#36). As built (2026-10-18), such a kill is not reported as a stop: the run fails with exit 1, while `stop()` settles it as `{ exitCode: 130, error: 'stopped' }`. The shipped ports have no `ChildHandle.kill()` ([[Agent Run Handle And Result]]).
 
 ## Steps that never start
 

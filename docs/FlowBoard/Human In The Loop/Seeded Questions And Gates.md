@@ -31,7 +31,7 @@ The mockups' seed flow gates only `review` and has no check step, and the old ha
 | `code-review` | *"calls `set_outcome`"*; *"told to look for failures, not to confirm the work"*. The capability-library mockup: *"call set_outcome with a verdict and its reasoning"* | backlog Story 1.2, PRD §15, `capability-library.html` |
 | `ask-three` | The M4 smoke test: *"a trivial skill that asks three questions of different kinds"*. **A test fixture, not a seed** (Capability Library **D30**) | PRD §14, §15; backlog Story 1.2 |
 
-That `grill-me` may use only `Read` is a reason PRD §7 always appends `mcp__vibe__*` to `--allowedTools` (our reading; see [[Ask User MCP Server]]).
+That `grill-me` may use only `Read` is a reason PRD §7 always appends `mcp__vibe__*` to `--allowedTools` (our reading; see [[Ask User MCP Server]]). As built, each adapter pre-approves every injected server whatever the allow list says (`mcp__flowboard__*` on Claude, `flowboard_*` on OpenCode), so a `Read`-only list still leaves `ask_user`; an explicit deny wins (2026-10-22).
 
 ## Seeded artifact types
 

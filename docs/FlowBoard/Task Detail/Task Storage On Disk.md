@@ -31,6 +31,9 @@ data/
 
 Paths from PRD §3 (`data/flowboard.db`), §6, §7, §9 and §11, the drawio *Harness architecture* page, and for the skills store PRD §13 (*"gitignored, one dir per commit"*) and [[Capability Library Decisions]] D5. *Mounted read-only* is from PRD §11.1. See [[Task Workspace]] for the three competing worktree schemes and [[Task Artifacts]] for artifact naming.
 
+> [!warning] The shipped code differs
+> None of the run files under `data/` is written yet (2026-10-22): there is no `args.json`, `spec.json` or `run_events` table, because the runner is not built. The one run record today is `pnpm run-agent`'s log, `runs/<stamp>-<adapter>.jsonl`, whose `start` line holds the `RunSpec` as launched and whose `event` lines hold each event with its `raw` native message. Its broker socket is `ask.sock` in a `/tmp/fb-*` folder, deleted when the run ends. See [[Agent Providers Storage]].
+
 ## What lives where
 
 | Thing | Store | Why (source) |

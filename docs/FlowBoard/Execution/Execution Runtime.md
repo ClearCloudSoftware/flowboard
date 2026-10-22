@@ -20,6 +20,10 @@ The drawio *Harness architecture* title: *"One laptop · two Node processes · o
 | Sandbox container | non-host tiers only: *"one container per run, destroyed on exit"* | drawio *Docker Desktop* box; PRD §11.1 (*"one per run, destroyed on completion"*) |
 | Egress proxy | the only way out of the sandbox network | PRD §11.1 |
 
+> [!warning] The shipped code differs
+> - The shim is `code/flowboard/packages/ask-user/`, not `apps/mcp-shim`. The agent CLI, or the OpenCode server, still launches it once per run. Its broker runs inside `pnpm run-agent` (`cli/src/ask/broker.ts`), the only caller today, not in a worker.
+> - The agent is not started as `claude -p …`. The Claude Agent SDK spawns the installed `claude` through the host ExecHost and talks to it over stdio; OpenCode runs one `opencode serve` per run. Both are host child processes (2026-10-18). See [[Agent Providers Runtime]].
+
 ```mermaid
 flowchart LR
   subgraph host[Your machine]
@@ -57,6 +61,9 @@ apps/
 
 (PRD §3, trimmed to the execution parts.) The architecture README's layout puts the runner and worker at top level: *"`runner/` # generic execution loop — imports ports, not adapters (03)"*, *"`worker/` # queue + lifecycle"*. Its rule: *"`core/` and `runner/` must never import from `adapters/` — only from `core/ports/`. Enforce with a lint rule."*
 
+> [!warning] The shipped code differs
+> The provider layer, built 2026-10-18, lives in `code/flowboard/packages/`. `core/src/ports/` holds `agent-provider.ts`, `events.ts` and `exec-host.ts`, and `events.ts` has no version `v` yet ([[Agent Providers Open Questions]] #6). `adapters/src/agent/` holds `claude`, `opencode` and `replay`, and `adapters/src/exec/` only the `host` tier; the shim is `ask-user`, and `cli` is `run-agent`. OpenCode, not Codex, was built second; Codex is designed, not built ([[Agent Providers Open Questions]] #38).
+
 ## Ports execution touches
 
 | Port | Used for | Source |
@@ -75,7 +82,10 @@ export interface ExecHost {
 }
 ```
 
-(`exec-host.ts`; the trailing comments are shortened from its doc comments.) *"This keeps sandboxing orthogonal to the provider: **any provider × any tier, for free** (2×N, not N×M)."* (`01-ports.md`)
+(The reference `docs/old/reference/core/ports/exec-host.ts`; the trailing comments are shortened from its doc comments.) *"This keeps sandboxing orthogonal to the provider: **any provider × any tier, for free** (2×N, not N×M)."* (`01-ports.md`)
+
+> [!warning] The shipped code differs
+> On 2026-10-18 the shipped port, `core/src/ports/exec-host.ts`, replaced the reference. `ChildHandle` is gone. The shipped method is `spawn(command: string, args: string[], opts: { cwd: string; env?: NodeJS.ProcessEnv }): ChildProcessWithoutNullStreams`: it returns Node's own child process with piped stdio, because providers need stdin (the Claude Agent SDK speaks to the CLI over stdio). `id`, `profile`, `IsolationTier` and `SandboxProfile` are unchanged. Only the `host` tier is built (`adapters/src/exec/host.ts`). See [[ExecHost Port]].
 
 ## The test of the abstraction
 

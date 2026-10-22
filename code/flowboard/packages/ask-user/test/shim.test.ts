@@ -1,6 +1,6 @@
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -8,9 +8,18 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import type { AskReply, AskRequest } from '@flowboard/core';
 import { SHIM_ENTRY } from '../src/index.ts';
 
+/** Temp folders made by this file's tests, removed once they are done. */
+const temps: string[] = [];
+after(() => temps.forEach((d) => rmSync(d, { recursive: true, force: true })));
+function tempDir(prefix: string) {
+  const dir = mkdtempSync(prefix);
+  temps.push(dir);
+  return dir;
+}
+
 /** A fake broker replying `reply` to every request; `requests` records what it saw. */
 async function fakeBroker(reply: AskReply | object) {
-  const socketPath = join(mkdtempSync('/tmp/fb-'), 'ask.sock');
+  const socketPath = join(tempDir('/tmp/fb-'), 'ask.sock');
   const requests: AskRequest[] = [];
   const server = createServer((conn) => {
     let buf = '';
@@ -122,7 +131,7 @@ test('malformed questions never reach the broker', async (t) => {
 });
 
 test('an unreachable broker is a tool error', async (t) => {
-  const client = await shim(join(mkdtempSync('/tmp/fb-'), 'missing.sock'));
+  const client = await shim(join(tempDir('/tmp/fb-'), 'missing.sock'));
   t.after(() => client.close());
   const res = await call(client, 'ask_user', { question: colour });
   assert.equal(res.isError, true);

@@ -36,6 +36,10 @@ The runner writes, per run:
 
 Where `mcp.json` and `settings.json` are written is not stated. *Proposal:* `data/runs/<id>/` beside `args.json` ([[Execution Open Questions]] #39). How they reach a sandboxed run is not stated either ([[Sandboxing Storage]]).
 
+> [!warning] The shipped code differs
+> - No per-run file is written (2026-10-18). The Claude adapter passes Agent SDK options in memory: `mcpServers` with `strictMcpConfig`, `settingSources: []`, and a `PreToolUse` hook callback when `RunSpec.guards` is set. The OpenCode adapter passes one config in `OPENCODE_CONFIG_CONTENT`. The shim reads only `FLOWBOARD_ASK_SOCKET`; there is no `RUN_ID` ([[Agent Providers Open Questions]] #4, #24).
+> - No `args.json` either: the runner that would write it is not built, and the SDK builds the CLI's arguments itself. `run-agent` logs the launched `RunSpec` as the `start` line of `runs/<stamp>-<adapter>.jsonl`, and puts the broker socket, `ask.sock`, in a temp folder `/tmp/fb-*` ([[Agent Providers Storage]]).
+
 ## What never enters the sandbox
 
 *"Never mount host secrets (`~/.ssh`, cloud credentials), the host DB, or the Docker socket."* (PRD §11.1). The drawio *Mounts* card (line breaks shown as `/`): *"rw: task worktree → /work / ro: skills/ → /skills / socket: ask.sock / never: ~/.ssh, cloud credentials, flowboard.db, docker.sock"*.

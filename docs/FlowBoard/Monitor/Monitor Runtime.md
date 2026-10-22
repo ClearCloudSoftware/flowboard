@@ -9,7 +9,7 @@ How the screen gets and keeps its picture. The mockup simulates everything in th
 
 ## In the real system
 
-Partly a **proposal**: no source defines a stream to the monitor or board ([[Monitor Open Questions]] #30), so the SSE leg is drawn as proposed. Stop follows backlog 3.4 and `03` §8 (a SIGTERM from the route); making it a worker job instead is #36.
+Partly a **proposal**: no source defines a stream to the monitor or board ([[Monitor Open Questions]] #30), so the SSE leg is drawn as proposed. Stop follows backlog 3.4 and `03` §8 (a SIGTERM from the route); making it a worker job instead is #36. As built (2026-10-18), a SIGTERM by pid from outside is not reported as a stop: the run fails with exit 1, while `AgentRun.stop()` settles it as `{ exitCode: 130, error: 'stopped' }` ([[Agent Run Handle And Result]]).
 
 ```mermaid
 sequenceDiagram

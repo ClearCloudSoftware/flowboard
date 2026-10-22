@@ -51,7 +51,7 @@ The Capability Library is the FlowBoard module that holds the reusable building 
 
 - [[Seeded Capabilities]] — the starter set that ships with FlowBoard
 - [[Capability Library Roadmap]] — v1 scope, later ideas, and what is out of scope
-- [[Capability Library Open Questions]] — places where the sources disagree or leave a gap: 1–18 with their outcome, 19–26 still open
+- [[Capability Library Open Questions]] — places where the sources disagree or leave a gap: 1–18 with their outcome, 19 answered by the build, 20–26 still open
 - [[Capability Library Sources]] — where every fact in these notes comes from
 
 ## Related
