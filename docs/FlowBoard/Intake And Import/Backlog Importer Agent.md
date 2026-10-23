@@ -33,9 +33,12 @@ Backlog 7.3 (**FIX**): *"Agent invocation: haiku, `--tools ""`, extract the firs
 - **Output**: the first JSON array in its reply.
 - **On failure**: the deterministic parser runs instead.
 - **Report**: which path ran. `05` §14: the endpoint *"reports which path ran (deterministic vs agent)"*.
-- **Through the CLI**: PRD §17 rules out *"anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI."* The importer is a headless `claude` call like any run, not an SDK call.
+- **Through the CLI**: PRD §17 rules out *"anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI."* The importer is a headless `claude` call like any run, not a direct API call. As built (2026-10-18), runs reach that CLI through the Agent SDK, which spawns the installed `claude`, so PRD §17 still holds ([[Claude Code Adapter]]).
 
 Backlog 7.3 (**BUG**): *"Isolate the importer from global hooks (see 0.1)."* Story 0.1 is the general problem: *"Decide how to isolate headless runs from `~/.claude` hooks/settings (e.g. `--settings` with an empty file, or `CLAUDE_CONFIG_DIR`)"*. Decision D5 recommends *"Empty `--settings` file per run"*. The backlog's *What went wrong*, item 6, gives the reason: *"global `~/.claude` hooks apply to headless runs"*. See [[Import Trust And Isolation]] and [[Agent Providers Open Questions]] #24.
+
+> [!warning] The shipped code differs
+> Runs through the Claude adapter use neither (2026-10-18). No settings file is written, and `settingSources: []` loads no user, project or local settings, so global `~/.claude` hooks do not reach the run. Whether the importer goes through the adapter is [[Intake And Import Open Questions]] #12; see [[Agent Providers Open Questions]] #24.
 
 The backlog's header lists a *"2026‑09‑09 import debugging"* session and *"nine headless `backlog-importer` runs"* among the sessions it was derived from.
 

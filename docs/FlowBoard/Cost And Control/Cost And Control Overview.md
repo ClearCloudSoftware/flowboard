@@ -35,7 +35,7 @@ Architecture: component **#12 Cost & usage ledger + PricingService** and compone
 
 ```mermaid
 flowchart LR
-  P[AgentProvider<br/>stream] -->|NormalizedEvent<br/>result.usage| R[Runner]
+  P[AgentProvider<br/>stream] -->|NormalizedEvent<br/>usage · result.usage| R[Runner]
   R -->|Usage| PS[PricingService]
   PS -->|costUsd| RUNS[(runs<br/>append-only journal)]
   R -->|live tokens| LV[Live cost<br/>cards · rows · viewer]

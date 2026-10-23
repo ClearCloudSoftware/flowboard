@@ -7,6 +7,8 @@ module: Capability Library
 
 > [!check] Deferred: not in v1
 > v1 is Claude-only ([[Capability Library Decisions|D1]]). The coverage counter, provider filter, per-provider packs block and provider-match check below are not built until a second provider arrives. This note describes the designed behaviour for that point.
+>
+> The provider layer already has one: OpenCode, built on 2026-10-18, declares `plugins` and reads a Claude plugin dir's `skills/` folder, so a skill packaged for Claude also runs there, while the plugin's hooks, agents, commands and MCP servers do not load. Codex is designed, not built. Whether OpenCode is in v1 is [[Agent Providers Open Questions]] #38.
 
 ## The rule
 

@@ -17,6 +17,9 @@ The runtime shape of an install: which processes run, what each may touch, and h
 | Agent CLI | `claude -p …`, on the host or in a container | no | PRD §7, §11.1 |
 | Egress proxy | Squid or tinyproxy on an internal Docker network | no | PRD §11.1 |
 
+> [!warning] The shipped code differs
+> As built (2026-10-18), the shim is `packages/ask-user`, a stdio MCP server named `flowboard` that the `claude` CLI or the OpenCode server launches per run; its broker runs inside `pnpm run-agent`, not a worker. The agent CLI is the installed `claude`, run through the Agent SDK rather than a hand-built `claude -p`, or one `opencode serve` per run, always as a host child process: there is no container or egress proxy. See [[Agent Providers Runtime]] and [[Ask User MCP Server]].
+
 *"`concurrently` to run `next dev` and the worker together under `npm run dev`"* (PRD §2). The PRD's package manager is pnpm, and PRD §16's first acceptance check is *"`pnpm dev` starts Next.js and the worker together"*. The drawio host card: *"pnpm dev → concurrently starts both processes"*.
 
 ```mermaid
@@ -38,10 +41,11 @@ flowchart LR
 - **The web process never spawns agents.** PRD §2. See [[Thin Route Handlers]].
 - **The worker is the only writer of run lifecycle.** `03` §7: *"the only writer of run lifecycle state"*. The broker is *"the only writer of the `questions` table"* (PRD §9).
 - **They talk through rows.** The web process writes rows and a job; the worker leases it (*"UPDATE … SET state='leased' …"*, PRD §7). Live updates flow back by tailing tables ([[Live Updates]]).
-- **Same machine.** Stop is *"SIGTERM by pid from the route (same machine)"* (backlog 3.4). Out of scope: *"multi-machine support"* (PRD §17). The worker is *"a **generic executor host** … the decoupling point that later allows remote executors or a fleet"* (`03` §7).
+- **Same machine.** Stop is *"SIGTERM by pid from the route (same machine)"* (backlog 3.4). Out of scope: *"multi-machine support"* (PRD §17). The worker is *"a **generic executor host** … the decoupling point that later allows remote executors or a fleet"* (`03` §7). As built, the port's stop is `AgentRun.stop()`, and a SIGTERM by pid from outside is reported as a failure with exit 1, not as a stop ([[Monitor Open Questions]] #36).
 
 > [!warning] Does the MCP process open the database?
 > PRD §3 and §9 say never. Backlog 1.1 describes a DB path env var *"so worker and MCP (spawned with a foreign cwd) open the same file"*, and `02` §1 says the same (*"so worker and MCP (foreign cwd) hit the same file"*): the first build's design. See [[Execution Open Questions]] #54.
+> As built (2026-10-18), the shim opens none: it reads only `FLOWBOARD_ASK_SOCKET` ([[Ask User MCP Server]]).
 
 ## Ports and binding
 

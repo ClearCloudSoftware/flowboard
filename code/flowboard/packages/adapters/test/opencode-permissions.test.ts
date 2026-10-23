@@ -24,9 +24,13 @@ test('maps the tool policy after the defaults', () => {
   assert.ok(edit > 0 && edit < env && env < bash && bash < web, JSON.stringify(rules));
 });
 
-test('pre-approves injected tool servers last', () => {
-  const rules = toPermissionRules({ ...base, toolPolicy: { deny: ['*'] }, tools: [{ name: 'vibe', command: 'node' }] });
-  assert.deepEqual(rules.at(-2), { permission: 'vibe_*', pattern: '*', action: 'allow' });
+test('pre-approves injected tool servers after the allow list, but an explicit deny still wins', () => {
+  const tools = [{ name: 'vibe', command: 'node' }];
+  const rules = toPermissionRules({ ...base, toolPolicy: { allow: ['Read(src/*)'], deny: ['mcp__vibe__ask'] }, tools });
+  const i = (r: object) => rules.findIndex((x) => JSON.stringify(x) === JSON.stringify(r));
+  const allow = i({ permission: 'vibe_*', pattern: '*', action: 'allow' });
+  assert.ok(i({ permission: 'read', pattern: 'src/*', action: 'allow' }) < allow, 'after the allow list');
+  assert.ok(allow < i({ permission: 'vibe_ask', pattern: '*', action: 'deny' }), 'before the deny list, as on Claude');
 });
 
 test('maps mcp tool globs to OpenCode names', () => {

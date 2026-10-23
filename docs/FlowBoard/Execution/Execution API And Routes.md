@@ -76,7 +76,7 @@ sequenceDiagram
 
 - *"Every port is called from `src/lib/`, **never from a route**"* (`06` §15). `06` uses the first build's layout (`src/app/api/`, `src/lib/`); in the PRD's layout that is `apps/web/app/api/` calling `packages/core` (PRD §3, §12).
 - *"If a route ever needs to know whether it's Claude or Codex, something leaked upward."* (`06` §15)
-- Stop is the one route that touches a process (by pid): *"SIGTERM by pid from the route (same machine)"* (backlog 3.4; `03` §8).
+- Stop is the one route that touches a process (by pid): *"SIGTERM by pid from the route (same machine)"* (backlog 3.4; `03` §8). As built, a signal from outside is reported as a failed run (exit 1), not as a stop, and OpenCode's pid is its server's ([[Agent Run Handle And Result]]).
 
 ## Related
 

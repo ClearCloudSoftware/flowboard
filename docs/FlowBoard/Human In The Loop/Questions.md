@@ -49,7 +49,7 @@ export interface Question {
 | `help` | Optional help text, shown under the question. The mockup's `note` (e.g. *"Streaming is cheaper but holds a connection open for the whole export."*) | PRD §5, old design README 1a |
 | `kind` | One of five shapes | PRD §5. See [[Question Shapes]] |
 | `options` | *"JSON array of {value,label} for select kinds"* | PRD §5 |
-| `required` | Default 1 (PRD §5). *"a run parks only while a required question is unanswered"* (`question.ts`) | PRD §5, `question.ts` |
+| `required` | Default 1 (PRD §5). *"a run parks only while a required question is unanswered"* (the reference `question.ts`) | PRD §5, the reference `question.ts` |
 | `batch_id` | *"groups questions asked together"* | PRD §5. See [[Question Batches]] |
 | `task_id`, `step_instance_id`, `run_id` | Where the question came from | PRD §5 |
 | `state` | `pending \| answered \| expired \| cancelled` | PRD §5. See [[Question Lifecycle]] |

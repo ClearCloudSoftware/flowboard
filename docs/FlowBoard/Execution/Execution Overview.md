@@ -7,7 +7,7 @@ module: Execution
 
 ## Purpose
 
-FlowBoard is *"a local-first Kanban board where each column is an agent or skill invocation rather than a human workflow stage"* (PRD §1). Execution is the machinery that makes that true. A task *"flows through a graph of automated steps — research, planning, implementation, review — each one a headless Claude Code session with its own model and effort setting. Some steps advance automatically when they finish; others park and wait for me to approve or answer questions."* (PRD §1)
+FlowBoard is *"a local-first Kanban board where each column is an agent or skill invocation rather than a human workflow stage"* (PRD §1). Execution is the machinery that makes that true. A task *"flows through a graph of automated steps — research, planning, implementation, review — each one a headless Claude Code session with its own model and effort setting. Some steps advance automatically when they finish; others park and wait for me to approve or answer questions."* (PRD §1) The build went past Claude Code: OpenCode was built on 2026-10-18 as a second provider, and whether it is in v1 is [[Agent Providers Open Questions]] #38.
 
 The architecture README names the whole system *"a **durable workflow engine** + human-in-the-loop protocol + cost ledger, specialized to orchestrate headless coding-agent CLIs, wearing a Kanban board as its read model."* Execution is the durable workflow engine part.
 
@@ -49,6 +49,9 @@ Edges as drawn on the drawio *Functional components* page. Inside, three archite
 | 7 | Job queue & worker lifecycle | *"SQLite-as-queue with leasing; restart recovery; concurrency cap `VIBE_MAX_RUNS`"* (`03` §7) |
 
 On the drawio *Logical components* page these appear as **Flow engine**, **Job queue** (*"enqueue / claim"*) and **Run orchestrator** (*"spawns run, parses stream-json, emits events"*), wired: engine → queue (*"enqueue step"*), queue → orchestrator (*"claim"*), orchestrator → engine (*"step done → advance"*), orchestrator → **Task & run state** (*"events, cost"*). The orchestrator also has unlabelled edges to the AgentProvider, Workspace and ArtifactStore ports, and one to the MemoryStore port labelled *"recall / commit (host-side)"*.
+
+> [!warning] The shipped code differs
+> Parsing is the adapters' job, as `03` §5 has it, not the orchestrator's: the Claude adapter maps the Agent SDK's typed messages and OpenCode its server's SSE events, and nothing parses stdout lines (2026-10-18; [[Agent Providers Open Questions]] #34).
 
 ## Design principles
 

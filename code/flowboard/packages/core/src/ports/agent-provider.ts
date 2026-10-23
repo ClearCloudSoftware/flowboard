@@ -1,9 +1,10 @@
 /**
  * AgentProvider — the port that makes coding-agent CLIs interchangeable.
  *
- * This is the seam of the whole system. `core/` and `runner/` program against
- * this interface; `adapters/agent/<claude|codex|replay>/` implement it. No file
- * under `core/` or `runner/` may import a provider adapter — only this port.
+ * This is the seam of the whole system. `core/` and the runner (not built yet;
+ * `run-agent` stands in) program against this interface;
+ * `adapters/src/agent/<claude|opencode|replay>/` implement it. No file under
+ * `core/` or the runner may import a provider adapter — only this port.
  *
  * An adapter's job is exactly two mappings:
  *   1. RunSpec  ->  the provider's native CLI flags / config.
@@ -60,7 +61,7 @@ export type Capability =
   | 'budget_cap'
   | 'tool_hooks';
 
-/** Permission modes, in Claude Code's vocabulary; other providers map them. The runner's permission gate picks one. */
+/** Permission modes, in Claude Code's vocabulary; other providers map them (OpenCode: rules plus its answers to asks). */
 export type PermissionMode = 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'dontAsk' | 'auto';
 
 // ---------------------------------------------------------------------------
@@ -119,24 +120,30 @@ export interface CapabilityPack {
 /**
  * In-agent guard rules (PRD §7 hooks), provider-neutral. Adapters with the
  * `tool_hooks` capability enforce them on every tool call; see ../guard.ts.
+ * Only file-edit tools and recursive `rm` are checked against paths: any other
+ * shell command an allow rule permits can still write anywhere.
  */
 export interface GuardRules {
-  /** Absolute dirs writes may land in; normally just the task's worktree. */
+  /** Absolute dirs writes may land in, links followed; normally just the task's worktree. A recursive `rm` must stay inside one too. */
   writeRoots: string[];
-  /** Globs relative to `cwd`, from the task's non-goals written as paths; no write may match one. */
+  /** Globs relative to `cwd` (path.matchesGlob: `*` stays in one folder, dot names match, case is ignored on macOS and Windows), from the task's non-goals; no file-edit write may match one. */
   denyPaths?: string[];
-  /** Regex sources matched against shell commands; a match is denied. */
+  /** Regex sources matched against shell commands; a match is denied. Nothing is added for you: pass DEFAULT_DENY_COMMANDS for PRD §7's set. */
   denyCommands?: string[];
 }
 
 /** Everything needed to launch one attempt of one step, provider-agnostically. */
 export interface RunSpec {
   prompt: PromptParts;
-  /** Logical model id (in v1, a Claude alias); the adapter resolves it via resolveModel(). */
+  /** Logical model id; the adapter resolves it via resolveModel() (Claude: an alias, as is; OpenCode: its table, or "provider/model" as is). */
   model: string;
   /** Dropped by the adapter when `effort` is unsupported. */
   effort?: Effort;
-  /** Tool allow/deny globs. The adapter always pre-approves each injected tool server, so neither a restrictive list nor a missing one can lock out HITL. */
+  /**
+   * Tool allow/deny entries in Claude Code's vocabulary (`Read`, `Bash(git *)`, `mcp__server__tool`); other
+   * adapters translate them. The adapter always pre-approves each injected tool server, so neither a restrictive
+   * allow list nor a missing one can lock out HITL; an explicit deny still wins.
+   */
   toolPolicy?: { allow?: string[]; deny?: string[] };
   /** MCP servers to inject. Ignored when `mcp_tools` is absent. */
   tools?: ToolServer[];
@@ -153,7 +160,7 @@ export interface RunSpec {
   /** Resume a prior session; `fork` requires the `resume_fork` capability, else context-replay. */
   resume?: { sessionId: string; fork?: boolean };
   limits?: { maxTurns?: number; maxBudgetUsd?: number };
-  /** Chosen by the runner's permission gate; adapters default to the most restrictive headless mode. */
+  /** Chosen by the caller (run-agent's `permissions.mode`; the runner's permission gate is not built); adapters default to the most restrictive headless mode, `dontAsk`. */
   permissionMode?: PermissionMode;
   /** The agent's system prompt, added to the provider's own (Claude: appended to the claude_code preset). */
   systemPrompt?: string;
@@ -166,6 +173,7 @@ export interface RunSpec {
 // ---------------------------------------------------------------------------
 
 export interface RunResult {
+  /** The run's totals; for a run that ended before its result, the last running totals (Claude: tokens, no cost). */
   usage: Usage;
   exitCode: number;
   /** Drives conditional edges; read from the produced JSON or set_outcome. Unset is NOT 'pass': the engine parks the step at a human gate. */

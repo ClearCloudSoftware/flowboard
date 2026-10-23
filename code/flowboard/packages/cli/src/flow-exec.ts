@@ -10,7 +10,7 @@ import type { AgentProvider, AgentRun, Outcome, RunCommand, RunEnd, RunResult, R
 import { startBroker } from './ask/broker.ts';
 import type { Answerer } from './ask/broker.ts';
 import type { Adapter, RunConfig } from './config.ts';
-import { openLog, streamRun, summaryLines, withAsking, WITHDRAWN } from './run.ts';
+import { openLog, streamRun, summaryLines, withAsking, WITHDRAWN, WITHDRAWN_QUEUED } from './run.ts';
 import type { Log } from './run.ts';
 
 /** How much of a shell step's output its artifact keeps: the end, where failures are. */
@@ -204,16 +204,16 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
         tmp = realpathSync(mkdtempSync('/tmp/fb-'));
         const socket = join(tmp, 'ask.sock');
         broker = await startBroker(socket, ctx.answer, {
-          onQuestion: (questions) => quietly('question', { questions }),
-          onAnswer: (answers) => quietly('answer', { answers }),
-          onWithdrawn: () => {
-            quietly('withdrawn', {});
-            ctx.show(WITHDRAWN);
+          onQuestion: (questions, batch) => quietly('question', { batch, questions }),
+          onAnswer: (answers, batch) => quietly('answer', { batch, answers }),
+          onWithdrawn: (batch, shown) => {
+            quietly('withdrawn', { batch });
+            ctx.show(shown ? WITHDRAWN : WITHDRAWN_QUEUED);
           },
           onDone: () => {},
           onInterrupt: ctx.onInterrupt,
         });
-        spec = withAsking(config, socket, tmp, { FLOWBOARD_OUTCOME_FILE: outcomeFile });
+        spec = await withAsking(config, socket, tmp, { FLOWBOARD_OUTCOME_FILE: outcomeFile });
       } catch (e) {
         return noRun(`cannot set up the run: ${(e as Error).message}`);
       }

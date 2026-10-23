@@ -10,10 +10,10 @@ What cost data is persisted, and where.
 | What | Where | Source |
 |---|---|---|
 | A run's cost, tokens, turns, wasted flag | `runs` in `data/flowboard.db` (SQLite, WAL, `busy_timeout` 5 s) | PRD §3, §5; backlog 1.1; drawio *SQLite* card |
-| The raw provider line for every event | `run_events.raw` | PRD §5, `01-ports.md` |
+| The raw provider line for every event (as built: the native message, in each event's `raw`; no `run_events` table yet, so `run-agent` keeps it in `runs/<stamp>-<adapter>.jsonl`) | `run_events.raw` | PRD §5, `01-ports.md` |
 | Step limits, model, effort | `step_defs` | PRD §5 |
 | Draft mode | `settings` | PRD §13, `06` §15 |
-| The CLI args a run used | `data/runs/<id>/args.json` | PRD §7 |
+| The CLI args a run used (as built: not written, since the runner is not built; `run-agent` logs the launched `RunSpec` as its `start` line, [[Agent Providers Storage]]) | `data/runs/<id>/args.json` | PRD §7 |
 | The resolved `RunSpec` (idea) | `data/runs/<id>/spec.json` | `03` §6 |
 | Run records, *"replayable at $0"* | `data/runs/<id>/spec.json + raw stream` | drawio *Harness architecture* |
 | The rate table | **Not specified** | `06` §12 |

@@ -53,9 +53,13 @@ Backlog **D9**: *"Artifact-file park/resume by default; host-side broker over a 
 
 `yes_no | single_select | multi_select | text | number` (PRD, `question.ts`); `yes_no | single | multi | text | number` (old handoff); `yesno | one | many | num | text` (mockup); *yes / no, pick one, pick many, a number, free text* (guide). **Proposal** in [[Question Shapes]]: the PRD names are canonical and the guide's words are display labels. The answer channel differs the same way: `answered_via` is `'web' | 'slack'` (PRD §5), and the old handoff's `answeredVia` is `'ui' | 'slack'`.
 
+As built (2026-10-18), `core/src/hitl/question.ts` and the `ask_user` tools use the PRD names ([[Ask User MCP Server]]).
+
 ### 11. Required vs optional
 
 The PRD has a per-question `required` flag, default true. The mockup treats every free-text question as optional and every other kind as required. The guide: *"Free text counts as answered even when empty"*. Should `text` default to `required = false`? Can a non-text question be optional, and how does the inbox show it?
+
+As built (2026-10-18), `required` defaults to true for every kind, `text` included, and any kind can be optional; `run-agent`'s terminal lets an optional question be skipped ([[Run Agent CLI Decisions]] R21). The inbox is not built.
 
 ### 12. Fields the screen needs that the schema lacks
 
@@ -171,9 +175,13 @@ PRD §9: the broker *"is the only writer of the `questions` table"*. But answers
 
 PRD §3 and §9: the shim *"never opens the database"*; §11.1: it *"cannot open the host SQLite file"*; `08`: *"No DB file or network inside the box"*. `02` §1 and backlog Story 1.1 open the DB *"so worker and MCP (foreign cwd) hit the same file"*, the first build's design. See [[Ask User MCP Server]]. Same as [[Execution Open Questions]] #54 and [[Settings And Plumbing Open Questions]] #20.
 
+As built (2026-10-18), the shim follows the PRD: it reads only `FLOWBOARD_ASK_SOCKET` and opens no database ([[Ask User MCP Server]]).
+
 ### 38. Resume by fork, or by prompt replay?
 
 PRD §9 resumes with `--resume <claude_session_id> --fork-session`; the drawio harness says only *"resume with --resume"* and doesn't say whether it forks; `01-ports.md` keeps context-replay as the fallback without `resume_fork`. The drawio *Advance modes* card reads *"park / resume via prompt replay"*, the architecture README lists *"Park/resume via prompt replay"* as the primitive, and `04` §9 allows either. Which is the v1 mechanism for Claude? See [[Ask Park And Resume]] and [[Session Resume And Context Replay]].
+
+As built (2026-10-18), both adapters can fork a session or continue it in place (Claude: the Agent SDK's `resume` and `forkSession`; OpenCode: `session.fork`). Context-replay is not built, and nothing resumes yet ([[Session Resume And Context Replay]]).
 
 ### 39. An exit-0 run after the sentinel: `succeeded` or `parked`?
 

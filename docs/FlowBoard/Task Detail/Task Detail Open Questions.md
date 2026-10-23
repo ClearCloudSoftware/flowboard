@@ -153,6 +153,8 @@ The guide's pill table says you can *"stop the run from the story row if it is c
 
 Cancel and Stop end a run with SIGTERM (backlog Story 2.1; `03` §8), and Stop finalises the run as `cancelled` (`03` §8, backlog Story 3.4); `03` §7 does the same for a graceful worker shutdown. The monitor guide records its stop *"as failed, with "stopped by you" as the reason"*, and `monitor.html`'s `stop()` sets `state = 'failed'`. And PRD §7 classes *"process killed by a signal"* as **transient**, retried automatically up to 3 times. Unless the runner records that the kill was intentional before the process exits, a cancelled task's run comes back by itself. What a stopped run costs is [[Cost And Control Open Questions]] #20. See [[Task Actions]].
 
+As built (2026-10-18), only a stop through the port marks itself: `AgentRun.stop()` settles the run as `{ exitCode: 130, error: 'stopped' }` and keeps the usage so far. A SIGTERM by pid from outside fails the run with exit 1, like a crash. Whether 130 counts as transient is [[Agent Providers Open Questions]] #22.
+
 ### 32. The mockup's reason box can't be edited
 
 A 1 s timer redraws the gate banner while a gate is open, and the reason box with it. Typed text and focus are lost within a second, so a send back nearly always sends the prefilled reason, and `Esc` only works after a redraw takes focus away. A mockup bug, but it hides whether the design wants the reason prefilled at all. See [[Task Detail Controls]].
@@ -160,6 +162,8 @@ A 1 s timer redraws the gate banner while a gate is open, and the reason box wit
 ### 33. Decision numbers collide across documents
 
 The backlog decisions (D1–D9: D1 Start, D3 attempt cap, D5 hook isolation), the drawio decision cards (D1–D6 on the same topics, though drawio D3 *"Fail on the 4th"* contradicts backlog D3 *"never auto-fail"*, see #11; and D10 memory hosting, which has no backlog row) and [[Capability Library Decisions]] (D1 Claude-only, D3 no bundle packs, D5 skills store, D10 tasks pin capabilities) share one numbering. An unqualified "D3" or "D10" is ambiguous. These notes prefix every id with its source. Renumbering one set, e.g. `CL-D10`, would remove the clash. Same as [[Memory Open Questions]] #27. See [[Task Detail Sources]].
+
+Capability Library D1 (Claude-only) has since been overtaken by the build: OpenCode was built on 2026-10-18 as a second provider, and whether it is in v1 is [[Agent Providers Open Questions]] #38.
 
 ### 34. Task status at an ordinary approval gate
 

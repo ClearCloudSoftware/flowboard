@@ -114,6 +114,11 @@ test('guard hook denies with a reason', async () => {
     },
   });
   assert.deepEqual(await cb({ ...input, tool_input: { file_path: '/repo/wt/a.ts' } }, 't', { signal }), {});
+  // A cd persists between Bash calls: the hook's cwd says where the shell is now.
+  const bash = { ...input, tool_name: 'Bash', tool_input: { command: 'rm -rf foo' } };
+  assert.deepEqual(await cb(bash, 't', { signal }), {});
+  const moved = (await cb({ ...bash, cwd: '/tmp' }, 't', { signal })) as { hookSpecificOutput?: { permissionDecisionReason?: string } };
+  assert.equal(moved.hookSpecificOutput?.permissionDecisionReason, 'Recursive rm outside the worktree: foo');
 });
 
 test('registers no hooks without guards', () => {

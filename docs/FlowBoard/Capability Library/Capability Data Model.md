@@ -123,7 +123,7 @@ export interface RunSpec {
 }
 ```
 
-`ProviderId` is `'claude-code' | 'codex' | 'replay' | (string & {})` — an open set.
+`ProviderId` is `'claude-code' | 'codex' | 'replay' | (string & {})` — an open set. The shipped port (`core/src/ports/agent-provider.ts`, 2026-10-18) adds `'opencode'` ([[Agent Providers Open Questions]] #15).
 
 > [!warning] Two shapes for `CapabilityPack`
 > `05-environment-and-registry.md` §13 sketches it with a method — `provider: AgentProvider['id']; mount(spec: RunSpec): void;` — while `agent-provider.ts` makes `mount` a data union the adapter interprets. The union suits a registry that stores packs as rows. **Decided: the data union** ([[Capability Library Decisions|D2]]).

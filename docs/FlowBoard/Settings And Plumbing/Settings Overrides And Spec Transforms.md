@@ -38,6 +38,9 @@ flowchart LR
 
 The drawio *Runner* card has the draft-mode transform and the recording step, but no sandbox-profile transform (that is backlog 3.5) and no permission gate (a separate *Permission gate* card): *"builds the RunSpec · draft-mode transform · writes per-run mcp.json + settings.json (hooks) · records model, effort, tier"*.
 
+> [!warning] The shipped code differs
+> No runner writes `mcp.json` or `settings.json` (2026-10-18). Each adapter builds its provider's config in memory from the `RunSpec`: Agent SDK options on Claude, with `guards` as an in-memory `PreToolUse` hook, and one config in `OPENCODE_CONFIG_CONTENT` on OpenCode. See [[Agent Providers Open Questions]] #4.
+
 ## Precedence
 
 Only two layered settings exist in the sources:

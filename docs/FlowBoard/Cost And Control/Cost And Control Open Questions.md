@@ -43,9 +43,11 @@ Monitor Open Questions #14 and #17 cover the stop and reject cases. See [[Wasted
 
 ### 2. Live cost has no source path
 
-The Claude stream carries per-message tokens mid-run (`message_start`, `message_delta`; see [[Usage And Native Cost]]). But `NormalizedEvent` carries `Usage` only on `result`. `07-ports-in-practice.md` updates live cost only on `result`. Claude's price table is a passthrough, so there are no rates to price live tokens. Monitor Open Questions #38 raised it.
+The Claude stream carries per-message tokens mid-run (`message_start`, `message_delta`; see [[Usage And Native Cost]]). But the reference `NormalizedEvent` carries `Usage` only on `result`. `07-ports-in-practice.md` updates live cost only on `result`. Claude's price table is a passthrough, so there are no rates to price live tokens. Monitor Open Questions #38 raised it.
 
 **Proposal:** add a `usage_delta` normalized event kind (the name [[Agent Providers Open Questions]] #9 uses; it also offers `Usage` on `assistant_text`), emitted only by providers with `partial_stream`, carrying cumulative tokens for the run so far. Give the rate table rows for Claude models too, used **only** for the live estimate, never for `runs.cost_usd`. Replace the estimate with the result's total when it lands. Same as [[Execution Open Questions]] #62.
+
+**Half answered by the code (2026-10-18):** the port has an eighth kind, `usage`, with the run's running totals, emitted by both real adapters ([[Agent Providers Open Questions]] #9). Claude's carry tokens and turns but no `costUsd`, so the rates half is still open; OpenCode's carry its own running cost, 0 for a model it has no price for.
 
 ### 3. What is burn rate for real runs?
 
@@ -85,6 +87,8 @@ See [[Pricing Service]].
 
 The probe's result carries `modelUsage.<model>.costBasis: "list"` and a `rate_limit_event` with five-hour and seven-day utilisation windows (`stream-sample.jsonl`). On a subscription plan, `total_cost_usd` is a list-price estimate, not money charged. The monitor guide calls *today* *"The real bill"*. The pitch talks about *"one opaque line on a vendor invoice"*. No source says which billing mode FlowBoard assumes, whether to show the cost basis, or whether rate-limit utilisation belongs on a cost screen.
 
+As built, Claude runs use the owner's subscription login: the adapter strips `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` ([[Claude Code Adapter]]). So on Claude the figure is the list-price estimate. Whether to show it as a bill is still open ([[Agent Providers Open Questions]] #32).
+
 ### 8. Budget caps
 
 - **Per attempt or per run?** The guide says *"on one attempt"*. The CLI flag applies per process. Infra retries are new runs with the same attempt number, and a parked run resumes in a new process. Does each get the full budget?
@@ -93,6 +97,8 @@ The probe's result carries `modelUsage.<model>.costBasis: "list"` and a `rate_li
 - **A cap hit's spend.** Blocked, not retried (PRD §7). The guides call a failed run's spend wasted; the PRD sets no flag. See #1.
 - **Turn caps.** `budget_cap` covers `maxBudgetUsd`; no capability covers `maxTurns` ([[Agent Providers Open Questions]] #25).
 - **No default.** `max_budget_usd` is nullable and the seed sets none, so the seeded flow has no financial brake: *"only the sandbox's time limit"* (flow-designer guide).
+
+As built (2026-10-18), both real adapters declare `budget_cap`: Claude passes `maxBudgetUsd` to the Agent SDK, and the OpenCode adapter stops the run itself once the running cost reaches the cap, which answers the enforcement point for OpenCode. Both honour `maxTurns` without a capability ([[Agent Providers Open Questions]] #25). The cap applies per `launch()`, one process or session.
 
 See [[Spend Caps And Limits]].
 
@@ -140,6 +146,8 @@ A second gap: recall adds a seventh prompt part of up to 6,000 characters (PRD �
 
 A resume is a new run: *"When the last required answer arrives, enqueue a new `start_run` that resumes with `--resume <claude_session_id> --fork-session`"* (PRD §9). The parked run keeps its row in state `parked`, so there is one row per process, each with its own `total_cost_usd` (see [[Execution State Machines]]). Not specified: whether the resumed run's total covers only its own process or is cumulative over the forked session, so that summing the two rows double-counts; how the step's and the task's cost add the parked and resumed rows together; and whether either counts toward `max_attempts` or could be flagged wasted. See [[Ask Park And Resume]], [[Human In The Loop Open Questions]] #38 (fork or prompt replay) and #42 (what a resume carries, including cost).
 
+Half answered by the code (2026-10-18): on OpenCode a resumed run's usage covers only its own steps, because the adapter subscribes to events after the fork, so the cloned history is not counted ([[OpenCode Adapter]]). On Claude the adapter reports the CLI's own `total_cost_usd`; whether that includes the forked history is not checked.
+
 ### 17. Flagging wasted after the fact
 
 `02` §1: *"never mutate cost after the result lands; corrections are new rows."* Marking a run `wasted = 1` on rework updates an existing row. The cost is untouched, so this is probably fine. Should the flag change be journalled (who, when, which rework)? Also [[Execution Open Questions]] #46.
@@ -156,7 +164,9 @@ Monitor `reject()` drops the review run's cost. Monitor `stop()` double-counts. 
 
 ### 20. What a stopped run costs
 
-`AgentRun.stop()` SIGTERMs the child. The stream ends before `result`, so `total_cost_usd` never arrives. `ReplayProvider` settles a stop with zero usage. The guides say a stopped run's spend becomes wasted, but the port never reports it. Use the last live estimate (#2)? Record `0`? Also applies to a run lost on worker restart (backlog 3.3), which PRD §7 classes as transient and so flags `wasted = 1` with whatever cost was recorded.
+In the reference port, `AgentRun.stop()` SIGTERMs the child. The stream ends before `result`, so `total_cost_usd` never arrives. `ReplayProvider` settles a stop with zero usage. The guides say a stopped run's spend becomes wasted, but the port never reports it. Use the last live estimate (#2)? Record `0`? Also applies to a run lost on worker restart (backlog 3.3), which PRD §7 classes as transient and so flags `wasted = 1` with whatever cost was recorded.
+
+**Answered in the port (2026-10-22, open to Alex's review):** `stop()` takes no arguments, and a stop before the result settles `{ exitCode: 130, error: 'stopped' }` with the last running usage. That is tokens and turns without `costUsd` on Claude, so it still needs pricing from tokens, and tokens and cost on OpenCode; Replay keeps its scripted totals. A process killed from outside reports exit 1, not a stop. See [[Agent Run Handle And Result]] and [[Agent Providers Open Questions]] #33. What the ledger records, and the restart case, wait for the runner.
 
 ### 21. Colour of money
 

@@ -37,11 +37,11 @@ The label is a safety control, not decoration. See [[Memory Trust Boundary]].
 > [!warning] The sources disagree
 > - **Just before the closing instruction** (part 6): PRD §7, `09-memory.md`.
 > - **At the end**: PRD §11.2 (*"append them to the prompt as a final part"*), `03` §6 (*"append the hits as a **7th prompt part**"*), and the drawio *Prompt builder* card (*"6 headless: use ask_user · +7 recalled memory, ≤ max_recall_chars"*).
-> - **Nowhere yet**: `PromptParts` in `agent-provider.ts` has six fields and says adapters must not reorder.
+> - **Nowhere yet**: `PromptParts` has six fields, in the reference `agent-provider.ts` and in the shipped `core/src/ports/agent-provider.ts`. The reference also said adapters must not reorder; the shipped port dropped that rule on 2026-10-18, so each adapter places the parts itself ([[Prompt Assembly]]).
 >
 > Already logged as [[Execution Open Questions]] #51 and [[Capability Library Open Questions]] #17. Here: [[Memory Open Questions]] #6.
 
-The order matters: PRD §7 explains why part 6 is last: *"A headless agent that ends with "let me know if you also want tests" is a stuck run."* Putting memory after it would make background the last thing the agent reads (inferred).
+The order matters: PRD §7 explains why part 6 is last: *"A headless agent that ends with "let me know if you also want tests" is a stuck run."* Putting memory after it would make background the last thing the agent reads (inferred). That reasoning assumes the canonical order reaches the agent, which the reference port's "must not reorder" rule guaranteed; in the shipped code the closing stays last only because both adapters render it last (Claude moves just the invocation to the front).
 
 ## Prompt shape with memory on
 

@@ -41,6 +41,19 @@ function parse(entry: string): { permission: string; pattern: string } {
   return { permission: TOOL_NAMES[name] ?? name.toLowerCase(), pattern };
 }
 
+/** OpenCode 1.19.3's Wildcard.match: `*` is any run, `?` one character, and a trailing ` *` may also match nothing. */
+function wildcardMatch(text: string, glob: string): boolean {
+  let re = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.');
+  if (re.endsWith(' .*')) re = `${re.slice(0, -3)}( .*)?`;
+  return new RegExp(`^${re}$`, 's').test(text);
+}
+
+/** Whether an allow entry, as OpenCode matches it, lets the agent run any shell command: `*`, `b*`, `Bash(?*)`. */
+export function allowsAnyShell(entry: string): boolean {
+  const { permission, pattern } = parse(entry);
+  return wildcardMatch('bash', permission) && pattern.includes('*') && /^[*?\s]*$/.test(pattern);
+}
+
 /** Ordered rules; OpenCode applies the last match. */
 export function toPermissionRules(spec: RunSpec): PermissionRule[] {
   const base: PermissionRule[] =
@@ -59,9 +72,10 @@ export function toPermissionRules(spec: RunSpec): PermissionRule[] {
     ...allows.filter((r) => r.pattern === '*'),
     ...ENV_FILES,
     ...allows.filter((r) => r.pattern !== '*'),
-    ...(spec.toolPolicy?.deny ?? []).map((e): PermissionRule => ({ ...parse(e), action: 'deny' })),
-    // Injected tool servers (ask_user) are always allowed, so no policy can lock out HITL.
+    // Injected tool servers (ask_user) are always allowed, so no allow list can lock out HITL; an explicit
+    // deny still wins, as it does on Claude.
     ...(spec.tools ?? []).map((t): PermissionRule => ({ permission: `${t.name}_*`, pattern: '*', action: 'allow' })),
+    ...(spec.toolPolicy?.deny ?? []).map((e): PermissionRule => ({ ...parse(e), action: 'deny' })),
     // OpenCode's own `question` tool blocks until someone answers it; a headless run asks through ask_user instead.
     // A final deny hides the tool from the model entirely.
     { permission: 'question', pattern: '*', action: 'deny' },

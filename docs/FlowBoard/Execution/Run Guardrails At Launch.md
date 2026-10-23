@@ -50,9 +50,15 @@ The per-run `settings.json` registers `PreToolUse` hooks that deny (PRD §7):
 
 *"A denial returns its reason to the agent, so it changes course instead of stalling. The prompt states the same rules; the hook enforces them. Hooks are a provider capability (`tool_hooks`): a provider without them relies on the sandbox alone, and the flow editor says so."* (PRD §7) More in [[In-Agent Hooks]].
 
+> [!warning] The shipped code differs
+> No `settings.json` is written (2026-10-18). The rules travel in `RunSpec.guards`, and both adapters enforce them in-agent: Claude through an in-process `PreToolUse` hook callback, registered only when `guards` is set; OpenCode through a guard plugin. They deny file-edit writes outside the write roots or matching a `denyPaths` glob, a recursive `rm` outside the roots, and any `denyCommands` regex. `DEFAULT_DENY_COMMANDS` covers `git push`, `git reset --hard` and a download piped into a shell; the base-branch `git checkout` needs the branch name, so it is left to the runner, which is not built. See [[Run Spec]].
+
 ## Tools
 
 *"**Allowed tools** are the intersection of the agent's list and the skill's `allowed-tools` (whichever the step names), narrowed further by the step's own `allowed_tools` when set"* (PRD §7). *"When `--allowedTools` is set, always append `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`."* (PRD §7)
+
+> [!warning] The shipped code differs
+> The injected server is named `flowboard`, so the agent sees `mcp__flowboard__ask_user` and `mcp__flowboard__ask_user_batch`. Each adapter pre-approves every injected server, with or without an allow list (`mcp__flowboard__*` on Claude, `flowboard_*` on OpenCode), and an explicit deny still wins (2026-10-22; [[Agent Providers Open Questions]] #31).
 
 ## Plugins
 
@@ -73,9 +79,15 @@ Backlog D5: *"Hook isolation for headless runs"*, default *"Empty `--settings` f
 > [!warning] Empty, or holding the hooks?
 > D5's *"Empty `--settings` file per run"* (also the drawio card *"D5 · Hook isolation / Empty --settings file per headless run"*) cannot be squared with PRD §7's *"`--settings <generated per-run settings.json with PreToolUse hooks>`"* and the drawio *Runner* card's *"writes per-run mcp.json + settings.json (hooks)"*. D5's aim, keeping the operator's global `~/.claude` hooks out, still holds; its "empty" predates the hooks gate. See [[Execution Open Questions]] #52, [[Agent Providers Open Questions]] #24 and [[Sandboxing Open Questions]] #24.
 
+> [!warning] The shipped code differs
+> On the host tier the code uses neither a `--settings` file nor `CLAUDE_CONFIG_DIR` (2026-10-18). Claude runs get `settingSources: []`, which loads no user, project or local settings and skips the folder's `CLAUDE.md`, plus `strictMcpConfig`; the guards are an in-process hook, so no settings file is needed. OpenCode runs get a fresh `XDG_CONFIG_HOME` and `OPENCODE_DISABLE_PROJECT_CONFIG=1` ([[Agent Providers Open Questions]] #24).
+
 ## No real credential
 
 *"No real credential is passed in: the CLI's `ANTHROPIC_BASE_URL` points at the egress proxy, which injects it."* (`03` §6) PRD §11.1 adds the dummy key: *"The CLI gets `ANTHROPIC_BASE_URL` pointing at the egress proxy and a dummy key."* See [[Credential Injecting Proxy]].
+
+> [!warning] The shipped code differs
+> No proxy is built: runs are host child processes in the real folder with the owner's credentials. Claude uses the installed CLI's subscription login, and the adapter strips `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`; OpenCode uses its own stored credentials. A dummy key behind a proxy fits an API key, not that login ([[Claude Code Adapter]]). As of 2026-10-18.
 
 ## Related
 

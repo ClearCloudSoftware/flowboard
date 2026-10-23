@@ -30,6 +30,8 @@ From PRD §8:
 - *"**A missing outcome is never a pass.** If the step has an `on_pass` or `on_fail` edge and the run ended without setting an outcome, set the step instance to `awaiting_approval` with the reason "no outcome reported" and stop."*
 - *"Steps with only `always` edges need no outcome."*
 
+As built, the ask-user shim (`packages/ask-user`) has only `ask_user` and `ask_user_batch`: `set_outcome` is not built on `dev`, and neither real adapter sets `outcome`, so every Claude or OpenCode run ends with it unset ([[Agent Run Handle And Result]]).
+
 > [!tip] Design implication
 > Adding any conditional edge to a step obliges that step to report an outcome. A skill used on such a step must call `set_outcome` (the seeded `/code-review` *"must call `set_outcome`"*, PRD §15). The capability-library mockup shows this in skill manifests as `invokes: set_outcome`.
 

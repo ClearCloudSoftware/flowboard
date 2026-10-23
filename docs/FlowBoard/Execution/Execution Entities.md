@@ -47,7 +47,7 @@ A task pins two things, at moments the sources do not agree on ([[Starting A Tas
 ## What the engine reads, and what it never reads
 
 - Reads: the pinned flow (`step_defs`, `step_edges`), `step_instances`, and the run's normalised result.
-- Never reads: provider JSON. *"The viewer, cost ledger, and engine never see provider JSON."* (`01-ports.md`)
+- Never reads: provider JSON. *"The viewer, cost ledger, and engine never see provider JSON."* (`01-ports.md`) As built, that holds for `RunResult`, which is all the engine reads. But tool events keep each provider's own tool names and inputs, and any event may carry `raw`, the native message, so a viewer that looks inside a tool event has to know the provider ([[Normalized Event Envelope]]).
 
 ## Related
 

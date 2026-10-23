@@ -27,6 +27,8 @@ The backlog's first lesson: *"**Milestone verification was curl + sqlite only.**
 
 > [!note] Three test doubles
 > The fake `claude` binary (backlog 0.2) drives the whole Claude adapter; the reference `ReplayProvider` (`replay-provider.ts`) replays scripted `NormalizedEvent`s and skips the parser; `01-ports.md` also allows *"a captured `stream-sample.jsonl`"*. Which one each lane uses is open: [[Agent Providers Open Questions]] #20, [[Replay Provider]].
+>
+> For the adapters' own tests it was decided on 2026-10-18 (#20): Replay stays a `NormalizedEvent` script; the Claude normalizer is tested against a recorded stream (`adapters/test/fixtures/claude-hello.jsonl`), and the Claude provider against a fake `query()` plus small fake `claude` scripts for the process paths, not a stream-replaying binary.
 
 ## ReplayProvider
 

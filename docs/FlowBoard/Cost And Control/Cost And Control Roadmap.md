@@ -79,7 +79,7 @@ Backlog 10.1 tightens the first: *"with non‑zero cost **and live turns/cost du
 
 ## Out of scope
 
-- *"anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI."* (PRD §17). **Inferred:** so FlowBoard reads cost from the CLI, never from a billing API.
+- *"anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI."* (PRD §17). **Inferred:** so FlowBoard reads cost from the CLI, never from a billing API. (As built: OpenCode runs go through `opencode serve` instead, since 2026-10-18; both adapters read cost from the agent's own events, never from a billing API. See [[OpenCode Adapter]].)
 - Authentication, user accounts, roles (PRD §17). Per-person spend needs identities first.
 - Mem0's managed cloud (PRD §17).
 

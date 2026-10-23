@@ -14,6 +14,9 @@ module: Human In The Loop
 | **M6 — Slack escalation** | *"5-minute timer, Block Kit rendering, interaction handler, idempotency and reconciliation both directions."* |
 | **M9 — Memory** | *"a preference answered once in the inbox is recalled into the next task and not asked again"* |
 
+> [!warning] The shipped code differs
+> Of M4, only the MCP server is built (2026-10-18), for `run-agent`: `ask_user` and `ask_user_batch` in `packages/ask-user`, answered in the terminal. It has no 20-minute sentinel: both adapters lift their MCP time limits and the broker has none, so a question waits until it is answered ([[Run Agent CLI Decisions]] R20). See [[Ask User MCP Server]].
+
 PRD §16 acceptance items for HITL:
 
 - *"`/grill-me` asks a batch of questions that appear in `/inbox` with correct controls per kind"*
@@ -66,7 +69,7 @@ A `manual` step kind is also in v1: PRD §5 has `kind` *"'ai' | 'shell' | 'manua
 - *"authentication, user accounts, roles"* (PRD §17), so there is no real *who* for a filter or a stamp.
 - *"No auth, no multi-tenancy, no user table. Do not add them 'for later'"* (PRD §2).
 - Channels beyond Slack: the PRD builds only a Slack adapter (§3) and calls Slack optional (§10). The Notifier port allows others later.
-- The artifact-file fallback in practice: v1 is Claude-only (Capability Library **D1**), so every run has MCP.
+- The artifact-file fallback in practice: v1 is Claude-only (Capability Library **D1**), so every run has MCP. The build went further: OpenCode, built on 2026-10-18 as a second provider, takes an injected MCP server too; whether it is in v1 is [[Agent Providers Open Questions]] #38.
 - *"A shared team tier"* (feature map *Parking lot*).
 
 ## Related

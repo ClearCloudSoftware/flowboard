@@ -23,13 +23,13 @@ Settled on 2026-10-15 ([[Capability Library Decisions]]), v1 also takes on:
 - [ ] **Task capability pins** and commit-dir garbage collection (D10, D11)
 - [ ] **Check for updates**, update preview with added/removed skills, refusal when an in-use skill is dropped (D13, D19)
 - [ ] Mount only the step's plugins, read-only; fail closed on the host tier for git plugins (D14, D15)
-- [ ] Fully qualified invocation `/<plugin>:<slug>` — verify in backlog Story 0.1 (D16)
+- [ ] Fully qualified invocation `/<plugin>:<slug>` — verify in backlog Story 0.1 (D16); the headless probe passed on 2026-10-18 ([[Capability Library Open Questions]] #19)
 - [ ] Amber for `.mcp.json` / `hooks/` (D9)
 - [ ] **Duplicate to edit** for seeded agents (D21)
 
 M7 and Epic 7 also cover markdown backlog import (Story 7.3). That half is not a library feature and is left out here.
 
-Prerequisite already found the hard way: `--plugin-dir`, not `--add-dir`, registers `/slug` (backlog Story 0.1 *Probe the CLI*, FIX — verify before building).
+Prerequisite already found the hard way: `--plugin-dir`, not `--add-dir`, registers `/slug` (backlog Story 0.1 *Probe the CLI*, FIX — verify before building). As built (2026-10-18), the Claude Code adapter mounts plugins this way, through the Agent SDK's `plugins` option, and fails a run whose plugin does not load ([[Claude Code Adapter]]).
 
 ## Designed in the mockup, beyond the PRD
 
@@ -56,6 +56,8 @@ Of these, v1 builds the single screen, preview-before-install, amber marks, upda
 ## Adding a second provider
 
 To run flows on Codex (`06-cost-and-platform.md`), one of four steps is: *Codex-format `CapabilityPack`s for any skills used by flows targeting it.* The seeded Claude plugin dirs are the reference implementation for that format.
+
+As built, the provider layer's second provider is OpenCode (2026-10-18), and it needed no new pack format: it reads a Claude plugin dir's `skills/` folder. Codex is designed, not built. Whether OpenCode is in v1, and whether Codex is still next, is [[Agent Providers Open Questions]] #38.
 
 ## Out of scope (v1)
 

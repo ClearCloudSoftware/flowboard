@@ -16,15 +16,18 @@ Architecture component **#8**, *Event stream & live viewer* (`03` §8):
 
 ```mermaid
 flowchart LR
-  CLI["claude -p … --output-format stream-json"] -->|stdout lines| Parser[Stream parser]
-  Parser -->|NormalizedEvent v1| RE[(run_events)]
-  Parser -->|live tokens, cost| Runs[(runs)]
+  CLI["claude via the Agent SDK · opencode serve"] -->|SDK messages · SSE events| Parser[Adapter normalizer]
+  Parser -->|NormalizedEvent| RE[(run_events)]
+  Parser -->|usage events: live tokens, cost| Runs[(runs)]
   RE -->|tail by seq| SSE["GET /api/runs/:id/stream"]
   SSE -->|EventSource| Viewer["/runs/[id]"]
   SSE --> Monitor[Monitor log + cost]
 ```
 
 PRD §7: *"Stream stdout line by line, parse each as JSON, write to `run_events` with an incrementing `seq`, The *[sic]* SSE endpoint lives in `apps/web`, a different process, so it cannot share an in-memory emitter: it tails `run_events` by `seq` (with `Last-Event-ID` for catch-up). Normalise each event into one of the `type` values in the schema and produce a one-line `summary` for the viewer."*
+
+> [!warning] The shipped code differs
+> Nothing reads stdout lines (2026-10-18). The Claude adapter iterates the Agent SDK's typed messages (the SDK reads the CLI's `stream-json` itself); the OpenCode adapter reads its server's SSE events. Each adapter normalizes its own events and builds a `summary` for `tool_use` only. `run_events`, `seq` and the SSE route belong to the runner, which is not built: `pnpm run-agent` appends each event, with its native `raw` message, to `runs/<stamp>-<adapter>.jsonl`. See [[Normalized Event Envelope]] and [[Agent Providers Storage]].
 
 PRD §12: *"The SSE endpoint replays existing `run_events` for the run, then streams new ones. Reconnect with `Last-Event-ID`."*
 
@@ -48,6 +51,9 @@ interface Usage {
   costUsd?: number;   // absent → PricingService fills it from tokens
 }
 ```
+
+> [!warning] The shipped code differs
+> `core/src/ports/events.ts` (2026-10-18) has eight kinds, not the seven quoted here and in the *Seam* line above: `{ type: 'usage'; usage: Usage }` carries the run's running totals mid-run, and every event may carry `raw`, the native message. Tool events keep each provider's own tool names and inputs (`Read` with `file_path` on Claude, `read` with `filePath` on OpenCode), so a viewer that shows a tool's input has to know the provider. `costUsd` is the provider's own figure, Claude's only on the result and OpenCode's on every event; absent still means price it from tokens, and PricingService is not built. See [[Normalized Event Envelope]].
 
 ## Rules
 

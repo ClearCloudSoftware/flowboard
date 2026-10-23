@@ -47,7 +47,7 @@ Nodes from the drawio *Harness architecture* page. Only four of the edges are dr
 
 - *"Live updates — A steady stream keeps the board, the viewer, and the inbox current without you refreshing."* (feature map §20). Task detail is not named.
 - The drawio SSE node: *"tail run_events by seq, questions and task state from SQLite (works across processes; catches up on reconnect)"*.
-- Running cost before the result lands: *"Accumulate per-message token usage as you stream"* (PRD §7). The viewer shows a cost *"estimated from tokens until `result` lands"* (`03` §8). A live running cost (feature map §5's cards) was a past bug: the backlog intro lists *"$0 running cost"*.
+- Running cost before the result lands: *"Accumulate per-message token usage as you stream"* (PRD §7). The viewer shows a cost *"estimated from tokens until `result` lands"* (`03` §8). A live running cost (feature map §5's cards) was a past bug: the backlog intro lists *"$0 running cost"*. As built (2026-10-18), the adapters emit `usage` events with the run's running totals: tokens and turns on Claude, which prices a run only in its result, and cost too on OpenCode ([[Normalized Event Envelope]]).
 - *"Dedupe by `seq` on append (StrictMode double‑subscribe duplicates replay)."* (backlog Story 3.4)
 
 ## The mockup's model

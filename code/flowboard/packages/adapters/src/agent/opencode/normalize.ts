@@ -71,7 +71,7 @@ export function createNormalizer(rootSessionID: string): (event: Event) => Norma
           usage.output += part.tokens.output + part.tokens.reasoning;
           usage.cacheRead += part.tokens.cache.read;
           usage.cacheWrite += part.tokens.cache.write;
-          usage.numTurns += 1;
+          if (part.sessionID === rootSessionID) usage.numTurns += 1; // the main agent's steps, as on Claude
           usage.costUsd = (usage.costUsd ?? 0) + part.cost;
           return [{ type: 'usage', usage: { ...usage }, raw }];
         }

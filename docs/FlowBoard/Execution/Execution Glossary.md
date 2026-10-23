@@ -21,10 +21,10 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 | **Outcome** | `pass`, `fail` or null on a step instance; *"drives conditional edges"* | PRD §5 |
 | **`RunSpec`** | *"Everything needed to launch one attempt of one step, provider-agnostically"* | `agent-provider.ts` |
 | **`RunResult`** | `{ usage, exitCode, outcome?, error? }`, what the engine consumes. See [[Agent Run Handle And Result]]. | `01-ports.md`, `agent-provider.ts` |
-| **`NormalizedEvent`** | The seven event kinds every provider's stream is parsed into. See [[Normalized Event Envelope]]. | `01-ports.md`, `events.ts` |
+| **`NormalizedEvent`** | The event kinds every provider's stream is mapped to: seven in the sources, eight in the shipped port, which adds `usage` for running totals (2026-10-18). See [[Normalized Event Envelope]]. | `01-ports.md`, `events.ts` |
 | **ExecHost** | *"WHERE a process runs, decoupled from WHICH agent runs it"*. See [[ExecHost Port]]. | `exec-host.ts` |
 | **Fingerprint** | A hash of a failing shell step's normalised output tail, on `runs.fingerprint` | PRD §8 |
-| **Run record** | `data/runs/<id>/`: `args.json` (PRD §7) or `spec.json` (`03` §6), plus *"raw stream"* (drawio *Run records*) | PRD §7, `03` §6, drawio |
+| **Run record** | `data/runs/<id>/`: `args.json` (PRD §7) or `spec.json` (`03` §6), plus *"raw stream"* (drawio *Run records*). Not built; `run-agent` keeps `runs/<stamp>-<adapter>.jsonl`, whose `start` line holds the launched `RunSpec` ([[Agent Providers Storage]]) | PRD §7, `03` §6, drawio |
 
 ## Actors
 
@@ -35,7 +35,7 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 | **Worker** ⚠ | (1) The separate Node process `apps/worker` that leases jobs (PRD §2, §3). (2) On the monitor and in the guides, a **slot**: *"a worker slot frees up"*, *"Two of your four slots are on this task"* (monitor guide). | see [[Worker Lifecycle]], [[Worker Slots]] |
 | **Loop guard** | The rule set that caps rework and escalates. A drawio card of its own. | drawio *Harness architecture* |
 | **Infra-retry classifier** | Sorts a non-zero agent exit into transient or not | drawio *Harness architecture* |
-| **Broker** | The worker-side half of `ask_user`; *"the only writer of the `questions` table"* | PRD §9 |
+| **Broker** | The worker-side half of `ask_user`; *"the only writer of the `questions` table"*. As built, it runs inside `run-agent` (`cli/src/ask/broker.ts`) and asks in the terminal ([[Ask User MCP Server]]) | PRD §9 |
 
 ## Moves
 

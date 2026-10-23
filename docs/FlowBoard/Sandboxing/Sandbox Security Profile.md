@@ -19,7 +19,7 @@ module: Sandboxing
 | Minimal mounts | *"Mount only the worktree (and the declared artifact dir), plus the plugin dirs the step names, read-only"* | `08` | [[Sandbox Mounts]] |
 | Resource limits | *"`--memory`, `--cpus`, `--pids-limit`, and a wall-clock timeout"* | `08`, PRD §11.1 | [[Resource Limits]] |
 | No real credential | *"The CLI gets `ANTHROPIC_BASE_URL` pointing at the egress proxy and a dummy key"* | `08`, PRD §11.1 | [[Credential Injecting Proxy]] |
-| In-agent hooks | *"`PreToolUse` hooks (per-run `--settings`) deny writes outside the worktree, non-goal paths and destructive git/shell commands."* | `08`, PRD §7 | [[In-Agent Hooks]] |
+| In-agent hooks | *"`PreToolUse` hooks (per-run `--settings`) deny writes outside the worktree, non-goal paths and destructive git/shell commands."* | `08`, PRD §7 | [[In-Agent Hooks]]. As built (2026-10-18), no settings file is written: an in-process hook on Claude Code, a guard plugin on OpenCode |
 | Ephemeral | *"One container per run/attempt, destroyed on completion — clean state, no cross-run contamination."* | `08` | [[Sandboxed Run Lifecycle]] |
 
 The drawio *Hardening* card condenses it: *"non-root user · --cap-drop ALL · no-new-privileges · read-only root + tmpfs /tmp · --memory / --cpus / --pids-limit · wall-clock kill · no real credential inside"*.
@@ -40,13 +40,16 @@ The drawio *Hardening* card condenses it: *"non-root user · --cap-drop ALL · n
 > ```
 > `--rm`; `--user`, `--read-only` and `--tmpfs /tmp` as the spellings of *non-root* and *read-only root + tmpfs*; the env var name for the dummy key; and the plugin mount target are assumptions. The sketch leaves out the `seccomp` profile and the wall-clock timeout, which is not a `docker run` flag. Listed in [[Sandboxing Open Questions]] #29.
 
+> [!warning] The shipped code differs
+> The shipped port (2026-10-18) needs piped stdio, because the Agent SDK drives the Claude CLI over stdin and stdout; its comment names `docker exec -i …` as a container tier's process ([[ExecHost Port]]). The SDK, not a `claude -p` line, builds the CLI's arguments. Claude runs on the owner's subscription login, not an API key, which a dummy key does not fit as is ([[Credential Injecting Proxy]]).
+
 ## Where it lives in code
 
 `SandboxProfile` in `exec-host.ts` carries `tier`, `image`, `egressAllow`, `limits`, `mounts`, `env` and `nonRoot`. Capability drops, seccomp, read-only root and `no-new-privileges` are **not fields**. No source makes them configurable, so they read as fixed behaviour of the container `ExecHost` (inference; `07` says its `execHost` *"applies the security profile (egress allowlist, non-root, caps, limits"*). See [[Sandboxing Data Model]].
 
 ## Which tiers apply it
 
-The profile applies to `container`, `gvisor` and `microvm`. *"Absent for the `host` tier; present for sandboxed tiers."* (`exec-host.ts`, on `ExecHost.profile`). The `host` tier has none of these protections; the [[In-Agent Hooks]] and the [[Permission Gate]] still apply there. Whether host runs go through the egress proxy is open ([[Sandboxing Open Questions]] #27).
+The profile applies to `container`, `gvisor` and `microvm`. *"Absent for the `host` tier; present for sandboxed tiers."* (`exec-host.ts`, on `ExecHost.profile`). The `host` tier has none of these protections; the [[In-Agent Hooks]] and the [[Permission Gate]] still apply there (as built, 2026-10-18, only the in-agent guards: the gate is not built). Whether host runs go through the egress proxy is open ([[Sandboxing Open Questions]] #27).
 
 ## Related
 

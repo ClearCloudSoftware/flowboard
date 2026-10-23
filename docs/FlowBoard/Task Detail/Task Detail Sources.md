@@ -65,7 +65,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 Overlapping notes in the sets written since (their links resolve once those branches merge): [[Workspace Naming]], [[Cleaning Up A Workspace]], [[Demote And Re-Promote]], [[Git Inside A Workspace]], [[Workspaces Open Questions]], [[Promoting A Task]], [[Seed Data]], [[Intake And Import Open Questions]], [[Memory In The UI]], [[Task Memory Scope]], [[Memory Open Questions]], [[Sandboxing In The UI]], [[Egress Denials]], [[Sandboxing Open Questions]].
 
 > [!warning] Decision numbers collide
-> The backlog numbers its decisions D1–D9 (D1 = Start, D3 = attempt cap, D5 = hook isolation). The drawio cards carry D1–D6 on the same topics (drawio D3's content differs, see [[Task Detail Open Questions]] #11), plus **D10** (memory hosting), which has no backlog row. [[Capability Library Decisions]] reuses D1–D31 for different decisions (D1 = Claude-only, D5 = skills store, D10 = tasks pin capabilities). These notes prefix every id with its source: *backlog D3*, *drawio D10*, *Capability Library D10*.
+> The backlog numbers its decisions D1–D9 (D1 = Start, D3 = attempt cap, D5 = hook isolation). The drawio cards carry D1–D6 on the same topics (drawio D3's content differs, see [[Task Detail Open Questions]] #11), plus **D10** (memory hosting), which has no backlog row. [[Capability Library Decisions]] reuses D1–D31 for different decisions (D1 = Claude-only, D5 = skills store, D10 = tasks pin capabilities). D1 has since been overtaken by the build: OpenCode was built on 2026-10-18 as a second provider ([[Agent Providers Open Questions]] #38). These notes prefix every id with its source: *backlog D3*, *drawio D10*, *Capability Library D10*.
 
 ## Related
 

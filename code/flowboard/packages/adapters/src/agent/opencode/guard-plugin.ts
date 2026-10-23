@@ -8,7 +8,7 @@
  * this file exports nothing else.
  */
 import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { checkToolCall } from '@flowboard/core';
 import type { GuardRules } from '@flowboard/core';
 
@@ -31,7 +31,8 @@ export const FlowboardGuard = async ({ directory }: { directory: string }) => {
                 checkToolCall(rules, 'Write', { file_path: m[1].trim() }, directory),
               )
             : tool === 'bash'
-              ? [checkToolCall(rules, 'Bash', { command: args.command }, directory)]
+              ? // bash runs in its `workdir` when given, which OpenCode tells the agent to use instead of cd.
+                [checkToolCall(rules, 'Bash', { command: args.command }, directory, resolve(directory, String(args.workdir ?? '.')))]
               : [];
       const reason = reasons.find(Boolean);
       if (reason) throw new Error(reason);

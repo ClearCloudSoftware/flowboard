@@ -103,6 +103,8 @@ export class OpencodeProvider implements AgentProvider {
       let server: StartedServer | undefined;
       const emit = (ev: NormalizedEvent) => {
         if (ev.type === 'system' && ev.sessionId) resolveSession(ev.sessionId);
+        // Running totals, so a run stopped or failed before its result still reports what it spent.
+        if (ev.type === 'usage' && !finished) usage = ev.usage;
         if (ev.type === 'result') {
           usage = ev.usage;
           finished = true;

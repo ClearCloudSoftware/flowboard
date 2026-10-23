@@ -60,6 +60,8 @@ Mockups count it (*"Attempt 3 of 3"*); PRD §7 treats non-zero exits as infrastr
 ### 15. How does a physical limit hit get classified?
 Backlog 3.5: *"marks the run failed with reason."* PRD §7's transient list does not name it, but does list *"process killed by a signal or lost on restart"*; an out-of-memory or wall-clock kill is a signal kill, so (inference) PRD §7 would retry it as transient. For a shell step a non-zero exit is an outcome, so an out-of-memory kill would loop as `fail`. → [[Resource Limits]], [[Infra Retries]]; [[Execution Open Questions]] #68, #41.
 
+As built (2026-10-18), the result does not show the signal: both adapters report a process killed from outside as exit 1 with an error text, so a runner cannot tell an out-of-memory kill from a plain failure ([[Agent Run Handle And Result]]).
+
 ### 16. How does the runner learn the denied host?
 The failure cards name it; no source says where it comes from (proxy log, stderr). → [[Egress Denials]]
 
@@ -73,6 +75,8 @@ A parked run's resume is a new `start_run`, so a new container. Where the CLI se
 
 ### 19. Stop and restart recovery in a container
 Stop is *"SIGTERM by pid"* (backlog 3.4); re-attach after restart is *"by pid"* (backlog 3.3). Neither is described for a container. → [[Sandboxed Run Lifecycle]]
+
+As built (2026-10-18), Stop is `AgentRun.stop()`, which ends what `ExecHost.spawn` started; a SIGTERM by pid from outside is reported as a failure (exit 1), not a stop ([[Agent Run Handle And Result]]). The port has no way to re-attach ([[Agent Providers Open Questions]] #30).
 
 ### 20. Do check containers get egress?
 *"no model, no API key"* (drawio); a check that installs packages would need registries. → [[Sandboxed Run Lifecycle]], [[Shell Step Execution]]; [[Execution Open Questions]] #40.
@@ -91,8 +95,14 @@ drawio *"ro: skills/ → /skills"* versus `08`, PRD §7 and Capability Library D
 ### 24. Empty `--settings` or the hooks file?
 Backlog D5 versus PRD §7. → [[In-Agent Hooks]]; [[Execution Open Questions]] #52; [[Settings And Plumbing Open Questions]] #29; [[Agent Providers Open Questions]] #24.
 
+> [!check] Implemented 2026-10-18
+> Answered by the code for the host tier: neither. No settings file is written. Claude runs get `settingSources: []`: no user, project or local settings, so the operator's `~/.claude` hooks stay out (managed policy is still read). The guard hook is registered in process. OpenCode runs get a fresh `XDG_CONFIG_HOME` ([[Agent Providers Open Questions]] #24).
+
 ### 25. The two port sketches disagree
-`tool_hooks` is in the `01-ports.md` `Capability` union, not in `agent-provider.ts`. `01-ports.md` says the runner *"passes it in `RunSpec.exec`"*, but only `agent-provider.ts` declares the field. → [[In-Agent Hooks]], [[ExecHost Port]]
+`tool_hooks` is in the `01-ports.md` `Capability` union, not in the reference `agent-provider.ts` (`docs/old/reference/`). `01-ports.md` says the runner *"passes it in `RunSpec.exec`"*, but only `agent-provider.ts` declares the field. → [[In-Agent Hooks]], [[ExecHost Port]]
+
+> [!check] Implemented 2026-10-18
+> The `tool_hooks` part is answered by the shipped port (`core/src/ports/agent-provider.ts`): `Capability` has `tool_hooks`, and `RunSpec.guards` carries the rules. Claude Code and OpenCode both declare `tool_hooks` and enforce the guards in-agent ([[Agent Providers Open Questions]] #1). The shipped port declares `RunSpec.exec` too ([[Agent Providers Open Questions]] #3).
 
 ### 26. Credential rules for `env`
 `01-ports.md`: *"never a real credential"*. `exec-host.ts`: *"Run-scoped env (model/CLI auth)"*. → [[Credential Injecting Proxy]]
@@ -100,8 +110,12 @@ Backlog D5 versus PRD §7. → [[In-Agent Hooks]]; [[Execution Open Questions]] 
 ### 27. Does a host-tier run use the proxy?
 `03` §6 says no real credential is passed, without naming a tier. On the host, the CLI could reach anything directly. → [[Credential Injecting Proxy]]
 
+As built (2026-10-18), no: no proxy exists, and a host run holds the owner's real credentials ([[Providers And Sandboxing]], *As built*). What a host run should do once a proxy exists is still open.
+
 ### 28. Key injection for Codex
 `ANTHROPIC_BASE_URL` is Claude-only; the drawio lists `api.openai.com (later)`. → [[Credential Injecting Proxy]]; [[Agent Providers Open Questions]] #23.
+
+The second provider built is OpenCode (2026-10-18), not Codex, and the same question applies to it; on the host it uses its own credentials. Codex is designed, not built ([[Agent Providers Open Questions]] #23, #38).
 
 ### 29. The illustrative `docker run`
 `--rm`, the `--user` / `--read-only` / `--tmpfs` spellings, the dummy-key env var name and the plugin mount target in [[Sandbox Security Profile]] are **proposals**. So are the `sandbox_profile` JSON shape and its limit values in [[Sandboxing Data Model]], and the endpoints in [[Sandboxing API And Routes]].

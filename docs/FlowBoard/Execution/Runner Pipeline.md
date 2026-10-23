@@ -27,6 +27,9 @@ No source lists these stages as one sequence; the order is assembled from PRD §
 
 The drawio *Runner* card: *"builds the RunSpec · draft-mode transform · writes per-run mcp.json + settings.json (hooks) · records model, effort, tier"*.
 
+> [!warning] The shipped code differs
+> Stages 5 and 6 write no file. The adapters take the tool servers, `permissionMode` and `guards` from the `RunSpec` and set up the provider in memory: Agent SDK options on Claude, `OPENCODE_CONFIG_CONTENT` on OpenCode ([[Agent Providers Open Questions]] #4). The SDK builds the CLI's arguments itself, so there is no final command line to snapshot; `run-agent` logs the launched `RunSpec` as its `start` line ([[Agent Providers Storage]]). As of 2026-10-18.
+
 ## The illustrative code
 
 `07-ports-in-practice.md` sketches the runner touching three ports and no adapter (abridged: the three `import type` lines, the parameter types, three comments and the `register` fields dropped):
@@ -51,7 +54,7 @@ export async function runStep(deps, step, task, produces) {
 }
 ```
 
-*"Swapping Claude for Codex means constructing a different `provider` in the composition root and nothing here changes."* (`07`) The sketch is illustrative: it passes no `exec`, `limits` or `toolPolicy`, has no memory bracket, and updates live cost only on the `result` event, which PRD §7's running cost needs earlier ([[Execution Open Questions]] #62).
+*"Swapping Claude for Codex means constructing a different `provider` in the composition root and nothing here changes."* (`07`) The sketch is illustrative: it passes no `exec`, `limits` or `toolPolicy`, has no memory bracket, and updates live cost only on the `result` event, which PRD §7's running cost needs earlier ([[Execution Open Questions]] #62). The shipped port's `usage` events carry those running totals ([[Agent Providers Open Questions]] #9).
 
 ## Events and cost while it runs
 
@@ -59,6 +62,9 @@ export async function runStep(deps, step, task, produces) {
 - *"Take the final result event's total cost as authoritative for `runs.cost_usd`. Accumulate per-message token usage as you stream so the live view shows a running number before the run ends."* (PRD §7)
 - Parsing and normalisation are the adapter's ([[Stream Parsing And Normalization]]).
 - Backlog 3.2 (**PRD/BUG**): *"persist `num_turns` per assistant turn so the viewer/board show live numbers."* `02` §4: *"progress hairline needs `runs.num_turns` written **incrementally** (backlog bug: today only on the final event → always 0%)."*
+
+> [!warning] The shipped code differs
+> Nothing reads stdout lines: the Claude adapter iterates the Agent SDK's typed messages, and OpenCode reads its server's SSE events. The adapters keep the running totals and emit them as `usage` events, which count the main agent's turns; Claude's carry no cost until the result. They build `summary` for `tool_use` only. `run_events` and `seq` wait for the runner; `run-agent` appends every event to `runs/<stamp>-<adapter>.jsonl`. See [[Normalized Event Envelope]].
 
 ## On exit
 

@@ -40,13 +40,13 @@ test('normalizes the captured read run', () => {
   // Sum the capture's step-finish parts per the plan's Decisions table.
   const expected = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, numTurns: 0, costUsd: 0 };
   for (const e of lines) {
-    const p = (e as { properties: { part?: { type: string; cost: number; tokens: any } } }).properties.part;
+    const p = (e as { properties: { part?: { type: string; sessionID: string; cost: number; tokens: any } } }).properties.part;
     if (e.type !== 'message.part.updated' || p?.type !== 'step-finish') continue;
     expected.input += p.tokens.input;
     expected.output += p.tokens.output + p.tokens.reasoning;
     expected.cacheRead += p.tokens.cache.read;
     expected.cacheWrite += p.tokens.cache.write;
-    expected.numTurns += 1;
+    if (p.sessionID === root) expected.numTurns += 1;
     expected.costUsd += p.cost;
   }
   assert.deepEqual((events.at(-1) as { usage: Usage }).usage, expected);
@@ -89,13 +89,13 @@ test('maps tool parts to one tool_use and one tool_result', () => {
   ]);
 });
 
-test('sums step-finish usage across the root and child sessions', () => {
+test('sums step-finish usage across the root and child sessions; turns count the root only', () => {
   const norm = createNormalizer(ROOT);
   norm(ev('session.created', { sessionID: 'ses_child', info: { id: 'ses_child', parentID: ROOT } }));
   norm(step(ROOT));
   const out = norm(step('ses_child'));
   assert.deepEqual(strip(out), [
-    { type: 'usage', usage: { input: 20, output: 16, cacheRead: 200, cacheWrite: 14, numTurns: 2, costUsd: 0.02 } },
+    { type: 'usage', usage: { input: 20, output: 16, cacheRead: 200, cacheWrite: 14, numTurns: 1, costUsd: 0.02 } },
   ]);
 });
 

@@ -177,9 +177,11 @@ Found when these notes were checked against the sources a second time.
 
 PRD §7 classes *"process killed by a signal"* as a **transient** failure: *"retry the same attempt automatically, up to 3 times, with backoff of 30 s, 2 min and 8 min"*, marked `wasted = 1`. Backlog 3.4's Stop is *"SIGTERM by pid"*. Nothing marks a run as stopped by the user before the signal, so the runner would re-run what you just stopped. The replay adapter's `stop()` settles with `exitCode: 130, error: 'stopped'`, a non-zero exit, so it is classified the same way. **Proposal:** record the stop on the run first and exclude it from the transient class. Linked to #14. Same as [[Execution Open Questions]] #55 and [[Agent Providers Open Questions]] #22.
 
+As built (2026-10-18), all three providers settle a `stop()` before the result as `{ exitCode: 130, error: 'stopped' }` and keep the usage so far, so a runner can tell a stop through the port from a crash. A process killed by pid from outside is not a stop: it fails with exit 1 (#36). Whether 130 counts as transient is still [[Agent Providers Open Questions]] #22.
+
 ### 36. Where does Stop run?
 
-Backlog 3.4 and `03` §8: *"Stop = SIGTERM by pid from the route (same machine)"*. PRD §2: *"Next.js route handlers must never spawn a long-lived child process; they enqueue jobs and the worker picks them up"*. The ports already have a stop: `AgentRun.stop()` (*"SIGTERM the child"*, `agent-provider.ts`) and `ChildHandle.kill()` (`exec-host.ts`). Inferred: on the container tier the host pid belongs to the docker client, not the agent. Should Stop be a job the worker handles through the port? Who finalises the stopped run is [[Execution Open Questions]] #56.
+Backlog 3.4 and `03` §8: *"Stop = SIGTERM by pid from the route (same machine)"*. PRD §2: *"Next.js route handlers must never spawn a long-lived child process; they enqueue jobs and the worker picks them up"*. The reference port had two stops: `AgentRun.stop()` (*"SIGTERM the child"*) and `ChildHandle.kill()` (`exec-host.ts`). The shipped port (`core/src/ports/agent-provider.ts`, 2026-10-18) has one: `AgentRun.stop()`, *"Stop the run; `result` settles as stopped."*, and each provider then ends its own child (SIGTERM, then SIGKILL after a grace). A process killed by pid from outside is not reported as a stop: the run fails with exit 1 (Claude: the SDK's "terminated by signal" error; OpenCode: "opencode server ended the run early"), and on OpenCode `AgentRun.pid` is the `opencode serve` server's. Inferred: on the container tier the host pid belongs to the docker client, not the agent. Should Stop be a job the worker handles through the port? Who finalises the stopped run is [[Execution Open Questions]] #56.
 
 ### 37. Retry as-is for rate limits
 
@@ -189,9 +191,13 @@ The guide offers **Retry as-is** for *"a flaky test, a rate limit, a transient e
 
 PRD §7: *"Accumulate per-message token usage as you stream so the live view shows a running number before the run ends."* Backlog 3.4: *"estimate from tokens until result lands"*. But `events.ts` carries `Usage` only on `result`; `07-ports-in-practice.md` updates live cost only `if (ev.type === 'result')`; and `06` §12 makes Claude's price table *"a **passthrough**"*, so there are no rates to turn mid-run tokens into dollars. `agent-provider.ts` names the capability (*"partial_stream emits incremental deltas (live token counts) mid-turn"*) but no event carries them. Needed for the row cost, burn and the viewer footer. Same as [[Cost And Control Open Questions]] #2, [[Agent Providers Open Questions]] #9 and [[Execution Open Questions]] #62.
 
+Answered for the provider layer on 2026-10-18 ([[Agent Providers Open Questions]] #9): an eighth event kind, `usage`, carries the run's running totals mid-run, and a run that ends before its result keeps the last ones. Claude's totals hold tokens and turns but no cost, because Claude prices a run only in its result, so its live dollars still need PricingService, which is not built; OpenCode's carry its own cost. See [[Normalized Event Envelope]].
+
 ### 39. The event envelope
 
 PRD §7: *"each event carries `v`, starting at 1"*; `01-ports.md`: *"every event also carries `v: 1`"*. The `NormalizedEvent` type in `events.ts` has no `v` (it is only the `run_events.v` column). `summary` exists only on `tool_use`, yet `run_events.summary` is a *"short human-readable line for the session viewer"* on every row. Who writes the summary for the other six kinds? Same as [[Agent Providers Open Questions]] #6 and #8 and [[Execution Open Questions]] #62; see [[Normalized Event Envelope]].
+
+As built (2026-10-18), the shipped `NormalizedEvent` still has no `v` (skipped for now, [[Agent Providers Open Questions]] #6), and the adapters build `summary` for `tool_use` only, so the seven other kinds, `usage` included, have none ([[Agent Providers Open Questions]] #8).
 
 ### 40. The stale "deviation" label
 

@@ -7,6 +7,9 @@ module: Sandboxing
 
 > *"**No real credential enters the container.** The CLI gets `ANTHROPIC_BASE_URL` pointing at the egress proxy and a dummy key. The proxy swaps in the real credential, and only on requests to the model endpoint. A prompt-injected agent can read its own environment, so the environment holds nothing worth stealing."* — PRD §11.1
 
+> [!warning] The shipped code differs
+> No proxy is built. As of 2026-10-18 every run is a host child process holding the owner's real credentials: Claude runs on the owner's subscription login, with `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` stripped from its environment, and OpenCode on its own `auth.json`, `OPENCODE_API_KEY` or `OPENCODE_AUTH_CONTENT`. A dummy key fits an API key, not a subscription login: a container tier would need a `claude setup-token` token inside the box, which breaks the rule above. That is an open design question ([[Providers And Sandboxing]], *Credentials*; [[Claude Code Adapter]]).
+
 ## How it works
 
 ```mermaid
@@ -48,7 +51,7 @@ No source says where the proxy gets the real credential on the host. Raised in [
 
 ## Other providers
 
-The drawio lists `api.openai.com (later)` on the allowlist for the Codex adapter. `ANTHROPIC_BASE_URL` is Claude-specific; how the proxy injects a key for Codex is not described. Same as [[Agent Providers Open Questions]] #23.
+The drawio lists `api.openai.com (later)` on the allowlist for the Codex adapter. `ANTHROPIC_BASE_URL` is Claude-specific; how the proxy injects a key for Codex is not described. Same as [[Agent Providers Open Questions]] #23. The second provider built is OpenCode (2026-10-18), not Codex; it raises the same question, and on the host it uses its own credentials. Whether Codex is still next is [[Agent Providers Open Questions]] #38.
 
 ## Related
 

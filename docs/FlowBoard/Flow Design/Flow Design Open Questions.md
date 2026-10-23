@@ -62,6 +62,8 @@ The mockup opens with the chip reading *adopted 12 Sep* (nothing edited), yet th
 
 > [!check] **Moot in v1 — D1.** v1 is Claude-only, so no step needs a provider field. Returns with the second provider.
 
+The build overtook D1: OpenCode was built on 2026-10-18 as a second real provider; Codex is designed, not built. No flow or step exists yet to pick one; `run-agent` takes the provider per run from its YAML (`adapter:`). Whether OpenCode is in v1 is [[Agent Providers Open Questions]] #38, open.
+
 The capability-library guide: *"Steps name their provider individually — one flow can mix them."* `01-ports.md` and `05` §13 assume a step has a *target provider*. Neither the PRD `step_defs` table, backlog Story 8.2's inspector list, nor the flow-designer mockup has a provider field. The same question, with a proposed nullable `step_defs.provider`, is [[Agent Providers Open Questions]] #14.
 
 ### 10. Step kind and capability in the designer
@@ -99,7 +101,7 @@ The flow designer cannot show or edit it. Four other mockups speak of a per-step
 
 ### 15. Model ids and effort values
 
-The PRD and every mockup use the Claude aliases `haiku`, `sonnet` and `opus`. They are not native ids: PRD §5 comments `agents.default_model` as *"a Claude alias, used as the logical model id"*, and the CLI reports a native id such as `claude-fable-5-1` (`docs/old/stream-sample.jsonl`). `01-ports.md`: *"Step defs reference logical ids (`reasoning-high`, `fast-cheap`, `default`)"*. `06` §15 draft mode sets `model: 'fast-cheap'`. For v1, [[Capability Library Decisions|D20]] makes the aliases the logical ids; the abstract names are open until a second provider ([[Logical Model Ids]], [[Agent Providers Open Questions]] #11). Effort: the mockup offers `low | medium | high`; the PRD and `agent-provider.ts` allow `low | medium | high | xhigh | max`. See [[Models And Effort]].
+The PRD and every mockup use the Claude aliases `haiku`, `sonnet` and `opus`. They are not native ids: PRD §5 comments `agents.default_model` as *"a Claude alias, used as the logical model id"*, and the CLI reports a native id such as `claude-fable-5-1` (`docs/old/stream-sample.jsonl`). `01-ports.md`: *"Step defs reference logical ids (`reasoning-high`, `fast-cheap`, `default`)"*. `06` §15 draft mode sets `model: 'fast-cheap'`. For v1, [[Capability Library Decisions|D20]] makes the aliases the logical ids; the abstract names are open until a second provider ([[Logical Model Ids]], [[Agent Providers Open Questions]] #11). The code has answered that for now: with OpenCode built (2026-10-18), there is no shared vocabulary; Claude takes an alias or any id its CLI accepts, OpenCode a `providerID/modelID` id, and nothing maps `reasoning-high`. Effort: the mockup offers `low | medium | high`; the PRD and `agent-provider.ts` allow `low | medium | high | xhigh | max`. See [[Models And Effort]].
 
 ### 16. Prompt template placeholders
 

@@ -53,7 +53,7 @@ On the *Logical components* page, **Board `/p/[slug]`** (*projection of task + s
 | **Colour means something is happening or wanted** | *"colour only appears where something is happening or something is wanted. When nothing is blocked, band 3 collapses to a single white line and every trace of amber leaves the screen. If you see amber, a human is the bottleneck."* (monitor guide, *Anatomy*) |
 | **Most urgent at the top** | *"Reading down the screen is reading from *most urgent* to *least*."* (monitor guide) |
 | **Done drains to grey** | *"*Done* is drained to stone grey on purpose — it's most of the screen, and colouring it would drown the part that needs you"* (mockups README) |
-| **The viewer never parses provider JSON** | *"the 7 `NormalizedEvent` kinds are the universal contract … The viewer never parses provider JSON."* (`03` §8) |
+| **The viewer never parses provider JSON** | *"the 7 `NormalizedEvent` kinds are the universal contract … The viewer never parses provider JSON."* (`03` §8). As built (2026-10-18) there are eight kinds, and tool events keep each provider's tool names and inputs ([[Normalized Event Envelope]]) |
 | **Catch up on reconnect** | *"reopen the page and it catches you up from the start."* (feature map §9) |
 | **Waste is the number to attack** | *"Wasted is the number to attack. It's every dollar spent on an attempt that was thrown away"* (monitor guide, *Money*) |
 | **Keyboard first** | *"This is the screen you'll live in, so it's built to be driven without a mouse."* (monitor guide, *Keyboard*) |

@@ -7,6 +7,13 @@ module: Agent Providers
 
 What each source contributed. There is no mockup for this component; sibling mockups mention it in sample data.
 
+There are two kinds of source. The design sources were written before any code, and the notes of 2026-10-15/16 rest on them. Since 2026-10-18 the shipped code in `code/flowboard/packages/`, and the plans and specs it was built from, are sources too: see *Code, plans and specs* below.
+
+## Design sources
+
+> [!warning] Reference port or shipped port
+> `docs/old/reference/core/ports/` holds the reference port, a design sketch. The notes written on 2026-10-15/16 quote or describe it, usually by bare file name (`agent-provider.ts`, `events.ts`, `exec-host.ts`, `replay-provider.ts`): [[Run Spec]], [[Agent Run Handle And Result]], [[Normalized Event Envelope]], [[Provider Capabilities]], [[Logical Model Ids]], [[Session Resume And Context Replay]], [[Stream Parsing And Normalization]], [[Providers And Sandboxing]], [[Provider Boundary Rules]], [[Replay Provider]], [[Codex Adapter]], [[Agent Providers Glossary]], [[Agent Providers Data Model]], [[Agent Providers Storage]], [[Agent Providers Overview]], the PRD mapping in [[Claude Code Adapter]], and the early entries of [[Agent Providers Open Questions]]. Since 2026-10-18 the shipped port in `code/flowboard/packages/core/src/ports/` replaces it. How the two differ is in the first row of *Code, plans and specs* below.
+
 | Source | Contributed |
 |---|---|
 | `docs/FlowBoard/Component Documentation Tracker.md` | Scope (*"AgentProvider port, capability negotiation, logical models, Claude / Codex / replay"*), feature map §6, architecture #5 and `01-ports.md`; platform component, documented as architecture reference |
@@ -22,10 +29,10 @@ What each source contributed. There is no mockup for this component; sibling moc
 | `docs/old/architecture/08-sandboxing.md` | *"The sandbox is not a new kind of AgentProvider"*; 2×N; the gate on the host tier; Codex's own OS sandbox; Claude Code rejecting root; `runs.sandbox` beside `runs.model`/`effort`; prior art; *The security profile* (*"Drop capabilities: `--cap-drop ALL`"*, the glossary's kernel *capability*) |
 | `docs/old/architecture/09-memory.md` | Memory touches *"the prompt contract on AgentProvider"*; recall/write bracket `launch()` |
 | `docs/old/architecture/README.md` | *"Claude Code and Codex are interchangeable adapters"*; *"already the provider seam"*; the provider-agnostic graph; five-ports table (*Codex, Gemini CLI, ReplayProvider*); the dependency rule and lint; the spec's leaks; module layout `adapters/agent/claude/ codex/ replay/`; component index #5; open decision 2 (ACP + Codex spike) |
-| `docs/old/reference/core/ports/agent-provider.ts` | The reference port: `ProviderId`, `Effort`, `Capability` (no `tool_hooks`) with per-flag meanings, `ArtifactRef`, `PromptParts`, `ToolServer`, `CapabilityPack`, `RunSpec` (with `exec`), `RunResult`, `AgentRun`, `AgentProvider`; the two-mappings comment |
-| `docs/old/reference/core/ports/events.ts` | Header (the four consumers), `Usage`, the seven `NormalizedEvent` kinds (no `v`) |
-| `docs/old/reference/core/ports/exec-host.ts` | `ExecHost`, `SandboxProfile` (`env` for *"model/CLI auth"*, `nonRoot`), `ChildHandle`, `IsolationTier`; *"any provider × any isolation tier"* |
-| `docs/old/reference/adapters/agent/replay/replay-provider.ts` | `ReplayScript`, the replay adapter's behaviour (including when `result` settles and how `stop()` lands), capabilities and self-check |
+| `docs/old/reference/core/ports/agent-provider.ts` | The reference port: `ProviderId`, `Effort`, `Capability` (no `tool_hooks`) with per-flag meanings, `ArtifactRef`, `PromptParts`, `ToolServer`, `CapabilityPack`, `RunSpec` (with `exec`), `RunResult`, `AgentRun`, `AgentProvider`; the two-mappings comment. Replaced on 2026-10-18 by `core/src/ports/agent-provider.ts` |
+| `docs/old/reference/core/ports/events.ts` | Header (the four consumers), `Usage`, the seven `NormalizedEvent` kinds (no `v`). The shipped `core/src/ports/events.ts` has eight |
+| `docs/old/reference/core/ports/exec-host.ts` | `ExecHost`, `SandboxProfile` (`env` for *"model/CLI auth"*, `nonRoot`), `ChildHandle`, `IsolationTier`; *"any provider × any isolation tier"*. The shipped `core/src/ports/exec-host.ts` has no `ChildHandle` |
+| `docs/old/reference/adapters/agent/replay/replay-provider.ts` | `ReplayScript`, the replay adapter's behaviour (including when `result` settles and how `stop()` lands), capabilities and self-check. The shipped copy is `adapters/src/agent/replay/replay-provider.ts`; its self-check became `adapters/test/replay.test.ts` |
 | `docs/old/reference/README.md` | File map (which omits `exec-host.ts`), how to run the self-checks, strip-only TypeScript rules |
 | `docs/old/PRD.MD` §0 | The `stream-json` probe, `claude --version`, the credential-proxy probe; *"stop and say so"* |
 | `docs/old/PRD.MD` §1, §2, §3 | Each step a headless Claude Code session; web never spawns; `packages/core/ports`, `events.ts`, `adapters/agent/ # claude-cli, codex-cli (later), replay` |
@@ -44,6 +51,26 @@ What each source contributed. There is no mockup for this component; sibling moc
 | `docs/pitch.md` | *"provider-agnostic by design"*; *"a replayable fake-agent for tests"*; the provider seam as the path to a shared tier |
 | `docs/competitor-multica.md` | *"One seam, Claude Code first, Codex intended"* vs *"26 agent CLIs today"*; *"provider-agnosticism"* among what Multica already ships |
 | Sibling vault sets | [[Agent Launch Contract]], [[Prompt Assembly]], [[Draft Mode And Spec Transforms]], [[Execution Testing]], [[Execution Open Questions]] #7, #31, #38, #39, #42, #45, #47, #51, #52, #53, #55, #56, #62, #63; [[Models And Effort]]; [[Usage And Native Cost]], [[Pricing Service]]; [[Capability Library Decisions]] D1, D2, D20, D23; [[Capability Versus Provider Pack]], [[Provider Coverage And Portability]]; [[Event Stream And SSE]], [[Monitor Open Questions]] #35, #36, #38, #39; [[Cost And Control Open Questions]] #2, #7, #14, #16; [[Flow Design Open Questions]] #15; [[Human In The Loop Open Questions]] #9; [[Sandboxing Open Questions]] #24, #25, #26, #28; [[Settings And Plumbing Open Questions]] #2, #10, #22; [[Intake And Import Open Questions]] #12 |
+
+## Code, plans and specs
+
+Since 2026-10-18. Paths below are under `code/flowboard/packages/` unless they start with `docs/`.
+
+| Source | Contributed |
+|---|---|
+| `core/src/ports/agent-provider.ts`, `events.ts`, `exec-host.ts` | The shipped port, which replaced the reference port on 2026-10-18. What changed: `ProviderId` adds `opencode`; `Capability` adds `tool_hooks`; `RunSpec` adds `permissionMode`, `systemPrompt` and `guards` (`GuardRules`); `pid` is a `Promise<number>`; `sessionId` rejects when no id arrives; `stop()` settles the run as stopped; a set `RunResult.error` means failed; the rule that adapters must not reorder the prompt is gone; `NormalizedEvent` has eight kinds (`usage` added) and an optional `raw`; `ExecHost.spawn` returns a Node child process, and `ChildHandle` is gone |
+| `core/src/guard.ts`, `prompt.ts`, `hitl/question.ts` | The guard check (`checkToolCall`, the built-in recursive-`rm` rule, `DEFAULT_DENY_COMMANDS`); the prompt renderer; the question and ask protocol types |
+| `adapters/src/` | The adapters in `agent/claude/`, `agent/opencode/` and `agent/replay/`; the shared tool summary `agent/summarize.ts`; the host `ExecHost` and the SIGTERM-then-SIGKILL helper in `exec/` |
+| `ask-user/src/` | The ask_user MCP shim: a `flowboard` server with `ask_user` and `ask_user_batch`, which forwards each question over a Unix socket |
+| `cli/src/` | `pnpm run-agent`: the YAML loader (`config.ts`), the run and its log (`run.ts`), the terminal broker (`ask/`) |
+| `*/test/` | The free suite and the live tests. Fixtures: `claude-hello.jsonl` (the same bytes as `docs/old/stream-sample.jsonl`), `opencode-read.jsonl` (a recorded OpenCode stream), small fake `claude` scripts, and a fake `opencode serve` |
+| `@anthropic-ai/claude-agent-sdk` 0.3.302 (for Claude Code 2.1.302), `@opencode-ai/sdk` 1.19.3 | The SDKs the adapters are built on; the documentation read is listed in [[Provider SDK Fit Analysis]] |
+| `docs/superpowers/plans/2026-10-18-agent-providers-claude-code.md` | The plan for the port, Replay, the host `ExecHost` and the Claude Code provider |
+| `docs/superpowers/plans/2026-10-18-agent-providers-opencode.md` | The plan for the OpenCode provider |
+| `docs/superpowers/specs/2026-10-18-yaml-run-config-design.md`, `docs/superpowers/plans/2026-10-18-yaml-run-config.md` | The design and plan for the YAML run config and `run-agent` |
+| `docs/superpowers/specs/2026-10-18-terminal-ask-user-design.md`, `docs/superpowers/plans/2026-10-18-terminal-ask-user.md` | The design and plan for answering ask_user in the terminal, and for `skills:` folders |
+| `docs/superpowers/plans/2026-10-18-deferred-group-1.md` | The plan for eight deferred fixes |
+| [[Agent Providers Docs Audit]] (2026-10-21) | Every note checked against the code. Its section 2 lists the code problems fixed on 2026-10-22 |
 
 ## Not found
 

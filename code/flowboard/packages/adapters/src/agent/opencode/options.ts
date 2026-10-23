@@ -19,6 +19,10 @@ export interface LaunchBase {
   guardPlugin: string;
 }
 
+/** OpenCode's own credentials: the only OPENCODE_* variables a run inherits. */
+const OPENCODE_CREDENTIALS = ['OPENCODE_API_KEY', 'OPENCODE_AUTH_CONTENT'];
+const ANTHROPIC_KEYS = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'];
+
 export interface OpencodePrompt {
   model: { providerID: string; modelID: string };
   system?: string;
@@ -47,12 +51,14 @@ export function buildLaunch(
   const skills = packs.flatMap((p) => (p.mount.kind === 'plugin_dir' ? [`${p.mount.path}/skills`] : []));
 
   const permission = toPermissionRules(spec);
-  const config: Config = {
+  // Native packs go first: the keys set below replace theirs, so no pack can drop the permission rules,
+  // the guard plugin, ask_user or the step limits.
+  const config: Config = Object.assign({}, ...packs.flatMap((p) => (p.mount.kind === 'native' ? [p.mount.config] : [])), {
     permission: rulesToConfig(permission),
     // A rejected permission ends the turn by default; keep the agent going so it can take another route.
     // A tool call may wait on a human (ask_user) for as long as they take.
     experimental: { continue_loop_on_deny: true, mcp_timeout: NO_TIME_LIMIT_MS },
-  };
+  });
   if (tools.length) {
     config.mcp = Object.fromEntries(
       tools.map((t) => [
@@ -74,7 +80,6 @@ export function buildLaunch(
     config.agent = { build: { steps }, plan: { steps }, general: { steps }, explore: { steps } };
   }
   if (spec.guards) config.plugin = [pathToFileURL(base.guardPlugin).href];
-  for (const p of packs) if (p.mount.kind === 'native') Object.assign(config, p.mount.config);
 
   // OpenCode has no Claude plugin namespace: a "/plugin:slug" invocation becomes an instruction to use the skill.
   const { invocation, ...parts } = spec.prompt;
@@ -85,8 +90,11 @@ export function buildLaunch(
     .filter(Boolean)
     .join('\n\n');
 
-  // OPENCODE_CONFIG / OPENCODE_CONFIG_DIR from the owner's shell would pull extra config into the run.
-  const { OPENCODE_CONFIG: _config, OPENCODE_CONFIG_DIR: _configDir, ...inherited } = base.env;
+  // The owner's OPENCODE_* settings (extra config, OPENCODE_PERMISSION, sharing, experiments) would change what
+  // the run may do; only OpenCode's credentials pass. An inherited Anthropic key would silently bill the API for
+  // an anthropic/... model, so it stays out as on the Claude adapter.
+  const keep = (k: string) => (k.startsWith('OPENCODE_') ? OPENCODE_CREDENTIALS.includes(k) : !ANTHROPIC_KEYS.includes(k));
+  const inherited = Object.fromEntries(Object.entries(base.env).filter(([k]) => keep(k)));
   const env: NodeJS.ProcessEnv = {
     ...inherited,
     XDG_CONFIG_HOME: base.configHome,

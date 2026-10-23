@@ -23,6 +23,12 @@ The drawio *Harness architecture* page traces one step from button to verdict wi
 
 Beat A covers two triggers, but only one goes through the web process. *Inference:* when the engine advances a task, `advance_task` is a job the worker runs (PRD §8), so the server action in A and the Next.js write in B apply to **Start** only. After an advance, the worker enqueues the next `start_run` itself ([[Execution Open Questions]] #70).
 
+> [!warning] The shipped code differs
+> The provider layer built on 2026-10-18 contradicts four beats; the sequence below still draws the design.
+> - **E, F.** No `mcp.json` or hook settings are written: the adapter passes the ask-user server, permission mode and guards to the provider in memory ([[Agent Providers Open Questions]] #4). The Claude adapter runs the CLI on the host with the owner's subscription login and strips `ANTHROPIC_API_KEY`; a dummy key behind a proxy does not fit that login ([[Claude Code Adapter]]).
+> - **G.** No stdout parser: the Claude adapter reads the Agent SDK's typed messages, and OpenCode its server's SSE events ([[Normalized Event Envelope]]).
+> - **H.** The shim (`packages/ask-user`) forwards over `ask.sock` to a broker inside `run-agent`, which asks in the terminal ([[Ask User MCP Server]]).
+
 ## As a sequence
 
 ```mermaid

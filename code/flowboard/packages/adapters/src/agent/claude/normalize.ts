@@ -63,7 +63,8 @@ export function createNormalizer(): (msg: SDKMessage) => NormalizedEvent[] {
           streaming.set(key, overlay(streaming.get(key) ?? ZERO_USAGE, ev.usage));
           out.push({ type: 'usage', usage: running(), raw });
         } else if (ev.type === 'message_stop') {
-          finished = add(finished, streaming.get(key) ?? ZERO_USAGE);
+          // A main-agent message is one turn, as the result's num_turns counts them; a subagent's is not.
+          finished = add(finished, { ...(streaming.get(key) ?? ZERO_USAGE), numTurns: key === '' ? 1 : 0 });
           streaming.delete(key);
         }
         break;

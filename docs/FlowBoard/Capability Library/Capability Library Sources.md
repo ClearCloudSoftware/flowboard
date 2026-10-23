@@ -24,6 +24,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 | `docs/old/architecture/05-environment-and-registry.md` §13 | Skill/Agent registry → Capability packs: the seam, `CapabilityPack`, provider-tagged install, seed idea |
 | `docs/old/reference/core/ports/agent-provider.ts` | `CapabilityPack`, mount kinds, open `ProviderId`, `RunSpec.capabilities` and `toolPolicy`, `plugins` capability flag, the six-field `PromptParts` (part 4 as `"/grill-me"`) |
 | `.gitignore` | `skills/_installed/` (removed on 2026-10-15) |
+| `code/flowboard/packages/{core,adapters,cli}/src` and `adapters/test/`, checked 2026-10-22 | The "as built" notes: the shipped port (`ProviderId` with `opencode`, `tool_hooks`, part 4 fully qualified); how the Claude Code and OpenCode adapters mount packs, pre-approve the `flowboard` ask-user server and place the invocation; `run-agent`'s `local` skills plugin and log; the live `/<plugin>:<slug>` tests. The Agent SDK 0.3.302 docs and the Claude Code 2.1.302 binary for plugin MCP servers under `--strict-mcp-config` |
 
 ## Secondary
 

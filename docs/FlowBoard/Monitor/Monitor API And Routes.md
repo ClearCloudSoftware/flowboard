@@ -59,7 +59,7 @@ POST /api/runs/:id/stop                 -- SIGTERM by pid, finalise the run
 POST /api/step-instances/:id/retry      -- add { note?, allowHost? }
 ```
 
-The stop endpoint must record that the user stopped the run before signalling it, or the runner classifies the exit as a transient infra failure and retries it. It should go through the worker rather than kill by pid from the route ([[Monitor Open Questions]] #35, #36).
+The stop endpoint must record that the user stopped the run before signalling it, or the runner classifies the exit as a transient infra failure and retries it. It should go through the worker rather than kill by pid from the route ([[Monitor Open Questions]] #35, #36). As built (2026-10-18), the port already tells the two apart: `AgentRun.stop()`, held by whoever launched the run, settles it as `{ exitCode: 130, error: 'stopped' }` with the usage so far, while a process killed by pid from outside fails with exit 1 (on OpenCode the pid is the `opencode serve` server's). See [[Agent Run Handle And Result]].
 
 `GET /api/monitor` would take `?project=` to narrow to one project, so it can also serve `/p/[slug]`. The stream follows `02` §4's idea of a projection refreshed on job completion. `allowHost` would write the step's egress override, which is [[Flow Design Open Questions]] #14.
 
