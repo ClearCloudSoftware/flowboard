@@ -23,9 +23,9 @@ test('a flow writes with Claude Code, checks in the shell and judges with OpenCo
   writeFileSync(join(base, 'judge.md'), 'Read the greeting file, and write nothing. Report pass if it contains the word hello, otherwise fail.');
   writeFileSync(
     join(base, 'flow.yaml'),
-    `folder: proj
-task: task.md
+    `budget_usd: 1
 defaults: { limits: { max_turns: 6, budget_usd: 0.3 } }
+entry: write
 steps:
   write: { adapter: claude-code, model: haiku, prompt: write.md, produces: [greeting] }
   check: { shell: 'grep -qi hello "$FLOWBOARD_ARTIFACTS/greeting.md"', produces: [check_output] }
@@ -42,11 +42,12 @@ edges:
 `,
   );
   const out: string[] = [];
-  const code = await runFlow(['flow.yaml'], { cwd: base, print: (l) => out.push(l), printErr: (l) => out.push(l), signals: new EventEmitter() });
+  const code = await runFlow(['--folder', 'proj', '--task', 'task.md', 'flow.yaml'], { cwd: base, print: (l) => out.push(l), printErr: (l) => out.push(l), signals: new EventEmitter() });
   assert.equal(code, 0, out.join('\n'));
   const [run] = readdirSync(join(base, 'runs'));
   const state = JSON.parse(readFileSync(join(base, 'runs', run, 'state.json'), 'utf8')) as FlowState;
   assert.equal(state.status, 'done');
+  assert.ok(state.runs.some((r) => (r.costUsd ?? 0) > 0), 'no run recorded a cost');
   const judge = state.runs.findLast((r) => r.step === 'judge');
   assert.equal(judge?.outcome, 'pass', out.join('\n'));
   // The file proves set_outcome reached the shim on OpenCode; a result's own outcome would not write it.

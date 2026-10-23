@@ -72,6 +72,44 @@ test('a check ends when its shell exits, and a background command it left is sto
   assert.throws(() => process.kill(pid, 0), 'the background sleep is still running');
 });
 
+test('a background command that redirected its output is stopped too', async () => {
+  const { run, folder } = check('sleep 5 > /dev/null 2>&1 & echo $! > bg.pid; echo started');
+  assert.deepEqual(await run.ended, { costUsd: 0, outcome: 'pass' });
+  const pid = Number(readFileSync(join(folder, 'bg.pid'), 'utf8'));
+  await new Promise((r) => setTimeout(r, 100));
+  assert.throws(() => process.kill(pid, 0), 'the background sleep is still running');
+});
+
+test('a shell that cannot run its command, or dies by a signal, is a setup failure, not a fail', async () => {
+  assert.deepEqual(await check('no-such-command-here').run.ended, { costUsd: 0, error: 'exit code 127: command not found' });
+  assert.deepEqual(await check('kill -9 $$').run.ended, { costUsd: 0, error: 'killed by SIGKILL' });
+});
+
+test('a check says its last line of output, and its log keeps the tail, with or without produces', async () => {
+  const shown: string[] = [];
+  const s = stepSetup({ show: (l) => shown.push(l) });
+  await execShell('echo one; echo "  two  "; echo', s.folder, RUN, [], s.ctx).ended;
+  assert.deepEqual(shown, ['-- check: last output: two']);
+  const result = JSON.parse(readFileSync(join(s.ctx.logDir, '007-check.jsonl'), 'utf8').trim().split('\n').at(-1)!);
+  assert.equal(result.output, 'one\n  two  \n\n');
+});
+
+test('a stopped check keeps the output it had, and ends with the reason it was stopped for', async () => {
+  const { run, artifact } = check('echo partial; sleep 30');
+  await new Promise((r) => setTimeout(r, 200));
+  run.stop('timed out after 0.1 minutes');
+  assert.deepEqual(await run.ended, { costUsd: 0, error: 'timed out after 0.1 minutes' });
+  assert.equal(artifact('check_output'), 'partial\n');
+});
+
+test('a shell step names its missing inputs and reads a note from FLOWBOARD_NOTE', async () => {
+  const shown: string[] = [];
+  const s = stepSetup({ show: (l) => shown.push(l) });
+  await execShell('printf %s "$FLOWBOARD_NOTE"', s.folder, { ...RUN, inputs: ['plan'], note: 'skip the slow tests' }, ['check_output'], s.ctx).ended;
+  assert.deepEqual(shown.slice(0, 1), ['-- check: missing input plan; it runs without it']);
+  assert.equal(s.artifact('check_output'), 'skip the slow tests');
+});
+
 test('a shell step finds the artifacts in FLOWBOARD_ARTIFACTS', async () => {
   const { run, artifact, ctx } = check('echo "$FLOWBOARD_ARTIFACTS"');
   await run.ended;
@@ -106,11 +144,12 @@ test('a check that cannot start ends with an error, not an outcome', async () =>
   assert.deepEqual([end.costUsd, end.outcome, typeof end.error], [0, undefined, 'string']);
 });
 
-test('each shell run logs a start line and a result line', async () => {
+test('each shell run logs a start line, its process group and a result line', async () => {
   const s = stepSetup();
   await execShell('exit 3', s.folder, RUN, ['check_output'], s.ctx).ended;
   const lines = readFileSync(join(s.ctx.logDir, '007-check.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
-  assert.deepEqual([lines[0].kind, lines[0].command, lines.at(-1).kind, lines.at(-1).exitCode, lines.at(-1).outcome], ['start', 'exit 3', 'result', 3, 'fail']);
+  assert.deepEqual(lines.map((l) => l.kind), ['start', 'pid', 'result']);
+  assert.deepEqual([lines[0].command, typeof lines[1].pid, lines[2].exitCode, lines[2].outcome], ['exit 3', 'number', 3, 'fail']);
 });
 
 // --- agent steps
@@ -193,6 +232,63 @@ test('an output not written by this run is missing, even when an old copy is the
   assert.deepEqual((await plan({}, PLAN, old)).end, { costUsd: 0.1, missing: ['plan'] });
 });
 
+test('a step whose verdict nothing reads is not offered set_outcome, and keeps no outcome', async () => {
+  const { provider, specs } = agent({ write: ['plan'], reported: { outcome: 'fail' }, outcome: 'fail' });
+  const s = stepSetup({ makeProvider: () => provider });
+  const end = await execAi(aiConfig(s.folder), PLAN, ['plan'], s.ctx, { verdict: false }).ended;
+  assert.deepEqual(end, { costUsd: 0.1 });
+  assert.equal(specs[0].tools?.find((x) => x.name === 'flowboard')?.env?.FLOWBOARD_OUTCOME_FILE, undefined);
+});
+
+test('a run stopped before its result costs what its running totals say: unknown with tokens and no price', async () => {
+  const usage = (u: object) => async () => {
+    const { provider } = agent({ error: 'stopped' });
+    const launch = provider.launch.bind(provider);
+    provider.launch = (spec) => ({ ...launch(spec), result: Promise.resolve({ usage: { ...ZERO_USAGE, ...u }, exitCode: 1, error: 'stopped' }) });
+    const s = stepSetup({ makeProvider: () => provider });
+    return (await execAi(aiConfig(s.folder), PLAN, ['plan'], s.ctx).ended).costUsd;
+  };
+  assert.equal(await usage({ input: 5000 })(), null); // Claude: tokens, no price
+  assert.equal(await usage({ input: 5000, costUsd: 0.03 })(), 0.03); // OpenCode prices as it goes
+  assert.equal(await usage({})(), 0);
+});
+
+test('an OpenCode model with no price is said aloud: budget_usd cannot stop it', async () => {
+  const { provider } = agent({ write: ['plan'] });
+  const launch = provider.launch.bind(provider);
+  provider.launch = (spec) => ({ ...launch(spec), result: Promise.resolve({ usage: { ...ZERO_USAGE, input: 900, costUsd: 0 }, exitCode: 0 }) });
+  const shown: string[] = [];
+  const s = stepSetup({ makeProvider: () => provider, show: (l) => shown.push(l) });
+  await execAi({ ...aiConfig(s.folder), adapter: 'opencode' }, PLAN, ['plan'], s.ctx).ended;
+  assert.ok(shown.includes('-- plan: no price for sonnet: its cost shows as $0, and limits.budget_usd cannot stop it'), JSON.stringify(shown));
+});
+
+test('an agent run stopped for a reason ends, and logs, with that reason', async () => {
+  let stop!: () => void;
+  const stopped = new Promise<void>((r) => (stop = r));
+  const provider: AgentProvider = {
+    id: 'fake',
+    capabilities: new Set(),
+    resolveModel: (m) => m,
+    launch: () => ({
+      sessionId: Promise.resolve('s-1'),
+      pid: Promise.resolve(-1),
+      events: (async function* (): AsyncGenerator<NormalizedEvent> {
+        await stopped;
+      })(),
+      result: stopped.then(() => ({ usage: ZERO_USAGE, exitCode: 1, error: 'stopped' })),
+      stop: () => stop(),
+    }),
+  };
+  const s = stepSetup({ makeProvider: () => provider });
+  const run = execAi(aiConfig(s.folder), PLAN, ['plan'], s.ctx);
+  await new Promise((r) => setTimeout(r, 100));
+  run.stop('timed out after 1 minutes');
+  assert.deepEqual(await run.ended, { costUsd: 0, error: 'timed out after 1 minutes' });
+  const result = JSON.parse(readFileSync(join(s.ctx.logDir, '007-plan.jsonl'), 'utf8').trim().split('\n').at(-1)!);
+  assert.deepEqual([result.kind, result.error, result.result.error], ['result', 'timed out after 1 minutes', 'stopped']);
+});
+
 test('a failed run ends with its error', async () => {
   assert.deepEqual((await plan({ error: 'boom' })).end, { costUsd: 0.1, error: 'boom' });
   assert.deepEqual((await plan({ exitCode: 3 })).end, { costUsd: 0.1, error: 'exit code 3' });
@@ -208,10 +304,11 @@ test('stop() before the agent is launched ends stopped and launches nothing', as
   assert.equal(specs.length, 0);
 });
 
-test('each agent run logs start, event and result lines', async () => {
+test('each agent run logs start, pid, event and result lines', async () => {
   const { ctx } = await plan({ write: ['plan'] });
-  const kinds = readFileSync(join(ctx.logDir, '007-plan.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l).kind);
-  assert.deepEqual(kinds, ['start', 'event', 'result']);
+  const lines = readFileSync(join(ctx.logDir, '007-plan.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  assert.deepEqual(lines.map((l) => l.kind), ['start', 'pid', 'event', 'result']);
+  assert.equal(lines[1].pid, -1);
 });
 
 test('a step run reports its end even when its log cannot be written', async () => {

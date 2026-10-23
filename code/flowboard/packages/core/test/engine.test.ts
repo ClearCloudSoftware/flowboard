@@ -8,13 +8,16 @@ const step = (id: string, o: Partial<StepDef> = {}): StepDef => ({ id, requires:
 const e = (from: string, to: string, condition: EdgeCondition = 'always'): FlowEdge => ({ from, to, condition });
 const flow = (steps: (string | StepDef)[], edges: FlowEdge[]): FlowDef => ({ steps: steps.map((s) => (typeof s === 'string' ? step(s) : s)), edges });
 
-type End = { end: string; outcome?: Outcome; reason?: string; error?: string; missing?: string[]; fp?: string; cost?: number; interrupted?: boolean };
+type End = { end: string; outcome?: Outcome; reason?: string; error?: string; missing?: string[]; fp?: string; cost?: number | null; interrupted?: boolean };
 type Ev = End | Exclude<FlowEvent, { type: 'start' | 'run_ended' }>;
 const text = (c: FlowCommand) =>
   c.type === 'run' ? `run:${c.step}:${c.attempt}` : c.type === 'gate' ? `gate:${c.step}:${c.gate.kind}` : c.type === 'stop' ? `stop:${c.runs.join(',')}` : `end:${c.status}`;
 
-/** Starts the flow, then feeds `events`; `{ end: s }` ends s's live run. `log` has one entry per event (start first): its commands as text, space-separated. */
-function play(f: FlowDef, events: Ev[]) {
+/**
+ * Starts the flow, then feeds `events`; `{ end: s }` ends s's live run. `log` has one entry per event (start first):
+ * its commands as text, space-separated. Each run is reported launched as the host would, unless `queue` holds.
+ */
+function play(f: FlowDef, events: Ev[], queue = false) {
   let state = newFlowState();
   const commands: FlowCommand[] = [];
   const log: string[] = [];
@@ -24,12 +27,15 @@ function play(f: FlowDef, events: Ev[]) {
     if ('end' in ev) {
       const run = state.runs.findLast((r) => r.step === ev.end && r.live);
       assert.ok(run, `no live run of ${ev.end}`);
-      event = { type: 'run_ended', run: run.id, costUsd: ev.cost ?? 0, outcome: ev.outcome, reason: ev.reason, error: ev.error, missing: ev.missing, fingerprint: ev.fp, interrupted: ev.interrupted };
+      event = { type: 'run_ended', run: run.id, costUsd: ev.cost === undefined ? 0 : ev.cost, outcome: ev.outcome, reason: ev.reason, error: ev.error, missing: ev.missing, fingerprint: ev.fp, interrupted: ev.interrupted };
     } else event = ev;
     const r = advance(f, state, event);
     state = r.state;
     commands.push(...r.commands);
     log.push(r.commands.map(text).join(' '));
+    for (const c of queue ? [] : r.commands) {
+      if (c.type === 'run') state = advance(f, state, { type: 'launched', run: c.run }).state;
+    }
   }
   return { state, commands, log };
 }
@@ -66,7 +72,7 @@ test('no outcome on a conditional step waits for a verdict; approve takes the pa
 test("an approval step waits even with an outcome, and approve wins over the agent's fail", () => {
   const f = flow([step('a', { approval: true, produces: ['plan'] }), 'p'], [e('a', 'p', 'on_pass')]);
   const first = play(f, [{ end: 'a', outcome: 'fail', reason: 'unsure' }]);
-  assert.deepEqual(first.state.steps.a.gate, { kind: 'verdict', reason: 'approval needed; the agent says fail: unsure', evidence: ['plan'], decisions: ['approve', 'retry', 'fail'] });
+  assert.deepEqual(first.state.steps.a.gate, { kind: 'verdict', reason: 'approval needed; it reported fail: unsure', evidence: ['plan'], decisions: ['approve', 'retry', 'fail'] });
   assert.equal(play(f, [{ end: 'a', outcome: 'fail' }, { type: 'decide', step: 'a', decision: 'approve' }]).log.at(-1), 'run:p:1');
 });
 
@@ -171,14 +177,20 @@ test('retry at an escalation grants one more attempt with the note; the next fai
   assert.equal(play(loop(), [...SPENT, { type: 'decide', step: 'impl', decision: 'fail' }]).log.at(-1), 'end:failed');
 });
 
+test('a rework into a step Retries took past its budget escalates at once, and says so', () => {
+  const f = { ...flow([step('impl', { maxAttempts: 1, approval: true }), step('check', { produces: ['out'] })], [e('impl', 'check'), e('check', 'impl', 'on_fail')]), entry: 'impl' };
+  const { state } = play(f, [{ end: 'impl' }, { type: 'decide', step: 'impl', decision: 'retry' }, { end: 'impl' }, { type: 'decide', step: 'impl', decision: 'approve' }, { end: 'check', outcome: 'fail' }]);
+  assert.equal(state.steps.impl.gate?.reason, 'impl has used 2 attempts, past its max_attempts of 1');
+});
+
 test("a reject's note goes to the rework target", () => {
-  const f = flow(['impl', step('review', { approval: true, produces: ['review'] })], [e('impl', 'review'), e('review', 'impl', 'on_fail')]);
+  const f = { ...flow(['impl', step('review', { approval: true, produces: ['review'] })], [e('impl', 'review'), e('review', 'impl', 'on_fail')]), entry: 'impl' };
   const { commands } = play(f, [{ end: 'impl' }, { end: 'review' }, { type: 'decide', step: 'review', decision: 'reject', note: 'add tests' }]);
   assert.deepEqual(commands.at(-1), { type: 'run', run: 3, step: 'impl', attempt: 2, inputs: ['review'], note: 'add tests' });
 });
 
 test('a rework stops a downstream run that is still going and wastes it', () => {
-  const f = flow(['impl', step('check', { produces: ['out'] }), 'lint'], [e('impl', 'check'), e('impl', 'lint'), e('check', 'impl', 'on_fail')]);
+  const f = { ...flow(['impl', step('check', { produces: ['out'] }), 'lint'], [e('impl', 'check'), e('impl', 'lint'), e('check', 'impl', 'on_fail')]), entry: 'impl' };
   const { log, state } = play(f, [{ end: 'impl' }, { end: 'check', outcome: 'fail' }]);
   assert.deepEqual(log.slice(1), ['run:check:1 run:lint:1', 'stop:3 run:impl:2']);
   assert.deepEqual([state.runs[2].live, state.runs[2].wasted], [false, true]);
@@ -216,4 +228,114 @@ test('a stopped run reporting late only updates its cost', () => {
 
 test('a step named like an object property (constructor) runs like any other', () => {
   assert.deepEqual(play(flow(['a', 'constructor'], [e('a', 'constructor')]), [{ end: 'a' }, { end: 'constructor' }]).log, ['run:a:1', 'run:constructor:1', 'end:done']);
+});
+
+test('a gate note goes to the runs the decision starts: Approve and a forward Reject pass it on', () => {
+  const f = flow([step('plan', { approval: true }), 'build', 'fix'], [e('plan', 'build', 'on_pass'), e('plan', 'fix', 'on_fail')]);
+  const approved = play(f, [{ end: 'plan' }, { type: 'decide', step: 'plan', decision: 'approve', note: 'keep it small' }]);
+  assert.deepEqual(approved.commands.at(-1), { type: 'run', run: 2, step: 'build', attempt: 1, inputs: [], note: 'keep it small' });
+  const rejected = play(f, [{ end: 'plan' }, { type: 'decide', step: 'plan', decision: 'reject', note: 'too big' }]);
+  assert.deepEqual(rejected.commands.at(-1), { type: 'run', run: 2, step: 'fix', attempt: 1, inputs: [], note: 'too big' });
+});
+
+test("retry at a verdict gate keeps the attempt's note when none is typed", () => {
+  const f = { ...flow(['impl', step('review', { approval: true, produces: ['review'] })], [e('impl', 'review'), e('review', 'impl', 'on_fail')]), entry: 'impl' };
+  const { commands } = play(f, [
+    { end: 'impl' }, { end: 'review' }, { type: 'decide', step: 'review', decision: 'reject', note: 'add tests' },
+    { end: 'impl', missing: ['notes'] }, { type: 'decide', step: 'impl', decision: 'retry' },
+  ]);
+  assert.deepEqual(commands.at(-1), { type: 'run', run: 4, step: 'impl', attempt: 3, inputs: ['review'], note: 'add tests' });
+});
+
+test("retry at a run_failed gate keeps the attempt's note when none is typed", () => {
+  const f = { ...flow(['impl', step('review', { approval: true, produces: ['review'] })], [e('impl', 'review'), e('review', 'impl', 'on_fail')]), entry: 'impl' };
+  const { commands } = play(f, [
+    { end: 'impl' }, { end: 'review' }, { type: 'decide', step: 'review', decision: 'reject', note: 'add tests' },
+    { end: 'impl', error: 'rate limited' }, { type: 'decide', step: 'impl', decision: 'retry' },
+  ]);
+  assert.deepEqual(commands.at(-1), { type: 'run', run: 4, step: 'impl', attempt: 2, inputs: ['review'], note: 'add tests' });
+});
+
+test("a reject whose rework escalates keeps its note for the retry", () => {
+  const f = { ...flow([step('impl', { maxAttempts: 1 }), step('review', { approval: true, produces: ['review'] })], [e('impl', 'review'), e('review', 'impl', 'on_fail')]), entry: 'impl' };
+  const rejected: Ev[] = [{ end: 'impl' }, { end: 'review' }, { type: 'decide', step: 'review', decision: 'reject', note: 'add tests' }];
+  const { state } = play(f, rejected);
+  assert.deepEqual(state.steps.impl.gate, { kind: 'escalation', reason: 'impl has used 1 of 1 attempts', evidence: ['review'], decisions: ['retry', 'fail'], from: 'review', note: 'add tests' });
+  const retried = play(f, [...rejected, { type: 'decide', step: 'impl', decision: 'retry' }]);
+  assert.deepEqual(retried.commands.at(-1), { type: 'run', run: 3, step: 'impl', attempt: 2, inputs: ['review'], note: 'add tests' });
+  const typed = play(f, [...rejected, { type: 'decide', step: 'impl', decision: 'retry', note: 'smaller' }]);
+  const last = typed.commands.at(-1);
+  assert.equal(last?.type === 'run' ? last.note : undefined, 'smaller');
+});
+
+test('an escalation stops the runs below its target, since Retry and Fail would both discard them', () => {
+  // p fans out to a and b; both rework p. a's failure spends p's budget while b is still running.
+  const f = { ...flow([step('p', { maxAttempts: 1 }), step('a', { produces: ['a_out'] }), step('b', { produces: ['b_out'] })], [e('p', 'a'), e('p', 'b'), e('a', 'p', 'on_fail'), e('b', 'p', 'on_fail')]), entry: 'p' };
+  const { log, state } = play(f, [{ end: 'p' }, { end: 'a', outcome: 'fail' }]);
+  assert.deepEqual(log.slice(1), ['run:a:1 run:b:1', 'stop:3 gate:p:escalation']);
+  assert.deepEqual([state.runs[2].live, state.runs[2].wasted, state.runs[2].error], [false, true, 'superseded']);
+  assert.deepEqual(Object.keys(state.steps), ['p']);
+  // b's late end changes nothing but its cost; the gate stays as it was.
+  const late = advance(f, state, { type: 'run_ended', run: 3, costUsd: 0.4, outcome: 'fail' });
+  assert.deepEqual([late.commands, late.state.steps.p.gate, late.state.runs[2].costUsd], [[], state.steps.p.gate, 0.4]);
+});
+
+test("a join reset by a rework keeps the route a step outside the reset already fired", () => {
+  // b feeds d; c feeds d on a pass, or y on a fail; d's failure reworks c.
+  const f = flow(['s', 'b', step('c', { produces: ['c_out'] }), step('d', { produces: ['d_out'] }), 'y'], [
+    e('s', 'b'), e('s', 'c'), e('b', 'd'), e('c', 'd', 'on_pass'), e('c', 'y', 'on_fail'), e('d', 'c', 'on_fail'),
+  ]);
+  const { log, state } = play(f, [{ end: 's' }, { end: 'b' }, { end: 'c', outcome: 'pass' }, { end: 'd', outcome: 'fail' }, { end: 'c', outcome: 'fail' }, { end: 'y' }, { end: 'd', outcome: 'pass' }]);
+  assert.deepEqual(log.slice(3), ['run:d:1', 'run:c:2', 'run:d:1 run:y:1', '', 'end:done']);
+  assert.equal(state.status, 'done');
+});
+
+test("a rework does not hand on an output the failing run did not write", () => {
+  const f = { ...flow(['impl', step('review', { produces: ['review'] })], [e('impl', 'review'), e('review', 'impl', 'on_fail')]), entry: 'impl' };
+  const { commands } = play(f, [{ end: 'impl' }, { end: 'review', missing: ['review'] }, { type: 'decide', step: 'review', decision: 'reject' }]);
+  assert.deepEqual(commands.at(-1), { type: 'run', run: 3, step: 'impl', attempt: 2, inputs: [] });
+});
+
+test('a run is queued until the host launches it; one cut off before that is not wasted, and resume starts it', () => {
+  const f = flow(['a'], []);
+  const queued = play(f, [], true).state;
+  assert.equal(queued.runs[0].queued, true);
+  assert.equal(advance(f, queued, { type: 'launched', run: 1 }).state.runs[0].queued, undefined);
+  const cut = advance(f, queued, { type: 'run_ended', run: 1, costUsd: 0, interrupted: true }).state;
+  assert.deepEqual([cut.runs[0].live, cut.runs[0].wasted, cut.runs[0].error, cut.runs[0].queued, cut.steps.a.state], [false, false, 'not launched', undefined, 'running']);
+  assert.deepEqual(advance(f, cut, { type: 'resume' }).commands.map(text), ['run:a:1']);
+  const crashed = advance(f, queued, { type: 'resume' }).state;
+  assert.deepEqual([crashed.runs[0].wasted, crashed.runs[0].error], [false, 'not launched']);
+});
+
+test('a run stopped before the host launched it was not launched: not wasted, whatever stopped it', () => {
+  const f = { ...flow(['impl', step('check', { produces: ['out'] }), 'lint'], [e('impl', 'check'), e('impl', 'lint'), e('check', 'impl', 'on_fail')]), entry: 'impl' };
+  let { state } = play(f, [{ end: 'impl' }], true); // check and lint queued
+  state = advance(f, state, { type: 'launched', run: 2 }).state; // only check launched
+  const reworked = advance(f, state, { type: 'run_ended', run: 2, costUsd: 0.1, outcome: 'fail' });
+  assert.deepEqual(reworked.commands.map(text), ['stop:3', 'run:impl:2']);
+  assert.deepEqual([reworked.state.runs[2].error, reworked.state.runs[2].wasted], ['not launched', false]);
+  // Fail the flow while y still waits for a slot
+  const g = flow(['p', step('x', { approval: true }), 'y'], [e('p', 'x'), e('p', 'y')]);
+  let gs = play(g, [{ end: 'p' }], true).state;
+  gs = advance(g, gs, { type: 'launched', run: 2 }).state;
+  gs = advance(g, gs, { type: 'run_ended', run: 2, costUsd: 0.1 }).state;
+  const failed = advance(g, gs, { type: 'decide', step: 'x', decision: 'fail' });
+  assert.deepEqual(failed.commands.map(text), ['stop:3', 'end:failed']);
+  assert.deepEqual([failed.state.runs[2].error, failed.state.runs[2].wasted], ['not launched', false]);
+});
+
+test('a run whose provider reported no cost keeps a null cost', () => {
+  const { state } = play(flow(['a'], []), [{ end: 'a', error: 'stopped', cost: null }]);
+  assert.equal(state.runs[0].costUsd, null);
+});
+
+test('the order edges are written in changes nothing: a rework goes after the routes fired with it', () => {
+  const steps = ['impl', step('review', { approval: true, produces: ['review'] }), 'ship'];
+  const edges = [e('impl', 'review'), e('review', 'ship'), e('review', 'impl', 'on_fail')];
+  const events: Ev[] = [{ end: 'impl' }, { end: 'review' }, { type: 'decide', step: 'review', decision: 'reject', note: 'add tests' }, { end: 'impl' }, { end: 'review' }, { type: 'decide', step: 'review', decision: 'approve' }];
+  const runs = (order: typeof edges) => play({ ...flow(steps, order), entry: 'impl' }, events).commands.filter((c) => c.type === 'run');
+  assert.deepEqual(runs([...edges].reverse()), runs(edges));
+  // ship runs once, after the approval, without the Reject's note meant for impl
+  assert.deepEqual(runs(edges).at(-1), { type: 'run', run: 5, step: 'ship', attempt: 1, inputs: [] });
 });

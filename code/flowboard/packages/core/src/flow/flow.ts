@@ -6,12 +6,13 @@ export type Outcome = 'pass' | 'fail';
 export type EdgeCondition = 'always' | 'on_pass' | 'on_fail';
 export interface FlowEdge { from: string; to: string; condition: EdgeCondition }
 export interface StepDef { id: string; requires: string[]; produces: string[]; approval: boolean; maxAttempts: number }
-export interface FlowDef { steps: StepDef[]; edges: FlowEdge[] }
+/** `entry`: the step the flow starts at, when the routes alone do not say. */
+export interface FlowDef { steps: StepDef[]; edges: FlowEdge[]; entry?: string }
 
 export const DEFAULT_MAX_ATTEMPTS = 3;
 
-/** `edge` is an index into `flow.edges`. */
-export interface FlowProblem { step?: string; edge?: number; message: string; warning?: true }
+/** `edge` is an index into `flow.edges`; `entry` marks a problem with `flow.entry`. */
+export interface FlowProblem { step?: string; edge?: number; entry?: true; message: string; warning?: true }
 
 // ponytail: every call recomputes the graph from the edge list; flows have a handful of steps.
 
@@ -30,14 +31,12 @@ export function isRework(flow: FlowDef, edge: FlowEdge): boolean {
 const forward = (flow: FlowDef) => flow.edges.filter((e) => !isRework(flow, e));
 
 /**
- * The steps a flow starts at: those no route points to. When every step has a route into it, those only
- * rework routes point to, so a flow may loop back to its first step.
+ * The steps a flow starts at: the one `entry` names, else those no route points to. A flow that loops back to
+ * its first step names it: when every step has a route into it, the routes cannot say which one goes first.
  */
 export function entries(flow: FlowDef): string[] {
-  const unrouted = flow.steps.filter((s) => !flow.edges.some((e) => e.to === s.id));
-  if (unrouted.length) return unrouted.map((s) => s.id);
-  const fwd = forward(flow);
-  return flow.steps.filter((s) => !fwd.some((e) => e.to === s.id)).map((s) => s.id);
+  if (flow.entry !== undefined) return [flow.entry];
+  return flow.steps.filter((s) => !flow.edges.some((e) => e.to === s.id)).map((s) => s.id);
 }
 
 /** Steps reachable from `id` along non-rework routes; `id` itself excluded. */
@@ -73,11 +72,25 @@ export function validateFlow(flow: FlowDef): FlowProblem[] {
     if (pairs.has(pair)) problems.push({ edge, message: `repeats the edge ${e.from} → ${e.to}; keep one and set its condition` });
     pairs.add(pair);
   });
+  if (flow.entry !== undefined && !ids.has(flow.entry)) problems.push({ entry: true, message: `unknown step "${flow.entry}"` });
   if (problems.length) return problems;
 
   const starts = entries(flow);
-  if (!starts.length) problems.push({ message: 'no entry step: every step has a route into it' });
-  if (starts.length > 1) problems.push({ message: `more than one entry step: ${starts.join(', ')}` });
+  if (!starts.length) problems.push({ message: 'no entry step: every step has a route into it; name the first one with entry:' });
+  for (const id of starts.length > 1 ? starts : []) {
+    const others = starts.filter((x) => x !== id).map((x) => `"${x}"`).join(', ');
+    problems.push({ step: id, message: `no route leads here, nor to ${others}; a flow starts at one step, so route the others in` });
+  }
+
+  // A rework resets everything below its target, so another route fired by the same failure would act on
+  // steps the reset removes or is about to remove, and the result would depend on the order of the edges.
+  for (const s of flow.steps) {
+    const fails = flow.edges.filter((e) => e.from === s.id && e.condition === 'on_fail');
+    const rework = fails.find((e) => isRework(flow, e));
+    if (!rework || fails.length < 2) continue;
+    const others = fails.filter((e) => e !== rework).map((e) => `"${e.to}"`).join(', ');
+    problems.push({ step: s.id, message: `on a failure it would rework "${rework.to}" and also take the on_fail route to ${others}; a rework route must be its step's only on_fail route` });
+  }
 
   const fwd = forward(flow);
   const looped = loops([...ids], fwd);
@@ -106,13 +119,33 @@ export function validateFlow(flow: FlowDef): FlowProblem[] {
     }
   }
 
+  // A join runs once nothing can still feed it, so a branch cut off by a conditional route is not waited for.
+  const conditional = fwd.filter((e) => e.condition !== 'always');
+  const forwardReach = starts.length === 1 ? reach(fwd, starts[0]) : new Set<string>();
   for (const s of flow.steps) {
     const into = fwd.filter((e) => e.to === s.id);
     if (into.length < 2) continue;
     for (const e of into) {
       if (e.condition !== 'always') {
         problems.push({ step: s.id, warning: true, message: `waits for "${e.from}", whose route here is conditional; if it does not fire, ${s.id} runs without it` });
+        continue;
       }
+      // A source no forward route reaches (a repair step) runs on a failure, not behind a conditional route.
+      if (!forwardReach.has(e.from)) continue;
+      // Further up: a conditional route without which e.from never runs, while this join still can.
+      const c = conditional.find((c) => {
+        const without = reach(fwd.filter((x) => x !== c), starts[0]);
+        return !without.has(e.from) && without.has(s.id);
+      });
+      if (c) {
+        problems.push({ step: s.id, warning: true, message: `waits for "${e.from}", which runs only if the conditional route ${c.from} → ${c.to} fires; if it does not, ${s.id} runs without it` });
+      }
+    }
+  }
+
+  for (const e of flow.edges) {
+    if (isRework(flow, e) && !flow.steps.find((x) => x.id === e.from)!.produces.length) {
+      problems.push({ step: e.from, warning: true, message: `reworks "${e.to}" on a failure but produces nothing, so ${e.to} runs again without seeing why` });
     }
   }
   return problems;

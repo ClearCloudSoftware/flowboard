@@ -3,13 +3,13 @@ import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
+/** A recipe: each run gives it a folder and a task (RUN). */
 export const DELIVERY = `
-folder: proj
-task: task.md
+budget_usd: 0
 defaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 30 } }
 steps:
   plan: { prompt: prompts/plan.md, produces: [plan], gate: approval }
-  implement: { prompt: prompts/implement.md, requires: [plan], produces: [notes] }
+  implement: { prompt: prompts/implement.md, requires: [plan], produces: [notes], max_attempts: 2 }
   tests:
     adapter: opencode
     model: openrouter/deepseek/deepseek-v4.1-flash
@@ -18,7 +18,7 @@ steps:
     produces: [test_notes]
     write_roots: [tests]
   check: { shell: pnpm test, produces: [check_output] }
-  review: { prompt: prompts/review.md, requires: [notes, test_notes, check_output], max_attempts: 2 }
+  review: { prompt: prompts/review.md, requires: [notes, test_notes, check_output], produces: [review_notes] }
 edges:
   - { from: plan, to: implement }
   - { from: plan, to: tests }
@@ -28,6 +28,10 @@ edges:
   - { from: check, to: implement, condition: on_fail }
   - { from: review, to: implement, condition: on_fail }
 `;
+
+/** What a run of a fixture flow adds: the folder `proj` and the task `task.md`, both in the temp base. */
+export const RUN = ['--folder', 'proj', '--task', 'task.md'];
+export const RUN_IN = { folder: 'proj', task: 'task.md' };
 
 /** A temp base holding proj/, task.md, prompts/<name>.md (each holding its name), flow.yaml and `extra` (path → text). */
 export function flowProject(yaml: string, extra: Record<string, string> = {}): string {

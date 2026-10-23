@@ -2,7 +2,7 @@
  * One run of one flow step: a shell command or an agent session. Each ends
  * with a RunEnd for the engine and never rejects.
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, closeSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fingerprint, ZERO_USAGE } from '@flowboard/core';
@@ -19,8 +19,11 @@ const KILL_AFTER_MS = 2000;
 /** How long a check's output may still arrive after its shell exits. */
 const DRAIN_MS = 200;
 
-/** `ended` never rejects. */
-export interface StepRun { ended: Promise<RunEnd>; stop(): void }
+/**
+ * `ended` never rejects. `stop(reason)`: the run ends with `reason` as its error, `stopped` by default.
+ * `kill()`: SIGKILL now, for a host that must exit before the run ends.
+ */
+export interface StepRun { ended: Promise<RunEnd>; stop(reason?: string): void; kill(): void }
 export interface ExecContext {
   artifactsDir: string;
   logDir: string;
@@ -30,6 +33,8 @@ export interface ExecContext {
   makeProvider(adapter: Adapter): AgentProvider;
   answer: Answerer;
   onInterrupt(): void;
+  /** Live agent runs' temp folders, for a host that must exit before their runs end. */
+  temps?: Set<string>;
 }
 
 export const artifactPath = (artifactsDir: string, type: string): string => join(artifactsDir, `${type}.md`);
@@ -44,6 +49,16 @@ export function shellEnv(env: NodeJS.ProcessEnv): { env: NodeJS.ProcessEnv; remo
   };
 }
 
+/**
+ * When process `pid` started, as `ps` prints it; undefined when it has gone or `ps` cannot say. With the pid it
+ * tells a run's process from a later one given the same pid.
+ */
+export function processStart(pid: number): string | undefined {
+  if (!(pid > 0)) return undefined;
+  const ps = spawnSync('ps', ['-o', 'lstart=', '-p', String(pid)], { encoding: 'utf8' });
+  return (ps.status === 0 && ps.stdout.trim()) || undefined;
+}
+
 /** `<NNN>-<step>`: the run id, zero-padded, and the step; names the run's files in the log folder. */
 const runName = (run: RunCommand) => `${String(run.run).padStart(3, '0')}-${run.step}`;
 
@@ -56,7 +71,25 @@ function runLog(ctx: ExecContext, run: RunCommand) {
   };
 }
 
-/** Runs `command` in `folder`: exit 0 is pass. The output's tail is `produces[0]`'s artifact. */
+/** A shell that could not run its command, or that died by a signal: the setup failed, not the work. */
+function setupFailure(code: number | null, sig: NodeJS.Signals | null): string | undefined {
+  if (sig) return `killed by ${sig}`;
+  if (code === 126) return 'exit code 126: the command cannot run';
+  if (code === 127) return 'exit code 127: command not found';
+  return undefined;
+}
+
+/** The inputs not in the artifacts folder, each said aloud: the step runs without them. */
+function missingInputs(run: RunCommand, ctx: ExecContext): string[] {
+  const missing = run.inputs.filter((type) => !existsSync(artifactPath(ctx.artifactsDir, type)));
+  for (const type of missing) ctx.show(`-- ${run.step}: missing input ${type}; it runs without it`);
+  return missing;
+}
+
+/**
+ * Runs `command` in `folder`: exit 0 is pass, any other exit a fail, except 126, 127 and a death by a signal,
+ * which are setup failures. The output's tail is `produces[0]`'s artifact and the run log's last line.
+ */
 export function execShell(command: string, folder: string, run: RunCommand, produces: string[], ctx: ExecContext): StepRun {
   let logger: ReturnType<typeof runLog> | undefined;
   try {
@@ -64,25 +97,32 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
     logger.log('start', { command, run });
   } catch (e) {
     logger?.close();
-    return { ended: Promise.resolve({ costUsd: 0, error: `cannot set up the run: ${(e as Error).message}` }), stop: () => {} };
+    return { ended: Promise.resolve({ costUsd: 0, error: `cannot set up the run: ${(e as Error).message}` }), stop: () => {}, kill: () => {} };
   }
   const { log, close } = logger;
+  missingInputs(run, ctx);
   // ponytail: spawned here, not through ExecHost, which cannot kill a process group; go through it once
   // the sandbox tier can. `detached` makes the command and everything it starts one group, so stop() reaches all.
-  // stdin is /dev/null: a check never waits for input.
+  // stdin is /dev/null: a check never waits for input. A person's note reaches it as FLOWBOARD_NOTE.
   const child = spawn('sh', ['-c', command], {
     cwd: folder,
-    env: { ...shellEnv(process.env).env, FLOWBOARD_ARTIFACTS: ctx.artifactsDir },
+    env: { ...shellEnv(process.env).env, FLOWBOARD_ARTIFACTS: ctx.artifactsDir, ...(run.note !== undefined && { FLOWBOARD_NOTE: run.note }) },
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+  try {
+    // The group to stop, should this host die with the check still running; `started` tells it from a later one.
+    if (child.pid) log('pid', { pid: child.pid, group: true, started: processStart(child.pid) });
+  } catch {
+    // best effort, like the result line
+  }
   let tail = '';
   for (const s of [child.stdout, child.stderr]) {
     s.setEncoding('utf8');
     s.on('data', (d: string) => (tail = (tail + d).slice(-OUTPUT_TAIL)));
   }
 
-  let stopped = false;
+  let stopReason: string | undefined;
   let killer: NodeJS.Timeout | undefined;
   let settle!: (end: RunEnd) => void;
   const ended = new Promise<RunEnd>((resolve) => (settle = resolve));
@@ -92,7 +132,7 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
     done = true;
     clearTimeout(killer);
     try {
-      log('result', { exitCode, ...end });
+      log('result', { exitCode, ...end, output: tail });
     } catch {
       // Best effort: the end must still reach the host, whose own state writes report the disk trouble.
     } finally {
@@ -101,51 +141,56 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
     settle(end);
   };
   child.on('error', (e) => finish({ costUsd: 0, error: e.message }, null));
-  /** The shell has exited: save its output and report its verdict. */
-  const over = (code: number | null) => {
+  /** The shell has exited: stop what it left running, save its output and report its verdict. */
+  const over = (code: number | null, sig: NodeJS.Signals | null) => {
     if (done) return;
-    if (stopped) return finish({ costUsd: 0, error: 'stopped' }, code);
+    // Whatever is left in the group was started in the background and outlived its shell: it ends with the check.
+    if (signal('SIGTERM')) setTimeout(() => signal('SIGKILL'), KILL_AFTER_MS).unref();
+    let unsaved: string | undefined;
     if (produces[0]) {
       try {
         mkdirSync(ctx.artifactsDir, { recursive: true }); // the check may have cleaned it away (git clean -fdx)
         writeFileSync(artifactPath(ctx.artifactsDir, produces[0]), tail);
       } catch (e) {
-        return finish({ costUsd: 0, error: `cannot save the output: ${(e as Error).message}` }, code);
+        unsaved = `cannot save the output: ${(e as Error).message}`;
       }
     }
+    const last = tail.split('\n').findLast((l) => l.trim());
+    if (last) ctx.show(`-- ${run.step}: last output: ${last.trim().slice(0, 300)}`);
+    const error = stopReason ?? unsaved ?? setupFailure(code, sig);
+    if (error) return finish({ costUsd: 0, error }, code);
     const end: RunEnd = { costUsd: 0, outcome: code === 0 ? 'pass' : 'fail' };
     if (code !== 0 && tail.trim()) end.fingerprint = fingerprint(tail);
     finish(end, code);
   };
   // The check is over when its shell exits. Output written before that drains in a moment; a background
-  // command still holding the pipes after it is the check's leftover, and is stopped with the group.
+  // command still holding the pipes after it would keep them open, so the end does not wait for them.
   let drain: NodeJS.Timeout | undefined;
-  child.on('exit', (code) => {
-    drain = setTimeout(() => {
-      signal('SIGTERM');
-      setTimeout(() => signal('SIGKILL'), KILL_AFTER_MS).unref();
-      over(code);
-    }, DRAIN_MS);
-  });
-  child.on('close', (code) => {
+  child.on('exit', (code, sig) => (drain = setTimeout(() => over(code, sig), DRAIN_MS)));
+  child.on('close', (code, sig) => {
     clearTimeout(drain);
-    over(code);
+    over(code, sig);
   });
 
-  const signal = (sig: NodeJS.Signals) => {
+  /** False when the group has already gone. */
+  const signal = (sig: NodeJS.Signals): boolean => {
     try {
       if (child.pid) process.kill(-child.pid, sig);
+      return child.pid !== undefined;
     } catch {
-      // the group has already gone
+      return false;
     }
   };
   return {
     ended,
-    stop() {
-      if (done || stopped) return;
-      stopped = true;
+    stop(reason = 'stopped') {
+      if (done || stopReason) return;
+      stopReason = reason;
       signal('SIGTERM');
       killer = setTimeout(() => signal('SIGKILL'), KILL_AFTER_MS);
+    },
+    kill() {
+      signal('SIGKILL');
     },
   };
 }
@@ -173,10 +218,14 @@ function writtenSince(path: string, since: number): boolean {
 /**
  * Runs one attempt of an agent step: inputs that exist go in the prompt, the rest are named as missing; the
  * verdict comes from set_outcome, else the provider's result; an output this run did not write is missing.
+ * `verdict`: the step's routes or gate use the outcome; without it, set_outcome is not offered and no outcome kept.
+ * `capUsd`: the most this run may spend, what the flow's budget has left; the step's own `budget_usd` if lower.
  */
-export function execAi(config: RunConfig, run: RunCommand, produces: string[], ctx: ExecContext): StepRun {
-  let stopped = false;
+export function execAi(config: RunConfig, run: RunCommand, produces: string[], ctx: ExecContext, opts: { verdict?: boolean; capUsd?: number } = {}): StepRun {
+  const verdict = opts.verdict ?? true;
+  let stopReason: string | undefined;
   let agent: AgentRun | undefined;
+  let agentPid: number | undefined;
   const ended = (async (): Promise<RunEnd> => {
     let logger: ReturnType<typeof runLog> | undefined;
     const log: Log = (kind, body) => logger?.log(kind, body);
@@ -202,6 +251,7 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
         logger = runLog(ctx, run);
         // Short and real: a Unix socket path is limited to about 104 characters, and /tmp is a link on macOS.
         tmp = realpathSync(mkdtempSync('/tmp/fb-'));
+        ctx.temps?.add(tmp);
         const socket = join(tmp, 'ask.sock');
         broker = await startBroker(socket, ctx.answer, {
           onQuestion: (questions, batch) => quietly('question', { batch, questions }),
@@ -213,13 +263,12 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
           onDone: () => {},
           onInterrupt: ctx.onInterrupt,
         });
-        spec = await withAsking(config, socket, tmp, { FLOWBOARD_OUTCOME_FILE: outcomeFile });
+        spec = await withAsking(config, socket, tmp, verdict ? { FLOWBOARD_OUTCOME_FILE: outcomeFile } : {});
       } catch (e) {
         return noRun(`cannot set up the run: ${(e as Error).message}`);
       }
       const ref = (type: string) => ({ type, path: artifactPath(ctx.artifactsDir, type) });
-      const missing = run.inputs.filter((type) => !existsSync(artifactPath(ctx.artifactsDir, type)));
-      for (const type of missing) ctx.show(`-- ${run.step}: missing input ${type}; it runs without it`);
+      const missing = missingInputs(run, ctx);
       // New objects: the config's own prompt and guards are shared by every attempt.
       spec.prompt = {
         ...spec.prompt,
@@ -231,30 +280,48 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
         outputs: produces.map(ref),
       };
       spec.guards = { ...spec.guards, writeRoots: [...(spec.guards?.writeRoots ?? []), ctx.artifactsDir] };
-      log('start', { step: run.step, attempt: run.attempt, config: spec });
-      if (stopped) return noRun('stopped');
+      if (opts.capUsd !== undefined) spec.limits = { ...spec.limits, maxBudgetUsd: Math.min(spec.limits?.maxBudgetUsd ?? Infinity, opts.capUsd) };
+      log('start', { step: run.step, attempt: run.attempt, adapter: config.adapter, config: spec });
+      if (stopReason) return noRun(stopReason);
 
       const startedAt = Date.now();
-      const { result, failedTools, last } = await streamRun(() => (agent = ctx.makeProvider(config.adapter).launch(spec)), log, ctx.show);
+      const launch = () => {
+        agent = ctx.makeProvider(config.adapter).launch(spec);
+        // To stop it, should this host die first; `started` tells it from a later process given the same pid.
+        agent.pid.then((pid) => {
+          agentPid = pid;
+          quietly('pid', { pid, started: processStart(pid) });
+        }, () => {});
+        return agent;
+      };
+      const { result, failedTools, last } = await streamRun(launch, log, ctx.show);
       await broker.close(); // withdraw any question still open, so the log ends with the result
       broker = undefined;
-      log('result', { result });
+      log('result', { result, ...(stopReason && { error: stopReason }) }); // why the host stopped it, if it did
       summaryLines(failedTools, last).forEach((l) => ctx.show(l));
 
-      const costUsd = result.usage.costUsd ?? 0;
-      const error = result.error ?? (result.exitCode !== 0 ? `exit code ${result.exitCode}` : undefined);
+      // A run cut off before its result has its running totals; Claude's carry tokens but no price yet.
+      const { usage } = result;
+      const tokens = usage.input + usage.output + usage.cacheRead + usage.cacheWrite;
+      const costUsd = usage.costUsd ?? (tokens ? null : 0);
+      // OpenCode reports 0 for a model it has no price for, so limits.budget_usd can never stop it.
+      if (config.adapter === 'opencode' && costUsd === 0 && tokens) ctx.show(`-- ${run.step}: no price for ${config.spec.model}: its cost shows as $0, and limits.budget_usd cannot stop it`);
+      const error = stopReason ?? result.error ?? (result.exitCode !== 0 ? `exit code ${result.exitCode}` : undefined);
       if (error) return { costUsd, error };
       const end: RunEnd = { costUsd };
-      const reported = readOutcome(outcomeFile);
+      const reported = verdict ? readOutcome(outcomeFile) : undefined;
       if (reported) Object.assign(end, reported);
-      else if (result.outcome) end.outcome = result.outcome;
+      else if (verdict && result.outcome) end.outcome = result.outcome;
       const unwritten = produces.filter((type) => !writtenSince(artifactPath(ctx.artifactsDir, type), startedAt));
       if (unwritten.length) end.missing = unwritten;
       return end;
     } finally {
       await broker?.close();
       logger?.close();
-      if (tmp) rmSync(tmp, { recursive: true, force: true });
+      if (tmp) {
+        rmSync(tmp, { recursive: true, force: true });
+        ctx.temps?.delete(tmp);
+      }
     }
   })().catch((e: unknown): RunEnd => {
     agent?.stop(); // whatever failed, the agent must not go on unwatched
@@ -262,9 +329,16 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
   });
   return {
     ended,
-    stop() {
-      stopped = true;
+    stop(reason = 'stopped') {
+      stopReason ??= reason;
       agent?.stop();
+    },
+    kill() {
+      try {
+        if (agentPid !== undefined && agentPid > 0) process.kill(agentPid, 'SIGKILL');
+      } catch {
+        // already gone
+      }
     },
   };
 }

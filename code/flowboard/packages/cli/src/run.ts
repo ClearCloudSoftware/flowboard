@@ -87,10 +87,12 @@ export async function streamRun(
   let failedTools = 0;
   let lastText: string | undefined;
   let lastThinking: string | undefined;
+  let usage = ZERO_USAGE; // the running totals, should the stream die before the result
   try {
     run = launch();
     for await (const ev of run.events) {
       log('event', { event: ev });
+      if (ev.type === 'usage') usage = ev.usage;
       if (ev.type === 'tool_result' && !ev.ok) failedTools += 1;
       if (ev.type === 'assistant_text') lastText = ev.text;
       if (ev.type === 'thinking') lastThinking = ev.text;
@@ -101,7 +103,7 @@ export async function streamRun(
   } catch (e) {
     // ponytail: a stream that died may never settle `result`; report it ourselves.
     run?.stop();
-    return { result: { usage: ZERO_USAGE, exitCode: 1, error: e instanceof Error ? e.message : String(e) }, failedTools, last: lastText ?? lastThinking };
+    return { result: { usage, exitCode: 1, error: e instanceof Error ? e.message : String(e) }, failedTools, last: lastText ?? lastThinking };
   }
 }
 
