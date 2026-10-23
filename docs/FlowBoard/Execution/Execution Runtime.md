@@ -21,8 +21,10 @@ The drawio *Harness architecture* title: *"One laptop · two Node processes · o
 | Egress proxy | the only way out of the sandbox network | PRD §11.1 |
 
 > [!warning] The shipped code differs
-> - The shim is `code/flowboard/packages/ask-user/`, not `apps/mcp-shim`. The agent CLI, or the OpenCode server, still launches it once per run. Its broker runs inside `pnpm run-agent` (`cli/src/ask/broker.ts`), the only caller today, not in a worker.
+> - The shim is `code/flowboard/packages/ask-user/`, not `apps/mcp-shim`. The agent CLI, or the OpenCode server, still launches it once per run. Its broker (`cli/src/ask/broker.ts`) runs inside the terminal commands, `pnpm run-agent` and, one per agent run, `pnpm run-flow`, not in a worker.
 > - The agent is not started as `claude -p …`. The Claude Agent SDK spawns the installed `claude` through the host ExecHost and talks to it over stdio; OpenCode runs one `opencode serve` per run. Both are host child processes (2026-10-18). See [[Agent Providers Runtime]].
+
+As built in run-flow (2026-10-23), one `pnpm run-flow` process stands in for `apps/worker` for one flow: it runs the engine, launches each step's run, and hosts the brokers. There is no web process, queue, database, container or egress proxy; a lock file keeps one such process per folder. See [[Run Flow Reference]].
 
 ```mermaid
 flowchart LR
@@ -64,6 +66,8 @@ apps/
 > [!warning] The shipped code differs
 > The provider layer, built 2026-10-18, lives in `code/flowboard/packages/`. `core/src/ports/` holds `agent-provider.ts`, `events.ts` and `exec-host.ts`, and `events.ts` has no version `v` yet ([[Agent Providers Open Questions]] #6). `adapters/src/agent/` holds `claude`, `opencode` and `replay`, and `adapters/src/exec/` only the `host` tier; the shim is `ask-user`, and `cli` is `run-agent`. OpenCode, not Codex, was built second; Codex is designed, not built ([[Agent Providers Open Questions]] #38).
 
+As built in run-flow (2026-10-23), the engine is `core/src/flow/`: `engine.ts` (DAG traversal, advancement, the loop guard), `flow.ts` (the flow shape and its validation) and `fingerprint.ts`. `cli` also holds `run-flow`, the terminal host that stands in for the runner and the worker: `flow-config.ts` (the flow file), `flow-run.ts` (the command) and `flow-exec.ts` (one step's run).
+
 ## Ports execution touches
 
 | Port | Used for | Source |
@@ -87,6 +91,8 @@ export interface ExecHost {
 > [!warning] The shipped code differs
 > On 2026-10-18 the shipped port, `core/src/ports/exec-host.ts`, replaced the reference. `ChildHandle` is gone. The shipped method is `spawn(command: string, args: string[], opts: { cwd: string; env?: NodeJS.ProcessEnv }): ChildProcessWithoutNullStreams`: it returns Node's own child process with piped stdio, because providers need stdin (the Claude Agent SDK speaks to the CLI over stdio). `id`, `profile`, `IsolationTier` and `SandboxProfile` are unchanged. Only the `host` tier is built (`adapters/src/exec/host.ts`). See [[ExecHost Port]].
 
+As built in run-flow (2026-10-23), agent steps reach `ExecHost` through the adapters, which use the host tier because `RunSpec.exec` is never set. Shell steps bypass it: `execShell` calls Node's `spawn('sh', ['-c', …], { detached: true })` directly, so stopping a check can kill its whole process group, which `ExecHost` cannot do yet. A `ponytail:` comment in `cli/src/flow-exec.ts` marks the way back; the sandbox tier must route shell steps through `ExecHost` again, with a group kill.
+
 ## The test of the abstraction
 
 *"Adding **Codex** should require only: … Zero changes to: engine, board projection, HITL protocol, notifier, cost rollups, viewer, API. If step 4 isn't true, the abstraction leaked"* (`06`, *Where a new provider actually touches the codebase*).
@@ -103,6 +109,8 @@ interface StepExecutor {
 ```
 
 *"Nearly free given the DAG already exists; widens the engine's core interface, so decide before hardening."* (`02` §3) The drawio *FlowBoard ideation* card: *"StepExecutor generalization / A step could be shell, HTTP, pure transform or a human task, not only an agent."*
+
+As built in run-flow (2026-10-23), the engine knows no kinds. Its `StepDef` holds `id`, `requires`, `produces`, `approval` and `maxAttempts`; whether a step is an agent step or a shell step lives in the host's `FlowConfig`, and the engine sees only each run's `RunEnd`. The step rules stay in the CLI loader until a second reader, the canvas or the worker, exists; moving them means adding `kind` to `StepDef` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
 ## Related
 

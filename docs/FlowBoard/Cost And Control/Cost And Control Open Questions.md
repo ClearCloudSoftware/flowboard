@@ -102,6 +102,9 @@ As built (2026-10-18), both real adapters declare `budget_cap`: Claude passes `m
 
 See [[Spend Caps And Limits]].
 
+> [!check] Answered by run-flow, 2026-10-23
+> For run-flow the ceiling is real: every flow file sets `budget_usd`, the most the whole flow may spend, `0` for none (Alex's call, 2026-10-23), and `--budget-usd <n>` overrides it for a run or a `--resume`. Each agent run is capped at what is left, and once it is spent run-flow stops the live runs and pauses the flow with exit 3; with no budget, `--check` warns about each agent step with no `limits` (the required key, the per-run cap and the pause are Claude's calls, open to Alex's review). The worker may still choose differently, such as a per-task cap kept in the database, and the designer's `est. $X ceiling per task` stays an estimate. See [[Spend Caps And Limits]] and [[Run Flow Reference]].
+
 ### 9. Does a waiting question stop billing?
 
 *"a parked run is not billing you"* holds once the run parks, after 20 minutes. Before that the CLI process is alive with a blocked tool call. Task Detail Open Questions #17, Monitor Open Questions #42 (the old handoff's *"burning idle"*).

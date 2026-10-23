@@ -4,3 +4,6 @@ export * from './ports/exec-host.ts';
 export * from './prompt.ts';
 export * from './guard.ts';
 export * from './hitl/question.ts';
+export * from './flow/flow.ts';
+export * from './flow/engine.ts';
+export * from './flow/fingerprint.ts';

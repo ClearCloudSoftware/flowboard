@@ -35,12 +35,20 @@ The route sends the signal directly, not through the queue. *Inference:* that do
 > [!question] Would a Stop be retried automatically?
 > PRD §7 lists *"process killed by a signal"* as transient, retried automatically up to 3 times. Stop is a SIGTERM, and on every shipped adapter (Claude, OpenCode and Replay) a run stopped before its result settles with `exitCode: 130, error: 'stopped'`. Read literally, a stopped run would be retried. The same applies to runs SIGTERMed by a graceful shutdown. See [[Monitor Open Questions]] #35 and [[Execution Open Questions]] #55.
 
+> [!check] Answered by run-flow, 2026-10-23
+> No. run-flow retries nothing by itself; automatic infra retry backoff is on the run-flow plan's Left out list. A run cut off by Ctrl+C reruns only when a person runs `--resume`, and a run stopped by its `timeout_minutes` waits at a *run failed* gate. See [[Run Flow Reference]].
+
 > [!question] Who finalises a stopped run?
 > `03` §7 makes the worker *"the only writer of run lifecycle state"*. `03` §8 and backlog 3.4 have the route signal the process and *"finalise as cancelled"*. See [[Monitor Open Questions]] #36 and [[Execution Open Questions]] #56.
 
 What the engine does next after a Stop is not stated. A stopped run is neither a work verdict nor an infra failure. *Proposal:* the step instance waits at `awaiting_approval` with reason "stopped", so you choose Retry or Fail task, and nothing is retried automatically ([[Execution Open Questions]] #28, [[Monitor Open Questions]] #35).
 
+> [!check] Answered by run-flow, 2026-10-23
+> run-flow has no Stop for one run. Ctrl+C stops every run: each cut-off run is recorded `error: 'interrupted'` and wasted, uses no attempt, and leaves its step `running`, so `--resume` reruns it at the same attempt without asking. The one stop of a single run, `timeout_minutes`, lands where the proposal puts a Stop: a *run failed* gate offering Retry this step (the same attempt) and Fail the flow. A Stop of one run, should the Monitor add it, would land at that gate too, since every live run that ends with an error does. See [[Run Flow Reference]].
+
 **Money.** Monitor guide: *"Everything it had spent moves to wasted — stopping saves the future spend, not the past."*
+
+As built in run-flow (2026-10-23), a run cut off by Ctrl+C, or because the flow has spent its budget, keeps what it cost and counts as wasted, as does a run a rework or an escalation superseded. A run that *Fail the flow* stopped counts as spent but not wasted, and one the host never launched cost nothing and is not wasted. A stopped OpenCode run records its running dollars. A Claude run stopped before its result has tokens but no price, so its cost is unknown (`costUsd: null`): the totals count it as nothing and add `, cost unknown for 1 run`.
 
 ## Cancel a task
 
@@ -50,9 +58,13 @@ Task-detail guide: *"Stops any running agents and tidies up. The workspace survi
 
 From which statuses Cancel works is not stated: PRD §12's `POST /api/tasks/:id/cancel` names none ([[Execution State Machines]]).
 
+As built in run-flow (2026-10-23), there is no Cancel (the run-flow plan's Left out list). The nearest control is **Fail the flow**, offered at every gate. It stops every live and queued run, takes down the other open gate prompts, marks every `pending`, `running` or gated step `failed` (not `skipped`), and ends the flow `failed`, with exit 1. The runs it stops are recorded `error: 'stopped'` and count as spent but not wasted, unlike the guide's *"Anything in flight becomes wasted"*; a run still queued is `not launched`. Agents' open questions are withdrawn as their runs stop. The folder and its artifacts stay.
+
 ## Pause a task
 
 Feature map §3 names it in a heading (*"**Pause, send back, or cancel**"*) without defining it. The task-detail guide gives the rule: *"Stops after the current run rather than mid-flight. The workspace stays."* Cost: *"Stops future spend only."* Its lifecycle note adds *"Pausing and sending back to the backlog both keep the workspace"*. No status, column, endpoint or engine rule backs it. *Proposal:* a flag the engine checks before enqueuing the next `start_run`. See [[Execution Roadmap]].
+
+As built in run-flow (2026-10-23), there is no Pause: no control lets live runs finish while starting nothing new. Ctrl+C, SIGTERM or SIGHUP stops runs mid-flight and counts their spend as wasted; the host reports that as `stopped`, with exit 130. It says `paused`, with exit 3, when a gate waits with no terminal to answer it and nothing else can run, and when the flow has spent its budget (`budget_usd` in the flow file, or `--budget-usd`; the ceiling is Alex's call, 2026-10-23, and pausing at it Claude's, open to Alex's review): then it stops the live runs mid-flight and takes down any open gate prompt, as Ctrl+C does, and prints `-- the budget is spent: $<spent> of $<budget>`. Both continue with `pnpm run-flow --resume <run folder>`, which asks such a gate again; after a spent budget, `--resume` refuses until `--budget-usd` gives a ceiling above what is spent, or `0` for none. Neither is stored as a status: `state.json` shows them as a step at a gate with nothing live, or a step `running` with no live run (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). A budget pause can leave the second shape, as Ctrl+C does; then only its spend, against `flow.json`'s `config.budgetUsd`, tells the two apart.
 
 ## Worker shutdown
 
@@ -60,6 +72,8 @@ Feature map §3 names it in a heading (*"**Pause, send back, or cancel**"*) with
 
 > [!question] Shutdown versus "lost on restart"
 > PRD §7 lists *"lost on restart"* as **transient**, retried automatically. A graceful shutdown marks runs `cancelled`. Whether those cancelled runs are re-queued when the worker comes back is not stated.
+
+As built in run-flow (2026-10-23), SIGTERM and SIGHUP stop the host as Ctrl+C does, and `--resume` reruns each cut-off run at the same attempt. A second press more than 300 ms later quits at once: it kills (SIGKILL) every run still going, each check's process group and each agent's CLI process, removes the live agent runs' `/tmp/fb-*` folders, and leaves the folder's lock behind. So the next run-flow there warns `-- warning: a run-flow (pid <n>) ended without cleaning up`, and stops whatever the run logs show still running, as after a `kill -9` ([[Worker Lifecycle]]).
 
 ## What each does
 
@@ -69,6 +83,10 @@ Feature map §3 names it in a heading (*"**Pause, send back, or cancel**"*) with
 | Cancel task | SIGTERM all | cancelled | `skipped` | `cancelled` | kept |
 | Pause task (task-detail guide) | left to finish | not stated | not stated | none defined | kept |
 | Worker shutdown | SIGTERM all; runs `cancelled` | not stated | not stated | not stated | kept |
+| run-flow: Ctrl+C | stops all; runs `interrupted`, wasted | withdrawn | stay `running`, rerun by `--resume` | none stored; `stopped`, exit 130 | kept |
+| run-flow: budget spent | stops all; runs `interrupted`, wasted | withdrawn | stay `running`, rerun by `--resume --budget-usd <more>` | none stored; `paused`, exit 3 | kept |
+| run-flow: Fail the flow | stops all; runs `stopped`, not wasted | withdrawn | `failed` | flow `failed`, exit 1 | kept |
+| run-flow: timeout | stops one; run failed, wasted | none open: the clock stops while one waits | at a *run failed* gate | none stored | kept |
 
 ## Related
 

@@ -9,14 +9,16 @@ module: Flow Design
 
 Flow Design is mostly two PRD milestones, with a few items from **M1** (seed templates, new-project flow type) and **M2** (pinning). **M5 — Flow engine**: *"Step defs, edges, fan-out, joins, conditional edges, approval gates, rework loops with `max_attempts` escalation, shell check steps, artifact contract validation."* **M8 — Cost views and flow editor UI.** (PRD §14)
 
+As built in run-flow (2026-10-23), the M5 engine items are in `core/src/flow/`, with no API in front of them: `validateFlow` (`flow.ts`) checks a flow and `advance` (`engine.ts`) runs it, and the terminal host `pnpm run-flow`, which reads a flow from YAML, is their only caller ([[Run Flow Reference]]). Versions, `board_order`, draft mode and the designer are not built, as planned: the run-flow plan covers the engine and a terminal host, not the web app.
+
 From M5 and backlog **Epic 5**:
 
 - [ ] `PUT /api/flows/:id` creates a new version (Story 5.1)
-- [ ] `POST /api/flows/:id/validate` with readable errors: ancestor-produced `requires`, one entry, known types (Story 5.1)
+- [ ] `POST /api/flows/:id/validate` with readable errors: ancestor-produced `requires`, one entry, known types (Story 5.1). Partly built: `run-flow --check`, and every run before it starts, checks the first two (with one producer per type) and prints each problem as `<yaml>: <field>: <message>`, then exits 2. There is no known-types check, since any lowercase name is a type (Claude's call, 2026-10-23, open to Alex's review; [[Flow Design Open Questions]] #25), and no endpoint
 - [ ] `board_order` as layered topological order (Story 5.1)
-- [ ] Conditional edges, fan-out, joins, rework, `max_attempts` escalation (Story 5.2; engine side)
-- [ ] Shell check steps (PRD §7)
-- [ ] Flow tests, plus *"conditional edge never fires, cancel mid‑fan‑out, retry after failure, downstream attempts"* (Story 5.3)
+- [x] Conditional edges, fan-out, joins, rework, `max_attempts` escalation (Story 5.2; engine side)
+- [x] Shell check steps (PRD §7). The run-flow host runs `sh -c` in the run's folder (`--folder`), in its own process group rather than through an execution host, so without a sandbox. Exit 0 is pass; 126, 127 or a death by a signal waits at a *run failed* gate; any other exit is a fail. The last 20,000 characters of output go to the step's `produces` artifact when it declares one, and always into its run log ([[Check Steps]])
+- [x] Flow tests, plus *"conditional edge never fires, cancel mid‑fan‑out, retry after failure, downstream attempts"* (Story 5.3), in `core/test/engine.test.ts`, except cancel: there is none (the run-flow plan's Left out list), and *Fail the flow* stopping a sibling's live run comes nearest
 
 From M8 and backlog **Story 8.2 Flow editor**:
 
@@ -34,7 +36,7 @@ From elsewhere:
 - [ ] New-project dialog with a flow-type select, *"Empty"* allowed (Story 1.3)
 - [ ] Pin `tasks.flow_id` *"at promotion"* (Story 2.1); whether that is promote or Start is [[Flow Design Open Questions]] #7
 - [ ] Draft mode toggle (Story 8.3)
-- [ ] Acceptance: *"Saving a flow whose step requires an artifact nobody produces is rejected with a readable error"* (PRD §16; Story 10.1)
+- [ ] Acceptance: *"Saving a flow whose step requires an artifact nobody produces is rejected with a readable error"* (PRD §16; Story 10.1). The check is built: run-flow refuses such a flow before it runs, `steps.review: requires "notes", and no step before it produces that`; saving waits for the designer
 
 ## Designed in the mockup, beyond the PRD
 
@@ -42,9 +44,9 @@ From elsewhere:
 - **Preview** a library flow ghosted, and **Use this flow**
 - The version chip with *adopted / edited / preview*, and *Save as v(n+1)*
 - The **validation strip** with one clickable row per problem
-- The **reachability** check (*"has nothing leading into it"*)
+- The **reachability** check (*"has nothing leading into it"*). As built in run-flow (2026-10-23), each problem sits on its step, so a strip row could select it: `steps.new: no route leads here from the entry step "plan"`, or, when several steps have no route into them, one on each ([[Flow Design Open Questions]] #18)
 - The *unattended and unsandboxed* flag
-- The canvas bar's **ceiling per task** and conditional-route count
+- The canvas bar's **ceiling per task** and conditional-route count. As built in run-flow (2026-10-23), a flow states its ceiling instead, a required `budget_usd` for the whole flow, `0` for none (Alex's call; see [[Step Guardrails#Ceiling per task]])
 - The status bar's *N tasks still running on vN*
 - Draft mode as a designer toggle
 

@@ -27,6 +27,8 @@ flowchart LR
 
 Fingerprinting lives in `packages/core` (*"The engine, loop guard, advancement rules, prompt builder, fingerprinting and the port interfaces live there"*, PRD §3). The drawio *Test lane* card lists *"vitest on engine rules, fingerprinting and the prompt builder"*.
 
+As built in run-flow (2026-10-23), `fingerprint()` (`core/src/flow/fingerprint.ts`) takes the last 20 non-empty lines of the last 20,000 characters the check printed. It cuts each absolute path to its file name, so failures in different files stay different, though `index.ts` in two folders still match (the run-flow plan, Execution #19). Then it removes UUIDs, hex ids of 7 or more characters with at least one digit (`deadbeef` stays), durations with their unit (`980ms`, `1.02s`, `2 min`) and day and month names (`Mon`, `Tuesday`, `Oct`, `September`), and last every digit, which takes ISO timestamps with it. The SHA-256 of what is left goes on the run's record, `fingerprint` in `state.json`. A failing check whose output is blank gets no fingerprint, so it never counts as stuck: a quiet check such as `grep -q` or `test -f` loops on the budget alone (the run-flow plan).
+
 ## Worked example (illustrative)
 
 | Check run | Output tail | Fingerprint | Engine |
@@ -35,17 +37,20 @@ Fingerprinting lives in `packages/core` (*"The engine, loop guard, advancement r
 | 2 | `FAIL revokes old token` | B (one test fewer) | rework `implement` (attempt 3) |
 | 3 | `FAIL revokes old token` | B | **escalate**, attempts left or not |
 
-The output lines are invented for illustration. In this example the loop would also have escalated at run 3 on the cap (`max_attempts` 3 on `implement`); the fingerprint matters when `max_attempts` is higher, or when the same error repeats on attempt 2.
+The output lines are invented for illustration. In this example the loop would also have escalated at run 3 on the cap (`max_attempts` 3 on `implement`); the fingerprint matters when `max_attempts` is higher, or when the same error repeats on attempt 2. As built in run-flow (2026-10-23), the cap is checked first, so this gate would read `implement has used 3 of 3 attempts`.
 
 > [!question] Does stripping digits defeat "fewer failing tests"?
 > The PRD strips digits and then claims fewer failing tests change the fingerprint. A summary line such as `3 failing` → `2 failing` does not change once digits go. Listed in [[Execution Open Questions]] #19.
 
+> [!check] Answered by run-flow, 2026-10-23
+> Yes, by decision: digits are still removed, so output that differs only in a count (`Tests: 3 failed`, then `Tests: 2 failed`) gets the same fingerprint and escalates as stuck. Only a change in the failing tests' names within the last 20 non-empty lines shows progress, and Retry at the escalation gate gets past a count-only case (the run-flow plan, Execution #19). See [[Run Flow Reference]].
+
 ## Scope
 
 - **Shell steps only.** *"Review failures get no fingerprint"* (PRD §8).
-- **Previous failed run of the same step.** The comparison is with *"its previous failed run"*, not across steps. After a rework, `check` and every other step downstream of the target are re-created (*"downstream `done` → `skipped` so they re-instantiate"*, `02` §3). So the previous failed run sits on an *earlier instance* of the same step definition. No source says how the lookup crosses instances ([[Execution Open Questions]] #58).
-- **"Twice in a row" or "previous failed run".** The feature map stops on *"exactly the same error twice in a row"*; PRD §8 compares with *"its previous failed run"*, and `02` §3 with *"its previous failure"*. They differ when a passing check sits between two failures. For example, `check` fails, `implement` fixes it, `check` passes, `review` sends the work back, and `check` then fails with the first error again. The PRD wording escalates; "in a row" does not ([[Execution Open Questions]] #67).
-- **Infra retries.** These never produce a check verdict, so they never fingerprint.
+- **Previous failed run of the same step.** The comparison is with *"its previous failed run"*, not across steps. After a rework, `check` and every other step downstream of the target are re-created (*"downstream `done` → `skipped` so they re-instantiate"*, `02` §3). So the previous failed run sits on an *earlier instance* of the same step definition. No source says how the lookup crosses instances ([[Execution Open Questions]] #58). As built in run-flow (2026-10-23), run records outlive the instances a rework deletes, so the lookup runs over all of the step's runs: it compares with the step's latest earlier failing run that has a fingerprint (the run-flow plan, Execution #58).
+- **"Twice in a row" or "previous failed run".** The feature map stops on *"exactly the same error twice in a row"*; PRD §8 compares with *"its previous failed run"*, and `02` §3 with *"its previous failure"*. They differ when a passing check sits between two failures. For example, `check` fails, `implement` fixes it, `check` passes, `review` sends the work back, and `check` then fails with the first error again. The PRD wording escalates; "in a row" does not ([[Execution Open Questions]] #67). As built in run-flow (2026-10-23), the PRD wording holds: that example escalates, and a blank failure in between does not break the match either (the run-flow plan, Execution #67).
+- **Infra retries.** These never produce a check verdict, so they never fingerprint. As built in run-flow (2026-10-23), a run that ends with an error, a check's timeout or setup failure included, records neither an outcome nor a fingerprint.
 
 ## Related
 

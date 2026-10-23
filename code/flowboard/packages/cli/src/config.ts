@@ -33,7 +33,7 @@ export interface RunConfig {
 
 export type LoadResult = { ok: true; config: RunConfig } | { ok: false; errors: string[] };
 
-const Schema = z.strictObject({
+export const RunSchema = z.strictObject({
   adapter: z.enum(['claude-code', 'opencode']),
   model: z.string().min(1),
   effort: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).optional(),
@@ -66,13 +66,13 @@ const Schema = z.strictObject({
 });
 
 /** `~` and `~/x` go to the home dir; other relative paths resolve against `baseDir`. */
-function toAbs(p: string, baseDir: string): string {
+export function toAbs(p: string, baseDir: string): string {
   if (p === '~' || p.startsWith('~/')) return join(homedir(), p.slice(1));
   return resolve(baseDir, p);
 }
 
-const isDir = (p: string) => existsSync(p) && statSync(p).isDirectory();
-const isFile = (p: string) => existsSync(p) && statSync(p).isFile();
+export const isDir = (p: string) => existsSync(p) && statSync(p).isDirectory();
+export const isFile = (p: string) => existsSync(p) && statSync(p).isFile();
 
 /**
  * Matches an allow entry that lets the agent run any shell command: `Bash`, or a pattern of only `*`, `:` and spaces.
@@ -82,7 +82,7 @@ const ANY_SHELL = /^\s*bash\s*(\(\s*[*:\s]*\))?\s*$/i;
 const SHELL_TAIL = 'lets shell commands write outside folder; set permissions.allow_unrestricted_shell: true to allow it';
 
 /** One `field: message` per zod issue; unknown keys get one line each, missing keys say `required`. */
-function issueLines(issue: $ZodIssue, raw: unknown): string[] {
+export function issueLines(issue: $ZodIssue, raw: unknown): string[] {
   const path = issue.path.join('.');
   if (issue.code === 'unrecognized_keys') return issue.keys.map((k) => `${path ? `${path}.` : ''}${k}: unknown key`);
   const value = issue.path.reduce<unknown>((v, k) => (v as Record<PropertyKey, unknown> | undefined)?.[k], raw);
@@ -108,21 +108,37 @@ function checkSkill(path: string, earlier: { name: string }[]): string | undefin
   return undefined;
 }
 
-export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
-  const fail = (lines: string[]): LoadResult => ({ ok: false, errors: lines.map((l) => `${yamlPath}: ${l}`) });
+/** File, syntax and root-shape checks; error lines carry `yamlPath` as typed. */
+export function readYaml(yamlPath: string, baseDir: string): { ok: true; abs: string; raw: Record<string, unknown> } | { ok: false; errors: string[] } {
+  const fail = (line: string) => ({ ok: false as const, errors: [`${yamlPath}: ${line}`] });
   const abs = toAbs(yamlPath, baseDir);
-  if (!isFile(abs)) return fail(['file: not found']);
+  if (!isFile(abs)) return fail('file: not found');
 
   let raw: unknown;
   try {
     raw = parse(readFileSync(abs, 'utf8'));
   } catch (e) {
-    return fail([`syntax: ${(e instanceof Error ? e.message : String(e)).split('\n')[0]}`]);
+    return fail(`syntax: ${(e instanceof Error ? e.message : String(e)).split('\n')[0]}`);
   }
-  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return fail(['(root): must be a mapping']);
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return fail('(root): must be a mapping');
+  return { ok: true, abs, raw: raw as Record<string, unknown> };
+}
 
-  const parsed = Schema.safeParse(raw);
-  if (!parsed.success) return fail(parsed.error.issues.flatMap((i) => issueLines(i, raw)));
+export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
+  const read = readYaml(yamlPath, baseDir);
+  if (!read.ok) return read;
+  const r = configFromObject(read.raw, baseDir);
+  if (!r.ok) return { ok: false, errors: r.errors.map((l) => `${yamlPath}: ${l}`) };
+  return { ok: true, config: { yamlPath: read.abs, ...r.config } };
+}
+
+/** Every schema, file and semantic check of one run's settings; error lines are `field: message`. */
+export function configFromObject(
+  raw: Record<string, unknown>,
+  baseDir: string,
+): { ok: true; config: Omit<RunConfig, 'yamlPath'> } | { ok: false; errors: string[] } {
+  const parsed = RunSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, errors: parsed.error.issues.flatMap((i) => issueLines(i, raw)) };
   const y = parsed.data;
 
   // File-system and semantic checks; all failures are collected.
@@ -182,7 +198,7 @@ export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
       .map((a) => `permissions.allow: "${a}"`),
   ];
   if (!optIn) errors.push(...shellTriggers.map((t) => `${t} ${SHELL_TAIL}`));
-  if (errors.length) return fail(errors);
+  if (errors.length) return { ok: false, errors };
 
   const spec: RunSpec = {
     model: y.model,
@@ -213,8 +229,5 @@ export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
     };
   }
 
-  return {
-    ok: true,
-    config: { yamlPath: abs, adapter: y.adapter, spec, unrestrictedShell: optIn && shellTriggers.length > 0, skills },
-  };
+  return { ok: true, config: { adapter: y.adapter, spec, unrestrictedShell: optIn && shellTriggers.length > 0, skills } };
 }

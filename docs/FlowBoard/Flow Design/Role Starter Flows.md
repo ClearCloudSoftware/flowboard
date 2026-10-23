@@ -42,6 +42,12 @@ flowchart LR
 
 The appendix draws all six as mermaid diagrams.
 
+As built in run-flow (2026-10-23), each of the six, written as a flow file from the appendix's diagram with the `budget_usd:` every flow file needs, passes `pnpm run-flow --check`, alone and with `--folder` and `--task` (checked 2026-10-23). A run-flow version needs three things:
+
+- **A loop back to the first step names it.** The business analyst's *sign-off changes → elicit* leaves every step with a route in, so the file needs `entry: elicit`; without it, `steps: no entry step: every step has a route into it; name the first one with entry:` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). The other five start at their one step with no route in.
+- **A person's sign-off or test is a no-op shell step with a gate.** There are no manual steps (also Claude's call), so the analyst's sign-off and the designer's usability test are `shell: "true"` with `gate: approval`: a gated shell step, like `draft` in `gate.yaml` ([[Testing The Run Flow CLI]]), with nothing to run. The gate reads `approval needed; it reported pass`, and Reject reruns the loop's target with the person's note. Without `produces`, `--check` warns that the target `runs again without seeing why`; the note is what tells it.
+- **A repair step reached only by rework takes the failing step's outputs.** In DevOps's *failing → roll back → deploy* and QA's *defects → triage → execute*, the route into the repair step is a rework route, because the repair step leads back to the step that failed. It gets that step's outputs and can `require` nothing (`steps.rollback: requires "release", and no step before it produces that`). It also owns the loop's attempt budget (`rollback has used 3 of 3 attempts`), so `max_attempts` goes on it; on `deploy` it is an error: `steps.deploy.max_attempts: no rework route leads back to deploy, so nothing reads it`.
+
 ## The handoff relay
 
 ```mermaid

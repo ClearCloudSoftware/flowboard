@@ -3,8 +3,8 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import type { GuardRules } from './ports/agent-provider.ts';
 
-/** `git`, then any global options (`-C dir`, `-c k=v`, `--no-pager`) before its subcommand. */
-const GIT = String.raw`\bgit(?:\s+(?:-[Cc]\s+\S+|--?[\w-]+(?:=\S+)?))*\s+`;
+/** `git`, then any global options (`-C dir`, `-c k=v`, `--no-pager`) before its subcommand: a regex source. */
+export const GIT = String.raw`\bgit(?:\s+(?:-[Cc]\s+\S+|--?[\w-]+(?:=\S+)?))*\s+`;
 
 /**
  * PRD §7's destructive commands. The runner adds the base-branch `git checkout` rule, which needs the branch name.

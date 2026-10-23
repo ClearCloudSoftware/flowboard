@@ -9,6 +9,8 @@ module: Flow Design
 
 The feature map (§2 *Flows*) defines a flow as *"the recipe a task follows — an ordered set of steps, each one an agent doing a single job."* The PRD (§4) is more exact: *"a versioned DAG of step definitions belonging to a project. Editing a flow creates a new version rather than mutating the old one."*
 
+As built in run-flow (2026-10-23), a flow's forward routes form the DAG, and its only loops are rework routes, `on_fail` routes back to the step itself or to an ancestor. `--check` refuses any other loop: `steps: routes loop without an on_fail route back: a, b`. See [[Flow Validation]].
+
 Flow Design is everything up to the moment a task starts on a flow: authoring steps, wiring them, checking the recipe holds together, versioning it, and picking one from the library. Running a flow belongs to the execution engine.
 
 The flow-designer field guide puts the screen's two jobs this way: *"On the left you **choose** — and the hard part is that good flows get forked, so three different recipes can share one name. In the middle you **build** — and the screen refuses to save a recipe that can't actually run."*
@@ -58,6 +60,11 @@ Downstream, a flow version decides:
 | **Contract fixed before generation** | *"requires / produces, budget, turns and tools on the step. Fixed before generation, checked at flow save, injected by the prompt builder."* (drawio concept 1 *Bounded contract*) |
 | **Names are not identifiers** | *"A forked flow keeps the name, because it is still code review."* (flow-designer guide) |
 | **Canvas is arrangement, not meaning** | *"Dragging a step changes where it sits, never what runs when — that's the edges."* (flow-designer guide) |
+
+As built in run-flow (2026-10-23), two principles hold only in part:
+
+- **Provider-agnostic.** The graph names no provider, but a step's launch settings do: each agent step names an `adapter` and a native model id (`sonnet` on Claude Code, `provider/model` on OpenCode), so moving a step to another provider means editing both (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
+- **Pure and portable.** `validateFlow` is pure, but the step rules sit in the CLI loader ([[Flow Definition Internals]]). The flow file itself is portable: a reusable recipe (Alex's call, 2026-10-23) whose own paths resolve against its folder, so it runs in whatever folder a run names ([[Flow Storage]]).
 
 ## What it is not
 

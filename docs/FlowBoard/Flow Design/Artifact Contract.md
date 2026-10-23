@@ -47,9 +47,15 @@ The architecture README: *"**Artifacts flow along the edges.** … the graph is 
 
 On a rework loop, *"The new run's 'read these first' list (prompt part 2) also gets the artifacts the failing step produced, so a rework sees the raw `check_output` or `review`, not a summary of it."* (PRD §8). These inputs are not declared in `requires`. Whether a back-edge counts as ancestry for validation is open — [[Flow Design Open Questions]] #22.
 
+> [!check] Answered by run-flow, 2026-10-23
+> No (the run-flow plan): ancestry follows forward routes only, so a rework route never counts. On rework the run-flow engine adds the failing step's `produces` to the target's inputs, without a `requires` entry and leaving out any output its failing run did not write this time. A repair step reached only by rework (`health → rollback`) gets those outputs and can `require` nothing (`steps.rollback: requires "release", and no step before it produces that`). See [[Run Flow Reference]].
+
 ## Type keys versus filenames
 
 The PRD uses **type keys**: `research_brief`, `questions`, `answers`, `plan`, `explainer`, `implementation_notes`, `test_notes`, `check_output`, `review`, `summary` (§6 seed list). Files land at `<worktree>/.vibe/task-<task-id>/NN-<type>.<ext>`, e.g. `03-plan.md`. The mockups use **filenames** (`brief.md`, `plan.md`, `changes.patch`, `test-report.md`, `review.md`, `summary.md`). See [[Flow Design Open Questions]] #24 and #25.
+
+> [!check] Answered by run-flow, 2026-10-23
+> Type keys, each saved as `<folder>/.flowboard/<run folder name>/<type>.md`: always `.md` with no `NN-` prefix, even for a check's log or a patch (the run-flow plan). A type matches `^[a-z0-9][a-z0-9_-]*$`, so a file name is refused (`steps.research.produces.0: name may only use lowercase letters, digits, - and _`). The types are an open set with no known-types list, and a typo in `requires` fails as *no step before it produces that* (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
 Contract validation is store-agnostic: *"it checks the artifact **type graph** (does an ancestor produce what this step requires?), never the bytes."* (`05` §11; `artifact-store.ts` header).
 

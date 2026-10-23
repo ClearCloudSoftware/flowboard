@@ -57,6 +57,11 @@ There is no mockup for this component. It is documented as architecture referenc
 
 - [[Run Agent CLI Decisions]] — `pnpm run-agent <task.yaml>`: one YAML file runs either provider; the calls made and the issues left for later
 - [[Run Config Reference]] — every field of the `run-agent` YAML file: type, default, checks, and how it behaves on each adapter
+- [[Run Flow Reference]] — `pnpm run-flow --folder <dir> --task <file> <flow.yaml>`: several agents and checks as one flow, a reusable recipe with a budget for the whole flow; every field, how routes, loops, joins and gates work, stopping and resuming, and the files written
+- [[Run Flow Review Loop]] — how to have a reviewer agent send the work back to the implementer: the edge, the verdict, the file of issues, and what to get right
+- [[Testing The Run Flow CLI]] — how to test `run-flow`: the free suite, the live flow, and hand-run scenarios, most of them free shell-only flows
+- [[Run Flow Deferred Issues]] — what `run-flow` leaves for later: review findings not fixed, accepted limits, and what the audit fixes left open
+- [[Run Flow Monitor Readiness]] — is `run-flow` ready for the Monitor? What already matches, the Monitor questions it answers, what's missing, and an order to build it in
 - [[Testing The Run Agent CLI]] — how to test the providers and `run-agent`: the free suite, the live tests, and hand-run scenarios
 
 ## Under the hood

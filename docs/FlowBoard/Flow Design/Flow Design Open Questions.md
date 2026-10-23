@@ -5,29 +5,39 @@ module: Flow Design
 
 # Flow Design Open Questions
 
-Places where the sources disagree or leave a gap. Each needs a decision before building. Questions settled by the [[Capability Library Decisions]] (2026-10-15) carry their outcome. Anything another note labels a **proposal** is listed here too.
+Places where the sources disagree or leave a gap. Each needs a decision before building. Questions settled by the [[Capability Library Decisions]] (2026-10-15) carry their outcome. Questions that Alex or the run-flow host answered on 2026-10-23 carry the answer ([[Run Flow Reference]]). Anything another note labels a **proposal** is listed here too.
 
 ## Where flows live and who owns them
 
 ### 1. Per project, or one shared library?
 
+> [!check] **Answered — Alex's call (2026-10-23).** A flow is a reusable recipe, not one task's run: the folder and the task belong to each run, as the PRD's task references a flow. As built in run-flow, a flow file has no `folder:` or `task:` (`flow.yaml: folder: not in a flow file: a flow is a reusable recipe, and each run gives its folder with --folder`); a run gives them, `pnpm run-flow --folder <dir> --task <file> <flow.yaml>`, so one recipe runs in any folder. No project or library holds a flow file yet. See [[Run Flow Reference]].
+
 The PRD makes a flow belong to a project: `flows.project_id`, the route `/p/[slug]/flow`, and *"Editing a project's flow never moves an in-flight task"* (§4). Backlog Story 8.2 adds a *"Reuse… picker (steps or whole flow from other projects, key uniquified)"*. Story 1.3 creates flow v1 from a flow type when a project is made. The flow-designer mockup instead shows one shared, multi-author library (`@core`, `@alex`, `@team-sec`, `@pm-guild`, `@growth`) that a project *adopts* from. The capability-library mockup ships flows inside bundle packs. The monitor mockup runs one `v4` flow across tasks from six repos (`flowboard/api`, `core`, `docs`, `providers`, `runner`, `web`). See [[Flow Library]] and [[Flows And Flow Versions]].
 
 ### 2. What is an author, and what identifies a flow?
+
+> [!check] **Answered — Alex's call (2026-10-23).** A flow is a reusable recipe, apart from any task that runs it. As built in run-flow, a recipe's name is its file's name without the extension, and the file has no name, author or version key (`flow.yaml: name: unknown key`); nothing versions it yet (#4). Who authors a flow is left to the library.
 
 The PRD says *"No auth, no multi-tenancy, no user table. Do not add them 'for later'"* (§2), and its key is `UNIQUE (project_id, name, version)`. The mockups identify a flow by **name + author + version** (`Software delivery @core v4`, preview slug `@core/software-delivery`). Authors need identities. The feature map calls identities the one new foundation the teams ideas need (*Across everything → Teams & collaboration*).
 
 ### 3. Library metadata has no home in the schema
 
+> [!check] **Answered by run-flow, 2026-10-23.** Not in the flow file, for now: its schema is strict, so a `description:` or `domain:` key is refused as unknown. Fields beyond what a run needs are decided with the canvas (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
+
 The library rail shows a domain, description, ★ org default, *forked from*, a difference line, runs, last used, ~$/task, steps, gates and a shape glyph. None of these is a PRD column. **Proposal** in [[Flow Data Model]]: store domain, description, org default, fork lineage and difference line on the flow. Derive steps, gates, shape, runs, last used and cost from the graph, the tasks and the cost ledger.
 
 ### 4. Editing someone else's flow
+
+> [!check] **Answered — Alex's call (2026-10-23).** A flow is a reusable recipe. As built in run-flow, nothing versions it yet: an edit changes the file in place, each run pins the copy it loaded in its run folder's `flow.json`, and `--resume` reads that copy, so an edit never reaches a run already started. A hash of the recipe would now identify a flow version, but none is recorded until something reads it, the flow library or the Monitor (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). How a fork is made is left to the library.
 
 In the mockup, **Use this flow** copies the previewed flow and keeps its author and version, so saving makes `v(n+1)` under that same author. Should adopting create a fork under your name? The rail already shows `forked from @core v5`, but no source says how a fork is made. Separately, the capability-library guide's walkthrough wires a new step into `Code review @team-sec v2` and the version stays `v2`. That contradicts *"editing the graph forks a new version"* (architecture README). See [[Adopting And Adapting A Flow]].
 
 ## Versions and pinning
 
 ### 5. Persist node positions?
+
+> [!check] **Answered by run-flow, 2026-10-23.** Not in the flow file: its schema is strict, with no position field, and a step's key is its only name. A canvas that keeps positions keeps them in its own file, decided with the canvas (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
 The flow-designer guide: *"Position is for your reading comfort, and it's saved with the version so the recipe looks the same to whoever opens it next."* Backlog decision **D4** and the drawio card *D4 · Don't persist node positions* (page *FlowBoard ideation*): *"No; dagre is deterministic."* Backlog Story 8.2 still lists *"**Decide** whether to persist node positions (needs a layout column)."* See [[Canvas Layout And Board Order]].
 
@@ -62,7 +72,9 @@ The mockup opens with the chip reading *adopted 12 Sep* (nothing edited), yet th
 
 > [!check] **Moot in v1 — D1.** v1 is Claude-only, so no step needs a provider field. Returns with the second provider.
 
-The build overtook D1: OpenCode was built on 2026-10-18 as a second real provider; Codex is designed, not built. No flow or step exists yet to pick one; `run-agent` takes the provider per run from its YAML (`adapter:`). Whether OpenCode is in v1 is [[Agent Providers Open Questions]] #38, open.
+> [!check] **Answered by run-flow, 2026-10-23.** Yes, as the run-flow plan decided: each step names its provider with `run-agent`'s `adapter` key (`claude-code` or `opencode`), and the flow's `defaults:` supplies it to a step that does not. `adapter` is the key a canvas would write; `provider:` is refused as unknown. See [[Run Flow Reference]].
+
+The build overtook D1: OpenCode was built on 2026-10-18 as a second real provider; Codex is designed, not built. `run-agent` takes the provider per run from its YAML (`adapter:`), and run-flow per step. Whether OpenCode is in v1 is [[Agent Providers Open Questions]] #38, open.
 
 The capability-library guide: *"Steps name their provider individually — one flow can mix them."* `01-ports.md` and `05` §13 assume a step has a *target provider*. Neither the PRD `step_defs` table, backlog Story 8.2's inspector list, nor the flow-designer mockup has a provider field. The same question, with a proposed nullable `step_defs.provider`, is [[Agent Providers Open Questions]] #14.
 
@@ -70,13 +82,19 @@ The capability-library guide: *"Steps name their provider individually — one f
 
 > [!check] **Model resolved — D27.** `kind` is `ai | shell | manual`; an `ai` step names an agent, a skill or both. Still open: the flow-designer inspector needs agent and skill pickers and the shell and manual kinds.
 
+> [!check] **Answered by run-flow, 2026-10-23.** A run-flow step has no `kind` key (it is refused as unknown): a step with `shell:` is a check, and any other is an `ai` step that needs `prompt`, `skill` or `system_prompt`, in any combination. There is no manual kind (#39) and no named agent: the agent is the step's inline `system_prompt`, as the run-flow plan's Left out list has it. The rules for each kind stay in run-flow's loader until the canvas or the worker reads flow files too, when the engine's `StepDef` gains a `kind` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
+
 Before D27, the PRD and the backlog gave a step a `kind` (`skill | agent | shell | manual`) and one `skill_id` or `agent_id`. Since `8561b85` both read `ai | shell | manual` (PRD §5, §13; backlog Story 8.2). The flow-designer inspector has only a free-text **Agent** field. It has no kind, no skill picker, no check step and no manual step. The capability-library mockup's *used by* data has steps that use **both** a skill and an agent: `plan` uses skill `plan-implementation` and agent `architect`, and `review` uses skill `code-review` and agent `reviewer`. One `kind` cannot express that. See [[Step Kinds]].
 
 ### 11. Retries versus `max_attempts`, and what happens at the cap
 
+> [!check] **Answered by run-flow, 2026-10-23.** The PRD's `max_attempts`, with no Retries field, as the run-flow plan decided: it defaults to 3, counts the step's attempts, the first included, and is read only by a rework route back to the step, so setting it on any other step is an error (`steps.review.max_attempts: no rework route leads back to review, so nothing reads it`). At the cap the target waits at an escalation gate (`impl has used 3 of 3 attempts`) offering Retry and Fail the flow; a spent loop never fails the flow by itself. See [[Run Flow Reference]].
+
 The mockup's **Retries** field (0–5, default 2) is *"How many attempts before the step gives up and fails the task."* The PRD's `max_attempts` (default 3) *"counts total runs of the step, first try included"*. Its counter lives on the rework **target**, and at the cap FlowBoard escalates instead of failing (§8, decision **D3**, decided 2026-10-15). **Proposal:** Retries = `max_attempts − 1`. Several sources still fail the task at the cap: the monitor guide (*"Retries are capped, then the task fails"*, `monitor-guide.html:691`), the task-detail guide (*"Retries are capped. After the limit the engine gives up and fails the task"*, `task-detail-guide.html:567`), PRD §16 itself (*"three failed attempts fail the task"*, `PRD.MD:671`), backlog Story 10.1 (*"three failures fail the task"*) and the drawio card *D3 · max_attempts = attempts allowed* (*"Fail on the 4th (default 3)"*, page *FlowBoard ideation*). See [[Step Guardrails]].
 
 ### 12. Is the per-task cost ceiling really a ceiling?
+
+> [!check] **Answered — Alex's call (2026-10-23).** A flow has a budget ceiling, which can be set to 0 for none. As built in run-flow, it is the required top-level `budget_usd:`, the most the whole flow may spend in dollars, retries, rework and resumes included; `--budget-usd <n>` overrides it for one run or resume. Each agent run may spend only what is left, and once a run ends with the ceiling spent, run-flow stops the live runs and pauses (exit 3) until `--resume <run folder> --budget-usd <more>`. Runs launched together may each spend all that is left, and a run with no known price adds nothing. The key's name, that it is required, the per-run cap and the pause are Claude's calls, 2026-10-23, open to Alex's review; see [[Step Guardrails#Ceiling per task]] and [[Run Flow Reference#Rules this command settles]].
 
 The canvas bar shows *est. $X ceiling per task*: the sum of every step's budget. Budget is *"the most this step may spend on one attempt"*, so retries, rework loops and infra retries can all go past the figure. In draft mode the mockup counts a flat `$0.05` per step, which no other source states.
 
@@ -101,11 +119,15 @@ The flow designer cannot show or edit it. Four other mockups speak of a per-step
 
 ### 15. Model ids and effort values
 
+> [!check] **Answered by run-flow, 2026-10-23.** Native ids, per adapter: a Claude alias or id on `claude-code`, a `providerID/modelID` id on `opencode` (`steps.tests.model: opencode model must be "providerID/modelID"`), so moving a step to the other adapter means rewriting its `model`. Logical ids wait for a models table (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). `effort` takes all five values, `low` to `max`.
+
 The PRD and every mockup use the Claude aliases `haiku`, `sonnet` and `opus`. They are not native ids: PRD §5 comments `agents.default_model` as *"a Claude alias, used as the logical model id"*, and the CLI reports a native id such as `claude-fable-5-1` (`docs/old/stream-sample.jsonl`). `01-ports.md`: *"Step defs reference logical ids (`reasoning-high`, `fast-cheap`, `default`)"*. `06` §15 draft mode sets `model: 'fast-cheap'`. For v1, [[Capability Library Decisions|D20]] makes the aliases the logical ids; the abstract names are open until a second provider ([[Logical Model Ids]], [[Agent Providers Open Questions]] #11). The code has answered that for now: with OpenCode built (2026-10-18), there is no shared vocabulary; Claude takes an alias or any id its CLI accepts, OpenCode a `providerID/modelID` id, and nothing maps `reasoning-high`. Effort: the mockup offers `low | medium | high`; the PRD and `agent-provider.ts` allow `low | medium | high | xhigh | max`. See [[Models And Effort]].
 
 ### 16. Prompt template placeholders
 
 PRD §7 and `03` §6 list `{{task_title}} {{task_body}} {{acceptance_criteria}} {{non_goals}} {{artifact:<type>}} {{worktree}}`. Backlog Story 3.2 lists only `{{task_title}} {{task_body}} {{artifact:<type>}} {{worktree}}`. The `PromptParts.preamble` comment says *"task title + body"*. The mockup has no prompt-template field.
+
+As built in run-flow (2026-10-23), no placeholder is filled in (the run-flow plan's Left out list): a `{{…}}` in the run's task file or a step's prompt file reaches the agent as written, and run-flow warns, `-- warning: --task: {{…}} is not filled in; the agent reads it as written` (or `steps.<step>.prompt: …`).
 
 ## Routes and topology
 
@@ -115,13 +137,19 @@ The feature map promises *"drag steps, draw connections"* (§2). Backlog Story 8
 
 ### 18. Where **+ Step** wires a new step
 
+> [!check] **Answered by run-flow, 2026-10-23.** For the validator: an unwired step is flagged on the step itself. With `entry: plan` it reads `steps.new: no route leads here from the entry step "plan"`; without `entry:`, each step no route leads to gets its own problem, the real entry included: `steps.new: no route leads here, nor to "plan"; a flow starts at one step, so route the others in` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). Where **+ Step** wires the step is the canvas's to decide.
+
 The mockup wires the new `step-n` off `review` on the passed route, whatever is selected. It adds that edge even when `review` no longer exists. It reads as a placeholder. **Proposal:** add the step unwired (the validator then flags it unreachable), or after the selected step.
 
 ### 19. Joins behind conditional routes
 
+> [!check] **Answered by run-flow, 2026-10-23.** As the run-flow plan decided, a join waits for each step with a forward route into it, an `on_fail` route included (rework routes never make a join), as long as that step may still fire it; so a join whose conditional route never fired runs without that input once nothing can still feed it. `--check` warns about a conditional route into a join (`steps.d: waits for "b", whose route here is conditional; if it does not fire, d runs without it`) and about one further up, on the way to it. See [[Run Flow Reference]].
+
 PRD §8: a join *"starts only once every upstream step instance for this task is `done`"*. Backlog Story 5.2: *"join waits for every non‑`on_fail` upstream instance"*. Neither says what happens when an upstream route is conditional and never fires. That is the same root cause as the backlog BUG that strands a task in `running`. Should validation warn about a join behind a conditional route? See [[Branching Joining And Loops]].
 
 ### 20. Downstream attempts on rework
+
+> [!check] **Answered by run-flow, 2026-10-23.** They reset, as the run-flow plan decided: a rework starts every step below its target again from attempt 1, and only the target's count carries. See [[Run Flow Reference]].
 
 Backlog Story 5.2 (**DEC**): *"Downstream steps reset `attempts` on every loop; only the loop target is capped. Decide if downstream should also count."*
 
@@ -133,9 +161,13 @@ Architecture README, open decision 1: `shell` is in scope. *"Still open: make `s
 
 ### 22. Does an `on_fail` back-edge count as ancestry?
 
+> [!check] **Answered by run-flow, 2026-10-23.** No, as proposed and as the run-flow plan decided: each `requires` must be produced by a step before it along forward routes, and rework routes do not count. A rework adds the failing step's outputs to its target's inputs by itself, leaving out any that run did not write. See [[Run Flow Reference]].
+
 PRD §6: every `requires` entry *"is produced by some ancestor step in the DAG"*. A flow with a rework loop is not strictly acyclic. The mockup's `ancestors()` follows every edge, `fail` included, so `build` counts `review` as an ancestor through the back-edge. `board_order` ignores `on_fail` edges (`02` §2), and so do joins (backlog Story 5.2). On rework the new run also reads the failing step's artifacts (PRD §8) without declaring them. **Proposal:** compute ancestry over forward edges only, and treat rework inputs as implicit. See [[Artifact Contract]].
 
 ### 23. "Exactly one entry" or "exactly one producer"?
+
+> [!check] **Answered by run-flow, 2026-10-23.** Both, as the run-flow plan decided: a flow starts at exactly one step, and no two steps produce one type (`steps.b: produces "plan", which "a" also produces`). The entry is the step no route points to; a flow in which every step has a route into it, such as one that loops back to its first step, names it with a top-level `entry:`, the flow-level form of the PRD's `is_entry` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
 Backlog Story 5.1: *"every `requires` produced by an ancestor, exactly one entry, known types"*. `02` §2: *"every `requires` entry is produced by some ancestor; exactly one producer; known types"*. 5.1's *"exactly one entry"* reads two ways:
 
@@ -146,9 +178,13 @@ Backlog Story 5.1: *"every `requires` produced by an ancestor, exactly one entry
 
 ### 24. Artifact type keys or filenames?
 
+> [!check] **Answered by run-flow, 2026-10-23.** Type keys, as the run-flow plan decided: lowercase letters, digits, `-` and `_`, so a file name such as `plan.md` is refused (`steps.plan.produces.0: name may only use lowercase letters, digits, - and _`). Each artifact is saved as `<type>.md` in the run's artifacts folder, `<folder>/.flowboard/<run folder>/`, with no `NN-` prefix, and each attempt overwrites it. There is no type registry (#25). See [[Run Flow Reference]].
+
 The PRD uses type keys (`research_brief`, `plan`, `check_output`) stored as `NN-<type>.<ext>`. The mockups use filenames (`brief.md`, `plan.md`, `changes.patch`). The capability-library mockup's `SKILL.md` manifests declare `produces: plan.md`. A *known types* check needs a type registry either way.
 
 ### 25. Which artifact types are seeded?
+
+> [!check] **Answered by run-flow, 2026-10-23.** None are seeded: artifact types are an open set, any lowercase name, with no known-types check. A typo in `requires` still fails (`steps.review: requires "notes", and no step before it produces that`); one in `produces` that nothing requires passes (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
 PRD §6 seeds ten: `research_brief`, `questions`, `answers`, `plan`, `explainer`, `implementation_notes`, `test_notes`, `check_output`, `review`, `summary`. Backlog Story 1.1: *"the nine PRD types + `sources`, `grounding_report`"*. PRD §6 lists ten and the backlog says nine, so the backlog count probably predates `check_output`.
 
@@ -182,6 +218,8 @@ The PRD has three flow endpoints. The mockup also needs to list the library with
 
 ### 31. Edge condition names
 
+> [!check] **Answered by run-flow, 2026-10-23.** As proposed, by Alex's call on where routes live: a flow file lists its routes in a top-level `edges:` list of `{ from, to, condition }`, the fields of a `step_edges` row, and `condition` is `always` (the default), `on_pass` or `on_fail`; `pass` or `fail` is refused (`edges.0.condition: must be always, on_pass or on_fail`). Display labels are the canvas's; `--mermaid` draws `pass`, `fail` and, on a rework route, `fail ↺`. See [[Run Flow Reference]].
+
 The schema uses `always | on_pass | on_fail`. The mockup's data uses `always | pass | fail` and labels routes *passed* and *failed ↺*; the guide says *on passed* and *on failed*. **Proposal:** `pass` → `on_pass`, `fail` → `on_fail`, and keep *passed* / *failed ↺* as display labels. See [[Connections And Routes]].
 
 ### 32. The `researcher` template
@@ -191,6 +229,8 @@ The schema uses `always | on_pass | on_fail`. The mockup's data uses `always | p
 The current backlog Story 1.2 says only that *"The `researcher` web-research template is out of v1 until open-web egress has an answer."* Its shape was given, before commit `8561b85`, as *"scope → web research → summarize → grounding ✋, `on_fail` loop"*. The loop's target, each step's kind, model, `requires` and `produces` were never stated. [[Seeded Flows]] draws the loop back to `summarize` as a guess. The feature map still promises *"a research pipeline"* (§2).
 
 ### 33. Dependencies the contract cannot see
+
+> [!check] **Answered by run-flow, 2026-10-23.** Validation ignores them: only `requires` is checked, so a check wired before the code it checks passes `--check` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
 The seeded `check` step requires nothing but must run after `implement` and `tests`: it reads the worktree, not an artifact. A validator that only checks `requires` cannot tell whether a check step is wired after the code it checks. Should a check step implicitly require the code-producing steps, or should validation ignore this? See [[Check Steps]].
 
@@ -212,6 +252,8 @@ The version chip reads `adopted 12 Sep` and, after **Use this flow**, `adopted j
 
 ### 37. Must every step have a budget and a turn cap?
 
+> [!check] **Answered by run-flow, 2026-10-23.** Both stay optional, as the run-flow plan decided, with a warning rather than a refusal: in a flow with no ceiling (`budget_usd: 0`), an agent step left with neither `limits.max_turns` nor `limits.budget_usd` after `defaults` gets `-- warning: steps.<name>: no limits.max_turns or limits.budget_usd, and the flow has no budget; nothing stops a looping agent`, from `--check` and before a run. With a ceiling, each agent run may spend only what is left of it (#12). A flow's `defaults:` can set both for every agent step; run-flow reads no settings. See [[Run Flow Reference]].
+
 `docs/pitch.md`: *"Every step has a budget and a turn cap"*. PRD §5 makes both optional: `max_turns INTEGER` and `max_budget_usd REAL`, nullable, with no default. The flow-designer guide warns that *"No ceiling means a looping agent has no financial brake"*, and the mockup's **Budget** accepts `0` and has no "none" value; it has no turn field at all. Should validation require both on `ai` steps, or should settings supply defaults? See [[Step Guardrails]] and [[Spend Caps And Limits]].
 
 ### 38. Steps that cannot run on the host tier
@@ -219,6 +261,8 @@ The version chip reads `adopted 12 Sep` and, after **Use this flow**, `adopted j
 PRD §11.1: *"On the host tier, a step that mounts a git-installed plugin does not run"* ([[Capability Library Decisions|D15]]), and *"Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`."* So a step with sandbox `none`, or any step on a machine without Docker, can be valid in the designer and refused at run time. No source says whether the designer warns about this (a design-time check, like the PRD's *"the flow editor says so"* for missing hooks, §7) or only the run fails. See [[Step Guardrails]] and [[Permission Gate]].
 
 ### 39. What does a manual step do?
+
+> [!check] **Answered by run-flow, 2026-10-23.** Left out until this question is answered: run-flow has no manual step. The stand-in is a step that does nothing and waits for a person, `shell: "true"` with `gate: approval` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
 `kind='manual'` is in the schema and the step form (PRD §5, §13; backlog Story 8.2), but no source says how a manual step starts, who completes it, how it finishes, or which outcome it sets for conditional edges. The feature map's ideas (*"a manual or approval step can name who does it"*) and the StepExecutor's *"human task"* (#21) point at it without defining it. See [[Step Kinds]].
 

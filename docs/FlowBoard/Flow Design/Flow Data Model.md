@@ -90,8 +90,12 @@ erDiagram
 | Persisting positions *"needs a layout column"* | backlog Story 8.2 (**DEC**) |
 | Stable edge ids, not array index | backlog Story 8.2 (BUG) |
 | Flows are *"immutable JSON"*, exportable, keys uniquified on import | `02` §2; architecture README |
+| At most one edge from one step to another, so `from_step` and `to_step` identify an edge: `UNIQUE (flow_id, from_step, to_step)`, and the pair is the stable edge id | the run-flow plan (Alex's call) |
+| `is_entry` derived: the step no edge points to, unless the flow names its first step (`entry:`), which it must when every step has an edge into it | the run-flow plan (Alex's call); `entry:` is Claude's call, 2026-10-23 |
 
 `02` §1 lists *"flow immutability, version pinning, guarded loops"* as the schema's invariants.
+
+As built in run-flow (2026-10-23), a flow is a YAML file, not rows; [[Step Definitions#Fields across the sources]] maps its keys onto `step_defs`. Its defaults differ from the schema's: `model` is required, `effort` optional, and `permissions.mode` defaults to `acceptEdits`, not `bypassPermissions`. The file has keys with no column: a per-step `adapter`, the flow's `defaults` (a step's own key replaces the default whole), `write_roots`, `timeout_minutes`, `guards`, `skills` and `plugins` folders, and the flow's `budget_usd` and `entry`. The folder and the task are not in the file: a flow is a reusable recipe, and each run gives them with `--folder` and `--task` (Alex's call, 2026-10-23). Positions, display names, an agent reference and sandbox fields have no key yet (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
 ## Shape implied by the mockup
 
