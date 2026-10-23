@@ -5,7 +5,7 @@ module: Flow Design
 
 # Models And Effort
 
-Every agent step names a **model** and an **effort** (how hard it thinks). Check steps don't use them: the seed table shows `—` (PRD §15), but both columns are `NOT NULL` with defaults (§5), so a shell step row still carries `sonnet`/`medium`, ignored rather than absent.
+Every agent step names a **model** and an **effort** (how hard it thinks). Check steps don't use them: the seed table shows `—` (PRD §15), but both columns are `NOT NULL` with defaults (§5), so a shell step row still carries `sonnet`/`medium`, ignored rather than absent. As built in run-flow (2026-10-23), a shell step may set neither: `steps.check.model: not used by a shell step`.
 
 ## The fields
 
@@ -16,15 +16,22 @@ Every agent step names a **model** and an **effort** (how hard it thinks). Check
 
 Agents carry a `default_model` and `default_effort` (PRD §5 `agents`); the step sets its own. Each node on the canvas shows three chips: model, effort, budget — *"its model, its thinking effort, and the most it may spend on one attempt."*
 
+As built in run-flow (2026-10-23), each agent step takes `adapter`, `model` and `effort` from itself or from the flow's `defaults`. `model` has no default (`steps.a.model: required`); `effort` is optional and sent only when set, so unset means the model's own. The terminal names the adapter and model as each run starts: `-- <step> attempt <n> (<adapter> <model>)`.
+
 ## Logical model ids
 
 > Step defs reference logical ids (`reasoning-high`, `fast-cheap`, `default`) resolved per provider via `resolveModel`. A flow authored for Claude runs on Codex unchanged; only the resolution table differs. — `01-ports.md`, *Logical model ids*
 
 `RunSpec.model` is documented as *"Logical model id (e.g. 'reasoning-high'); the adapter resolves it via resolveModel()"* (the reference `agent-provider.ts`; the shipped one says *"Logical model id; the adapter resolves it via resolveModel() (Claude: an alias, as is; OpenCode: its table, or "provider/model" as is)"*). The PRD and every mockup use `haiku`, `sonnet` and `opus`. These are Claude **aliases**, not native ids: PRD §5 comments `agents.default_model` as *"a Claude alias, used as the logical model id"*, and the CLI in `docs/old/stream-sample.jsonl` reports a native id like `claude-fable-5-1`. For v1, [[Capability Library Decisions|D20]] treats the aliases as the logical ids, and `resolveModel` passes them through for Claude. The abstract names (`reasoning-high` …) return with a second provider. As built, the second provider, OpenCode (2026-10-18), did not bring them back: it takes a `providerID/modelID` id, or a table given to its constructor, and nothing maps `reasoning-high` and the like ([[Agent Providers Open Questions]] #11). See [[Logical Model Ids]] and [[Flow Design Open Questions]] #15.
 
+> [!check] Answered by run-flow, 2026-10-23
+> Native ids per adapter: a Claude alias or id on `claude-code`, OpenCode's `provider/model` on `opencode`; logical ids wait for a models table (Claude's call, 2026-10-23, open to Alex's review). `--check` refuses `sonnet` on an OpenCode step, one inherited from `defaults` included (`steps.a.model: opencode model must be "providerID/modelID"`), so moving a step to another adapter means rewriting its model. See [[Run Flow Reference#Rules this command settles]].
+
 ## Capability negotiation
 
 *"The engine and flow editor query `capabilities` before using a knob: no `effort` → adapter drops it; editor greys the field."* (`01-ports.md`). The *capability contract* checks *"every knob a step uses is supported by its target provider"* (`02` §2). See [[Flow Validation]].
+
+As built in run-flow (2026-10-23), capability negotiation is deferred: nothing reads `capabilities`, and capability-gap warnings are on the run-flow plan's Left out list, since both providers declare the same set. The gaps are per model instead. OpenCode drops `effort` silently when the model has no variant of that name, and it reports $0 for a model it has no price for, so neither `limits.budget_usd` nor the flow's `budget_usd` stops such a step. run-flow says so only after the run (`-- <step>: no price for <model>: its cost shows as $0, and limits.budget_usd cannot stop it`); `--check` does not warn.
 
 ## Draft mode
 

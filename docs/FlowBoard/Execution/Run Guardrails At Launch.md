@@ -40,6 +40,9 @@ The drawio *Permission gate* card: *"bypassPermissions only when the tier is con
 >
 > See [[Execution Open Questions]] #53, [[Sandboxing Open Questions]] #1 and #2.
 
+> [!check] Answered by run-flow, 2026-10-23
+> On the host, the only tier built, it refuses: `bypassPermissions`, `auto` or an allow entry that lets the agent run any shell command is an error unless the step sets `permissions.allow_unrestricted_shell: true` ([[Run Agent CLI Decisions]] R3). With that opt-in the step runs on the host, and `--check` and the flow's start print `-- warning: steps.<step>: unrestricted shell: commands can write outside <folder>` (`outside the folder` when `--check` is given no `--folder`); `permissions.mode` defaults to `acceptEdits` (R8), not `bypassPermissions`. The worker, once it has sandbox tiers, may still choose differently. See [[Run Flow Reference]].
+
 ### The hooks (inside)
 
 The per-run `settings.json` registers `PreToolUse` hooks that deny (PRD §7):
@@ -53,6 +56,14 @@ The per-run `settings.json` registers `PreToolUse` hooks that deny (PRD §7):
 > [!warning] The shipped code differs
 > No `settings.json` is written (2026-10-18). The rules travel in `RunSpec.guards`, and both adapters enforce them in-agent: Claude through an in-process `PreToolUse` hook callback, registered only when `guards` is set; OpenCode through a guard plugin. They deny file-edit writes outside the write roots or matching a `denyPaths` glob, a recursive `rm` outside the roots, and any `denyCommands` regex. `DEFAULT_DENY_COMMANDS` covers `git push`, `git reset --hard` and a download piped into a shell; the base-branch `git checkout` needs the branch name, so it is left to the runner, which is not built. See [[Run Spec]].
 
+As built in run-flow (2026-10-23), an agent step's guards are `run-agent`'s, with three additions:
+
+- **Write roots.** They are the folder the run names with `--folder`, or the step's `write_roots`, plus the run's artifacts folder; `write_roots: []` leaves only the artifacts folder. A flow file is a recipe that runs in many folders, so `write_roots` are paths inside the folder, relative to it: an absolute path, `~` or `..` is refused, `steps.<step>.write_roots.0: must be a path inside the folder, relative to it`. When the run folder lies inside the folder, it is a deny path.
+- **Non-goal paths.** Nothing reads non-goals from the task file, which is free text. A step, or `defaults`, lists `guards.deny_paths` globs relative to the folder, and a matching edit is refused with `Path is a non-goal: <glob>`.
+- **Commands that discard work.** `DISCARD_COMMANDS` (`cli/src/flow-run.ts`) refuses the git commands that throw away uncommitted edits, which in a flow are the earlier steps' work: `git checkout` with `--`, `.`, `-f` or `--force`; `git switch` with `--discard-changes`, `-f` or `--force`; `git restore`, except a staged-only `--staged`; `git clean`, except a dry run; and `git stash`, except `list` and `show`. `git checkout <path>` without `--` still gets through, since it looks like a branch switch. The base-branch `git checkout` rule still waits for the worker, which has a base branch (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
+
+Shell steps are not guarded: the hooks act inside an agent, and a check runs no agent.
+
 ## Tools
 
 *"**Allowed tools** are the intersection of the agent's list and the skill's `allowed-tools` (whichever the step names), narrowed further by the step's own `allowed_tools` when set"* (PRD §7). *"When `--allowedTools` is set, always append `mcp__vibe__*` so a restrictive list cannot lock out `ask_user`."* (PRD §7)
@@ -64,6 +75,8 @@ The per-run `settings.json` registers `PreToolUse` hooks that deny (PRD §7):
 
 *"Use `--plugin-dir`, not `--add-dir`: only `--plugin-dir` registers a plugin's skills"*. *"Mount only the plugins the step names, never every installed one"*. *"Each plugin dir is the commit recorded in the task's `capability_pins`"* (PRD §7). Details in [[Capability Runtime Mounting]]. A skill that needs the network also needs its host on the step's egress allowlist; the capability library guide warns the library *"cannot do it for you: add the advisory host to that step's egress allowlist, or the first run fails closed."*
 
+As built in run-flow (2026-10-23), a step mounts only the `plugins:` and `skills:` it names, and nothing is pinned: plugin folders are mounted as they stand, and skill folders are copied afresh at every launch, `--resume` included. Pinning waits for the capability library's pins (Claude's call, 2026-10-23, open to Alex's review).
+
 ## Limits
 
 | Logical caps (the CLI) | Physical backstop (the sandbox), for both caps together |
@@ -71,6 +84,8 @@ The per-run `settings.json` registers `PreToolUse` hooks that deny (PRD §7):
 | `max_turns` → `--max-turns`; `max_budget_usd` → `--max-budget-usd` | `--memory`, `--cpus`, `--pids-limit`, wall-clock |
 
 PRD §11.1: resource limits *"physically backstop the logical `max_turns`/`max_budget_usd` caps"*. `03` §6: the runner *"maps the logical `max_turns` / `max_budget_usd` caps to the sandbox's physical `--memory` / `--cpus` / `--pids-limit` / wall-clock backstops"* (`03` §6). Backlog 3.5: *"a limit/timeout hit marks the run failed with reason."* PRD §7 classes *"budget or turn cap hit"* as non-transient: the task goes to `blocked`. No source gives the limit values or the mapping, or says how a physical limit hit is classified ([[Sandboxing Open Questions]] #12, #15). See [[Infra Retries]] and [[Resource Limits]].
+
+As built in run-flow (2026-10-23), there is no sandbox backstop. A step's `limits.max_turns` and `limits.budget_usd` go to the provider. The flow file also sets `budget_usd`, the most the whole flow may spend, `0` for none, which `--budget-usd` overrides for a run or a `--resume` (Alex's call, 2026-10-23). Each agent run may spend only what is left of it: its `limits.maxBudgetUsd` is the step's `limits.budget_usd` or what is left, whichever is lower. When a run ends and the flow has spent its budget, run-flow stops the live runs and pauses, with exit 3 (the per-run cap and the pause are Claude's calls, 2026-10-23, open to Alex's review). When the flow has no budget (`0`, from the flow file or `--budget-usd`), `--check` and the start warn about an agent step with neither limit: `steps.<step>: no limits.max_turns or limits.budget_usd, and the flow has no budget; nothing stops a looping agent`. `timeout_minutes` adds a wall clock per step: 30 minutes by default for a shell step, none for an agent step. The clock stops while one of the run's questions waits for a person (Claude's call, 2026-10-23, open to Alex's review). A limit hit or a timeout ends the run with an error, and the step waits at a *run failed* gate; nothing retries it by itself. An OpenCode model with no price cannot be stopped by its budget, and the run says so: `-- <step>: no price for <model>: its cost shows as $0, and limits.budget_usd cannot stop it`.
 
 ## Isolation from the operator's own config
 

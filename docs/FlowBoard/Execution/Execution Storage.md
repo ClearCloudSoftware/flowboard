@@ -20,6 +20,15 @@ The drawio *Logical components* page splits it in two: **Database** holds *"flow
 | Installed plugins | `<repo_path>/.flowboard/skills/<name>/<commit_sha>/` | PRD §5 |
 | CLI stream probe | `docs/stream-sample.jsonl` (PRD's path; the capture now sits at `docs/old/stream-sample.jsonl`, with `docs/old/stream-sample.stderr`) | PRD §0 |
 
+As built in run-flow (2026-10-23), there is no database and no worktree. The host works in place in the folder each run names with `--folder` and writes:
+
+- **The run folder**, `runs/<YYYY-MM-DDTHH-MM-SS>-<flow name>/`, beside where the command runs. It is claimed with a non-recursive `mkdir`, so a name already taken, even by another host in the same second, gets `-2`, `-3` and so on. In the flow name, any character but a letter, digit, `_`, `.` or `-` becomes `_`. It holds `flow.json`, the pinned flow (`{ version: 1, config, artifactsDir, maxRuns }`, whose `config` also keeps the run's folder and the flow's budget); `state.json`, the engine's state, written whole through `state.json.<pid>.tmp`; `flow.jsonl`, one line per transition; and per run `<NNN>-<step>.jsonl`, its log, and `<NNN>-<step>.outcome.json`, its `set_outcome` verdict. If a check deletes the run folder, the next save writes `flow.json` and `state.json` again, so the flow can still be resumed; earlier logs and `flow.jsonl` lines are lost.
+- **The artifacts**, `<folder>/.flowboard/<run folder name>/<type>.md`.
+- **The lock**, `<folder>/.flowboard/lock`, holding `{ pid, runDir }`, the host's pid and its run folder's absolute path, which keeps one `run-flow` per folder. Making it creates only `.flowboard/`, never the folder itself.
+- **The broker socket**, `ask.sock`, in a temp folder `/tmp/fb-*` per agent run, with the copied `skills:` folders. A second Ctrl+C removes these folders before it exits.
+
+When `runs/` lies inside the run's folder, agent steps may not write to the run folder. See [[Run Flow Reference#Files written]].
+
 ## The database is the only shared state
 
 *"Only `apps/web` and `apps/worker` open the SQLite file; the MCP shim never does"* (PRD §3). The drawio *SQLite* card: *"the only shared state: opened by apps/web and apps/worker only, never from a sandbox"*. `02` §1: *"keep it the *only* shared-state coupling."*
@@ -55,11 +64,15 @@ The read-only mount differs: the drawio mounts all of `skills/`, while PRD §11.
 | Run records, events | not stated. PRD §5 deletes them with their task (`ON DELETE CASCADE` from `tasks` through `step_instances` and `runs`), but no source deletes a task |
 | Jobs | not stated |
 
+As built in run-flow (2026-10-23), the run folder and the artifacts are never removed. An agent run's temp folder goes when the run ends, and the lock when its host exits, but only while it still holds that host's pid. A host killed with `kill -9`, or quit by a second Ctrl+C, leaves its lock behind; the next run-flow in that folder replaces it and stops what that host left running ([[Worker Lifecycle]]).
+
 ## Ignored by git
 
 Backlog 0.3 (**FIX**), for FlowBoard's own repo: *"`.gitignore`: `data/*.db*`, `data/runs`, `.vibe-worktrees`."*
 
 In each managed project's repo, git's local exclude file is used instead: *"Installed plugins live in each managed project's `.flowboard/skills/`, which FlowBoard adds to that repo's `.git/info/exclude`"* (backlog 0.3), and promote should *"append `.vibe-worktrees/` to `<repo>/.git/info/exclude` so the parent repo stays clean"* (backlog 2.1). See [[Parent Repo Hygiene]].
+
+As built in run-flow (2026-10-23), the host does the same for its own files: at start it adds `.flowboard/` to the local exclude file of the repository that holds the run's folder, found with `git rev-parse --git-path info/exclude`. So a `git add -A` during a flow, which an agent might run, leaves the lock and the artifacts out, and the uncommitted-changes check skips `.flowboard` too. `run-flow` never touches `.gitignore` ([[Run Agent CLI Decisions]] R14).
 
 ## Where the sources disagree
 

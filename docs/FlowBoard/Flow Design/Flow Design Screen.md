@@ -45,6 +45,8 @@ Columns are 300 px · flexible · 272 px. Below 1100 px wide the inspector hides
 
 `7 steps · 2 conditional routes · 1 approval gate · est. $15.80 ceiling per task`, plus `draft mode — every step forced to haiku` when draft mode is on. *Conditional routes* counts edges that are not `always`. The ceiling sums step budgets (see [[Step Guardrails]]).
 
+As built in run-flow (2026-10-23), a flow states its ceiling instead of summing one: the required top-level `budget_usd` is the most the whole flow may spend, retries and rework included, and `0` means none (Alex's call; see [[Step Guardrails#Ceiling per task]]).
+
 ## Step marks on the canvas
 
 | State | Look | Means (guide) |
@@ -56,6 +58,8 @@ Columns are 300 px · flexible · 272 px. Below 1100 px wide the inspector hides
 | gate | Pause-bars glyph after the name | *"this step stops when its agent is done and waits for your approval"* |
 
 Each node shows: name (+ gate glyph), agent, then chips `model · effort · $budget`. Edge marks are in [[Connections And Routes]].
+
+As built in run-flow (2026-10-23), a flow file has no display name or agent reference for a node to show: a step's key is its only name (`name` and `label` are `unknown key`), and positions, display names, an agent reference and sandbox fields stay out of the file until the canvas settles them (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). `--mermaid` labels a node with its key, plus `(approval)` on a gated step.
 
 ## States of the screen
 

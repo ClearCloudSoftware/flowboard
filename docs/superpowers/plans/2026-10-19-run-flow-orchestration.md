@@ -17,6 +17,8 @@
 
 **Spec:** `docs/FlowBoard/Multi-Agent Orchestration Analysis.md`. It is on `dev` and was untracked when this plan was written, so read it from the main checkout. This plan carries every decision an implementer needs; the analysis is the background.
 
+**As built:** notes dated 2026-10-23 correct facts this plan got wrong and mark calls replaced since. The rules as built are in *Rules this command settles* in `docs/FlowBoard/Agent Providers/Run Flow Reference.md`. The calls numbered D1–D22 there are Claude's, taken on 2026-10-23 and open to Alex's review. Three calls of the same day are Alex's: a flow file is a reusable recipe, and a run gives its folder and task (`pnpm run-flow --folder <dir> --task <file> <flow.yaml>`); a flow has a budget ceiling, `budget_usd`, 0 for none; and the next run-flow stops what a host killed with `kill -9` left running.
+
 ## Before you start
 
 - Create a worktree for a new branch `feature/flow-orchestration` from `dev`, using superpowers:using-git-worktrees. `feature/agent-providers` is merged into `dev` first (Alex, 2026-10-19).
@@ -30,10 +32,10 @@ The analysis left these open (its §7 and §8). Each line below is **my call**, 
 
 | Question | Call |
 |---|---|
-| **(Alex)** Where routes live | A top-level `edges:` list, as in yamlgraph, because the Flow Design canvas will read and write these files. An edge is `{ from, to, condition }`, the fields of a `step_edges` row; `condition` is `always` (the default), `on_pass` or `on_fail`. At most one edge goes from one step to another, so `from` and `to` identify it: the stable edge id the backlog asks for. There is no `START` or `END`, which `step_edges` could not store: the entry is the step no edge points to |
-| Flow Design #24, #25: type keys or file names | Type keys, each saved as `<type>.md`. Names cannot contain a dot today, so accepting a file name such as `result.json` later breaks no flow |
+| **(Alex)** Where routes live | A top-level `edges:` list, as in yamlgraph, because the Flow Design canvas will read and write these files. An edge is `{ from, to, condition }`, the fields of a `step_edges` row; `condition` is `always` (the default), `on_pass` or `on_fail`. At most one edge goes from one step to another, so `from` and `to` identify it: the stable edge id the backlog asks for. There is no `START` or `END`, which `step_edges` could not store: the entry is the step no edge points to. *2026-10-23:* commit `148d7a6` (2026-10-19) added a fallback for a flow where every step has an edge into it: the entry became the step only rework edges point to. That fallback is gone; such a flow now names its first step with a top-level `entry: <step>` (D1 in Run Flow Reference: Claude's call, open to Alex's review) |
+| Flow Design #24: type keys or file names | Type keys, each saved as `<type>.md`. Names cannot contain a dot today, so accepting a file name such as `result.json` later breaks no flow. *Correction, 2026-10-23:* this row also cited #25, which asks which artifact types are seeded. `run-flow` seeds none and has no known-types check: any lowercase name is a type (D9 in Run Flow Reference: Claude's call, open to Alex's review) |
 | 7.1 The unfinished "but …" | Unknown. The plan assumes it changes nothing below |
-| 7.2 Where flows live | Decide later. The engine takes a plain `FlowDef`. `run-flow` reads YAML and pins its loaded copy (`flow.json`) for the run, so `--resume` never re-reads the YAML |
+| 7.2 Where flows live | Decide later. The engine takes a plain `FlowDef`. `run-flow` reads YAML and pins its loaded copy (`flow.json`) for the run, so `--resume` never re-reads the YAML. *2026-10-23 (Alex's call):* a flow file is a reusable recipe. It holds no `folder` or `task`; each run gives them, `pnpm run-flow --folder <dir> --task <file> <flow.yaml>`, and `flow.json` pins them with the loaded copy, so `--resume` takes neither. See Run Flow Reference |
 | 7.3 CLI or worker first | CLI. The worker, queue and web app are out of scope |
 | 7.4 Provider per step | Yes: `adapter` per step, with a flow-level `defaults`. There are no capability-gap warnings, because both providers declare the same capability set today |
 | 7.5 Parallel steps, one folder | One folder. `write_roots` narrows a step's file edits, and `--max-runs 1` runs branches one at a time |
@@ -45,7 +47,7 @@ The analysis left these open (its §7 and §8). Each line below is **my call**, 
 | Execution #17: which runs are wasted | On rework: every run so far of the target and of every step downstream of it, including the failing run. Also interrupted runs, infra-failed runs, and a run replaced by a gate Retry |
 | Execution #18, Flow Design #20: downstream attempts | Reset. Downstream instances are recreated, and only the target's count carries |
 | Execution #64: approve over the agent's `fail` | The person wins: approve sets `pass`, reject sets `fail` |
-| Execution #5, #71: a silent approval step | Gated once. The approval gate's decision is the outcome |
+| Execution #71: a silent approval step | Gated once. The approval gate's decision is the outcome. *Correction, 2026-10-23:* this row also cited #5, which asks about a step with both an approval gate and unanswered questions. That cannot happen in `run-flow`: questions are answered live, and any still open are withdrawn when the run ends, before its gate opens. #5 stays open for the worker |
 | Execution #66: does `attempts` count the first run? | Yes, the first run sets 1. Escalate when `attempts + 1 > max_attempts` |
 | Execution #14, #16: a spent loop | Escalate, never fail on its own (D3). Retry does not reset the count, so the next failure escalates at once |
 | Execution #58, #67: stuck detection | A failing shell run whose fingerprint equals that step's previous *failed* run escalates (PRD wording), across instances |
@@ -54,15 +56,15 @@ The analysis left these open (its §7 and §8). Each line below is **my call**, 
 | Execution #49, #50: one branch blocked, cancel | A gate on one branch doesn't stop the others. There is no cancel: Ctrl+C pauses (resumable), and "Fail the flow" at a gate stops every live run |
 | Flow Design #19: join behind a conditional route | The join runs once nothing can still feed it, and `--check` warns about it |
 | Flow Design #22: back-edges as ancestry | No. Rework inputs are implicit |
-| Flow Design #23, Execution #65: entries and producers | Exactly one entry step (no route into it), and one producer per artifact type |
-| Flow Design #37: budget and turn caps | Optional. `--check` warns when an `ai` step has neither |
+| Flow Design #23, Execution #65: entries and producers | Exactly one entry step (no route into it), and one producer per artifact type. *2026-10-23:* the entry is the step a top-level `entry:` names, else the one step no route points to (D1 in Run Flow Reference: Claude's call, open to Alex's review). It replaces commit `148d7a6`'s fallback to the step only rework routes point to |
+| Flow Design #37: budget and turn caps | Optional. `--check` warns when an `ai` step has neither. *2026-10-23:* only when the flow has no ceiling (`budget_usd: 0`): `steps.<name>: no limits.max_turns or limits.budget_usd, and the flow has no budget; nothing stops a looping agent`. With a ceiling, each agent run may spend only what is left of it (Claude's call, open to Alex's review) |
 | **(Alex)** New: a `fail` that fires no route | Waits at a `verdict` gate, `failed, and no edge handles a failure`, offering Approve, Retry this step and Fail the flow. Other branches keep running, as at every gate. With this, only a person's Fail the flow ever fails a flow (D3) |
 | Reject with no `on_fail` route (PRD: "fails the task") | Not offered: a gate lists Reject only when its step has an `on_fail` route. Without one, Reject either repeated Fail the flow or, through an `always` route, carried the rejected work on to the next step |
 | New: exit 0 without a declared output | The step waits at a gate with `did not write: …`. It is never a silent pass |
 | New: infra failures | Not retried automatically. They wait at a gate: Retry keeps the attempt number, Fail ends the flow |
 | **(Alex)** Uncommitted changes at start | Refused unless `--allow-dirty`: changed tracked files in `folder` exit 2 before anything is created. Untracked files don't count, or the flow's own new files would block every run. `--resume` never checks. Not a git repository: a warning |
 | Where run state lives | `runs/` beside where the command runs, as for `run-agent`. When that is inside `folder`, ai steps' `guards.denyPaths` cover the run folder, and the host re-creates the folder before each state write, so a check running `git clean -fdx` cannot crash it |
-| Two hosts in one folder | Refused, by `<folder>/.flowboard/lock`. A lock whose pid is dead is replaced, with a warning that its agents may still be running: the adapters expose no pids to stop them |
+| Two hosts in one folder | Refused, by `<folder>/.flowboard/lock`. A lock whose pid is dead is replaced, with a warning that its agents may still be running: the adapters expose no pids to stop them. *Correction, 2026-10-23:* the adapters do expose pids (`AgentRun.pid`, a `Promise<number>`); `run-flow` did not record them. Each run log now has a `pid` line (the agent's process, or a check's process group id), with the process's start time. A run-flow that replaces a dead host's lock now stops what that host left running (Alex's call): the process, or a check's whole process group, of each run whose log has a `pid` line and no `result` line, with SIGTERM, then SIGKILL after up to 2 s. It signals a process only while its start time still matches the log, since the pid may be another process's by now (Claude's call, open to Alex's review). `--resume` does the same in its own run folder. See Run Flow Reference |
 | A step that hangs | `timeout_minutes` per step. Shell steps default to 30; ai steps have none, since their `limits` bound them. A timeout is an infra failure, so it opens a `run_failed` gate |
 | Secrets and shell steps | Variables named `*_KEY`, `*_TOKEN`, `*_SECRET` or `*_PASSWORD` are removed from shell steps' environment, and their names are printed at start. Agents keep the environment their provider needs; the sandbox is the real fix |
 | A failing check that prints nothing | Gets no fingerprint, so it never counts as stuck |
@@ -79,16 +81,17 @@ Each is small to add later, when its trigger arrives:
 - routing on labels;
 - `declare_artifact`;
 - a JSON outcome fallback;
-- prompt `{{placeholders}}`;
+- prompt `{{placeholders}}` (*2026-10-23:* still not filled in, but `--check` and a normal start now warn about a `{{…}}` in the task or a prompt file, which the agent would read as written);
 - memory (part 7);
-- a flow-wide budget ceiling (Flow Design #12);
-- capability-gap warnings;
+- a flow-wide budget ceiling (Flow Design #12; *2026-10-23:* built, Alex's call: the top-level `budget_usd`, the most the whole flow may spend, 0 for none, which `--budget-usd` overrides for a run or a resume. The key's name and that it is required, each agent run's cap at what is left, and pausing with exit 3 once it is spent are Claude's calls, open to Alex's review. See Run Flow Reference);
+- capability-gap warnings (*2026-10-23:* still none at `--check`, but an OpenCode run whose model has no price now says so when it ends: `-- <step>: no price for <model>: its cost shows as $0, and limits.budget_usd cannot stop it`);
 - a Mermaid overlay of a run's route;
 - cancel;
 - an `agent:` file key (use `system_prompt`);
 - prompt-injection scanning of hand-offs between steps;
-- stopping agents orphaned by `kill -9` (the adapters expose no pids, so the lock only warns);
-- counting untracked files as uncommitted changes.
+- stopping agents orphaned by `kill -9` (the adapters expose no pids, so the lock only warns. *Correction, 2026-10-23:* the adapters do expose pids, `AgentRun.pid`; what was left out is recording and stopping them. Checks outlive a `kill -9` of the host too. Each run log now has a `pid` line, for agents and checks, with the process's start time. Built since, Alex's call: a run-flow that finds a dead host's lock stops what that host's runs left running, and `--resume` does the same in its own run folder; a process is signalled only while its start time still matches its log (Claude's call, open to Alex's review). A second Ctrl+C now kills every run still going before it exits. See Run Flow Reference);
+- counting untracked files as uncommitted changes;
+- manual steps (*added 2026-10-23*, D11 in Run Flow Reference: Claude's call, open to Alex's review): blocked on Flow Design #39, which asks what a manual step does. The stand-in is a shell step `shell: "true"` with `gate: approval`.
 
 ## Global Constraints
 
@@ -100,14 +103,14 @@ Each is small to add later, when its trigger arrives:
   - commands run from `code/flowboard/`.
 - **Core purity:** `packages/core` imports no framework, database driver, CLI or `@flowboard/adapters`. `validateFlow` and `advance` do no I/O. `@flowboard/adapters` is not changed.
 - **No new dependencies.**
-- **Relative paths** (the YAML or run-folder argument, `folder`, `task`, `prompt`, `plugins`, `skills`, `runs/`) resolve against the folder the command was run from, `process.env.INIT_CWD ?? process.cwd()` (R2). `write_roots` resolve against `folder`.
+- **Relative paths** (the YAML or run-folder argument, `folder`, `task`, `prompt`, `plugins`, `skills`, `runs/`) resolve against the folder the command was run from, `process.env.INIT_CWD ?? process.cwd()` (R2). `write_roots` resolve against `folder`. *2026-10-23:* a flow file is a reusable recipe (Alex's call), so `folder` and `task` are the run's `--folder` and `--task`, which still resolve against the folder run-flow starts in. The recipe's own paths (`prompt`, `plugins` and `skills`, in a step or in `defaults`) now resolve against the flow file's folder, so a recipe and its prompts move together (Claude's call, open to Alex's review). `write_roots` must be relative paths inside the folder; an absolute path, `~` or `..` is refused.
 - **Names:** step names and artifact types match `/^[a-z0-9][a-z0-9_-]*$/`, because they become file names. Lowercase only: macOS treats `Plan.md` and `plan.md` as one file.
 - **Error line format:** `<yaml path as typed>: <field>: <message>`, as in `run-agent`.
 - **Exit codes:**
   - 0: the flow is done.
   - 1: the flow failed.
   - 2: bad usage, config or flow, uncommitted changes, or another run-flow in the folder; nothing launched.
-  - 3: paused at a gate with no terminal to answer it.
+  - 3: paused at a gate with no terminal to answer it. *2026-10-23:* also paused because the flow has spent its budget.
   - 130: stopped by Ctrl+C.
 - **Files:**
   - `runs/<stamp>-<flow name>/` holds `flow.json`, `state.json`, `flow.jsonl` (one line per engine transition), `<NNN>-<step>.jsonl` and `<NNN>-<step>.outcome.json`. `<NNN>` is the run id, zero-padded to 3; `<stamp>` is `run.ts`'s `stamp()`. A taken folder name gets `-2`, `-3`, ….
@@ -474,7 +477,7 @@ Rules. The flow is assumed valid, so add a `ponytail:` comment that `validateFlo
   - push `{ id, step, attempt: n, live: true, costUsd: 0, wasted: false }`;
   - the instance becomes `running`, with `attempts = n`, `inputs` and `note` set, and `gate` and `outcome` cleared;
   - emit `run`.
-- **First run of a step:** attempt 1, with `inputs = requires`. `start` begins the entry step (the step no route points to).
+- **First run of a step:** attempt 1, with `inputs = requires`. `start` begins the entry step (the step no route points to). *2026-10-23:* or the step a top-level `entry:` names, which a flow needs when every step has a route into it (see the decisions table).
 - **`run_ended` for run `r`:**
   1. If `r` is no longer live, set its `costUsd` and stop.
   2. Copy `costUsd`, `outcome`, `reason`, `error` and `fingerprint` into the record, and set `live = false`.
@@ -781,6 +784,8 @@ git commit -m "refactor(cli): run config checks usable from a parsed mapping"
   - `spec.guards.writeRoots` is the resolved `write_roots`, when set.
 - **Shell steps** ignore `defaults`. A launch key set on the step itself is an error.
 
+*2026-10-23:* a flow file is a reusable recipe (Alex's call). It has no `folder` or `task`, which each run gives as `--folder` and `--task`; a file that still has either is refused, `flow.yaml: folder: not in a flow file: a flow is a reusable recipe, and each run gives its folder with --folder` (and the same for `task` and `--task`). It needs a top-level `budget_usd`, the most the whole flow may spend, 0 for no ceiling (Alex's call; the key's name and that it is required are Claude's, open to Alex's review). Errors about a run's inputs name the flag: `flow.yaml: --folder: not a directory: <abs>`. The flow files in this plan are kept as written; the tests' copies drop `folder:` and `task:`, add `budget_usd:` and run with `--folder proj --task task.md`.
+
 Errors, in this order. After any `(root)` or schema error, no other checks run; bad names and `START`/`END` count as schema errors. The per-step run checks (the last row) run only when `folder` and `task` passed:
 
 | Line after `<yaml>: ` | When |
@@ -809,6 +814,13 @@ Warnings (`FlowConfig.warnings`, no file prefix):
   usage: pnpm run-flow [--check | --mermaid] [--max-runs <n>] [--allow-dirty] <flow.yaml>
          pnpm run-flow --resume <run folder> [--max-runs <n>]
   ```
+  *2026-10-23:* the usage is now:
+  ```
+  usage: pnpm run-flow --folder <dir> --task <file> [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] <flow.yaml>
+         pnpm run-flow --check | --mermaid [--folder <dir> --task <file>] <flow.yaml>
+         pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>]
+  ```
+  A run without both `--folder` and `--task`, `--check` or `--mermaid` with only one of them, or a resume with either prints it and exits 2. Without them, `--check` checks the recipe on its own.
 - **Without `--check`, `--mermaid` or `--resume`:** this task prints `run-flow: running flows comes in Task 9` and exits 2. Task 9 replaces it.
 - **`--check`:** prints warnings as `-- warning: <line>`, then `-- flow ok: <n> steps`, and exits 0. Errors go to stderr, with exit 2.
 - **`--mermaid`:** prints `toMermaid(flow)` and exits 0.
@@ -871,6 +883,8 @@ test('a flow file becomes a FlowDef plus one launch config per ai step', () => {
   assert.deepEqual(review.spec.limits, { maxTurns: 30 });
 });
 ```
+
+*2026-10-23:* this fixture no longer loads. `max_attempts` on a step that no rework route leads back to is now an error, `flow.yaml: steps.review.max_attempts: no rework route leads back to review, so nothing reads it`, since only rework reads it. The test fixture (`packages/cli/test/fixtures/flow.ts`) moves `max_attempts: 2` to `implement`, the rework target, and gives `review` `produces: [review_notes]`, because `--check` now also warns about a rework route from a step that produces nothing. It also drops `folder:` and `task:` and adds `budget_usd: 0`, and its tests load it with the folder `proj` and the task `task.md` (see the note under *The flow file*).
 
 Error tests. Each builds a flow from `DELIVERY` with one change and asserts `r.errors` includes the line (`deepEqual` where it is the only line):
 - an unknown step key `promt` gives `flow.yaml: steps.plan.promt: unknown key`;
@@ -1217,6 +1231,8 @@ How the host behaves:
    - Print `-- flow <done|failed|paused>: <runs> runs, $<spent> spent, $<wasted> wasted`.
    - When paused, also print `-- waiting for a decision: <steps>` and `-- continue with: pnpm run-flow --resume <run folder>`.
 10. **A host error:** write one `stopAll()` that stops launching, stops every live run, and feeds each one's end with `interrupted: true`. An exception anywhere in the loop calls it, saves the state, prints the `--resume` hint and rethrows, so Node prints the error and exits 1.
+
+*2026-10-23:* Alex's calls changed some of these rules. The start line ends with the ceiling, `, a budget of $5.00` or `, no budget ceiling`, and with a ceiling the summary reads `-- flow done: 3 runs, $0.30 of $1.00 spent, $0.00 wasted`. When the flow's spending reaches its ceiling and the flow has not ended, the host stops the live runs (interrupted and wasted; queued ones are `not launched`) and pauses with exit 3, printing `-- the budget is spent: $0.20 of $0.15` and `-- continue with: pnpm run-flow --resume <run folder> --budget-usd <more>`; `--resume` without a larger budget refuses. A run-flow that replaces a dead host's lock then stops what that host's runs left running (see *Two hosts in one folder* in the decisions table). See Run Flow Reference.
 
 - [ ] **Step 1: Write the failing tests**
 

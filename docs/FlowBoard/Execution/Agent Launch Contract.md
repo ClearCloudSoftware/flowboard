@@ -65,6 +65,8 @@ export interface RunResult {
 > - The adapter, not the runner, pre-approves each injected tool server, with or without an allow list: `mcp__flowboard__*` on Claude, `flowboard_*` on OpenCode. An explicit deny still wins (2026-10-22).
 > - `model` has no shared logical vocabulary: Claude takes an alias or model id as is, and OpenCode a `provider/model` id ([[Agent Providers Open Questions]] #11). See [[Run Spec]].
 
+As built in run-flow (2026-10-23), each agent step's `RunSpec` is the one `run-agent` builds from the step's keys: the prompt ([[Prompt Assembly]]), model, effort, permission mode, system prompt, plugins and skills, limits and guards, with `cwd` set to the folder the run names with `--folder`. The host adds the step's inputs and outputs as structured paths, and the `flowboard` tool server with `FLOWBOARD_ASK_SOCKET` and, where the step's routes or gate read the verdict, `FLOWBOARD_OUTCOME_FILE`. It also denies Claude's own `AskUserQuestion`, adds the run's artifacts folder to the write roots and, when the flow has a budget, lowers `limits.maxBudgetUsd` to what is left of it. `exec` is left unset, so both adapters spawn on the host. See [[Run Flow Reference]].
+
 ## Capabilities the engine and runner check
 
 *"The engine and flow editor query `capabilities` before using a knob"* (`01-ports.md`):
@@ -81,6 +83,8 @@ export interface RunResult {
 | `permission_modes` | none stated. The flag means *"supports a bypass/ask permission mode"* (`agent-provider.ts`); the permission gate needs it ([[Run Guardrails At Launch]]) |
 
 The first five rows are `01-ports.md`'s list. `sessions`, `plugins` and `partial_stream` have no stated fallback either. Per-flag detail is in [[Provider Capabilities]] and [[Capability Negotiation]].
+
+As built in run-flow (2026-10-23), nothing reads `capabilities`: the terminal host assumes `mcp_tools`. Every agent step gets the `flowboard` server, and `set_outcome` has no artifact-file or JSON fallback. That holds because both adapters a flow file can name, `claude-code` and `opencode`, declare all eleven capabilities; Replay, which lacks `mcp_tools`, cannot be named. Capability-gap warnings and a JSON outcome fallback are on the run-flow plan's *Left out* list, so a provider without `mcp_tools` needs that check first.
 
 ## The Claude adapter's command
 
@@ -118,7 +122,7 @@ Seven kinds in the design (`01-ports.md`, the reference `events.ts`). Each carri
 > [!warning] The shipped code differs
 > - `core/src/ports/events.ts` (2026-10-18) has eight kinds: `usage` carries the run's running totals mid-run, with no cost on Claude until the result. Any event may carry `raw`, the native message, already parsed. Tool events keep each provider's own tool names and inputs. There is no `v` yet.
 > - Nothing parses stdout lines: the Claude adapter reads the Agent SDK's typed messages, and OpenCode its server's SSE events. The adapters build `summary`, on `tool_use` only.
-> - `run_events` and `seq` wait for the runner, which is not built; `run-agent` appends every event to `runs/<stamp>-<adapter>.jsonl`. See [[Normalized Event Envelope]].
+> - `run_events` and `seq` wait for the runner, which is not built; `run-agent` appends every event to `runs/<stamp>-<adapter>.jsonl`, and run-flow to each run's log, `<NNN>-<step>.jsonl` in its run folder. See [[Normalized Event Envelope]].
 
 ## Where the sources disagree
 

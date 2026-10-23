@@ -28,6 +28,9 @@ flowchart TD
 
 *Proposal* for "reachable": a `pending` instance whose join could still be satisfied by some active or pending upstream instance. No source defines it ([[Execution Open Questions]] #10). Nor does any source define "active"; the diagram reads it as `running`, `awaiting_answers` or `awaiting_approval` (inference).
 
+> [!check] Answered by run-flow, 2026-10-23
+> A pending step starts as soon as no live step is, or can still reach, one of its forward upstreams, so no pending step is ever left behind and "reachable" needs no test. The flow is done when no step is `pending`, `running` or at a gate (`awaiting_approval`). A join behind a route that never fires runs rather than being passed over (the run-flow plan, Flow Design #19). See [[Run Flow Reference]].
+
 ## Failed
 
 | Trigger | Source |
@@ -35,6 +38,10 @@ flowchart TD
 | Reject with no `on_fail` edge | *"reject with no `on_fail` edge fails the task"* (`02` §3) |
 | Fail task at an escalation gate | *"**Fail task** ends it."* (PRD §8) |
 | A missing row | *"Guard `getInstance()!` / `defs.find()!` so a missing row fails the task cleanly instead of throwing."* (`02` §3; backlog 5.2 adds *"three times"*) |
+
+As built in run-flow (2026-10-23), only a person's **Fail the flow** fails a flow. Reject is offered only when the step has an `on_fail` route (the run-flow plan), and a `fail` that no route handles waits at a gate offering Approve, Retry this step and Fail the flow (Alex's call in the run-flow plan).
+
+The missing-row guard is not built. `advance` assumes a valid flow, which `validateFlow` checked first, and throws on a state that names a step the flow lacks. run-flow reaches that only through a hand-edited `state.json` or `flow.json`, and treats it as an error of its own: it stops every run, saves the state, prints `-- continue with: pnpm run-flow --resume <run folder>` and exits 1. The worker must check its rows before it calls `advance`, or have `advance` fail the flow cleanly.
 
 A spent loop does **not** fail the task under PRD §8; see [[Loop Guard And Escalation]] for the sources that still say it does.
 
@@ -46,6 +53,8 @@ The bug the done rule fixes: a conditional edge that never fires left the task i
 > A step fans out to branches A and B, which meet again at join C. A finishes with `pass`, but its only route onward is `on_fail`, so nothing fires from A. B is still running, so the task cannot be done at that moment. B then finishes and its edge to C fires. Now nothing is active, but an edge *did* fire, so the old rule (*"nothing active and no edge fired"*) says "not done". If C waits for A's route as well, C never starts, and the task sits in `running` for ever.
 >
 > Under the fixed rule, C is not a *reachable* pending target, so the task resolves. Whether it should end `done` or `failed` is not stated. The example depends on a join that waits per incoming route, which PRD §8's instance-based wording does not clearly require ([[Execution Open Questions]] #4, #10).
+
+As built in run-flow (2026-10-23), C runs. It starts once nothing live can still feed it, without A's input, and the flow ends `done` after it. `--check` warns about it beforehand: `steps.c: waits for "a", whose route here is conditional; if it does not fire, c runs without it` (the run-flow plan, Flow Design #19).
 
 ## After done
 

@@ -34,10 +34,21 @@ From PRD §11 and backlog 2.1. No source gives the order of these steps. The int
 
 Acceptance agrees: PRD §14 M2, *"Promote Backlog → Todo creates a worktree. No agents run yet."*; PRD §16, *"Promoting a task creates a git worktree on its own branch"*; backlog 10.1, *"Promote creates worktree + branch."*
 
+As built in run-flow (2026-10-23), there is one move, `pnpm run-flow --folder <dir> --task <file> <flow.yaml>`, and no worktree or branch: every step works in place in the folder the run names (the run-flow plan; worktrees are on its *Left out* list). The flow file is a reusable recipe with no folder or task of its own; each run gives both (Alex's call, 2026-10-23). At start the host:
+
+1. takes the folder's lock, `<folder>/.flowboard/lock`, first, so a second `run-flow` there is told `<flow.yaml>: --folder: another run-flow (pid <n>) is working here on <run folder>; if it is not, delete <lock>` rather than about the first one's edits; a lock whose run-flow has died is replaced, and what that one left running is stopped ([[Worker Lifecycle]]);
+2. refuses a folder whose tracked files have uncommitted changes, unless `--allow-dirty` is passed (Alex's call); untracked files don't count, a folder outside git gets a warning, and `--resume` never checks;
+3. adds `.flowboard/` to the repository's local exclude file, as step 3 above does for `.vibe-worktrees/`, so a `git add -A` during the flow leaves the host's files out;
+4. claims a run folder, `runs/<YYYY-MM-DDTHH-MM-SS>-<flow name>/`, and pins the loaded flow there as `flow.json`, with the run's folder and the flow's budget; the artifacts go to `<folder>/.flowboard/<run folder name>/`. It then prints `-- flow <name>: <n> steps in <folder>, a budget of $5.00` (or `…, no budget ceiling`) and `-- run folder <run folder>`.
+
+See [[Run Flow Reference]] and [[Execution Storage]].
+
 > [!question] Which process runs `git worktree add`?
 > PRD §12 puts *"create worktree"* in the promote route, in `apps/web`. The drawio draws the *Workspace manager* (*"git worktree add / remove per task"*) inside `apps/worker`, and `apps/web` as *"thin: validates, calls core, enqueues; never spawns agents"*. No job kind creates a workspace (PRD §5 `jobs.kind`; drawio *Job loop*). PRD §2 bans only *"a long-lived child process"* from route handlers, so a short `git` call in the route is allowed by the letter. See [[Execution Open Questions]] #69, [[Workspaces Open Questions]] #2 and [[Job Queue]].
 
 `tasks.capability_pins` is *"set when the task starts"* (PRD §5). Whether that is promote or Start is not stated.
+
+As built in run-flow (2026-10-23), `flow.json` pins the flow, the task text and each step's prompt text when the flow starts, and `--resume` never reads the YAML again (the run-flow plan). Skills and plugins are not pinned: `skills:` folders are copied afresh at every launch and `plugins:` folders mounted as they stand, so a later attempt, or a `--resume`, uses what they hold by then. Pinning them waits for the capability library's pins (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
 > [!warning] Pinned at promotion, or at start?
 > The sources split on when the flow is pinned and the workspace made:
@@ -68,6 +79,9 @@ No source spells out the steps. From the drawio *Life of one step*:
 3. Enqueue one `start_run` job per entry instance.
 
 How many entry steps a flow may have is not settled. Backlog 5.1's validation lists *"exactly one entry"*, and backlog 8.2's inspector has a field *"entry"*, which supports reading it as one entry step; [[Flow Design Open Questions]] #23 reads it so. `02` §2 states a similar rule as *"exactly one producer"*, which allows the other reading, one producer per `requires` entry ([[Execution Open Questions]] #65). The seeded flow starts at `research`. See [[Step Definitions]].
+
+> [!check] Answered by run-flow, 2026-10-23
+> One entry step and one producer per artifact type (the run-flow plan). The entry is the step no route points to (Alex's call) or, when every step has a route into it, the step a top-level `entry:` names (Claude's call, 2026-10-23, open to Alex's review); several steps with no route in are an error. The engine starts a flow with one run of its entry step. See [[Run Flow Reference]].
 
 ## Going back
 

@@ -17,6 +17,16 @@ What the engine does after a run finishes. The rules are PRD §8; the code lives
 
 "Succeeds" means the process exited 0 (*"On exit code 0, set the run to `succeeded`, scan for artifacts, then apply the advancement rules in §8"*, PRD §7). A shell step with a non-zero exit also follows its edges (PRD §7). See [[Run Outcomes]].
 
+As built in run-flow (2026-10-23), a run that ends with an error never reaches these rules: an agent's error or non-zero exit, a timeout, or a shell exit of 126 or 127 or a death by a signal waits at a *run failed* gate ([[Infra Retries]]). Any other run is checked in this order as it ends (`core/src/flow/engine.ts`):
+
+1. An output the run did not write: a gate, `did not write: <types>`.
+2. An approval step: a gate, `approval needed`, plus `; it reported <outcome>` and `: <reason>` when the step reported them. So the PRD's rule 1 holds even when the step reported an outcome.
+3. A step with an `on_pass` or `on_fail` route and no outcome: a gate, `no outcome reported`.
+4. A `fail` that no route handles (no `always` or `on_fail` route): a gate, `failed, and no edge handles a failure` (Alex's call in the run-flow plan).
+5. Otherwise the step is `done` and its routes fire.
+
+Each of these gates opens straight from `running`, never from `done`. The PRD's rule 2 has no counterpart: an agent's questions are answered while its run waits, since parking is on the run-flow plan's Left out list.
+
 ## `advance_task`
 
 *"`advance_task` resolves outgoing edges from the completed step definition:"* (PRD §8)
@@ -34,6 +44,8 @@ Then:
 - **Rework.** *"an `on_fail` edge pointing at an earlier step increments that step instance's `attempts` and creates a new run."*
 
 Details: [[Fan-Out And Join]], [[Rework Loop]].
+
+As built in run-flow (2026-10-23), a step fires its `always` routes plus the routes matching its outcome, and each target starts once nothing live can still feed it. A rework route is an `on_fail` route to the step itself or to an ancestor along `always` and `on_pass` routes (the run-flow plan). It must be its step's only `on_fail` route; `validateFlow` refuses a step that would also take another: `steps.check: on a failure it would rework "impl" and also take the on_fail route to "notify"; a rework route must be its step's only on_fail route`. The rework fires after the `always` routes fired with it, and its reset removes their targets below the rework target, so the order the edges are written in changes nothing (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
 ```mermaid
 flowchart TD
@@ -65,6 +77,8 @@ Assembled from PRD §8, with the done rule from `02` §3 (see [[Task Completion]
 
 The drawio *Flow engine* card in the worker: *"advance_task: always / on_pass / on_fail · fan-out + join · approval and answer gates · no outcome → gate, never pass"*.
 
+As built in run-flow (2026-10-23), the person wins: Approve sets `pass` and Reject sets `fail`, whatever the agent reported (the run-flow plan). Reject is offered only when the step has an `on_fail` route, so it never fails a flow; only a person's *Fail the flow* does. A Reject is a `fail`, so it also fires the step's `always` routes; a route a Reject must not take is written `on_pass`. A note typed at the gate goes to the runs the decision starts: Approve's to the steps its `on_pass` and `always` routes start, Reject's to the rework target, or to the targets of the forward routes it fires. These two rules are Claude's calls (2026-10-23, open to Alex's review).
+
 ## The feature map's version
 
 §4 *The engine*: *"**Decide the next step** — When a step finishes, the engine reads the recipe and starts whatever comes next."*; *"**Follow pass/fail paths** — If a step reports success or failure, the engine takes the matching route (a passed review moves on; a failed one loops back)."*; *"**Silence isn't success** — If an agent finishes without saying whether it passed, the engine doesn't assume it did. The step stops and asks you."*
@@ -73,10 +87,10 @@ The monitor guide's *"four handoff rules"* (Advance, Fan out, Join, Loop back) r
 
 ## Gaps
 
-- **Approval and questions together.** A step with `advance_mode='approval'` that also has unanswered questions hits rule 1 first and never reaches rule 2. Whether that is intended is not stated ([[Execution Open Questions]] #5).
-- **Approval on a failed outcome.** On an approval step whose agent set `fail`, the run still "succeeds", so rule 1 parks it for approval. Under `02` §3 Approve then overrides to pass; the PRD does not say, and the backlog calls the override a deviation ([[Execution Open Questions]] #64). The screens should show the agent's verdict at the gate.
-- **A silent approval step.** Because rule 1 comes first, a run on an approval step that sets no outcome waits first at an ordinary gate. If Approve writes `pass` (`02` §3 *"Approve overrides…"*, feature map §4 *"Your call wins"*), `advance_task` then finds an outcome and the step never shows *"no outcome reported"*. Read literally, PRD §8 says only that the step *"advances only when I click Approve"*; the no-outcome check then runs inside `advance_task` and parks the same step a second time, now with "no outcome reported". So the PRD alone gates a silent approval step twice ([[Execution Open Questions]] #64, #71). The `review` step in the seeded flow is such a step ([[Seeded Flow Execution]]).
-- **`manual` steps.** PRD §5 allows `kind = 'manual'`; no rule says what the engine does when it reaches one. See [[Execution Open Questions]] #6.
+- **Approval and questions together.** A step with `advance_mode='approval'` that also has unanswered questions hits rule 1 first and never reaches rule 2. Whether that is intended is not stated ([[Execution Open Questions]] #5). As built in run-flow (2026-10-23), the questions come first: they are answered while the run waits, and the approval gate opens when the run ends. The worker, which parks, still has to choose.
+- **Approval on a failed outcome.** On an approval step whose agent set `fail`, the run still "succeeds", so rule 1 parks it for approval. Under `02` §3 Approve then overrides to pass; the PRD does not say, and the backlog calls the override a deviation ([[Execution Open Questions]] #64). The screens should show the agent's verdict at the gate. As built in run-flow (2026-10-23), the gate shows it (`approval needed; it reported fail: <reason>`), and Approve passes the step over it (the run-flow plan, Execution #64).
+- **A silent approval step.** Because rule 1 comes first, a run on an approval step that sets no outcome waits first at an ordinary gate. If Approve writes `pass` (`02` §3 *"Approve overrides…"*, feature map §4 *"Your call wins"*), `advance_task` then finds an outcome and the step never shows *"no outcome reported"*. Read literally, PRD §8 says only that the step *"advances only when I click Approve"*; the no-outcome check then runs inside `advance_task` and parks the same step a second time, now with "no outcome reported". So the PRD alone gates a silent approval step twice ([[Execution Open Questions]] #64, #71). The `review` step in the seeded flow is such a step ([[Seeded Flow Execution]]). As built in run-flow (2026-10-23), it is gated once: its gate reads `approval needed`, and the decision there is the outcome (the run-flow plan, Execution #5, #71).
+- **`manual` steps.** PRD §5 allows `kind = 'manual'`; no rule says what the engine does when it reaches one. See [[Execution Open Questions]] #6. As built in run-flow (2026-10-23), there are none until [[Flow Design Open Questions]] #39 is settled; the stand-in is a shell step `shell: "true"` with `gate: approval` (Claude's call, 2026-10-23, open to Alex's review).
 
 ## Related
 

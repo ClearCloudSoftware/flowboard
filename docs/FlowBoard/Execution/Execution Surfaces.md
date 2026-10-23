@@ -36,6 +36,11 @@ The step states the engine writes reach the screens as marks. The monitor guide'
 
 Transitions the guide draws between them: *"its dependencies are done"* (pending → queued), *"a worker slot frees up"* (queued → running), *"the agent finished its job"*, *"it asks you something"*, *"it errored, or you stopped it"*, *"you answered"*, *"Retry as-is · Allow host & retry"*, *"…if the step is a gate"*, *"Send back"*, *"Approve → the next step queues"*, *"build re-queues with your reason"*.
 
+> [!check] Answered by run-flow, 2026-10-23
+> Queued is on the run, not the step: a run is `queued: true` in `state.json` from the engine's run command until the host reports it launched, which behind `--max-runs` means *"ready, no free worker"*; its step is already `running`. A run cut off while still queued is recorded `error: 'not launched'`, not wasted, the summary's run count leaves it out, and `--resume` starts it (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
+
+As built in run-flow (2026-10-23), two other marks map as follows. *asking* has no state of its own: the step stays `running` while its agent's question waits in the terminal, and the step's `timeout_minutes` clock stops meanwhile (Claude's call, open to Alex's review). *failed* is a step at a *run failed* gate, `awaiting_approval` with gate kind `run_failed`, whose run counts as wasted; a step is `failed` only when a person fails the flow.
+
 Full mark tables: [[Flow Bar And Step States]], [[Task Status Icons]], [[Task Detail Marks]].
 
 ## The four human decisions

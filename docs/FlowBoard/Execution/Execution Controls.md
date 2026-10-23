@@ -7,6 +7,8 @@ module: Execution
 
 Every control in the sources that starts, stops or redirects execution, grouped by what it does to the engine. Screen-by-screen control lists live with each screen: [[Monitor Controls]], [[Task Detail Controls]], [[Human In The Loop Controls]], [[Flow Design Controls]].
 
+As built in run-flow (2026-10-23), the terminal is the only screen. `pnpm run-flow --folder <dir> --task <file> <flow.yaml>` starts a flow, and `--budget-usd <n>` overrides its budget. A gate asks for a decision, `Approve (pass)`, `Reject (fail)`, `Retry this step` or `Fail the flow`, with Reject offered only when the step has an `on_fail` route and only Retry and Fail at an escalation or a *run failed* gate. Then it asks `Note for the next run (optional)`, which goes to the runs the decision starts (Claude's call, 2026-10-23, open to Alex's review). A *run failed* gate's `See:` line names the run's log. A spent loop escalates and never fails the flow by itself. Ctrl+C stops the flow so `--resume` can continue it. Once the flow has spent its budget, run-flow stops the runs the same way and pauses the flow, and `--resume <run folder> --budget-usd <more>` continues it. There is no Pause, Cancel or Stop for one run. See [[Run Flow Reference#Gates and their choices]].
+
 ## Start and go back
 
 | Control | Where | Key | Engine effect | Source |

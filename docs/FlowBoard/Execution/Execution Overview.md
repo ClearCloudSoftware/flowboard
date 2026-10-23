@@ -48,6 +48,8 @@ Edges as drawn on the drawio *Functional components* page. Inside, three archite
 | 6 | Runner / execution host | *"the generic execution loop — build `RunSpec`, `launch()` via the port, tee events to `run_events` + the SSE emitter, scan artifacts on completion, apply the engine's advancement rules"* (`03` §6) |
 | 7 | Job queue & worker lifecycle | *"SQLite-as-queue with leasing; restart recovery; concurrency cap `VIBE_MAX_RUNS`"* (`03` §7) |
 
+As built in run-flow (2026-10-23), component 3 is `core/src/flow/`: one pure function from the flow, its state and an event to the next state and the commands a host carries out. The run-flow host, a terminal command, stands in for components 6 and 7 in one process and one folder, with `--max-runs` as its cap and `--resume` as its restart recovery. See [[Run Flow Reference]].
+
 On the drawio *Logical components* page these appear as **Flow engine**, **Job queue** (*"enqueue / claim"*) and **Run orchestrator** (*"spawns run, parses stream-json, emits events"*), wired: engine → queue (*"enqueue step"*), queue → orchestrator (*"claim"*), orchestrator → engine (*"step done → advance"*), orchestrator → **Task & run state** (*"events, cost"*). The orchestrator also has unlabelled edges to the AgentProvider, Workspace and ArtifactStore ports, and one to the MemoryStore port labelled *"recall / commit (host-side)"*.
 
 > [!warning] The shipped code differs
@@ -67,6 +69,11 @@ On the drawio *Logical components* page these appear as **Flow engine**, **Job q
 | Escalate, don't fail | *"Escalate, don't fail, when a loop is spent or stuck."* (PRD §8) |
 | The board is a projection | *"The board is a projection, not the model."* (PRD §4) |
 | Sensors before autonomy | *"Check steps run real commands. The exit code is the verdict, and the raw output feeds the next attempt."* (drawio *Harness architecture*, concept 4) |
+
+As built in run-flow (2026-10-23), two of these play out as follows:
+
+- **Work, not weather.** Nothing below the engine retries, so the engine itself receives infra failures. An agent error, a nonzero exit, a limit hit, a timeout or a shell step's setup failure reaches it as the run's `error`, and any outcome the agent reported is dropped. The engine marks the run wasted and opens a *run failed* gate, where Retry keeps the attempt number, so `max_attempts` still counts only work (the run-flow plan).
+- **Sensors before autonomy.** A check's output feeds the next attempt only as its `produces` artifact, which a rework run reads. A check that declares none keeps its output only in its run log, and `--check` warns about a rework route from it: `steps.check: reworks "impl" on a failure but produces nothing, so impl runs again without seeing why`.
 
 The drawio *Harness architecture* page names the execution rules as three harness concepts:
 

@@ -70,9 +70,13 @@ RETURNING *;
 
 *"**Do the right amount at once** — A cap on how many agents run at the same time, so your machine isn't overwhelmed."* (feature map §8). The cap is `VIBE_MAX_RUNS` (backlog 3.1, `03` §7, drawio *Job loop*). No source gives its default, or says whether it is an environment variable or a setting; the monitor mockup uses `CAP = 4` and its guide says *"raise the worker cap"* without saying where. See [[Worker Slots]], [[Environment And Configuration]], [[Execution Open Questions]] #36 and [[Monitor Open Questions]] #20.
 
+As built in run-flow (2026-10-23), there is no `jobs` table. The host keeps the engine's run commands in memory and launches them in order, at most `--max-runs` at once, shell runs included; there is no cap by default. `flow.json` pins the cap as `maxRuns` (`null` for none), and `--resume` keeps it unless `--max-runs` is given again. A run waiting for a slot is `queued: true` in `state.json`; one cut off before it launched is recorded `error: 'not launched'`, not wasted, and `--resume` starts it (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
+
 ## Known bug
 
 Backlog 3.1 (**BUG**): *"`start_run` must not be completed before the child is spawned; a crash mid‑spawn currently loses the run."* `03` §7 repeats it.
+
+As built in run-flow (2026-10-23), a crash loses no run that way: the engine records a run, live and `queued`, before the host launches it, and `--resume` starts every step whose run never ended.
 
 ## Gaps
 

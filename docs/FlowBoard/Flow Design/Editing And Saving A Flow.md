@@ -53,6 +53,8 @@ $('#save').disabled = !dirty || !!preview || problems.length > 0;
 
 The label always reads `Save as v(current + 1)`.
 
+As built in run-flow (2026-10-23), there is no editor and no Save: a flow file is edited by hand, and `pnpm run-flow --check <flow.yaml>` plays the validation strip, checking the recipe on its own, with no folder or task. It prints `-- flow ok: N steps, starting at <entry>`, or the problems with exit 2. See [[Flow Validation]].
+
 ## What saving does
 
 - Creates a new version; never overwrites (*"Saving does not overwrite v4 — it creates v5 and points your project at it."*).

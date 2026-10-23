@@ -44,8 +44,19 @@ flowchart LR
 
 The milestone proof for M5: *"a deliberately failing test in the scratch repo sends the seeded flow from `check` back to `implement` with the raw log, and a run that sets no outcome stops at a gate instead of passing."* (PRD §14)
 
+As built in run-flow (2026-10-23), the nine steps, written as a flow file with the edges above, pass `--check` (`-- flow ok: 9 steps, starting at research`), and `--mermaid` draws both loops as rework routes. A run-flow version differs from the table in five ways:
+
+- **Keys only.** A step's key is its only name; `name` and `label` are `unknown key`, so *Grill me* and *Lint & test* fit only in YAML comments (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
+- **No agent rows.** A step cannot name an agent (`steps.research.agent: unknown key`; an `agent:` file key is on the run-flow plan's Left out list), so each step carries its agent's text in `system_prompt` and its tool limits in `permissions`. A read-only `scout` still needs a tool that writes its artifact: an output counts only if this run wrote it, so a scout limited to `Read` and `Grep` stops at `did not write: research_brief`. `write_roots: []` keeps its edits to its artifacts folder.
+- **`check` is `shell: <command>`.** There is no project `check_command`.
+- **Models are native ids.** `sonnet`, `opus` and `haiku` work on Claude Code; an OpenCode step needs `provider/model` (also Claude's call).
+- **Skills are paths.** `skill: /plugin:name`, or `/name` from `skills:` folders, read at every launch rather than pinned (also Claude's call).
+
 > [!note] Validation quirk
 > `check` requires nothing but runs after `implement` and `tests`. It reads the worktree, not an artifact. A contract-only validator cannot see that dependency ([[Flow Design Open Questions]] #33).
+
+> [!check] Answered by run-flow, 2026-10-23
+> Validation ignores dependencies the contract cannot see; only `requires` is checked (Claude's call, 2026-10-23, open to Alex's review). `check` reads the folder as `implement` and `tests` left it, and their outputs through `$FLOWBOARD_ARTIFACTS`. See [[Run Flow Reference#Rules this command settles]].
 
 ## 2. Backlog flow templates
 
@@ -78,6 +89,8 @@ Named *Software delivery @core v4* in the flow-designer, task-detail and capabil
 | summarize | scribe | haiku | low | |
 
 Edges: research → plan → build ∥ tests → review → summarize, and review → build on fail. No check step. The flow-designer mockup opens it with a seventh, borrowed `threat-model` step. The monitor shows it as `research→plan→build∥tests→review→summarize`.
+
+As a run-flow flow file (2026-10-23) it passes `--check` once its file names become type keys (`brief.md` → `brief`), since a dot is refused: `steps.research.produces.0: name may only use lowercase letters, digits, - and _`.
 
 ## 4. The mockup library
 

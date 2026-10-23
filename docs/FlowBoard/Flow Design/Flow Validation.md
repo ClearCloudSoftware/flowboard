@@ -24,7 +24,36 @@ The flow-designer guide's lede: *"the screen refuses to save a recipe that can't
 | **Hooks missing** | *"a provider without them relies on the sandbox alone, and the flow editor says so"* | Notice | PRD §7 (`tool_hooks`) | — |
 | **Unattended and unsandboxed** | No gate and sandbox `none` | Flag only | flow-designer mockup | ✓ (inspector only) |
 
+As built in run-flow (2026-10-23), `pnpm run-flow --check <flow.yaml>` runs the checks below on a flow file, a recipe checked on its own; given `--folder <dir> --task <file>` too, it also checks the run's inputs, as every start does. Errors print as `<yaml path>: <field>: <message>` and exit 2; warnings print as `-- warning: <field>: <message>` and stop nothing. A flow that passes prints `-- flow ok: 9 steps, starting at research`.
+
+| Check | run-flow message | Severity |
+|---|---|---|
+| A recipe, not a run | `folder: not in a flow file: a flow is a reusable recipe, and each run gives its folder with --folder`, and the same for `task` | Error |
+| A budget for the whole flow | `budget_usd: required: the most the whole flow may spend, in dollars; 0 for no ceiling`; `budget_usd: must be 0 or more; 0 means no ceiling` | Error |
+| The run's inputs (with `--folder` and `--task`) | `--folder: not a directory: <path>`; `--task: not a file: <path>`; `--task: file is empty` | Error |
+| Inputs are produced upstream | `steps.plan: requires "brief", and no step before it produces that`. *Before* means along forward routes | Error |
+| One producer per type | `steps.b: produces "plan", which "a" also produces` | Error |
+| Exactly one entry | `steps: no entry step: every step has a route into it; name the first one with entry:`. Several steps with no route in get one line each: `steps.a: no route leads here, nor to "b"; a flow starts at one step, so route the others in`. A bad name: `entry: unknown step "x"` | Error |
+| Every step is reachable | `steps.notes: no route leads here from the entry step "impl"`, followed along every route from the entry. A stray step beside a loop back to the first step is the only step with no route in, so it becomes the entry and the loop's steps are reported instead, until `entry:` names the first step | Error |
+| Forward routes don't loop | `steps: routes loop without an on_fail route back: build, check, report` | Error |
+| One rework per failure | `steps.check: on a failure it would rework "impl" and also take the on_fail route to "notify"; a rework route must be its step's only on_fail route` | Error |
+| `max_attempts` is read | `steps.review.max_attempts: no rework route leads back to review, so nothing reads it` | Error |
+| Edges | `edges.2: unknown step "x"`; `edges.3: repeats the edge a → b; keep one and set its condition` | Error |
+| Names | `steps.Plan: name may only use lowercase letters, digits, - and _`; `steps.007: YAML reads this name as a number; quote it: "007"` | Error |
+| Agent step | `steps.a: an ai step needs prompt, skill or system_prompt`, then the step's `run-agent` checks (`steps.a.model: required`) | Error |
+| Write roots | `steps.a.write_roots.0: must be a path inside the folder, relative to it` | Error |
+| Join behind a conditional route | `steps.d: waits for "a", whose route here is conditional; if it does not fire, d runs without it`; further up, `steps.d: waits for "c", which runs only if the conditional route a → b fires; if it does not, d runs without it` | Warning |
+| Rework with nothing to read | `steps.check: reworks "impl" on a failure but produces nothing, so impl runs again without seeing why` | Warning |
+| No turn or budget cap | `steps.a: no limits.max_turns or limits.budget_usd, and the flow has no budget; nothing stops a looping agent`, only when `budget_usd` is `0` | Warning |
+| Placeholders | `--task: {{…}} is not filled in; the agent reads it as written` (with `--task`), or the same on `steps.x.prompt` | Warning |
+| Unrestricted shell | `steps.a: unrestricted shell: commands can write outside <folder>`, or `outside the folder` for a recipe checked on its own | Warning |
+
+There is no known-types check: artifact types are an open set, so a typo in `requires` fails as *no step before it produces that* (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). Some rules have no design source: *Forward routes don't loop* is the run-flow plan's (*"forward routes must not loop"*, Execution #9), and *One rework per failure* and *`max_attempts` is read*, like `entry:`, are Claude's calls of the same date. *A recipe, not a run* and *A budget for the whole flow* are Alex's calls of 2026-10-23 ([[Flow Design Open Questions]] #1 and #12); the budget key's name, that it is required, and *Write roots*, which follows from the recipe, are Claude's calls. *Agent or skill* is looser: an agent step needs a `prompt`, `skill` or `system_prompt`, not an agent or a skill, so a prompt-only step is valid, and it names capabilities by path (`skill: /plugin:name`, `plugins:` folders), not by library id. Capability, provider-match and tool checks are not built.
+
 Open questions: entry vs producer #23, capability severity #26, back-edges #22, required budget and turn caps #37, steps the host tier refuses #38 in [[Flow Design Open Questions]].
+
+> [!check] Answered by run-flow, 2026-10-23
+> #22: no, ancestry follows forward routes only. #23: one entry step, the one `entry:` names or else the one no route points to (`entry:` is Claude's call, open to Alex's review), and one producer per type. #37: both caps are optional, and in a flow with no ceiling (`budget_usd: 0`) `--check` warns about an agent step with neither. See [[Run Flow Reference#Rules this command settles]].
 
 ## How the mockup validates
 
@@ -53,6 +82,8 @@ From `docs/mockups/flow-designer.html`. Notes:
 - "Reachable" is really an incoming-edge check, not reachability from the entry. A disconnected cycle, or a step fed only by an edge from a deleted step (see **+ Step**, [[Flow Design Open Questions]] #18), passes.
 - It runs on every render except in preview (`live = !preview`), so the strip *"re-checks on every change, so the answer arrives as you type"* (guide). Backlog Story 8.2 asks for a *"Live validation banner (debounced)"*.
 
+As built in run-flow (2026-10-23), `validateFlow` (`core/src/flow/flow.ts`) differs on the first three points. Ancestors follow forward routes only, so a step in a loop cannot satisfy its own need. The entry is the step `entry:` names, or the one step with no route in; when several steps have no route in, each is reported as a competing start, not as a step that would never run. Reachability is followed from the entry, so a disconnected loop is caught.
+
 ## Error messages
 
 | Problem | Message |
@@ -79,6 +110,7 @@ Each problem row is a button: *"clicking it selects the offending step so you ca
 - **On save** — drawio *Flow validation on save* in `apps/web`: *"every requires is produced by an ancestor · edits create a new flow version; running tasks keep theirs"*.
 - **On demand** — `POST /api/flows/:id/validate -- artifact contract check` (PRD §12), returning *"readable errors"* (backlog 5.1).
 - **As pure functions** — *"pure functions over graph JSON — no I/O, no provider"* (`02` §2). See [[Flow Definition Internals]].
+- **In run-flow** (2026-10-23) — `pnpm run-flow --check`, `--mermaid` and every start load the flow file and run the checks above; nothing launches until they pass.
 
 ## Related
 

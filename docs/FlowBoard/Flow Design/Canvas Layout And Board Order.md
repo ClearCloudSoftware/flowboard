@@ -19,7 +19,7 @@ Two orderings come out of a flow: where steps sit on the **canvas**, and the ord
 | Drawio card *D4 · Don't persist node positions* | *"dagre layout is deterministic."* (page *FlowBoard ideation*) |
 | Backlog Story 8.2 | *"dagre auto‑layout"*; **DEC**: *"Decide whether to persist node positions (needs a layout column)."* |
 
-Undecided — [[Flow Design Open Questions]] #5 and #6.
+Undecided — [[Flow Design Open Questions]] #5 and #6. As built in run-flow (2026-10-23), a flow file has no position keys (`steps.a.x: unknown key`); for now a canvas keeps positions in its own file, and the question is settled with the canvas (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
 ## Edge drawing in the mockup
 
@@ -27,7 +27,7 @@ Undecided — [[Flow Design Open Questions]] #5 and #6.
 - Backward edges, whatever their condition, *"arc over the top"* of both nodes so they *"can't be confused with forward flow"*.
 - The canvas grows to fit: at least 880 × 400, plus 40 px past the furthest node.
 
-Backlog Story 8.2 instead routes *"backwards edges … under the row"*.
+Backlog Story 8.2 instead routes *"backwards edges … under the row"*. run-flow's `--mermaid` draws by condition instead, with rework routes dotted; see [[Connections And Routes]].
 
 ## Board order
 
@@ -41,7 +41,7 @@ Backlog Story 8.2 instead routes *"backwards edges … under the row"*.
 | *"`board_order` = layered topological order."* | backlog Story 5.1 |
 | *"Columns: Backlog, Todo, flow steps by `board_order` (topological order from the graph, `on_fail` ignored), Done."* | backlog Story 2.2 |
 
-Inference: an `on_fail` edge *"usually points *backwards*"* (guide), so ignoring them makes the graph acyclic and sortable. Not every one does — the mockup's `branch` preview draws a forward `fail` edge (`buildPreview()`). The board is a projection: *"A card's column is derived from its furthest-advanced step instance."* (PRD §4)
+Inference: an `on_fail` edge *"usually points *backwards*"* (guide), so ignoring them makes the graph acyclic and sortable. Not every one does — the mockup's `branch` preview draws a forward `fail` edge (`buildPreview()`). As built in run-flow (2026-10-23), the routes to set aside are rework routes, not every `on_fail` route: forward routes, a forward `on_fail` included, may not loop, so they always sort. The board is a projection: *"A card's column is derived from its furthest-advanced step instance."* (PRD §4)
 
 ### Parallel steps on the board
 

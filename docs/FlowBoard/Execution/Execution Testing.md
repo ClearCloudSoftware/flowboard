@@ -29,6 +29,8 @@ The backlog's first lesson: *"**Milestone verification was curl + sqlite only.**
 > The fake `claude` binary (backlog 0.2) drives the whole Claude adapter; the reference `ReplayProvider` (`replay-provider.ts`) replays scripted `NormalizedEvent`s and skips the parser; `01-ports.md` also allows *"a captured `stream-sample.jsonl`"*. Which one each lane uses is open: [[Agent Providers Open Questions]] #20, [[Replay Provider]].
 >
 > For the adapters' own tests it was decided on 2026-10-18 (#20): Replay stays a `NormalizedEvent` script; the Claude normalizer is tested against a recorded stream (`adapters/test/fixtures/claude-hello.jsonl`), and the Claude provider against a fake `query()` plus small fake `claude` scripts for the process paths, not a stream-replaying binary.
+>
+> For run-flow's flows (2026-10-23): whole flows run at $0 against a hand-written `scripted` provider in `cli/test/flow-run.test.ts`. It writes outputs and outcome files, asks through the broker and hangs on demand; a run stopped before its end reports tokens and no price, as a Claude run does. One flow test drives the adapters' `ReplayProvider` instead, to check that a run's recorded cost is what its stream reported, also when stopped. No flow test uses a fake `claude` binary: the real adapters meet a flow only in the live test, `cli/test/flow-live.test.ts`.
 
 ## ReplayProvider
 
@@ -61,6 +63,15 @@ From PRD §16 and backlog 10.1:
 - [ ] Recall and commit happen host-side; a sandboxed run needs no egress-allowlist entry for the memory store
 
 The park test does not need to wait 20 minutes: *"timeout overridable by `VIBE_ASK_TIMEOUT_MS` for tests"* (backlog 4.1). The M4 proof uses a test fixture: *"The M4 three-question skill (`ask-three`) is a test fixture loaded by the test setup, not a seed."* (PRD §15)
+
+As built in run-flow (2026-10-23), the terminal host's tests cover four of these, on run-flow's own flows rather than the seeded one (all run with `node --test`; see [[Testing The Run Flow CLI]]):
+
+- **A non-zero cost.** The live flow test, `cli/test/flow-live.test.ts` (`FLOWBOARD_LIVE=1`), asserts that a run recorded a cost above zero. Events stream to the terminal and the run's log, not to `/runs/[id]`.
+- **Gates and automatic advance.** An approval step waits even when the agent reports an outcome, and approving takes the pass route (`core/test/engine.test.ts`, `cli/test/flow-run.test.ts`).
+- **A fan-out and its join.** Both branches run at once, and the join starts only after both end; with `--max-runs 1` they take turns (`cli/test/flow-run.test.ts`, `core/test/engine.test.ts`).
+- **Reject and the spent loop.** A Reject's rework reruns its target as attempt 2 (`core/test/engine.test.ts`). A spent loop escalates to a person instead of failing the task, as the run-flow plan has it; only a person's *Fail the flow* fails a flow.
+
+The M5 proof has a counterpart too: a failed check reworks its target, which reads the failing output, and a conditional step with no outcome waits at a gate. Nothing covers `pnpm dev`, promotion, draft mode, parking or memory.
 
 ## Related
 

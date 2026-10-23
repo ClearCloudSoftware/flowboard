@@ -26,6 +26,12 @@ The runner builds every agent run's prompt from fixed parts, in a fixed order. T
 
 The drawio *Prompt builder* card compresses it: *"1 task + acceptance criteria + non-goals · 2 read-these-first paths · 3 output paths · 4 /skill · 5 template · 6 headless: use ask_user · +7 recalled memory, ≤ max_recall_chars"*.
 
+As built in run-flow (2026-10-23):
+
+- **Part 1** is the task file the run names with `--task`, as written, the same for every agent step: no title, acceptance-criteria or non-goal fields, and no headings (the run-flow plan, Task 5). So the task file states the goal, and each step's own prompt says what that step does ([[Testing The Run Flow CLI]]). Two lines may follow it: `A person's note for this attempt: <note>`, when a gate's note started the run, then `Missing inputs (an earlier step did not write them): <types>`, when an input does not exist. Part 2 lists only the inputs that do.
+- **Part 5** is the step's `prompt` file as written. No placeholder is substituted (prompt `{{placeholders}}` are on the plan's *Left out* list). `--check` and a normal start warn about any `{{…}}` in a prompt file, `steps.<name>.prompt: {{…}} is not filled in; the agent reads it as written`, or in the task, `--task: {{…}} is not filled in; the agent reads it as written`, which `--check` looks for only when it is given `--task`.
+- **Part 6** is `run-agent`'s closing. When an `on_pass` or `on_fail` route leaves the step, it also asks the agent to report its verdict with `set_outcome`. There is no part 7.
+
 ## Part 7
 
 - Scoped to *"user + project + agent + task"*, *"labelled as background rather than instructions"* (PRD §7).
@@ -39,6 +45,9 @@ The memory side is in [[Recalled Memory In The Prompt]] and [[Memory Recall]].
 ## What changes on rework
 
 *"The new run's "read these first" list (prompt part 2) also gets the artifacts the failing step produced, so a rework sees the raw `check_output` or `review`, not a summary of it."* (PRD §8) A human's reject reason or Retry note is also carried in: *"a rejection carries your reason into the next attempt"* (feature map §4); Retry *"carries my note into it, like a rejection reason"* (PRD §8). Which part holds the reason is not stated. *Proposal:* the preamble. See [[Execution Open Questions]] #21.
+
+> [!check] Answered by run-flow, 2026-10-23
+> The preamble (the run-flow plan). A note typed at any gate goes to the runs the decision starts, as the preamble line `A person's note for this attempt: <note>`, and a shell step gets it as `FLOWBOARD_NOTE` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). A rework's part 2 adds the failing step's `produces`, less any its failing run did not write.
 
 ## What changes on resume
 

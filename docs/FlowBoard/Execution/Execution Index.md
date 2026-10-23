@@ -8,7 +8,7 @@ module: Execution
 Execution is the part of FlowBoard that **makes a task move**. It starts a task, runs one step at a time as a headless agent session or a shell command, reads the outcome, and decides what happens next: advance, fan out, wait at a join, loop back for rework, stop at a gate, or hand the task to you. Behind it sit three architecture components: the flow execution engine (#3), the runner (#6) and the job queue and worker (#7).
 
 > [!important] The one idea to get right first
-> **The engine only ever sees work outcomes.** A run ends with `pass`, `fail` or no outcome, and the engine follows the matching edges. Everything else is kept away from it. Rate limits and crashes are retried by the runner and *"doesn't use up a try"* (feature map §4). A missing outcome is *"never a pass"* (PRD §8). A spent or stuck loop is handed to you, not failed: *"Escalate, don't fail, when a loop is spent or stuck."* (PRD §8). See [[Run Outcomes]] and [[Loop Guard And Escalation]].
+> **Only a work outcome picks the next edge.** A run ends with `pass`, `fail` or no outcome, and the engine follows the matching edges. A rate limit or a crash is never a `fail` and *"doesn't use up a try"* (feature map §4). In the design the runner retries it before the engine hears of it. As built in run-flow (2026-10-23), nothing retries it automatically: the run waits at a *run failed* gate, whose Retry this step reruns the same attempt ([[Run Flow Reference]]). A missing outcome is *"never a pass"* (PRD §8). A spent or stuck loop is handed to you, not failed: *"Escalate, don't fail, when a loop is spent or stuck."* (PRD §8). See [[Run Outcomes]] and [[Loop Guard And Escalation]].
 
 ## Start here
 
