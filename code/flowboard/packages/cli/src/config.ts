@@ -108,15 +108,19 @@ function checkSkill(path: string, earlier: { name: string }[]): string | undefin
   return undefined;
 }
 
-/** File, syntax and root-shape checks; error lines carry `yamlPath` as typed. */
-export function readYaml(yamlPath: string, baseDir: string): { ok: true; abs: string; raw: Record<string, unknown> } | { ok: false; errors: string[] } {
+/** File, syntax and root-shape checks; error lines carry `yamlPath` as typed. `text`, when given, is read instead of the file. */
+export function readYaml(
+  yamlPath: string,
+  baseDir: string,
+  text?: string,
+): { ok: true; abs: string; raw: Record<string, unknown> } | { ok: false; errors: string[] } {
   const fail = (line: string) => ({ ok: false as const, errors: [`${yamlPath}: ${line}`] });
   const abs = toAbs(yamlPath, baseDir);
-  if (!isFile(abs)) return fail('file: not found');
+  if (text === undefined && !isFile(abs)) return fail('file: not found');
 
   let raw: unknown;
   try {
-    raw = parse(readFileSync(abs, 'utf8'));
+    raw = parse(text ?? readFileSync(abs, 'utf8'));
   } catch (e) {
     return fail(`syntax: ${(e instanceof Error ? e.message : String(e)).split('\n')[0]}`);
   }

@@ -75,7 +75,8 @@ export class ClaudeCodeProvider implements AgentProvider {
     let exited: Promise<number> | undefined;
     let stderrTail = '';
     const spawnClaudeCodeProcess = (o: SpawnOptions) => {
-      const child = exec.spawn(o.command, o.args, { cwd: o.cwd ?? spec.cwd, env: o.env });
+      // A cast for the web app's typecheck: Next's types make NODE_ENV a required key of ProcessEnv.
+      const child = exec.spawn(o.command, o.args, { cwd: o.cwd ?? spec.cwd, env: o.env as NodeJS.ProcessEnv });
       resolvePid(child.pid ?? -1);
       exited = new Promise((r) => {
         child.once('exit', (code) => r(code ?? 1));

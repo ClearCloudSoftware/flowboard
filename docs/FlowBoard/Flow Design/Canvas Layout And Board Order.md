@@ -19,13 +19,15 @@ Two orderings come out of a flow: where steps sit on the **canvas**, and the ord
 | Drawio card *D4 · Don't persist node positions* | *"dagre layout is deterministic."* (page *FlowBoard ideation*) |
 | Backlog Story 8.2 | *"dagre auto‑layout"*; **DEC**: *"Decide whether to persist node positions (needs a layout column)."* |
 
-Undecided — [[Flow Design Open Questions]] #5 and #6. As built in run-flow (2026-10-23), a flow file has no position keys (`steps.a.x: unknown key`); for now a canvas keeps positions in its own file, and the question is settled with the canvas (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
+As built in the flow designer (2026-10-24), positions are not kept, as backlog D4 has it. The canvas lays a flow out from its routes, the same way on every open. A step sits one column past the longest forward route to it, with rework routes left out, and steps in a column keep their file order. The layout is the designer's own, not dagre. A dragged step stays where it was put until the page closes; a drag is not an edit, so it never marks the recipe unsaved. A flow file has no position keys anyway (`steps.a.x: unknown key`). This answers [[Flow Design Open Questions]] #5 and #6 (Claude's call, 2026-10-24, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
 ## Edge drawing in the mockup
 
 - Forward edges (target to the right) are cubic curves between node sides.
 - Backward edges, whatever their condition, *"arc over the top"* of both nodes so they *"can't be confused with forward flow"*.
 - The canvas grows to fit: at least 880 × 400, plus 40 px past the furthest node.
+
+The flow designer (2026-10-24) draws routes the same way: curves between step sides, and a route that points back, or to its own step, arced over the top. Its canvas pans and zooms instead of growing, and fits the whole flow when a flow opens or a step is added.
 
 Backlog Story 8.2 instead routes *"backwards edges … under the row"*. run-flow's `--mermaid` draws by condition instead, with rework routes dotted; see [[Connections And Routes]].
 

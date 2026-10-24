@@ -1,26 +1,61 @@
 @import "tailwindcss";
 
+/* FlowBoard's tokens (docs/mockups/README.md): light only, three signal colours, zero radius, hairlines. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --paper: #fbfaf7;
+  --surface: #ffffff;
+  --surface-2: #f4f2ec;
+  --surface-3: #edeae1;
+  --line: #e4e1d8;
+  --line-2: #cfcbbe;
+  --ink: #17171c;
+  --ink-2: #55535c;
+  --ink-3: #7a7880;
+  /* petrol: alive, pass, the primary action */
+  --run: #0e6e74;
+  --run-soft: #0e6e7414;
+  /* ochre: wants you, an edit, a problem */
+  --wait: #a35a00;
+  --wait-soft: #a35a0014;
+  --wait-wash: #f7ead3;
+  --wait-edge: #dcc49a;
+  --wait-ink: #fdf6ea;
+  --wait-ink-2: #f8e8d0;
+  /* brick: broken, a fail route, delete */
+  --fail: #b0231b;
+  --fail-soft: #b0231b12;
+  --fail-edge: #ebd0cc;
+  --done: #b8b4a8;
+  --mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: var(--font-plex-sans), system-ui, -apple-system, "Segoe UI", Helvetica, sans-serif;
+  --t: 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-run: var(--run);
+  --color-wait: var(--wait);
+  --color-fail: var(--fail);
+  --font-sans: var(--sans);
+  --font-mono: var(--mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
 }

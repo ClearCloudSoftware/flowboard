@@ -5,7 +5,7 @@ module: Flow Design
 
 # Flow Design Open Questions
 
-Places where the sources disagree or leave a gap. Each needs a decision before building. Questions settled by the [[Capability Library Decisions]] (2026-10-15) carry their outcome. Questions that Alex or the run-flow host answered on 2026-10-23 carry the answer ([[Run Flow Reference]]). Anything another note labels a **proposal** is listed here too.
+Places where the sources disagree or leave a gap. Each needs a decision before building. Questions settled by the [[Capability Library Decisions]] (2026-10-15) carry their outcome. Questions that Alex or the run-flow host answered on 2026-10-23 carry the answer ([[Run Flow Reference]]), and so do those the flow designer answered on 2026-10-24 ([[Flow Design Screen#As built in the flow designer (2026-10-24)]]). Anything another note labels a **proposal** is listed here too.
 
 ## Where flows live and who owns them
 
@@ -39,9 +39,13 @@ In the mockup, **Use this flow** copies the previewed flow and keeps its author 
 
 > [!check] **Answered by run-flow, 2026-10-23.** Not in the flow file: its schema is strict, with no position field, and a step's key is its only name. A canvas that keeps positions keeps them in its own file, decided with the canvas (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
+> [!check] **Answered by the flow designer, 2026-10-24.** No, as backlog D4 has it: the canvas lays a flow out from its routes, the same way on every open, so it keeps no positions at all. A dragged step stays put until the page closes (Claude's call, 2026-10-24, open to Alex's review; see [[Canvas Layout And Board Order]]).
+
 The flow-designer guide: *"Position is for your reading comfort, and it's saved with the version so the recipe looks the same to whoever opens it next."* Backlog decision **D4** and the drawio card *D4 · Don't persist node positions* (page *FlowBoard ideation*): *"No; dagre is deterministic."* Backlog Story 8.2 still lists *"**Decide** whether to persist node positions (needs a layout column)."* See [[Canvas Layout And Board Order]].
 
 ### 6. Does a layout-only change make a new version?
+
+> [!check] **Answered by the flow designer, 2026-10-24.** No: positions are not saved (#5), so a drag is not an edit and never marks the recipe unsaved. There are no versions either: Save writes the file in place, and a run pins its own copy (Claude's call, 2026-10-24, open to Alex's review; see [[Editing And Saving A Flow]]).
 
 In the mockup, dragging a step marks the recipe unsaved (*"any change — even dragging a step — marks the recipe unsaved"*). Saving after a drag creates a version that runs exactly like the last. Follows from #5.
 
@@ -133,11 +137,15 @@ As built in run-flow (2026-10-23), no placeholder is filled in (the run-flow pla
 
 ### 17. Editing routes on the canvas
 
+> [!check] **Answered by the flow designer, 2026-10-24.** As backlog Story 8.2 has it: drag from a step's right edge to another step to draw a route, click its label to cycle `always → on_pass → on_fail`, and `Backspace` or `Delete` removes the selected route (or step). A route drawn back to a step before it starts as `on_fail`, a rework. A selected route also opens in the inspector, with its condition and **Delete this route**. Routes that point back arc over the top, as in the mockup, not under the row (Claude's call, 2026-10-24, open to Alex's review; see [[Flow Design Controls]]).
+
 The feature map promises *"drag steps, draw connections"* (§2). Backlog Story 8.2: *"drag‑to‑connect, edge label cycles `always → on_pass → on_fail`"*. The mockup has no way to draw, select, relabel or delete a route. Routes only appear with **+ Step** and disappear with **Delete this step**.
 
 ### 18. Where **+ Step** wires a new step
 
 > [!check] **Answered by run-flow, 2026-10-23.** For the validator: an unwired step is flagged on the step itself. With `entry: plan` it reads `steps.new: no route leads here from the entry step "plan"`; without `entry:`, each step no route leads to gets its own problem, the real entry included: `steps.new: no route leads here, nor to "plan"; a flow starts at one step, so route the others in` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). Where **+ Step** wires the step is the canvas's to decide.
+
+> [!check] **Answered by the flow designer, 2026-10-24.** After the selected step, on an `always` route, as the proposal below has it; with nothing selected, the step is added unwired, and the check flags it. The new step is `step-n`, with no keys of its own, so it fails `--check` until it has a `prompt`, `skill` or `system_prompt` (Claude's call, 2026-10-24, open to Alex's review).
 
 The mockup wires the new `step-n` off `review` on the passed route, whatever is selected. It adds that edge even when `review` no longer exists. It reads as a placeholder. **Proposal:** add the step unwired (the validator then flags it unreachable), or after the selected step.
 
@@ -198,6 +206,8 @@ The capability-library mockup and guide say the flow editor refuses to save a st
 
 ### 27. List editor or canvas?
 
+> [!check] **Answered by the flow designer, 2026-10-24.** A canvas, with React Flow (xyflow), as the mockup, the drawio *Harness architecture* page and backlog Story 8.2 design it (Alex's call, 2026-10-24: *"Use the tanstack libraries and reactflow"*). The **yaml** tab shows the recipe as text beside it. See [[Flow Design Screen#As built in the flow designer (2026-10-24)]].
+
 PRD §13: *"A node graph is nice but not required for v1. A vertical list of steps with an 'add step' button and a connections panel is acceptable."* The drawio *Flow editor* card agrees (*"A node graph is nice, not required for v1."*). The original design brief is in between: *"a pure vertical list understates the structure. But a full node-graph editor is expensive to build. Propose the cheapest thing that communicates branching honestly"*. The flow-designer mockup, the drawio *Harness architecture* page (*"xyflow canvas"*) and backlog Story 8.2 (*React Flow canvas*) design a canvas. The feature map wants both: *"on a canvas … or as a simple list"*.
 
 ### 28. Draft mode: global switch or designer toggle?
@@ -211,6 +221,8 @@ PRD §13 and feature map §19 make draft mode a global setting, and `docs/pitch.
 PRD §15 seeds nine steps (research, grill, plan, explain, implement, tests, check, review, summarize), with gates on `explain` and `review`. Backlog Story 1.2 agrees: *"Flow template as JSON: *Software delivery* (the 9‑step table, exact agent/skill pairs, models/efforts/gates/edges)"*. The old design handoff shows `standard-flow · 8 steps` and *"Plan needs approval"*. The mockups use *Software delivery @core v4*: six steps (research, plan, build, tests, review, summarize), only `review` gated, and no check step. That is the library row and the monitor. The flow-designer canvas opens it with seven, adding the borrowed `threat-model` step. See [[Seeded Flows]].
 
 ### 30. API for the library
+
+> [!check] **Answered in part by the flow designer, 2026-10-24.** For a library of recipe files: list, create, read, save over a version, and a live check. Preview, adopt or fork, and a project's flow wait for a shared library and for projects (Claude's call, 2026-10-24, open to Alex's review; see [[Flow Design API And Routes#As built in the flow designer (2026-10-24)]]).
 
 The PRD has three flow endpoints. The mockup also needs to list the library with stats, preview a version, adopt or fork, and set a project's flow. **Proposal** in [[Flow Design API And Routes]].
 
@@ -237,6 +249,8 @@ The seeded `check` step requires nothing but must run after `implement` and `tes
 ## Look and packaging
 
 ### 34. Light or dark?
+
+> [!check] **Answered by the flow designer, 2026-10-24.** Light only, with no dark variant, as `docs/mockups/README.md` sets for every screen (*"Light only — no dark variant."*), and as Alex prefers. The web app's tokens follow that README (`code/flowboard/app/globals.css`).
 
 PRD §13: *"Dark-first, dense, keyboard-friendly."* (`PRD.MD:575`). The old design handoff (`docs/old/design/README.md`) draws dark artboards (e.g. header background `#0c0c0e`) and adds *"1f — Light mode"* as a variant. Every mockup is light only (`color-scheme:light`), as is the drawio *Harness architecture* tech card (*"shadcn/ui + Tailwind (light, zero radius, IBM Plex)"*). Backlog 9.1 says *"light default"*, and Story 8.3 and feature map §19 offer a light / dark / system switch. Does the flow designer ship light only, or light by default with a dark theme?
 

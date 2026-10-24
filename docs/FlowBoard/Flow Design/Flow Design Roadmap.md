@@ -9,12 +9,12 @@ module: Flow Design
 
 Flow Design is mostly two PRD milestones, with a few items from **M1** (seed templates, new-project flow type) and **M2** (pinning). **M5 — Flow engine**: *"Step defs, edges, fan-out, joins, conditional edges, approval gates, rework loops with `max_attempts` escalation, shell check steps, artifact contract validation."* **M8 — Cost views and flow editor UI.** (PRD §14)
 
-As built in run-flow (2026-10-23), the M5 engine items are in `core/src/flow/`, with no API in front of them: `validateFlow` (`flow.ts`) checks a flow and `advance` (`engine.ts`) runs it, and the terminal host `pnpm run-flow`, which reads a flow from YAML, is their only caller ([[Run Flow Reference]]). Versions, `board_order`, draft mode and the designer are not built, as planned: the run-flow plan covers the engine and a terminal host, not the web app.
+As built in run-flow (2026-10-23), the M5 engine items are in `core/src/flow/`, with no API in front of them: `validateFlow` (`flow.ts`) checks a flow and `advance` (`engine.ts`) runs it, and the terminal host `pnpm run-flow`, which reads a flow from YAML, is their only caller ([[Run Flow Reference]]). Versions, `board_order` and draft mode are not built, as planned: the run-flow plan covers the engine and a terminal host, not the web app. The flow designer was built on 2026-10-24, at `/flows` in the web app: it edits run-flow's recipe files and checks them with run-flow's own loader ([[Flow Design Screen#As built in the flow designer (2026-10-24)]]).
 
 From M5 and backlog **Epic 5**:
 
 - [ ] `PUT /api/flows/:id` creates a new version (Story 5.1)
-- [ ] `POST /api/flows/:id/validate` with readable errors: ancestor-produced `requires`, one entry, known types (Story 5.1). Partly built: `run-flow --check`, and every run before it starts, checks the first two (with one producer per type) and prints each problem as `<yaml>: <field>: <message>`, then exits 2. There is no known-types check, since any lowercase name is a type (Claude's call, 2026-10-23, open to Alex's review; [[Flow Design Open Questions]] #25), and no endpoint
+- [ ] `POST /api/flows/:id/validate` with readable errors: ancestor-produced `requires`, one entry, known types (Story 5.1). Partly built: `run-flow --check`, and every run before it starts, checks the first two (with one producer per type) and prints each problem as `<yaml>: <field>: <message>`, then exits 2. There is no known-types check, since any lowercase name is a type (Claude's call, 2026-10-23, open to Alex's review; [[Flow Design Open Questions]] #25). The endpoint is the designer's `POST /api/flows/:name/check` (2026-10-24; [[Flow Design API And Routes]])
 - [ ] `board_order` as layered topological order (Story 5.1)
 - [x] Conditional edges, fan-out, joins, rework, `max_attempts` escalation (Story 5.2; engine side)
 - [x] Shell check steps (PRD §7). The run-flow host runs `sh -c` in the run's folder (`--folder`), in its own process group rather than through an execution host, so without a sandbox. Exit 0 is pass; 126, 127 or a death by a signal waits at a *run failed* gate; any other exit is a fail. The last 20,000 characters of output go to the step's `produces` artifact when it declares one, and always into its run log ([[Check Steps]])
@@ -22,13 +22,13 @@ From M5 and backlog **Epic 5**:
 
 From M8 and backlog **Story 8.2 Flow editor**:
 
-- [ ] Canvas: *"nodes = steps, drag‑to‑connect, edge label cycles `always → on_pass → on_fail`, Backspace deletes, dagre auto‑layout"* — or the PRD's acceptable fallback, a vertical list with a connections panel
-- [ ] Inspector: *"kind (`ai`/`shell`/`manual`), agent and/or skill, model, effort, advance mode, entry, requires, produces, limits, permission mode, allowed tools, prompt template"*
-- [ ] *"Live validation banner (debounced)"*
+- [x] Canvas: *"nodes = steps, drag‑to‑connect, edge label cycles `always → on_pass → on_fail`, Backspace deletes, dagre auto‑layout"* — or the PRD's acceptable fallback, a vertical list with a connections panel. Built on 2026-10-24 with React Flow; the auto-layout is the designer's own, a layered one, not dagre ([[Canvas Layout And Board Order]])
+- [ ] Inspector: *"kind (`ai`/`shell`/`manual`), agent and/or skill, model, effort, advance mode, entry, requires, produces, limits, permission mode, allowed tools, prompt template"*. Partly built (2026-10-24): `ai` or `shell`, no `manual` (#39); skill, inline system prompt and prompt file, no pickers; model, effort, approval, entry, requires, produces and limits. Permission mode and allowed tools have no field and are kept as written ([[Flow Design Controls]])
+- [x] *"Live validation banner (debounced)"*: the validation strip, `run-flow --check` on the draft (2026-10-24)
 - [ ] *"Reuse… picker (steps or whole flow from other projects, key uniquified)"*
 - [ ] *"Start from flow type"*
-- [ ] BUGs: save redirect from a slug prop; stable edge ids; labels paired with inputs, shadcn `Select`
-- [ ] **DEC**: persist node positions?
+- [ ] BUGs: save redirect from a slug prop; stable edge ids; labels paired with inputs, shadcn `Select`. Stable edge ids and labels paired with inputs are built (2026-10-24): a route is named by its two steps, and every field has its label. There is no redirect, and selects are the browser's own
+- [x] **DEC**: persist node positions? No, as backlog D4 has it (Claude's call, 2026-10-24, open to Alex's review; [[Canvas Layout And Board Order]])
 
 From elsewhere:
 
@@ -36,7 +36,7 @@ From elsewhere:
 - [ ] New-project dialog with a flow-type select, *"Empty"* allowed (Story 1.3)
 - [ ] Pin `tasks.flow_id` *"at promotion"* (Story 2.1); whether that is promote or Start is [[Flow Design Open Questions]] #7
 - [ ] Draft mode toggle (Story 8.3)
-- [ ] Acceptance: *"Saving a flow whose step requires an artifact nobody produces is rejected with a readable error"* (PRD §16; Story 10.1). The check is built: run-flow refuses such a flow before it runs, `steps.review: requires "notes", and no step before it produces that`; saving waits for the designer
+- [ ] Acceptance: *"Saving a flow whose step requires an artifact nobody produces is rejected with a readable error"* (PRD §16; Story 10.1). The check is built: run-flow refuses such a flow before it runs, `steps.review: requires "notes", and no step before it produces that`, and since 2026-10-24 the designer's Save refuses it with the same line
 
 ## Designed in the mockup, beyond the PRD
 

@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+FlowBoard's code: the packages (`packages/`: the flow engine, the agent providers, and the `run-agent` and `run-flow` commands) and the web app (`app/`, Next.js).
 
-## Getting Started
-
-First, run the development server:
+## The flow designer
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [http://localhost:3000/flows](http://localhost:3000/flows).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The designer edits the recipes in `flows/`, the YAML files that `pnpm run-flow` runs. Set `FLOWBOARD_FLOWS_DIR` to edit another folder.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Library**: every `<name>.yaml` in the folder. Name a new one at its foot.
+- **Canvas**: drag a step to arrange it; positions are not saved, and the layout follows the routes. Drag from a step's right edge to another step to draw a route, and click a route's label to cycle `always → on_pass → on_fail`. `Delete` removes what is selected.
+- **Inspector**: the selected step, the selected route, or with nothing selected, the flow's own budget, entry and defaults.
+- **Validation strip**: `run-flow --check` on the draft, as you type. Save stays off while it finds a problem.
 
-## Learn More
+Save writes the file in place and changes only the lines whose meaning changed, so comments and alignment written by hand survive. It is refused if the file changed on disk since it was opened. A run already started keeps its own copy of the flow.
 
-To learn more about Next.js, take a look at the following resources:
+The flows API answers only on `localhost`. Notes: `docs/FlowBoard/Flow Design/Flow Design Screen.md`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Tests and checks
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+pnpm test:app            # the designer's draft model
+pnpm test:packages       # the packages; no live runs
+pnpm typecheck:packages
+pnpm lint
+pnpm build               # also typechecks the app
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`pnpm test:live` runs real agents and costs money.
