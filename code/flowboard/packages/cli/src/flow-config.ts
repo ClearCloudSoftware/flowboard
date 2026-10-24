@@ -19,8 +19,10 @@ export const OUTCOME_CLOSING =
 /** `verdict`: its routes or its approval gate use the outcome, so it is offered set_outcome. */
 export interface AiStep { kind: 'ai'; run: RunConfig; timeoutMinutes?: number; verdict: boolean }
 export interface ShellStep { kind: 'shell'; command: string; timeoutMinutes: number }
+/** Where steps run: a throwaway, non-root container from `image` per step. `env`: names of this machine's variables it gets, such as the agents' auth. */
+export interface Sandbox { image: string; env: string[] }
 /** `folder`: the run's; `budgetUsd`: the most the whole flow may spend, 0 for no ceiling. */
-export interface FlowConfig { yamlPath: string; name: string; folder: string; budgetUsd: number; flow: FlowDef; steps: Record<string, AiStep | ShellStep>; warnings: string[] }
+export interface FlowConfig { yamlPath: string; name: string; folder: string; budgetUsd: number; flow: FlowDef; steps: Record<string, AiStep | ShellStep>; warnings: string[]; sandbox?: Sandbox }
 export type FlowLoadResult = { ok: true; config: FlowConfig } | { ok: false; errors: string[] };
 /**
  * What one run of a recipe adds, as typed: relative paths resolve against the folder run-flow starts in.
@@ -57,6 +59,7 @@ const FlowSchema = z.strictObject({
   budget_usd: z.number({ error: 'must be a number of dollars' }).min(0, { error: 'must be 0 or more; 0 means no ceiling' }),
   entry: StepName.optional(),
   defaults: Launch.optional(),
+  sandbox: z.strictObject({ image: z.string().min(1), env: z.array(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'must be a variable name')).default([]) }).optional(),
   steps: z.record(z.string(), StepSchema).refine((s) => Object.keys(s).length > 0, 'needs at least one step'),
   edges: z
     .array(
@@ -209,7 +212,9 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs): Fl
   }
 
   if (found.length) return fail(found.sort((a, b) => a[0] - b[0]).map(([, line]) => line));
-  return { ok: true, config: { yamlPath: read.abs, name: basename(read.abs, extname(read.abs)), folder, budgetUsd, flow, steps, warnings } };
+  // ponytail: no egress proxy yet, so agents' boxes are online and hold the keys sandbox.env names (Sandboxing Roadmap)
+  if (y.sandbox && Object.values(steps).some((s) => s.kind === 'ai')) warnings.push('sandbox: ai steps have open network access and the variables in sandbox.env');
+  return { ok: true, config: { yamlPath: read.abs, name: basename(read.abs, extname(read.abs)), folder, budgetUsd, flow, steps, warnings, ...(y.sandbox && { sandbox: y.sandbox }) } };
 }
 
 /** Rework routes are dotted and marked ↺. */

@@ -1,12 +1,17 @@
 import { createConnection } from 'node:net';
 import type { AskReply, AskRequest } from '@flowboard/core';
 
-/** Send one request to the broker and wait, however long it takes, for its one-line reply. */
-export function askBroker(socketPath: string, request: AskRequest): Promise<AskReply> {
+/**
+ * Send one request to the broker and wait, however long it takes, for its one-line reply. `address` is a
+ * Unix socket path, or `host:port` for a broker on TCP, which wants FLOWBOARD_ASK_TOKEN with each request.
+ */
+export function askBroker(address: string, request: AskRequest): Promise<AskReply> {
   return new Promise((resolve, reject) => {
-    const conn = createConnection(socketPath);
+    const tcp = /^([^/:]+):(\d+)$/.exec(address);
+    const conn = tcp ? createConnection({ host: tcp[1], port: Number(tcp[2]) }) : createConnection(address);
+    const token = process.env.FLOWBOARD_ASK_TOKEN;
     let buf = '';
-    conn.on('connect', () => conn.write(JSON.stringify(request) + '\n'));
+    conn.on('connect', () => conn.write(JSON.stringify(token ? { ...request, token } : request) + '\n'));
     conn.on('data', (d) => {
       buf += d;
       const end = buf.indexOf('\n');

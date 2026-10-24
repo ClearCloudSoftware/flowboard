@@ -7,13 +7,14 @@ import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { dockerExecHost } from '@flowboard/adapters';
 import { advance, entries, GIT, newFlowState } from '@flowboard/core';
 import type { Answers, Decision, FlowCommand, FlowEvent, FlowState, Gate, Question, RunCommand } from '@flowboard/core';
 import type { Answerer } from './ask/broker.ts';
 import { noTerminal, terminalAnswerer } from './ask/terminal.ts';
 import { isDir } from './config.ts';
 import { inside, loadFlow, toMermaid } from './flow-config.ts';
-import type { FlowConfig } from './flow-config.ts';
+import type { FlowConfig, Sandbox } from './flow-config.ts';
 import { artifactPath, execAi, execShell, processStart, shellEnv } from './flow-exec.ts';
 import type { ExecContext, StepRun } from './flow-exec.ts';
 import { defaultProvider, stamp } from './run.ts';
@@ -493,6 +494,19 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number 
 /** What the runs cost, as far as their providers reported it. */
 const sumCost = (runs: FlowState['runs']) => runs.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
 
+/** Each step's box: the folder (its cwd) and the artifacts read-write, `mounts` read-only; only agents go online. */
+const sandboxFor = (sb: Sandbox, artifactsDir: string): NonNullable<ExecContext['sandbox']> => ({ online, tmpDir, mounts = [] }) =>
+  dockerExecHost(
+    {
+      tier: 'container',
+      image: sb.image,
+      egressAllow: online ? ['*'] : [],
+      mounts: [{ source: artifactsDir, target: artifactsDir }, ...mounts.map((m) => ({ source: m, target: m, readOnly: true }))],
+      env: Object.fromEntries(sb.env.flatMap((k) => (process.env[k] === undefined ? [] : [[k, process.env[k]!]]))),
+    },
+    { ...(tmpDir && { tmpDir }) },
+  );
+
 interface Drive {
   config: FlowConfig;
   runDir: string;
@@ -550,6 +564,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     answer: noTerminal,
     onInterrupt: () => interrupt(), // Ctrl+C at an agent's question
     temps,
+    ...(config.sandbox && { sandbox: sandboxFor(config.sandbox, d.artifactsDir) }),
   };
 
   /** Gate prompts open or waiting their turn, by step. */

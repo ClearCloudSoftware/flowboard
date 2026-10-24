@@ -4,10 +4,13 @@
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, closeSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
+import { join, resolve } from 'node:path';
+import { SHIM_ENTRY } from '@flowboard/ask-user';
 import { fingerprint, ZERO_USAGE } from '@flowboard/core';
-import type { AgentProvider, AgentRun, Outcome, RunCommand, RunEnd, RunResult, RunSpec } from '@flowboard/core';
+import type { AgentProvider, AgentRun, ExecHost, Outcome, RunCommand, RunEnd, RunResult, RunSpec } from '@flowboard/core';
 import { startBroker } from './ask/broker.ts';
+import { inside } from './flow-config.ts';
 import type { Answerer } from './ask/broker.ts';
 import type { Adapter, RunConfig } from './config.ts';
 import { openLog, streamRun, summaryLines, withAsking, WITHDRAWN, WITHDRAWN_QUEUED } from './run.ts';
@@ -29,6 +32,11 @@ export interface ExecContext {
   logDir: string;
   show(line: string): void;
   now(): Date;
+  /**
+   * Where steps run; absent, on this machine. `online` for agents, which reach their model APIs; `tmpDir` and
+   * `mounts` (read-only) are host folders the process sees at the same paths.
+   */
+  sandbox?(o: { online?: boolean; tmpDir?: string; mounts?: string[] }): ExecHost;
   // ai steps:
   makeProvider(adapter: Adapter): AgentProvider;
   answer: Answerer;
@@ -36,6 +44,9 @@ export interface ExecContext {
   /** Live agent runs' temp folders, for a host that must exit before their runs end. */
   temps?: Set<string>;
 }
+
+/** code/flowboard: holds the shim and the adapters' plugins, and their node_modules. */
+const FLOWBOARD_ROOT = resolve(SHIM_ENTRY, '../../../..');
 
 export const artifactPath = (artifactsDir: string, type: string): string => join(artifactsDir, `${type}.md`);
 
@@ -101,18 +112,19 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
   }
   const { log, close } = logger;
   missingInputs(run, ctx);
-  // ponytail: spawned here, not through ExecHost, which cannot kill a process group; go through it once
-  // the sandbox tier can. `detached` makes the command and everything it starts one group, so stop() reaches all.
-  // stdin is /dev/null: a check never waits for input. A person's note reaches it as FLOWBOARD_NOTE.
-  const child = spawn('sh', ['-c', command], {
-    cwd: folder,
-    env: { ...shellEnv(process.env).env, FLOWBOARD_ARTIFACTS: ctx.artifactsDir, ...(run.note !== undefined && { FLOWBOARD_NOTE: run.note }) },
-    detached: true,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  // On the host, `detached` makes the command and everything it starts one group, so stop() reaches all.
+  // In a sandbox, the container is the group: it ends with the shell, and stopping `docker` stops it.
+  // stdin is /dev/null (or closed): a check never waits for input. A person's note reaches it as FLOWBOARD_NOTE.
+  const env = { ...shellEnv(process.env).env, FLOWBOARD_ARTIFACTS: ctx.artifactsDir, ...(run.note !== undefined && { FLOWBOARD_NOTE: run.note }) };
+  const exec = ctx.sandbox?.({});
+  const child = exec
+    ? exec.spawn('sh', ['-c', command], { cwd: folder, env })
+    : spawn('sh', ['-c', command], { cwd: folder, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  child.stdin?.end();
   try {
     // The group to stop, should this host die with the check still running; `started` tells it from a later one.
-    if (child.pid) log('pid', { pid: child.pid, group: true, started: processStart(child.pid) });
+    // ponytail: a sandboxed check is not logged: its docker client is no group, and --rm ends the container when the client goes
+    if (child.pid && !exec) log('pid', { pid: child.pid, group: true, started: processStart(child.pid) });
   } catch {
     // best effort, like the result line
   }
@@ -175,6 +187,7 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
   /** False when the group has already gone. */
   const signal = (sig: NodeJS.Signals): boolean => {
     try {
+      if (exec) return child.kill(sig);
       if (child.pid) process.kill(-child.pid, sig);
       return child.pid !== undefined;
     } catch {
@@ -252,8 +265,9 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
         // Short and real: a Unix socket path is limited to about 104 characters, and /tmp is a link on macOS.
         tmp = realpathSync(mkdtempSync('/tmp/fb-'));
         ctx.temps?.add(tmp);
-        const socket = join(tmp, 'ask.sock');
-        broker = await startBroker(socket, ctx.answer, {
+        // In a sandbox the shim reaches the broker over TCP: a Unix socket cannot cross Docker Desktop's VM.
+        const token = ctx.sandbox && randomBytes(24).toString('hex');
+        broker = await startBroker(token ? { token } : join(tmp, 'ask.sock'), ctx.answer, {
           onQuestion: (questions, batch) => quietly('question', { batch, questions }),
           onAnswer: (answers, batch) => quietly('answer', { batch, answers }),
           onWithdrawn: (batch, shown) => {
@@ -263,7 +277,15 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
           onDone: () => {},
           onInterrupt: ctx.onInterrupt,
         });
-        spec = await withAsking(config, socket, tmp, verdict ? { FLOWBOARD_OUTCOME_FILE: outcomeFile } : {});
+        const outcome: Record<string, string> = verdict ? { FLOWBOARD_OUTCOME_FILE: outcomeFile } : {};
+        spec = token
+          ? await withAsking(config, `host.docker.internal:${broker.port}`, tmp, { ...outcome, FLOWBOARD_ASK_TOKEN: token }, 'node')
+          : await withAsking(config, join(tmp, 'ask.sock'), tmp, outcome);
+        if (ctx.sandbox) {
+          // FlowBoard's own code (the ask_user shim, OpenCode's guard plugin) and the step's plugins, at their host paths.
+          const plugins = (spec.capabilities ?? []).flatMap((c) => (c.mount.kind === 'plugin_dir' && !inside(tmp!, c.mount.path) ? [c.mount.path] : []));
+          spec.exec = ctx.sandbox({ online: true, tmpDir: tmp, mounts: [FLOWBOARD_ROOT, ctx.logDir, ...plugins] });
+        }
       } catch (e) {
         return noRun(`cannot set up the run: ${(e as Error).message}`);
       }
