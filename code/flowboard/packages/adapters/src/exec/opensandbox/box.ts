@@ -26,9 +26,9 @@ export interface Box {
   token: string;
   /** Credentials named in the options but not set on this machine. */
   missing: string[];
-  /** An ExecHost for one step; `tmpDir` is copied in before every process, `mounts` once per box. */
-  exec(o: { tmpDir?: string; mounts?: string[] }): ExecHost;
-  /** Copies a host folder into the box at the same path, replacing what is there. */
+  /** An ExecHost for one step; `tmpDir` and `fresh` are copied in before every process, `mounts` once per box. */
+  exec(o: { tmpDir?: string; mounts?: string[]; fresh?: string[] }): ExecHost;
+  /** Copies a host folder into the box at the same path, over what is there (parallel steps share the box). */
   pushDir(dir: string): Promise<void>;
   /** Copies a box folder back to the host at the same path: new and changed files only. */
   pullDir(dir: string): Promise<void>;
@@ -112,13 +112,22 @@ function boxOf(sb: Sandbox, folder: string, token: string, missing: string[]): B
   const pushed = new Set<string>();
   const pushDir = async (dir: string) => {
     const tgz = await upload(sb, tarOf(dir));
-    await root(sb, `rm -rf ${q(dir)} && mkdir -p ${q(dir)} && tar -xzf ${tgz} -C ${q(dir)} && rm ${tgz} && chown -R ${USER} ${q(dir)}`);
+    // Merged, never replaced: another step running in this box may be writing there.
+    await root(sb, `mkdir -p ${q(dir)} && tar -xzf ${tgz} -C ${q(dir)} && rm ${tgz} && chown -R ${USER} ${q(dir)}`);
   };
   return {
     id: sb.id,
     token,
     missing,
-    exec({ tmpDir, mounts = [] }) {
+    exec({ tmpDir, mounts = [], fresh = [] }) {
+      const prepare = async () => {
+        if (tmpDir) await pushDir(tmpDir); // the provider writes its files there just before it spawns
+        for (const d of fresh) await pushDir(d);
+        for (const m of mounts.filter((m) => !pushed.has(m))) {
+          await pushDir(m);
+          pushed.add(m);
+        }
+      };
       const host = relayExecHost({
         connect: () => reach(sb, RELAY_PORT),
         token,
@@ -126,13 +135,7 @@ function boxOf(sb: Sandbox, folder: string, token: string, missing: string[]): B
         profile: { tier: 'container', egressAllow: [] },
         ...(tmpDir && { tmpDir }),
         mapPath: (p) => (p.startsWith(`${FLOWBOARD_ROOT}/`) ? IN_IMAGE + p.slice(FLOWBOARD_ROOT.length) : p),
-        beforeSpawn: async () => {
-          if (tmpDir) await pushDir(tmpDir); // the provider writes its files there just before it spawns
-          for (const m of mounts.filter((m) => !pushed.has(m))) {
-            await pushDir(m);
-            pushed.add(m);
-          }
-        },
+        beforeSpawn: prepare,
       });
       return {
         ...host,
@@ -141,6 +144,11 @@ function boxOf(sb: Sandbox, folder: string, token: string, missing: string[]): B
           return !!info?.[path];
         },
         endpoint: (port) => reach(sb, port),
+        // The tunnel's socket lives in tmpDir, which must exist in the box first.
+        tunnel: async (boxSocket, hostSocket) => {
+          await prepare();
+          return host.tunnel!(boxSocket, hostSocket);
+        },
       };
     },
     pushDir,
@@ -192,7 +200,7 @@ export async function openBox(o: BoxOptions): Promise<Box> {
     const g = `git -C ${q(o.folder)} -c user.email=flowboard@sandbox -c user.name=flowboard`;
     await root(
       sb,
-      `mkdir -p ${q(o.folder)} && tar -xzf ${tgz} -C ${q(o.folder)} && rm ${tgz} && ${g} init -q && ${g} add -A && ${g} commit -qm base --allow-empty && ${g} tag ${BASE_TAG} && chown -R ${USER} ${q(o.folder)}`,
+      `mkdir -p ${q(o.folder)} && tar -xzf ${tgz} -C ${q(o.folder)} && rm ${tgz} && ${g} init -q && ${g} add -A && ${g} commit -qm base --allow-empty && ${g} tag ${BASE_TAG} && echo .flowboard/ >> ${q(o.folder)}/.git/info/exclude && chown -R ${USER} ${q(o.folder)}`,
     );
     const token = randomBytes(24).toString('hex');
     await startRelay(sb, token);

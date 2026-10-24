@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, AgentRun, RunResult, RunSpec } from '@flowboard/core';
 import { ClaudeCodeProvider, OpencodeProvider } from '@flowboard/adapters';
+import type { connectBox, openBox } from '@flowboard/adapters';
 import { SHIM_ENTRY } from '@flowboard/ask-user';
 import { startBroker } from './ask/broker.ts';
 import type { Answerer } from './ask/broker.ts';
@@ -28,6 +29,9 @@ export interface RunDeps {
   now?: () => Date;
   /** Answers the agent's questions; default: the terminal, or a refusal when stdin is not one. */
   answer?: Answerer;
+  /** runtime: opensandbox; default: the adapters' own. */
+  openBox?: typeof openBox;
+  connectBox?: typeof connectBox;
 }
 
 export const WITHDRAWN = '-- question withdrawn: the agent stopped waiting';
