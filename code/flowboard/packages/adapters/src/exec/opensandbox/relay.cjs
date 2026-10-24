@@ -5,7 +5,9 @@
 const http = require('http');
 const { spawn } = require('child_process');
 
-const FRAME = { stdin: 0, stdout: 1, stderr: 2, exit: 3, kill: 4, stdinEnd: 5, spec: 6 };
+const FRAME = { stdin: 0, stdout: 1, stderr: 2, exit: 3, kill: 4, stdinEnd: 5, spec: 6, ping: 7 };
+/** Every spawned connection hears from the relay this often, so the host can tell a dead box from a quiet process. */
+const PING_MS = Number(process.env.RELAY_PING_MS || 5000);
 /** How long output may still arrive after the process exits; what it left running is then stopped. */
 const DRAIN_MS = 200;
 const encode = (type, payload) => {
@@ -79,11 +81,26 @@ function runProcess(sock) {
     send(FRAME.exit, Buffer.from(JSON.stringify({ code, signal })));
     sock.end();
   };
+  const ping = setInterval(() => send(FRAME.ping, Buffer.alloc(0)), PING_MS);
+  sock.on('close', () => clearInterval(ping));
   const read = reader();
   sock.on('data', (chunk) => {
     for (const f of read(chunk)) {
-      if (f.type === FRAME.spec && !child && !done) start(JSON.parse(f.payload.toString()));
-      else handle(f);
+      if (f.type !== FRAME.spec || child || done) {
+        handle(f);
+        continue;
+      }
+      let spec;
+      try {
+        spec = JSON.parse(f.payload.toString());
+      } catch {
+        // A bad spec ends this one connection, never the relay every other step is using.
+        send(FRAME.stderr, Buffer.from('the relay got an unreadable process spec\n'));
+        done = true;
+        send(FRAME.exit, Buffer.from(JSON.stringify({ code: 127, signal: null })));
+        return sock.end();
+      }
+      start(spec);
     }
   });
   sock.on('error', () => {});
@@ -137,13 +154,31 @@ function listen(sock, path) {
 }
 
 const server = http.createServer((req, res) => res.end('relay'));
+const REFUSE = (sock, status) => sock.end(`HTTP/1.1 ${status}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
+const tokenOk = (given) => {
+  const a = Buffer.from(String(given || ''));
+  const b = Buffer.from(String(TOKEN));
+  return a.length === b.length && require('crypto').timingSafeEqual(a, b); // constant time
+};
+
 server.on('upgrade', (req, sock) => {
+  try {
+    route(req, sock);
+  } catch {
+    if (sock.writable) REFUSE(sock, '400 Bad Request'); // a bad request ends itself, not the relay
+  }
+});
+function route(req, sock) {
   // HTTP server sockets are half-open: the host hanging up arrives only as 'end', never as 'close'.
   sock.on('end', () => sock.destroy());
   const url = new URL(req.url, 'http://relay');
-  if (req.headers['x-relay-token'] !== TOKEN) return sock.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
-  if (url.pathname === '/listen') return listen(sock, url.searchParams.get('path'));
+  if (!tokenOk(req.headers['x-relay-token'])) return REFUSE(sock, '403 Forbidden');
+  if (url.pathname === '/listen') {
+    const path = url.searchParams.get('path');
+    if (!path || !path.startsWith('/')) return REFUSE(sock, '400 Bad Request');
+    return listen(sock, path);
+  }
   if (url.pathname === '/spawn') return runProcess(sock);
-  sock.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
-});
+  REFUSE(sock, '404 Not Found');
+}
 server.listen(Number(process.env.RELAY_PORT || 7000), '0.0.0.0');

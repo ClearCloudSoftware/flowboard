@@ -3,7 +3,7 @@
 // FAKE_OPENCODE_SCRIPT: JSON array of events streamed after prompt_async ("$SESSION" is replaced;
 //   a permission.asked waits for its reply; { "hold": true } waits for an abort).
 // FAKE_OPENCODE_LOG: JSONL of the startup env and every request.
-import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 
 const log = (entry) => appendFileSync(process.env.FAKE_OPENCODE_LOG, JSON.stringify(entry) + '\n');
@@ -16,6 +16,13 @@ log({
     ),
   ),
 });
+
+// FAKE_PORT_BUSY_ONCE: the first server finds its port taken, as a random port in a busy box can be.
+if (process.env.FAKE_PORT_BUSY_ONCE && !existsSync(process.env.FAKE_PORT_BUSY_ONCE)) {
+  writeFileSync(process.env.FAKE_PORT_BUSY_ONCE, '');
+  console.error(`error: listen EADDRINUSE: address already in use 0.0.0.0:${process.argv[process.argv.indexOf('--port') + 1]}`);
+  process.exit(1);
+}
 
 // Stands in for OpenCode loading the guard plugin, which marks itself loaded (FAKE_SKIP_PLUGIN: it failed to load).
 if (JSON.parse(env.OPENCODE_CONFIG_CONTENT ?? '{}').plugin?.length && !env.FAKE_SKIP_PLUGIN) {

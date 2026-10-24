@@ -16,6 +16,8 @@ export interface RelayOptions {
   mapPath?: (hostPath: string) => string;
   /** Names the sandbox in error messages. */
   name?: string;
+  /** A connection silent this long is dead (the relay pings every 5 s): a box gone half-dead must not hang a step. */
+  idleMs?: number;
   /** Awaited before each process starts: uploads what it must see. */
   beforeSpawn?: () => Promise<void>;
 }
@@ -61,9 +63,13 @@ class RelayChild extends EventEmitter {
 
   private readonly name: string | undefined;
 
-  constructor(start: Promise<Socket>, spec: Buffer, name?: string) {
+  private readonly idleMs: number;
+  private idle?: NodeJS.Timeout;
+
+  constructor(start: Promise<Socket>, spec: Buffer, name?: string, idleMs = 30_000) {
     super();
     this.name = name;
+    this.idleMs = idleMs;
     this.pending.push(encodeFrame(FRAME.spec, spec)); // first on the wire
     this.stdin = new Writable({
       write: (chunk: Buffer, _enc, cb) => this.send(encodeFrame(FRAME.stdin, chunk), cb),
@@ -96,7 +102,17 @@ class RelayChild extends EventEmitter {
     this.emit('spawn');
     for (const f of this.pending.splice(0)) sock.write(f);
     const reader = new FrameReader();
+    const alive = () => {
+      clearTimeout(this.idle);
+      this.idle = setTimeout(() => {
+        sock.destroy();
+        this.fail(new Error(`the sandbox relay${this.name ? ` (${this.name})` : ''} stopped answering for ${this.idleMs / 1000} s`));
+      }, this.idleMs);
+      this.idle.unref();
+    };
+    alive();
     sock.on('data', (chunk: Buffer) => {
+      alive();
       for (const f of reader.push(chunk)) {
         if (f.type === FRAME.stdout) this.stdout.write(f.payload);
         else if (f.type === FRAME.stderr) this.stderr.write(f.payload);
@@ -121,6 +137,7 @@ class RelayChild extends EventEmitter {
   private finish(code: number | null, signal: NodeJS.Signals | null) {
     if (this.ended) return;
     this.ended = true;
+    clearTimeout(this.idle);
     this.exitCode = code;
     this.signalCode = signal;
     this.emit('exit', code, signal);
@@ -148,7 +165,7 @@ export function relayExecHost(o: RelayOptions): ExecHost {
         await o.beforeSpawn?.();
         return upgrade(o, '/spawn', {});
       })();
-      return new RelayChild(start, spec, o.name) as unknown as ChildProcessWithoutNullStreams;
+      return new RelayChild(start, spec, o.name, o.idleMs) as unknown as ChildProcessWithoutNullStreams;
     },
     async tunnel(boxSocket, hostSocket) {
       let closed = false;

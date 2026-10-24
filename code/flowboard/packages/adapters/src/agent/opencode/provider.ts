@@ -134,14 +134,24 @@ export class OpencodeProvider implements AgentProvider {
 
         // Assign before checking for a stop, so cleanup can kill a server that came up after stop().
         const exec = spec.exec ?? hostExecHost;
-        server = await startServer(exec, {
-          opencodePath: this.opencodePath,
-          // A box that serves several steps at once has no free-port check: pick one at random, away from the low ports.
-          ...(exec.endpoint ? { port: 20000 + Math.floor(Math.random() * 40000) } : exec.id !== 'host' && { port: await freePort() }),
-          cwd: directory,
-          env: run.env,
-          killGraceMs: this.killGraceMs,
-        });
+        const start = async () =>
+          startServer(exec, {
+            opencodePath: this.opencodePath,
+            // A box that serves several steps at once has no free-port check: pick one at random, away from the low ports.
+            ...(exec.endpoint ? { port: 20000 + Math.floor(Math.random() * 40000) } : exec.id !== 'host' && { port: await freePort() }),
+            cwd: directory,
+            env: run.env,
+            killGraceMs: this.killGraceMs,
+          });
+        for (let attempt = 1; ; attempt++) {
+          try {
+            server = await start();
+            break;
+          } catch (e) {
+            // That random port was taken by another step's server: another one, a few times at most.
+            if (!exec.endpoint || attempt === 3 || !/EADDRINUSE/.test((e as Error).message)) throw e;
+          }
+        }
         resolvePid(server.child.pid ?? -1);
         if (stopped) throw STOP;
         server.child.once('close', () => streamAbort.abort()); // a dead server ends the event stream

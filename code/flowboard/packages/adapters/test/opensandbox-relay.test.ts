@@ -226,3 +226,37 @@ test('a relayed child has no pid on this machine', async () => {
   assert.equal(c.pid, undefined);
   await closed(c);
 });
+
+// Deferred minors.
+test('a malformed request is refused, and the relay keeps serving everyone else', async () => {
+  const { upgrade: open } = await import('../src/exec/opensandbox/relay-host.ts');
+  // /listen with no path, then a spawn whose spec is not JSON.
+  await assert.rejects(open({ connect: async () => ({ url }), token: TOKEN }, '/listen', {}), /HTTP 400/);
+  const bad = await open({ connect: async () => ({ url }), token: TOKEN }, '/spawn', {});
+  bad.resume(); // read it, or its end is never seen
+  bad.write(encodeFrame(6, Buffer.from('{not json')));
+  await new Promise((r) => bad.once('close', r));
+  const c = host().spawn('echo', ['still up'], { cwd: '/' });
+  const out = read(c.stdout);
+  await closed(c);
+  assert.equal(out.text.trim(), 'still up');
+});
+
+test('a relay that stops answering ends the step instead of hanging it', async () => {
+  const port = await freePort();
+  const frozen = spawn(process.execPath, [RELAY], { env: { ...process.env, RELAY_PORT: String(port), RELAY_TOKEN: TOKEN, RELAY_PING_MS: '100' }, stdio: 'ignore' });
+  try {
+    const at = `http://127.0.0.1:${port}`;
+    for (let i = 0; i < 100 && !(await fetch(at).then((r) => r.ok, () => false)); i++) await new Promise((r) => setTimeout(r, 50));
+    const c = relayExecHost({ connect: async () => ({ url: at }), token: TOKEN, profile: PROFILE, idleMs: 1000 }).spawn('sleep', ['30'], { cwd: '/' });
+    const err = new Promise<Error>((r) => c.on('error', r));
+    await new Promise((r) => setTimeout(r, 500)); // pings arrive: not idle yet
+    frozen.kill('SIGSTOP'); // the box goes half-dead: no close, no reset, just silence
+    const e = await Promise.race([err, new Promise<never>((_, rej) => setTimeout(() => rej(new Error('still waiting after 5 s')), 5000))]);
+    assert.match(e.message, /stopped answering/);
+  } finally {
+    frozen.kill('SIGCONT');
+    frozen.kill('SIGKILL');
+    spawnSync('pkill', ['-f', 'sleep 30$']);
+  }
+});

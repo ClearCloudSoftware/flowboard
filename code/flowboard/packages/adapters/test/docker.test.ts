@@ -49,13 +49,14 @@ test('a container sees the folder, runs as 1000, has no network, and gets only t
 });
 
 test('killing the docker client stops the container and what it started', { skip: noDocker }, async () => {
-  const child = dockerExecHost(PROFILE).spawn('sh', ['-c', `sleep 300 & sleep 300`], { cwd: tmpdir() });
+  const marker = `${300 + Math.floor(Math.random() * 1000) / 1000}`; // its own containers only: other test files run alpine too
+  const child = dockerExecHost(PROFILE).spawn('sh', ['-c', `sleep ${marker} & sleep ${marker}`], { cwd: tmpdir() });
   const ended = done(child);
   await new Promise((r) => setTimeout(r, 1500));
   child.kill('SIGTERM');
   const { code } = await ended;
   assert.notEqual(code, 0);
   await new Promise((r) => setTimeout(r, 1000));
-  const left = spawnSync('docker', ['ps', '-q', '--filter', 'ancestor=alpine:latest', '--filter', 'status=running'], { encoding: 'utf8' }).stdout.trim();
-  assert.equal(left, '', 'containers still running');
+  const left = spawnSync('docker', ['ps', '--no-trunc', '--filter', 'status=running', '--format', '{{.Command}}'], { encoding: 'utf8' }).stdout;
+  assert.ok(!left.includes(marker), 'its container is still running');
 });

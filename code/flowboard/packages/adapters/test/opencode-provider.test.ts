@@ -362,3 +362,13 @@ test('the guard plugin path goes through exec.mapPath', async () => {
   await provider().launch({ ...spec, exec, guards: { writeRoots: [spec.cwd] } }).result;
   assert.deepEqual(JSON.parse(envLine().OPENCODE_CONFIG_CONTENT!).plugin, ['file:///opt/flowboard/guard-plugin.ts']);
 });
+
+test('a sandboxed server whose random port is taken starts again on another', async () => {
+  const busy = join(tempDir(join(tmpdir(), 'fbbusy-')), 'busy');
+  const { spec, provider } = setup([userMsg, userText, text, step(0.01), idle], { FAKE_PORT_BUSY_ONCE: busy });
+  const { exec, calls } = boxLike();
+  const res = await provider().launch({ ...spec, exec }).result;
+  assert.equal(res.exitCode, 0, res.error);
+  assert.ok(existsSync(busy), 'the first server never hit the busy port');
+  assert.equal(calls.endpoint.length, 1); // only the server that came up is reached
+});
