@@ -2,7 +2,8 @@
  * The relay's wire format, one connection per process: `[type u8][length u32 BE][payload]`.
  * relay.cjs keeps its own copy of these few lines: it runs in the sandbox and cannot import TypeScript.
  */
-export const FRAME = { stdin: 0, stdout: 1, stderr: 2, exit: 3, kill: 4, stdinEnd: 5 } as const;
+/** `spec` (host→box, first): the process as JSON `{command,args,cwd,env}`; it never travels in the URL, which has a size limit and lands in logs. */
+export const FRAME = { stdin: 0, stdout: 1, stderr: 2, exit: 3, kill: 4, stdinEnd: 5, spec: 6 } as const;
 
 export function encodeFrame(type: number, payload: Buffer): Buffer {
   const head = Buffer.alloc(5);

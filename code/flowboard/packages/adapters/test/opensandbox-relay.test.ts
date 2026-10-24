@@ -188,3 +188,41 @@ test('a process whose host hangs up is killed in the box', async () => {
   (c as unknown as { sock: { destroy(): void } }).sock.destroy(); // the host side vanishes, as when run-flow dies
   await until(() => spawnSync('pgrep', ['-f', `sleep ${marker}`]).status !== 0);
 });
+
+// Fix pass (final review).
+const marker = (base: number) => `${base + Math.floor(Math.random() * 1000) / 1000}`;
+const running = (m: string) => spawnSync('pgrep', ['-f', `sleep ${m}`]).status === 0;
+
+test('stopping a process stops what it started, and the stop does not wait for them', async () => {
+  const m = marker(50);
+  const c = host().spawn('sh', ['-c', `sleep ${m} & sleep ${m}`], { cwd: '/' });
+  await until(() => running(m));
+  const ended = closed(c);
+  c.kill('SIGTERM');
+  await Promise.race([ended, new Promise<never>((_, rej) => setTimeout(() => rej(new Error('no exit in 3 s')), 3000))]);
+  await until(() => !running(m));
+});
+
+test('a host that hangs up takes the whole process group with it', async () => {
+  const m = marker(60);
+  const c = host().spawn('sh', ['-c', `sleep ${m} & sleep ${m}`], { cwd: '/' });
+  c.on('error', () => {});
+  await until(() => running(m));
+  (c as unknown as { sock: { destroy(): void } }).sock.destroy();
+  await until(() => !running(m));
+});
+
+test('a long command line starts: the spec does not travel in the URL', async () => {
+  const big = 'x'.repeat(100_000);
+  const c = host().spawn(process.execPath, ['-e', 'console.log(process.argv[1].length)', big], { cwd: '/' });
+  const out = read(c.stdout);
+  const end = await closed(c);
+  assert.equal(end.code, 0);
+  assert.equal(out.text.trim(), '100000');
+});
+
+test('a relayed child has no pid on this machine', async () => {
+  const c = host().spawn('true', [], { cwd: '/' });
+  assert.equal(c.pid, undefined);
+  await closed(c);
+});

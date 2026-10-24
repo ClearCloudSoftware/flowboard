@@ -23,15 +23,14 @@ export interface RelayOptions {
 /** Headers the gateway passes an upgrade on (from the spike, t2-stdin.mjs). */
 const UPGRADE = { Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==', 'Sec-WebSocket-Version': '13' };
 
-let nextPid = 1_000_000;
-
 /** Opens one upgrade to the relay at `path` (with `query`); rejects with the HTTP status when it refuses. */
 export async function upgrade(o: Pick<RelayOptions, 'connect' | 'token' | 'name'>, path: string, query: Record<string, string>): Promise<Socket> {
   const { url, headers } = await o.connect();
   const target = new URL(path.replace(/^\//, ''), url.endsWith('/') ? url : `${url}/`);
-  for (const [k, v] of Object.entries({ token: o.token, ...query })) target.searchParams.set(k, v);
+  for (const [k, v] of Object.entries(query)) target.searchParams.set(k, v);
   return new Promise((resolve, reject) => {
-    const req = request(target, { agent: false, headers: { ...headers, ...UPGRADE } }); // never a kept-alive socket: each upgrade owns its connection
+    // The token in a header, not the URL, which gateways log.
+    const req = request(target, { agent: false, headers: { ...headers, ...UPGRADE, 'x-relay-token': o.token } }); // never a kept-alive socket: each upgrade owns its connection
     req.on('upgrade', (_res, sock) => resolve(sock));
     req.on('response', (res) => {
       res.resume();
@@ -47,7 +46,8 @@ export async function upgrade(o: Pick<RelayOptions, 'connect' | 'token' | 'name'
  * Its stdio travels framed over one upgraded connection to the relay.
  */
 class RelayChild extends EventEmitter {
-  readonly pid = nextPid++;
+  /** None on this machine: a host pid would name some other process here. */
+  readonly pid: number | undefined = undefined;
   exitCode: number | null = null;
   signalCode: NodeJS.Signals | null = null;
   killed = false;
@@ -61,9 +61,10 @@ class RelayChild extends EventEmitter {
 
   private readonly name: string | undefined;
 
-  constructor(start: Promise<Socket>, name?: string) {
+  constructor(start: Promise<Socket>, spec: Buffer, name?: string) {
     super();
     this.name = name;
+    this.pending.push(encodeFrame(FRAME.spec, spec)); // first on the wire
     this.stdin = new Writable({
       write: (chunk: Buffer, _enc, cb) => this.send(encodeFrame(FRAME.stdin, chunk), cb),
       final: (cb) => this.send(encodeFrame(FRAME.stdinEnd, Buffer.alloc(0)), cb),
@@ -142,12 +143,12 @@ export function relayExecHost(o: RelayOptions): ExecHost {
     ...(o.mapPath && { mapPath: o.mapPath }),
     spawn(command, args, { cwd, env = process.env }) {
       const extra = { ...Object.fromEntries(Object.entries(env).filter(([k, v]) => process.env[k] !== v)), ...o.profile.env };
-      const spec = Buffer.from(JSON.stringify({ command, args, cwd, env: extra })).toString('base64');
+      const spec = Buffer.from(JSON.stringify({ command, args, cwd, env: extra }));
       const start = (async () => {
         await o.beforeSpawn?.();
-        return upgrade(o, '/spawn', { spec });
+        return upgrade(o, '/spawn', {});
       })();
-      return new RelayChild(start, o.name) as unknown as ChildProcessWithoutNullStreams;
+      return new RelayChild(start, spec, o.name) as unknown as ChildProcessWithoutNullStreams;
     },
     async tunnel(boxSocket, hostSocket) {
       let closed = false;

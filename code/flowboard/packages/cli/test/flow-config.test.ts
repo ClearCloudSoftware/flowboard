@@ -209,3 +209,8 @@ test('an IP in egress is an error', () => {
   const r = loadFlow('flow.yaml', osb(', egress: ["10.0.0.1"]'));
   assert.ok(!r.ok && r.errors.some((e) => e.endsWith('sandbox.egress.0: a host name or *.domain; IP addresses are not supported')), JSON.stringify(r));
 });
+
+test('a credential OpenSandbox cannot inject is an error, not silently dropped', () => {
+  const r = loadFlow('flow.yaml', osb(', credentials: [GITHUB_TOKEN]'));
+  assert.ok(!r.ok && r.errors.some((e) => e.endsWith('sandbox.credentials.0: OpenSandbox injects only CLAUDE_CODE_OAUTH_TOKEN and OPENROUTER_API_KEY')), JSON.stringify(r));
+});

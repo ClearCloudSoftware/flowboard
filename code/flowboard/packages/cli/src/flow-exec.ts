@@ -38,10 +38,10 @@ export interface ExecContext {
    */
   sandbox?(o: { online?: boolean; tmpDir?: string; mounts?: string[] }): ExecHost;
   /**
-   * runtime: opensandbox, where the box does not share this disk: brings the artifacts folder back from it.
+   * runtime: opensandbox, where the box does not share this disk: brings these files back from it.
    * Its presence means the box holds FlowBoard's own code and reaches run-flow only through a tunnel.
    */
-  pull?(): Promise<void>;
+  pull?(files: string[]): Promise<void>;
   // ai steps:
   makeProvider(adapter: Adapter): AgentProvider;
   answer: Answerer;
@@ -337,7 +337,8 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
         return agent;
       };
       const { result, failedTools, last } = await streamRun(launch, log, ctx.show);
-      await ctx.pull?.(); // the agent's outputs and verdict, before anything below reads them
+      // Its own outputs and verdict only, before anything below reads them: other files may be newer here.
+      await ctx.pull?.([...produces.map((type) => artifactPath(ctx.artifactsDir, type)), ...(verdict ? [outcomeFile] : [])]);
       await broker.close(); // withdraw any question still open, so the log ends with the result
       broker = undefined;
       log('result', { result, ...(stopReason && { error: stopReason }) }); // why the host stopped it, if it did
@@ -379,8 +380,10 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
       agent?.stop();
     },
     kill() {
+      // No pid here: the agent runs in a box, which only its provider can reach.
+      if (agentPid === undefined || agentPid <= 0) return agent?.stop();
       try {
-        if (agentPid !== undefined && agentPid > 0) process.kill(agentPid, 'SIGKILL');
+        process.kill(agentPid, 'SIGKILL');
       } catch {
         // already gone
       }

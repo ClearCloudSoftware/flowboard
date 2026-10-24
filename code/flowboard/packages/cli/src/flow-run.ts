@@ -201,7 +201,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
         printErr(`${yaml}: sandbox: cannot open an OpenSandbox box: ${(e as Error).message}`);
         return 2;
       }
-      writeFileSync(join(runDir, 'sandbox.json'), JSON.stringify({ id: box.id, token: box.token }) + '\n');
+      writeFileSync(join(runDir, 'sandbox.json'), JSON.stringify({ id: box.id, token: box.token }) + '\n', { mode: 0o600 }); // the relay token
       print(`-- sandbox ${box.id}: ${config.folder} at its last commit; egress ${sb.egress.join(', ') || 'none'}`);
       for (const name of box.missing) print(`-- warning: sandbox: ${name} is not set; steps that need it will fail`);
     }
@@ -518,6 +518,23 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number 
 /** What the runs cost, as far as their providers reported it. */
 const sumCost = (runs: FlowState['runs']) => runs.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
 
+/**
+ * The artifacts to copy into an OpenSandbox box before a process starts: every file here except the outputs of
+ * agents still running (their copy in the box is newer) and the verdicts, which only ever travel back.
+ */
+export function pushable(artifactsDir: string, producing: Set<string>): string[] {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory() && e.name !== '.outcomes') walk(p);
+      else if (e.isFile() && !producing.has(p)) out.push(p);
+    }
+  };
+  if (existsSync(artifactsDir)) walk(artifactsDir);
+  return out;
+}
+
 /** How long an OpenSandbox box lives unattended: a paused flow keeps its box for --resume this long. */
 const BOX_SECONDS = 86_400;
 
@@ -557,6 +574,8 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   const { config } = d;
   let state = d.state;
   const live = new Map<number, { cmd: RunCommand; run: StepRun }>();
+  /** OpenSandbox: artifact files agents still running are writing in the box. */
+  const producing = new Set<string>();
   /** Every run not yet ended, stopping ones included, for a second Ctrl+C to kill. */
   const running = new Set<StepRun>();
   // The flow's budget: each agent run may spend what is left, and once it is spent the flow stops and waits.
@@ -595,8 +614,8 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     temps,
     ...(config.sandbox?.runtime === 'docker' && { sandbox: sandboxFor(config.sandbox, d.artifactsDir) }),
     ...(d.box && {
-      sandbox: ({ tmpDir, mounts }) => d.box!.exec({ ...(tmpDir && { tmpDir }), ...(mounts && { mounts }), fresh: [d.artifactsDir] }),
-      pull: () => d.box!.pullDir(d.artifactsDir),
+      sandbox: ({ tmpDir, mounts }) => d.box!.exec({ ...(tmpDir && { tmpDir }), ...(mounts && { mounts }), push: () => pushable(d.artifactsDir, producing) }),
+      pull: (files) => d.box!.pullFiles(files),
     }),
   };
 
@@ -692,6 +711,9 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   const launch = (cmd: RunCommand) => {
     const step = config.steps[cmd.step];
     const produces = config.flow.steps.find((s) => s.id === cmd.step)!.produces;
+    // In a box, an agent's outputs are newest there until it ends: no other step's push may overwrite them.
+    const mine = step.kind === 'ai' && d.box ? produces.map((type) => artifactPath(d.artifactsDir, type)) : [];
+    for (const f of mine) producing.add(f);
     show(`-- ${cmd.step} attempt ${cmd.attempt} (${step.kind === 'shell' ? 'shell' : `${step.run.adapter} ${step.run.spec.model}`})`);
     mkdirSync(d.runDir, { recursive: true });
     mkdirSync(d.artifactsDir, { recursive: true });
@@ -724,6 +746,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     const capUsd = budget > 0 ? budget - sumCost(state.runs) : undefined;
     const run = step.kind === 'shell' ? execShell(step.command, config.folder, cmd, produces, runCtx) : execAi(step.run, cmd, produces, runCtx, { verdict: step.verdict, capUsd });
     live.set(cmd.run, { cmd, run });
+    void run.ended.then(() => mine.forEach((f) => producing.delete(f))); // pulled back by now: the host's copy is current
     running.add(run);
     void run.ended.then(() => running.delete(run));
     post({ type: 'launched', run: cmd.run });
@@ -830,7 +853,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     try {
       const patch = await d.box.patch();
       writeFileSync(patchPath, patch);
-      const files = (patch.match(/^diff --git /gm) ?? []).length;
+      const files = (patch.toString('latin1').match(/^diff --git /gm) ?? []).length;
       print(`-- changes: ${join(d.shown, 'changes.patch')} (${plural(files, 'file')}); review it, then: git -C ${config.folder} apply ${patchPath}`);
       await d.box.kill();
     } catch (e) {

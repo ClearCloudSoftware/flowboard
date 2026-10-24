@@ -5,7 +5,9 @@
  */
 import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Sandbox } from '@alibaba-group/opensandbox';
 import type { ExecHost } from '@flowboard/core';
@@ -26,14 +28,17 @@ export interface Box {
   token: string;
   /** Credentials named in the options but not set on this machine. */
   missing: string[];
-  /** An ExecHost for one step; `tmpDir` and `fresh` are copied in before every process, `mounts` once per box. */
-  exec(o: { tmpDir?: string; mounts?: string[]; fresh?: string[] }): ExecHost;
+  /** An ExecHost for one step; `tmpDir` and the files `push` names are copied in before every process, `mounts` once per box. */
+  exec(o: { tmpDir?: string; mounts?: string[]; push?: () => string[] }): ExecHost;
   /** Copies a host folder into the box at the same path, over what is there (parallel steps share the box). */
   pushDir(dir: string): Promise<void>;
-  /** Copies a box folder back to the host at the same path: new and changed files only. */
-  pullDir(dir: string): Promise<void>;
-  /** `git diff --binary` of the folder against the commit it started from, new files included. */
-  patch(): Promise<string>;
+  /**
+   * Copies these files back from the box to the same paths here: regular files only, read as the box's user.
+   * A file the box lacks, or holds as a link, stays as it is here.
+   */
+  pullFiles(files: string[]): Promise<void>;
+  /** `git diff --binary` of the folder against the commit it started from, new files included; bytes, as git wrote them. */
+  patch(): Promise<Buffer>;
   kill(): Promise<void>;
 }
 
@@ -61,11 +66,19 @@ const connectionConfig = () => ({
 });
 
 /** Runs a shell command in the box as root (the image must leave its user root: docker/Dockerfile.opensandbox). */
-async function root(sb: Sandbox, script: string): Promise<void> {
-  const ex = await sb.commands.run(script, { uid: 0, gid: 0 }); // a string: this server version takes no argv array
+async function root(sb: Sandbox, script: string, uid = 0): Promise<void> {
+  const ex = await sb.commands.run(script, { uid, gid: uid }); // a string: this server version takes no argv array
   const out = ex.logs.stdout.map((m) => m.text).join('') + ex.logs.stderr.map((m) => m.text).join('');
   if (ex.exitCode !== 0) throw new Error(`sandbox ${sb.id}: ${script.split('\n')[0]}: exit ${ex.exitCode}: ${out.trim()}`);
 }
+
+const isLink = (p: string) => {
+  try {
+    return lstatSync(p).isSymbolicLink();
+  } catch {
+    return false;
+  }
+};
 
 const q = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
@@ -115,14 +128,23 @@ function boxOf(sb: Sandbox, folder: string, token: string, missing: string[]): B
     // Merged, never replaced: another step running in this box may be writing there.
     await root(sb, `mkdir -p ${q(dir)} && tar -xzf ${tgz} -C ${q(dir)} && rm ${tgz} && chown -R ${USER} ${q(dir)}`);
   };
+  /** Files from here to the same paths in the box, owned by its user. */
+  const pushFiles = async (files: string[]) => {
+    const rel = files.map((f) => f.replace(/^\//, ''));
+    const data = execFileSync('tar', ['--no-mac-metadata', '-czf', '-', '-C', '/', ...rel], { env: { ...process.env, COPYFILE_DISABLE: '1' }, maxBuffer: 1 << 30 });
+    const tgz = await upload(sb, data);
+    const dirs = [...new Set(files.map((f) => dirname(f)))];
+    await root(sb, `tar -xzf ${tgz} -C / && rm ${tgz} && chown ${USER} ${dirs.map(q).join(' ')} ${files.map(q).join(' ')}`);
+  };
   return {
     id: sb.id,
     token,
     missing,
-    exec({ tmpDir, mounts = [], fresh = [] }) {
+    exec({ tmpDir, mounts = [], push }) {
       const prepare = async () => {
         if (tmpDir) await pushDir(tmpDir); // the provider writes its files there just before it spawns
-        for (const d of fresh) await pushDir(d);
+        const files = push?.() ?? [];
+        if (files.length) await pushFiles(files);
         for (const m of mounts.filter((m) => !pushed.has(m))) {
           await pushDir(m);
           pushed.add(m);
@@ -152,21 +174,36 @@ function boxOf(sb: Sandbox, folder: string, token: string, missing: string[]): B
       };
     },
     pushDir,
-    async pullDir(dir) {
-      // -h: an agent's symlink comes back as the file it names in the box, never as a link on this machine.
-      const tgz = `/tmp/fb-down-${randomBytes(6).toString('hex')}.tgz`;
-      await root(sb, `mkdir -p ${q(dir)} && tar -czhf ${tgz} -C ${q(dir)} .`);
+    async pullFiles(files) {
+      if (!files.length) return;
+      const tag = randomBytes(6).toString('hex');
+      const [list, tgz] = [`/tmp/fb-list-${tag}`, `/tmp/fb-down-${tag}.tgz`];
+      // As the box's user, regular files only: an agent's link to /etc/shadow or to / is never read as root.
+      const tests = files.map((f) => `[ -f ${q(f)} ] && [ ! -L ${q(f)} ] && printf '%s\\n' ${q(f.replace(/^\//, ''))}`).join('; ');
+      await root(sb, `cd / && { ${tests}; true; } > ${list} && tar -czf ${tgz} -C / -T ${list}`, 1000);
       const data = Buffer.from(await sb.files.readBytes(tgz));
-      await root(sb, `rm -f ${tgz}`);
-      execFileSync('mkdir', ['-p', dir]);
-      execFileSync('tar', ['-xzf', '-', '-C', dir], { input: data });
+      await root(sb, `rm -f ${list} ${tgz}`);
+      // Unpacked apart, then only regular files copied into place: whatever the archive holds, no link lands here.
+      const scratch = mkdtempSync(join(tmpdir(), 'fb-pull-'));
+      try {
+        execFileSync('tar', ['-xzf', '-', '-C', scratch, '--no-same-owner'], { input: data });
+        for (const f of files) {
+          const got = join(scratch, f.replace(/^\//, ''));
+          if (!existsSync(got) || !lstatSync(got).isFile()) continue;
+          mkdirSync(dirname(f), { recursive: true });
+          if (existsSync(f) || isLink(f)) rmSync(f, { force: true }); // never written through a link
+          copyFileSync(got, f);
+        }
+      } finally {
+        rmSync(scratch, { recursive: true, force: true });
+      }
     },
     async patch() {
       const g = `git -C ${q(folder)} -c safe.directory=* -c core.quotePath=false`; // root reading the image user's repo
       // Through a file: the command API hands output back as messages that lose their newlines.
       const file = `/tmp/fb-patch-${randomBytes(6).toString('hex')}`;
       await root(sb, `${g} add -A && ${g} diff --binary --cached ${BASE_TAG} > ${file}`);
-      const patch = Buffer.from(await sb.files.readBytes(file)).toString('utf8');
+      const patch = Buffer.from(await sb.files.readBytes(file)); // never decoded: a file in Latin-1 is not UTF-8
       await root(sb, `rm -f ${file}`);
       return patch;
     },

@@ -232,6 +232,9 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs): Fl
   let sandbox: Sandbox | undefined;
   if (y.sandbox?.runtime === 'opensandbox') {
     if (y.sandbox.env) return fail(['sandbox.env: only for runtime docker']);
+    const known = Object.values(NEEDS).map((n) => n.credential);
+    const unknown = (y.sandbox.credentials ?? []).findIndex((c) => !known.includes(c));
+    if (unknown !== -1) return fail([`sandbox.credentials.${unknown}: OpenSandbox injects only ${known.join(' and ')}`]);
     const needs = Object.values(steps).flatMap((st) =>
       st.kind !== 'ai' ? [] : st.run.adapter === 'claude-code' ? [NEEDS.claude] : st.run.spec.model.startsWith('openrouter/') ? [NEEDS.openrouter] : [],
     );

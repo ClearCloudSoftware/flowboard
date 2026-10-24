@@ -3,15 +3,16 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, dirname, join } from 'node:path';
 import { ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, FlowState, NormalizedEvent, Question, RunResult, RunSpec } from '@flowboard/core';
 import { hostExecHost, ReplayProvider } from '@flowboard/adapters';
 import type { Box } from '@flowboard/adapters';
 import { askBroker } from '@flowboard/ask-user';
 import { processStart } from '../src/flow-exec.ts';
-import { DISCARD_COMMANDS, runFlow } from '../src/flow-run.ts';
+import { DISCARD_COMMANDS, pushable, runFlow } from '../src/flow-run.ts';
 import type { RunDeps } from '../src/run.ts';
 import { DELIVERY, flowProject, RUN } from './fixtures/flow.ts';
 
@@ -822,21 +823,21 @@ function fakeBox(o: { missing?: string[]; gone?: boolean } = {}) {
     id: 'box-1',
     token: 'tok-1',
     missing: o.missing ?? [],
-    exec: ({ fresh = [] }) => ({
+    exec: ({ push }) => ({
       ...hostExecHost,
       id: 'container',
       spawn: (command, args, opts) => {
-        calls.push(`spawn:${fresh.length ? 'fresh' : 'none'}`);
+        calls.push(`spawn:push=${(push?.() ?? []).map((f) => basename(f)).sort().join(',')}`);
         return hostExecHost.spawn(command, args, opts);
       },
       tunnel: async () => ({ close() {} }),
       mapPath: (p) => p,
     }),
     pushDir: async () => void calls.push('push'),
-    pullDir: async () => void calls.push('pull'),
+    pullFiles: async (files) => void calls.push(`pull:${files.map((f) => basename(f)).join(',')}`),
     patch: async () => {
       calls.push('patch');
-      return 'diff --git a/x b/x\n';
+      return Buffer.from('diff --git a/x b/x\n');
     },
     kill: async () => void calls.push('kill'),
   };
@@ -858,9 +859,11 @@ test('an opensandbox flow opens one box, syncs artifacts around each step and en
   const s = setup(BOXED(LINEAR));
   const fb = fakeBox();
   assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fb.deps }), 0, s.out.join('\n'));
-  assert.deepEqual(fb.calls, ['open', 'pull', 'pull', 'spawn:fresh', 'patch', 'kill']);
+  // Each agent brings back only what it produces; the check gets every artifact the host has.
+  assert.deepEqual(fb.calls, ['open', 'pull:plan.md', 'pull:notes.md', 'spawn:push=notes.md,plan.md', 'patch', 'kill']);
   assert.equal(readFileSync(join(s.runDir, 'changes.patch'), 'utf8'), 'diff --git a/x b/x\n');
   assert.deepEqual(JSON.parse(readFileSync(join(s.runDir, 'sandbox.json'), 'utf8')), { id: 'box-1', token: 'tok-1' });
+  assert.equal(statSync(join(s.runDir, 'sandbox.json')).mode & 0o777, 0o600, 'it holds the relay token');
   assert.ok(s.out.some((l) => l.startsWith('-- sandbox box-1: ')), s.out.join('\n'));
   assert.ok(s.out.includes(`-- changes: ${join('runs', STAMPED, 'changes.patch')} (1 file); review it, then: git -C ${join(s.base, 'proj')} apply ${join(s.runDir, 'changes.patch')}`), s.out.join('\n'));
 });
@@ -887,4 +890,12 @@ test('a missing credential is a warning, not an error', async () => {
   const s = setup(BOXED(LINEAR));
   assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fakeBox({ missing: ['CLAUDE_CODE_OAUTH_TOKEN'] }).deps }), 0, s.out.join('\n'));
   assert.ok(s.out.includes('-- warning: sandbox: CLAUDE_CODE_OAUTH_TOKEN is not set; steps that need it will fail'), s.out.join('\n'));
+});
+
+test('an artifact a running agent produces is never pushed over its copy in the box', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fb-push-'));
+  for (const f of ['plan.md', 'notes.md', 'check_output.md']) writeFileSync(join(dir, f), f);
+  mkdirSync(join(dir, '.outcomes'));
+  writeFileSync(join(dir, '.outcomes', '001-plan.json'), '{}');
+  assert.deepEqual(pushable(dir, new Set([join(dir, 'notes.md')])).map((f) => basename(f)).sort(), ['check_output.md', 'plan.md']);
 });
