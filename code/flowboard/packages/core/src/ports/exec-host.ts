@@ -20,7 +20,7 @@ export interface SandboxProfile {
   tier: IsolationTier;
   /** Base image for container/microVM tiers. */
   image?: string;
-  /** Domains reachable from inside; default-deny everything else. `[]` = fully offline. */
+  /** Domains reachable from inside; default-deny everything else. `[]` = fully offline; `['*']` = open, until the egress proxy exists. */
   egressAllow: string[];
   /** Physical backstop to the logical max_turns / max_budget_usd caps. */
   limits?: { memoryMb?: number; cpus?: number; pids?: number; wallClockMs?: number };
@@ -36,6 +36,8 @@ export interface ExecHost {
   readonly id: IsolationTier;
   /** Absent for the `host` tier; present for sandboxed tiers. */
   readonly profile?: SandboxProfile;
+  /** A host folder the process sees at the same path: where a provider puts files the process must read. Absent: the host's temp folder. */
+  readonly tmpDir?: string;
   /**
    * Every tier spawns a local process (the CLI itself, or `docker exec -i …`),
    * so a Node child process with piped stdio is the handle. Providers need
@@ -44,6 +46,7 @@ export interface ExecHost {
   spawn(
     command: string,
     args: string[],
-    opts: { cwd: string; env?: NodeJS.ProcessEnv },
+    /** `ports`: the process listens on these, and this machine must reach them on 127.0.0.1 at the same numbers. */
+    opts: { cwd: string; env?: NodeJS.ProcessEnv; ports?: number[] },
   ): ChildProcessWithoutNullStreams;
 }

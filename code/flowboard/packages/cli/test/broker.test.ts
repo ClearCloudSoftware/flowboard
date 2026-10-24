@@ -147,3 +147,19 @@ test('a malformed request gets an error reply', async () => {
   assert.ok('error' in JSON.parse(reply));
   await broker.close();
 });
+
+test('a TCP broker answers a request with its token and drops one without', async () => {
+  const { events } = recorder();
+  const broker = await startBroker({ token: 'secret' }, async () => ({ a: 'yes' }), events);
+  try {
+    assert.ok(broker.port);
+    const addr = `127.0.0.1:${broker.port}`;
+    process.env.FLOWBOARD_ASK_TOKEN = 'secret';
+    assert.deepEqual(await askBroker(addr, { questions: [q('a')] }), { answers: { a: 'yes' } });
+    process.env.FLOWBOARD_ASK_TOKEN = 'wrong';
+    await assert.rejects(askBroker(addr, { questions: [q('a')] }), /closed without answering/);
+  } finally {
+    delete process.env.FLOWBOARD_ASK_TOKEN;
+    await broker.close();
+  }
+});

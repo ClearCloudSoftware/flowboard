@@ -3,7 +3,9 @@ import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, realpathSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { SHIM_ENTRY } from '@flowboard/ask-user';
+import { startBroker } from '../src/ask/broker.ts';
 import { dockerExecHost } from '@flowboard/adapters';
 import { fingerprint, ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, NormalizedEvent, RunCommand, RunResult, RunSpec } from '@flowboard/core';
@@ -338,7 +340,7 @@ test('a step run reports its end even when its log cannot be written', async () 
 const noDocker = spawnSync('docker', ['info'], { stdio: 'ignore' }).status !== 0 && 'docker is not running';
 
 test('a sandboxed check runs in the container: it passes, fails and keeps its output as on the host', { skip: noDocker }, async () => {
-  const s = stepSetup({ exec: dockerExecHost({ tier: 'container', image: 'alpine:latest', egressAllow: [] }) });
+  const s = stepSetup({ sandbox: () => dockerExecHost({ tier: 'container', image: 'alpine:latest', egressAllow: [] }) });
   const pass = await execShell('id -u', s.folder, RUN, ['check_output'], s.ctx).ended;
   assert.deepEqual(pass, { costUsd: 0, outcome: 'pass' });
   assert.equal(s.artifact('check_output').trim(), '1000');
@@ -348,9 +350,32 @@ test('a sandboxed check runs in the container: it passes, fails and keeps its ou
 });
 
 test('stopping a sandboxed check ends it as stopped', { skip: noDocker }, async () => {
-  const s = stepSetup({ exec: dockerExecHost({ tier: 'container', image: 'alpine:latest', egressAllow: [] }) });
+  const s = stepSetup({ sandbox: () => dockerExecHost({ tier: 'container', image: 'alpine:latest', egressAllow: [] }) });
   const run = execShell('sleep 300', s.folder, RUN, ['check_output'], s.ctx);
   await new Promise((r) => setTimeout(r, 1500));
   run.stop();
   assert.deepEqual(await run.ended, { costUsd: 0, error: 'stopped' });
+});
+
+const noImage = noDocker || (spawnSync('docker', ['image', 'inspect', 'flowboard-cli'], { stdio: 'ignore' }).status !== 0 && 'no flowboard-cli image');
+
+test('a shim in an agent box reaches the host broker over TCP, through FlowBoard code mounted at its host path', { skip: noImage }, async () => {
+  const { events } = { events: { onQuestion() {}, onAnswer() {}, onWithdrawn() {}, onDone() {}, onInterrupt() {} } };
+  const broker = await startBroker({ token: 't0k' }, async () => ({ a: 'from the host' }), events);
+  try {
+    const root = resolve(SHIM_ENTRY, '../../../..');
+    const client = join(root, 'packages/ask-user/src/broker-client.ts');
+    const script = `import { askBroker } from '${client}'; console.log(JSON.stringify(await askBroker('host.docker.internal:${broker.port}', { questions: [{ id: 'a', prompt: 'a?', kind: 'text' }] })));`;
+    const host = dockerExecHost({ tier: 'container', image: 'flowboard-cli', egressAllow: ['*'], mounts: [{ source: root, target: root, readOnly: true }] });
+    const child = host.spawn('node', ['--input-type=module', '-e', script], { cwd: tmp('box'), env: { ...process.env, FLOWBOARD_ASK_TOKEN: 't0k' } });
+    child.stdin.end();
+    let out = '';
+    child.stdout.on('data', (d) => (out += d));
+    child.stderr.on('data', (d) => (out += d));
+    const code = await new Promise((r) => child.on('close', r));
+    assert.equal(code, 0, out);
+    assert.deepEqual(JSON.parse(out.trim()), { answers: { a: 'from the host' } });
+  } finally {
+    await broker.close();
+  }
 });

@@ -6,7 +6,7 @@
  * See docs/FlowBoard/Human In The Loop/Ask User MCP Server.md.
  */
 import { createServer } from 'node:net';
-import type { Socket } from 'node:net';
+import type { AddressInfo, Socket } from 'node:net';
 import type { Answers, AskReply, AskRequest, Question } from '@flowboard/core';
 
 /** Answers one batch; rejects with an error named 'ExitPromptError' when the owner pressed Ctrl+C. Must stop when `signal` aborts. */
@@ -31,7 +31,17 @@ interface Job {
   abort: AbortController;
 }
 
-export async function startBroker(socketPath: string, answer: Answerer, events: BrokerEvents): Promise<{ close(): Promise<void> }> {
+/**
+ * `listen`: a Unix socket path, or TCP on 127.0.0.1 for a shim in a container (a socket cannot cross Docker
+ * Desktop's VM); a TCP broker answers only requests carrying `token`, since any local process can connect.
+ * `port` is the TCP port it took.
+ */
+export async function startBroker(
+  listen: string | { token: string },
+  answer: Answerer,
+  events: BrokerEvents,
+): Promise<{ close(): Promise<void>; port?: number }> {
+  const token = typeof listen === 'string' ? undefined : listen.token;
   const queue: Job[] = [];
   const conns = new Set<Socket>();
   let current: Job | undefined;
@@ -92,6 +102,7 @@ export async function startBroker(socketPath: string, answer: Answerer, events: 
       let request: AskRequest;
       try {
         request = JSON.parse(buf.slice(0, end)) as AskRequest;
+        if (token !== undefined && (request as { token?: unknown }).token !== token) return void conn.destroy();
         if (!Array.isArray(request.questions)) throw new Error('no questions');
       } catch (e) {
         return reply(conn, { error: `bad request: ${(e as Error).message}` });
@@ -110,10 +121,12 @@ export async function startBroker(socketPath: string, answer: Answerer, events: 
   });
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
-    server.listen(socketPath, resolve);
+    if (typeof listen === 'string') server.listen(listen, resolve);
+    else server.listen(0, '127.0.0.1', resolve);
   });
 
   return {
+    ...(token !== undefined && { port: (server.address() as AddressInfo).port }),
     async close() {
       for (const job of [...queue]) withdraw(job);
       if (current) withdraw(current);

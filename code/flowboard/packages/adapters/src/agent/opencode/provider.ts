@@ -10,6 +10,8 @@ import { randomBytes } from 'node:crypto';
 import { EventEmitter, on } from 'node:events';
 import { existsSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { createServer } from 'node:net';
+import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,6 +26,17 @@ import { replyFor } from './permissions.ts';
 import { ServerStartError, startServer } from './server.ts';
 import type { StartedServer } from './server.ts';
 import { KILL_GRACE_MS, terminate } from '../../exec/terminate.ts';
+
+/** A port free on this machine's loopback now, for a sandboxed server to publish. */
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = createServer().listen(0, '127.0.0.1', () => {
+      const { port } = srv.address() as AddressInfo;
+      srv.close(() => resolve(port));
+    });
+    srv.on('error', reject);
+  });
+}
 
 const GUARD_PLUGIN = fileURLToPath(new URL('./guard-plugin.ts', import.meta.url));
 
@@ -115,13 +128,15 @@ export class OpencodeProvider implements AgentProvider {
 
       try {
         const model = this.resolveModel(spec.model);
-        configHome = await mkdtemp(join(tmpdir(), 'fb-oc-'));
+        configHome = await mkdtemp(join(spec.exec?.tmpDir ?? tmpdir(), 'fb-oc-'));
         const password = randomBytes(24).toString('hex');
         const run = buildLaunch({ ...spec, model }, { env: this.env, configHome, password, guardPlugin: GUARD_PLUGIN });
 
         // Assign before checking for a stop, so cleanup can kill a server that came up after stop().
-        server = await startServer(spec.exec ?? hostExecHost, {
+        const exec = spec.exec ?? hostExecHost;
+        server = await startServer(exec, {
           opencodePath: this.opencodePath,
+          ...(exec.id !== 'host' && { port: await freePort() }),
           cwd: directory,
           env: run.env,
           killGraceMs: this.killGraceMs,

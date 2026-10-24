@@ -20,10 +20,13 @@ export class ServerStartError extends Error {
 /** Spawn `opencode serve` on loopback and resolve once it prints its URL. */
 export function startServer(
   exec: ExecHost,
-  opts: { opencodePath: string; cwd: string; env: NodeJS.ProcessEnv; timeoutMs?: number; killGraceMs?: number },
+  opts: { opencodePath: string; cwd: string; env: NodeJS.ProcessEnv; timeoutMs?: number; killGraceMs?: number; port?: number },
 ): Promise<StartedServer> {
   const { timeoutMs = 30_000 } = opts;
-  const child = exec.spawn(opts.opencodePath, ['serve', '--hostname', '127.0.0.1', '--port', '0'], { cwd: opts.cwd, env: opts.env });
+  // In a sandbox the server must listen on every interface of its own box, on a port this machine can reach.
+  const port = exec.id === 'host' ? 0 : (opts.port ?? 0);
+  const hostname = exec.id === 'host' ? '127.0.0.1' : '0.0.0.0';
+  const child = exec.spawn(opts.opencodePath, ['serve', '--hostname', hostname, '--port', String(port)], { cwd: opts.cwd, env: opts.env, ...(port && { ports: [port] }) });
   let tail = '';
   child.stderr.on('data', (d) => (tail = (tail + d).slice(-4000)));
 
@@ -43,7 +46,7 @@ export function startServer(
         done();
         // Keep an error listener for the server's whole life: an unhandled 'error' (say, a failed kill) would throw.
         child.on('error', (e) => (tail = `${tail}\n${e.message}`.slice(-4000)));
-        resolve({ url: m[1], child, stderrTail: () => tail });
+        resolve({ url: m[1].replace('//0.0.0.0:', '//127.0.0.1:'), child, stderrTail: () => tail });
       }
     };
     // 'close', not 'exit': stderr is fully read by then.

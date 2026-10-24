@@ -18,6 +18,12 @@ test('dockerArgs: offline, no capabilities, non-root, cwd at the same path, env 
   assert.ok(!dockerArgs({ ...PROFILE, nonRoot: false }, 'sh', [], '/w', []).includes('--user'));
 });
 
+test("dockerArgs: ['*'] is the open network; ports are published on loopback only", () => {
+  const a = dockerArgs({ ...PROFILE, egressAllow: ['*'] }, 'x', [], '/w', [], [4096]).join(' ');
+  assert.ok(!a.includes('--network'));
+  assert.ok(a.includes('-p 127.0.0.1:4096:4096'));
+});
+
 test('dockerArgs refuses an egress allowlist: there is no proxy to enforce it', () => {
   assert.throws(() => dockerArgs({ ...PROFILE, egressAllow: ['api.anthropic.com'] }, 'sh', [], '/w', []), /egress proxy/);
   assert.throws(() => dockerArgs({ ...PROFILE, image: undefined }, 'sh', [], '/w', []), /no image/);
