@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Sandbox } from '@alibaba-group/opensandbox';
 import type { ExecHost } from '@flowboard/core';
@@ -44,7 +44,8 @@ export interface Box {
 
 const RELAY = fileURLToPath(new URL('./relay.cjs', import.meta.url));
 /** code/flowboard on this machine; the flowboard-cli image keeps the same tree at /opt/flowboard. */
-const FLOWBOARD_ROOT = fileURLToPath(new URL('../../../../../', import.meta.url)).replace(/\/$/, '');
+// A plain path, not `new URL('../…', import.meta.url)`: bundlers (Next's Turbopack) read that as an asset import.
+const FLOWBOARD_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../..');
 const IN_IMAGE = '/opt/flowboard';
 const RELAY_PORT = 7000;
 const RELAY_IN_BOX = '/tmp/flowboard-relay.cjs';
