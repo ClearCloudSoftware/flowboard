@@ -49,6 +49,12 @@ export interface ExecHost {
     /** `ports`: the process listens on these, and this machine must reach them on 127.0.0.1 at the same numbers. */
     opts: { cwd: string; env?: NodeJS.ProcessEnv; ports?: number[] },
   ): ChildProcessWithoutNullStreams;
+  /** Where a file of FlowBoard's own code is inside the box; absent: the same path. */
+  mapPath?(hostPath: string): string;
+  /** Whether a file exists inside the box; absent: the box shares this disk. */
+  exists?(path: string): Promise<boolean>;
+  /** How this machine reaches a port the process listens on; absent: 127.0.0.1 (published, for docker). */
+  endpoint?(port: number): Promise<{ url: string; headers?: Record<string, string> }>;
   /**
    * For a sandbox that cannot dial this machine: connections to `boxSocket` inside it reach `hostSocket` here.
    * Absent where the box can reach this machine itself.

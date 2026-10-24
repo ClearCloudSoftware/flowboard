@@ -36,13 +36,13 @@ export const WITHDRAWN_QUEUED = '-- question withdrawn before it was shown: the 
 /**
  * The spec as launched: the ask_user shim on `socket`, Claude's own question tool off (so the agent asks
  * through ask_user), and the `skills:` folders copied into a `local` plugin under `tmp`. `env` joins the shim's;
- * `node` runs it (`node` from PATH in a sandbox, where this machine's Node path means nothing).
+ * `node` runs `shimEntry` (in a sandbox, `node` from PATH and the shim where the box keeps FlowBoard's code).
  */
-export async function withAsking(config: RunConfig, socket: string, tmp: string, env: Record<string, string> = {}, node = process.execPath): Promise<RunSpec> {
+export async function withAsking(config: RunConfig, socket: string, tmp: string, env: Record<string, string> = {}, node = process.execPath, shimEntry = SHIM_ENTRY): Promise<RunSpec> {
   const { adapter, spec, skills } = config;
   const out: RunSpec = {
     ...spec,
-    tools: [...(spec.tools ?? []), { name: 'flowboard', command: node, args: [SHIM_ENTRY], env: { FLOWBOARD_ASK_SOCKET: socket, ...env } }],
+    tools: [...(spec.tools ?? []), { name: 'flowboard', command: node, args: [shimEntry], env: { FLOWBOARD_ASK_SOCKET: socket, ...env } }],
   };
   if (adapter === 'claude-code') out.toolPolicy = { ...spec.toolPolicy, deny: [...(spec.toolPolicy?.deny ?? []), 'AskUserQuestion'] };
   if (skills.length) {

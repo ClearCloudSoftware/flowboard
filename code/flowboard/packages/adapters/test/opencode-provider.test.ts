@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { NormalizedEvent, RunSpec } from '@flowboard/core';
+import type { ExecHost, NormalizedEvent, RunSpec } from '@flowboard/core';
 import { OpencodeProvider } from '../src/agent/opencode/provider.ts';
 import { startServer } from '../src/agent/opencode/server.ts';
 import { hostExecHost } from '../src/exec/host.ts';
@@ -316,4 +316,49 @@ test('a server that exits on SIGTERM is not sent SIGKILL', async () => {
   await provider().launch({ ...spec, exec }).result;
   await new Promise((r) => setTimeout(r, 300));
   assert.deepEqual(kills, ['SIGTERM']);
+});
+
+/** The host tier dressed as a sandbox that does not share this disk: its hooks record how they were used. */
+function boxLike(o: { exists?: boolean } = {}) {
+  const calls = { endpoint: [] as number[], exists: [] as string[] };
+  const exec: ExecHost = {
+    ...hostExecHost,
+    id: 'container',
+    endpoint: async (port) => {
+      calls.endpoint.push(port);
+      return { url: `http://127.0.0.1:${port}`, headers: { 'x-test': 'through-the-gateway' } };
+    },
+    exists: async (path) => {
+      calls.exists.push(path);
+      return o.exists ?? true;
+    },
+    mapPath: (p) => (p.endsWith('guard-plugin.ts') ? '/opt/flowboard/guard-plugin.ts' : p),
+  };
+  return { exec, calls };
+}
+
+test('opencode connects through exec.endpoint when the host offers one', async () => {
+  const { spec, provider, requests } = setup([userMsg, userText, text, step(0.01), idle]);
+  const { exec, calls } = boxLike();
+  const res = await provider().launch({ ...spec, exec }).result;
+  assert.equal(res.exitCode, 0, res.error);
+  assert.equal(calls.endpoint.length, 1);
+  assert.ok(calls.endpoint[0] >= 20000 && calls.endpoint[0] <= 59999, String(calls.endpoint[0]));
+  assert.ok(requests().length > 0 && requests().every((r) => (r as { xTest?: string }).xTest === 'through-the-gateway'));
+});
+
+test('opencode checks the guard marker through exec.exists', async () => {
+  const { spec, provider } = setup([idle]);
+  const { exec, calls } = boxLike({ exists: false });
+  const res = await provider().launch({ ...spec, exec, guards: { writeRoots: [spec.cwd] } }).result;
+  assert.equal(res.error, 'guard plugin not loaded');
+  assert.equal(calls.exists.length, 1);
+  assert.match(calls.exists[0], /flowboard-guard\.loaded$/);
+});
+
+test('the guard plugin path goes through exec.mapPath', async () => {
+  const { spec, provider, envLine } = setup([userMsg, userText, text, step(0.01), idle]);
+  const { exec } = boxLike();
+  await provider().launch({ ...spec, exec, guards: { writeRoots: [spec.cwd] } }).result;
+  assert.deepEqual(JSON.parse(envLine().OPENCODE_CONFIG_CONTENT!).plugin, ['file:///opt/flowboard/guard-plugin.ts']);
 });

@@ -61,7 +61,7 @@ createServer(async (req, res) => {
   let body = '';
   for await (const chunk of req) body += chunk;
   const path = new URL(req.url, 'http://x').pathname;
-  log({ method: req.method, path, body: body ? JSON.parse(body) : undefined });
+  log({ method: req.method, path, body: body ? JSON.parse(body) : undefined, ...(req.headers['x-test'] && { xTest: req.headers['x-test'] }) });
   if (req.headers.authorization !== expectedAuth) return json(res, { error: 'unauthorized' }, 401);
 
   let m;
@@ -97,6 +97,6 @@ createServer(async (req, res) => {
   } else {
     json(res, { error: 'not found' }, 404);
   }
-}).listen(0, '127.0.0.1', function () {
+}).listen(Number(process.argv[process.argv.indexOf('--port') + 1] || 0), '127.0.0.1', function () {
   console.log(`opencode server listening on http://127.0.0.1:${this.address().port}`);
 });
