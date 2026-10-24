@@ -14,6 +14,8 @@ export interface RelayOptions {
   profile: SandboxProfile;
   tmpDir?: string;
   mapPath?: (hostPath: string) => string;
+  /** Names the sandbox in error messages. */
+  name?: string;
   /** Awaited before each process starts: uploads what it must see. */
   beforeSpawn?: () => Promise<void>;
 }
@@ -24,7 +26,7 @@ const UPGRADE = { Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Ke
 let nextPid = 1_000_000;
 
 /** Opens one upgrade to the relay at `path` (with `query`); rejects with the HTTP status when it refuses. */
-export async function upgrade(o: Pick<RelayOptions, 'connect' | 'token'>, path: string, query: Record<string, string>): Promise<Socket> {
+export async function upgrade(o: Pick<RelayOptions, 'connect' | 'token' | 'name'>, path: string, query: Record<string, string>): Promise<Socket> {
   const { url, headers } = await o.connect();
   const target = new URL(path.replace(/^\//, ''), url.endsWith('/') ? url : `${url}/`);
   for (const [k, v] of Object.entries({ token: o.token, ...query })) target.searchParams.set(k, v);
@@ -33,9 +35,9 @@ export async function upgrade(o: Pick<RelayOptions, 'connect' | 'token'>, path: 
     req.on('upgrade', (_res, sock) => resolve(sock));
     req.on('response', (res) => {
       res.resume();
-      reject(new Error(`the sandbox relay refused: HTTP ${res.statusCode}`));
+      reject(new Error(`the sandbox relay${o.name ? ` (${o.name})` : ''} refused: HTTP ${res.statusCode}`));
     });
-    req.on('error', (e) => reject(new Error(`cannot reach the sandbox relay: ${e.message}`)));
+    req.on('error', (e) => reject(new Error(`cannot reach the sandbox relay${o.name ? ` (${o.name})` : ''}: ${e.message}`)));
     req.end();
   });
 }
@@ -57,8 +59,11 @@ class RelayChild extends EventEmitter {
   private pending: Buffer[] = [];
   private ended = false;
 
-  constructor(start: Promise<Socket>) {
+  private readonly name: string | undefined;
+
+  constructor(start: Promise<Socket>, name?: string) {
     super();
+    this.name = name;
     this.stdin = new Writable({
       write: (chunk: Buffer, _enc, cb) => this.send(encodeFrame(FRAME.stdin, chunk), cb),
       final: (cb) => this.send(encodeFrame(FRAME.stdinEnd, Buffer.alloc(0)), cb),
@@ -102,7 +107,7 @@ class RelayChild extends EventEmitter {
     });
     sock.on('error', () => {}); // a dropped connection surfaces as 'close'
     sock.on('close', () => {
-      if (!this.ended) this.fail(new Error('the connection to the sandbox relay closed before the process ended'));
+      if (!this.ended) this.fail(new Error(`the connection to the sandbox relay${this.name ? ` (${this.name})` : ''} closed before the process ended`));
     });
   }
 
@@ -142,7 +147,7 @@ export function relayExecHost(o: RelayOptions): ExecHost {
         await o.beforeSpawn?.();
         return upgrade(o, '/spawn', { spec });
       })();
-      return new RelayChild(start) as unknown as ChildProcessWithoutNullStreams;
+      return new RelayChild(start, o.name) as unknown as ChildProcessWithoutNullStreams;
     },
     async tunnel(boxSocket, hostSocket) {
       let closed = false;

@@ -1,0 +1,4 @@
+# The image for runtime: opensandbox. OpenSandbox runs its execd as the image user; root lets run-flow lay out
+# the host paths and hand them to uid 1000, the user every step runs as (the relay starts as 1000).
+FROM flowboard-cli
+USER root
