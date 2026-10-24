@@ -5,7 +5,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, closeSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { SHIM_ENTRY } from '@flowboard/ask-user';
 import { fingerprint, ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, AgentRun, ExecHost, Outcome, RunCommand, RunEnd, RunResult, RunSpec } from '@flowboard/core';
@@ -37,6 +37,11 @@ export interface ExecContext {
    * `mounts` (read-only) are host folders the process sees at the same paths.
    */
   sandbox?(o: { online?: boolean; tmpDir?: string; mounts?: string[] }): ExecHost;
+  /**
+   * runtime: opensandbox, where the box does not share this disk: brings these files back from it.
+   * Its presence means the box holds FlowBoard's own code and reaches run-flow only through a tunnel.
+   */
+  pull?(files: string[]): Promise<void>;
   // ai steps:
   makeProvider(adapter: Adapter): AgentProvider;
   answer: Answerer;
@@ -250,8 +255,11 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
         // the result line, or the host's next state write, reports the disk trouble
       }
     };
-    const outcomeFile = join(ctx.logDir, `${runName(run)}.outcome.json`);
+    // In a box that keeps its own disk, the verdict comes back with the artifacts; the run folder never goes in.
+    const outcomeFile = ctx.pull ? join(ctx.artifactsDir, '.outcomes', `${runName(run)}.json`) : join(ctx.logDir, `${runName(run)}.outcome.json`);
     let tmp: string | undefined;
+    let hostDir: string | undefined;
+    let tunnel: { close(): void } | undefined;
     let broker: Awaited<ReturnType<typeof startBroker>> | undefined;
     const noRun = (error: string): RunEnd => {
       const result: RunResult = { usage: ZERO_USAGE, exitCode: 1, error };
@@ -266,8 +274,10 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
         tmp = realpathSync(mkdtempSync('/tmp/fb-'));
         ctx.temps?.add(tmp);
         // In a sandbox the shim reaches the broker over TCP: a Unix socket cannot cross Docker Desktop's VM.
-        const token = ctx.sandbox && randomBytes(24).toString('hex');
-        broker = await startBroker(token ? { token } : join(tmp, 'ask.sock'), ctx.answer, {
+        // In an OpenSandbox box it reaches it through the relay's tunnel: the box cannot dial this machine at all.
+        const token = ctx.sandbox && !ctx.pull && randomBytes(24).toString('hex');
+        if (ctx.pull) hostDir = realpathSync(mkdtempSync('/tmp/fb-h-')); // apart from tmp, which is copied into the box
+        broker = await startBroker(token ? { token } : join(hostDir ?? tmp, 'ask.sock'), ctx.answer, {
           onQuestion: (questions, batch) => quietly('question', { batch, questions }),
           onAnswer: (answers, batch) => quietly('answer', { batch, answers }),
           onWithdrawn: (batch, shown) => {
@@ -278,10 +288,20 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
           onInterrupt: ctx.onInterrupt,
         });
         const outcome: Record<string, string> = verdict ? { FLOWBOARD_OUTCOME_FILE: outcomeFile } : {};
-        spec = token
-          ? await withAsking(config, `host.docker.internal:${broker.port}`, tmp, { ...outcome, FLOWBOARD_ASK_TOKEN: token }, 'node')
-          : await withAsking(config, join(tmp, 'ask.sock'), tmp, outcome);
-        if (ctx.sandbox) {
+        if (ctx.pull) {
+          if (verdict) mkdirSync(dirname(outcomeFile), { recursive: true });
+          const shim = ctx.sandbox!({}).mapPath?.(SHIM_ENTRY) ?? SHIM_ENTRY;
+          spec = await withAsking(config, join(tmp, 'ask.sock'), tmp, outcome, 'node', shim);
+          const plugins = (spec.capabilities ?? []).flatMap((c) => (c.mount.kind === 'plugin_dir' && !inside(tmp!, c.mount.path) ? [c.mount.path] : []));
+          const exec = ctx.sandbox!({ online: true, tmpDir: tmp, mounts: plugins });
+          tunnel = await exec.tunnel!(join(tmp, 'ask.sock'), join(hostDir!, 'ask.sock'));
+          spec.exec = exec;
+        } else if (token) {
+          spec = await withAsking(config, `host.docker.internal:${broker.port}`, tmp, { ...outcome, FLOWBOARD_ASK_TOKEN: token }, 'node');
+        } else {
+          spec = await withAsking(config, join(tmp, 'ask.sock'), tmp, outcome);
+        }
+        if (ctx.sandbox && !ctx.pull) {
           // FlowBoard's own code (the ask_user shim, OpenCode's guard plugin) and the step's plugins, at their host paths.
           const plugins = (spec.capabilities ?? []).flatMap((c) => (c.mount.kind === 'plugin_dir' && !inside(tmp!, c.mount.path) ? [c.mount.path] : []));
           spec.exec = ctx.sandbox({ online: true, tmpDir: tmp, mounts: [FLOWBOARD_ROOT, ctx.logDir, ...plugins] });
@@ -317,6 +337,8 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
         return agent;
       };
       const { result, failedTools, last } = await streamRun(launch, log, ctx.show);
+      // Its own outputs and verdict only, before anything below reads them: other files may be newer here.
+      await ctx.pull?.([...produces.map((type) => artifactPath(ctx.artifactsDir, type)), ...(verdict ? [outcomeFile] : [])]);
       await broker.close(); // withdraw any question still open, so the log ends with the result
       broker = undefined;
       log('result', { result, ...(stopReason && { error: stopReason }) }); // why the host stopped it, if it did
@@ -338,8 +360,10 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
       if (unwritten.length) end.missing = unwritten;
       return end;
     } finally {
+      tunnel?.close();
       await broker?.close();
       logger?.close();
+      if (hostDir) rmSync(hostDir, { recursive: true, force: true });
       if (tmp) {
         rmSync(tmp, { recursive: true, force: true });
         ctx.temps?.delete(tmp);
@@ -356,8 +380,10 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
       agent?.stop();
     },
     kill() {
+      // No pid here: the agent runs in a box, which only its provider can reach.
+      if (agentPid === undefined || agentPid <= 0) return agent?.stop();
       try {
-        if (agentPid !== undefined && agentPid > 0) process.kill(agentPid, 'SIGKILL');
+        process.kill(agentPid, 'SIGKILL');
       } catch {
         // already gone
       }

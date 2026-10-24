@@ -379,3 +379,26 @@ test('a shim in an agent box reaches the host broker over TCP, through FlowBoard
     await broker.close();
   }
 });
+
+test('kill() of an agent with no host pid stops it through its provider', async () => {
+  let stopped = 0;
+  let release!: () => void;
+  const provider: AgentProvider = {
+    id: 'boxed',
+    capabilities: new Set(),
+    resolveModel: (m) => m,
+    launch: () => {
+      const result = new Promise<RunResult>((r) => (release = () => r({ usage: ZERO_USAGE, exitCode: 1, error: 'stopped' })));
+      async function* events(): AsyncGenerator<NormalizedEvent> {
+        await result;
+      }
+      return { sessionId: Promise.resolve('s'), pid: Promise.resolve(-1), events: events(), result, stop: () => (stopped++, release()) };
+    },
+  };
+  const s = stepSetup({ makeProvider: () => provider });
+  const run = execAi(aiConfig(s.folder), PLAN, ['plan'], s.ctx);
+  await new Promise((r) => setTimeout(r, 100));
+  run.kill();
+  await run.ended;
+  assert.equal(stopped, 1);
+});

@@ -130,25 +130,37 @@ export class OpencodeProvider implements AgentProvider {
         const model = this.resolveModel(spec.model);
         configHome = await mkdtemp(join(spec.exec?.tmpDir ?? tmpdir(), 'fb-oc-'));
         const password = randomBytes(24).toString('hex');
-        const run = buildLaunch({ ...spec, model }, { env: this.env, configHome, password, guardPlugin: GUARD_PLUGIN });
+        const run = buildLaunch({ ...spec, model }, { env: this.env, configHome, password, guardPlugin: spec.exec?.mapPath?.(GUARD_PLUGIN) ?? GUARD_PLUGIN });
 
         // Assign before checking for a stop, so cleanup can kill a server that came up after stop().
         const exec = spec.exec ?? hostExecHost;
-        server = await startServer(exec, {
-          opencodePath: this.opencodePath,
-          ...(exec.id !== 'host' && { port: await freePort() }),
-          cwd: directory,
-          env: run.env,
-          killGraceMs: this.killGraceMs,
-        });
+        const start = async () =>
+          startServer(exec, {
+            opencodePath: this.opencodePath,
+            // A box that serves several steps at once has no free-port check: pick one at random, away from the low ports.
+            ...(exec.endpoint ? { port: 20000 + Math.floor(Math.random() * 40000) } : exec.id !== 'host' && { port: await freePort() }),
+            cwd: directory,
+            env: run.env,
+            killGraceMs: this.killGraceMs,
+          });
+        for (let attempt = 1; ; attempt++) {
+          try {
+            server = await start();
+            break;
+          } catch (e) {
+            // That random port was taken by another step's server: another one, a few times at most.
+            if (!exec.endpoint || attempt === 3 || !/EADDRINUSE/.test((e as Error).message)) throw e;
+          }
+        }
         resolvePid(server.child.pid ?? -1);
         if (stopped) throw STOP;
         server.child.once('close', () => streamAbort.abort()); // a dead server ends the event stream
+        const reach = exec.endpoint ? await exec.endpoint(server.port) : { url: server.url };
         client = createOpencodeClient({
-          baseUrl: server.url,
+          baseUrl: reach.url,
           directory,
           throwOnError: true,
-          headers: { Authorization: `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}` },
+          headers: { ...reach.headers, Authorization: `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}` },
         });
 
         const { providers } = await ok(client.config.providers());
@@ -166,7 +178,8 @@ export class OpencodeProvider implements AgentProvider {
         emit({ type: 'system', sessionId: session.id, raw: session });
 
         // OpenCode logs a plugin that fails to load and carries on; never run unguarded while claiming tool_hooks.
-        if (spec.guards && !existsSync(join(configHome, 'flowboard-guard.loaded'))) throw new Error('guard plugin not loaded');
+        const marker = join(configHome, 'flowboard-guard.loaded');
+        if (spec.guards && !(await (exec.exists?.(marker) ?? Promise.resolve(existsSync(marker))))) throw new Error('guard plugin not loaded');
 
         // Subscribe only now: a fork republishes the cloned history, which must not count as this run's events.
         // The SSE stream connects on first read; wait for server.connected so no event is missed.

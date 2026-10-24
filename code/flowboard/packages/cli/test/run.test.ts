@@ -11,7 +11,7 @@ import { ReplayProvider } from '@flowboard/adapters';
 import { askBroker, SHIM_ENTRY } from '@flowboard/ask-user';
 import { noTerminal } from '../src/ask/terminal.ts';
 import { CLOSING } from '../src/config.ts';
-import { runAgent } from '../src/run.ts';
+import { runAgent, withAsking } from '../src/run.ts';
 import type { RunDeps } from '../src/run.ts';
 
 /** Temp folders made by this file's tests, removed once they are done. */
@@ -536,4 +536,10 @@ test('a skills folder that cannot be copied fails the run with a result', { skip
   assert.equal(last.kind, 'result');
   assert.match(last.result.error, /^cannot set up the run: /);
   assert.match(out.at(-1)!, /^-- result /);
+});
+
+test('withAsking puts the given node and shim entry in the tool', async () => {
+  const config = { yamlPath: '/x.yaml', adapter: 'claude-code' as const, unrestrictedShell: false, skills: [], spec: { prompt: { preamble: 'p', inputs: [], outputs: [], closing: 'c' }, model: 'm', cwd: '/w' } };
+  const spec = await withAsking(config, '/box/ask.sock', tempDir(join(tmpdir(), 'fbwa-')), {}, 'node', '/opt/flowboard/packages/ask-user/src/main.ts');
+  assert.deepEqual([spec.tools!.at(-1)!.command, spec.tools!.at(-1)!.args], ['node', ['/opt/flowboard/packages/ask-user/src/main.ts']]);
 });

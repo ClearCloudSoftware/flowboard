@@ -4,6 +4,8 @@ import { terminate } from '../../exec/terminate.ts';
 
 export interface StartedServer {
   url: string;
+  /** The port it listens on, inside its box. */
+  port: number;
   child: ChildProcessWithoutNullStreams;
   stderrTail: () => string;
 }
@@ -26,7 +28,9 @@ export function startServer(
   // In a sandbox the server must listen on every interface of its own box, on a port this machine can reach.
   const port = exec.id === 'host' ? 0 : (opts.port ?? 0);
   const hostname = exec.id === 'host' ? '127.0.0.1' : '0.0.0.0';
-  const child = exec.spawn(opts.opencodePath, ['serve', '--hostname', hostname, '--port', String(port)], { cwd: opts.cwd, env: opts.env, ...(port && { ports: [port] }) });
+  // A box reached through exec.endpoint publishes nothing: its gateway reaches the port.
+  const publish = port && !exec.endpoint ? { ports: [port] } : {};
+  const child = exec.spawn(opts.opencodePath, ['serve', '--hostname', hostname, '--port', String(port)], { cwd: opts.cwd, env: opts.env, ...publish });
   let tail = '';
   child.stderr.on('data', (d) => (tail = (tail + d).slice(-4000)));
 
@@ -46,7 +50,8 @@ export function startServer(
         done();
         // Keep an error listener for the server's whole life: an unhandled 'error' (say, a failed kill) would throw.
         child.on('error', (e) => (tail = `${tail}\n${e.message}`.slice(-4000)));
-        resolve({ url: m[1].replace('//0.0.0.0:', '//127.0.0.1:'), child, stderrTail: () => tail });
+        const url = m[1].replace('//0.0.0.0:', '//127.0.0.1:');
+        resolve({ url, port: Number(new URL(url).port), child, stderrTail: () => tail });
       }
     };
     // 'close', not 'exit': stderr is fully read by then.

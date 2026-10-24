@@ -12,10 +12,10 @@ PRD §17: *"**Sandboxing agent execution** in a container/microVM (§11.1) is in
 | In v1 | Source |
 |---|---|
 | `ExecHost` seam; host and docker exec adapters. Built 2026-10-18: the seam and the host tier only (`adapters/src/exec/host.ts`); both adapters spawn through it ([[ExecHost Port]]) | PRD §3; backlog 3.5 |
-| Container workspace: ephemeral container per run, hardened | PRD §11.1; backlog 3.5 |
+| Container workspace: ephemeral container per run, hardened. Built 2026-10-24 for OpenSandbox: one box per run holds the folder's last commit, and the run ends with `changes.patch` | PRD §11.1; backlog 3.5 |
 | gVisor/microVM for untrusted repos: *"(or, for untrusted repos, a gVisor/microVM)"* | PRD §11.1, §13 (*"host / container / microVM"*), §17 |
-| Egress proxy with default-deny allowlist | PRD §11.1; backlog 3.5 |
-| Credential-injecting proxy, dummy key | PRD §0, §11.1; backlog 3.5 |
+| Egress proxy with default-deny allowlist. Built 2026-10-24 through OpenSandbox (`sandbox: { runtime: opensandbox }`): its egress sidecar, deny by default, FQDN rules from `sandbox.egress` ([[OpenSandbox Spike]]). The `docker` runtime still has none | PRD §11.1; backlog 3.5 |
+| Credential-injecting proxy, dummy key. Built 2026-10-24 through OpenSandbox's credential vault: the box holds a fake of each `sandbox.credentials` name, and the real value is injected on the way out ([[OpenSandbox Spike]]). The `docker` runtime passes real keys in | PRD §0, §11.1; backlog 3.5 |
 | Permission gate | PRD §7, §11.1; backlog 3.5 |
 | `PreToolUse` hooks in a per-run `settings.json`. Built 2026-10-18 without the file: an in-process `PreToolUse` callback on Claude Code, a guard plugin on OpenCode, both set up from `RunSpec.guards` ([[Claude Code Adapter]], [[OpenCode Adapter]]) | PRD §7 |
 | `tool_hooks` provider capability; without it *"the flow editor says so"*. Built 2026-10-18: Claude Code and OpenCode declare it. No flow editor reads it yet ([[Agent Providers Open Questions]] #1) | PRD §7 |
