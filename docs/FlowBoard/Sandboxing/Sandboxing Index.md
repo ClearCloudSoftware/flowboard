@@ -40,6 +40,8 @@ Sandboxing is the FlowBoard platform component that runs each agent step inside 
 
 - [[ExecHost Port]]: the seam that makes any provider run at any tier
 - [[Sandboxing Runtime]]: the image, the internal network, the proxy, the adapters
+- [[OpenSandbox Runtime]]: `runtime: opensandbox` as built: one box per run, the relay, the vault, `changes.patch`
+- [[OpenSandbox Spike]]: why OpenSandbox, and what the spike measured
 - [[Sandboxing Data Model]]: `SandboxProfile`, `runs.sandbox`, `settings.sandbox_profile`
 - [[Sandboxing Storage]]: sockets, per-run files and paths
 - [[Sandboxing API And Routes]]: what the sources define (almost nothing) and proposals
