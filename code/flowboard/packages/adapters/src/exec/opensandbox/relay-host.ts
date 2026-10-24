@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { request } from 'node:http';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
+import { createConnection } from 'node:net';
 import type { Socket } from 'node:net';
 import { PassThrough, Writable } from 'node:stream';
 import type { ExecHost, SandboxProfile } from '@flowboard/core';
@@ -142,6 +143,35 @@ export function relayExecHost(o: RelayOptions): ExecHost {
         return upgrade(o, '/spawn', { spec });
       })();
       return new RelayChild(start) as unknown as ChildProcessWithoutNullStreams;
+    },
+    async tunnel(boxSocket, hostSocket) {
+      let closed = false;
+      let waiting: Socket | undefined;
+      // One upgrade always waits; the shim's first bytes pair it, and the next one opens.
+      const wait = async (): Promise<void> => {
+        if (closed) return;
+        const sock = await upgrade(o, '/listen', { path: boxSocket });
+        if (closed) return void sock.destroy();
+        waiting = sock;
+        sock.once('data', (first: Buffer) => {
+          waiting = undefined;
+          const local = createConnection(hostSocket);
+          local.write(first);
+          sock.pipe(local).pipe(sock);
+          local.on('error', () => sock.destroy());
+          local.on('close', () => sock.destroy());
+          sock.on('close', () => local.destroy());
+          wait().catch(() => {}); // the box is gone: the next shim connection fails inside it
+        });
+        sock.on('error', () => {});
+      };
+      await wait();
+      return {
+        close() {
+          closed = true;
+          waiting?.destroy();
+        },
+      };
     },
   };
 }

@@ -125,3 +125,66 @@ test('stdin end closes the process stdin', async () => {
   await closed(c);
   assert.equal(out.text.trim(), '2');
 });
+
+// Task 2: the reverse tunnel. The relay runs on this machine here, so "the box's" socket is a local path.
+import { mkdtempSync, realpathSync } from 'node:fs';
+import { join } from 'node:path';
+import { startBroker } from '../../cli/src/ask/broker.ts';
+import { askBroker } from '../../ask-user/src/broker-client.ts';
+
+const quiet = { onQuestion() {}, onAnswer() {}, onWithdrawn() {}, onDone() {}, onInterrupt() {} };
+/** Short and real: a Unix socket path is limited to about 104 characters, and /tmp is a link on macOS. */
+const sockDir = () => realpathSync(mkdtempSync('/tmp/fb-t-'));
+const q = { id: 'a', prompt: 'a?', kind: 'text' as const };
+
+async function tunnelled() {
+  const dir = sockDir();
+  const hostSock = join(dir, 'host.sock');
+  const boxSock = join(dir, 'box', 'ask.sock');
+  let n = 0;
+  const broker = await startBroker(hostSock, async () => ({ a: `yes ${++n}` }), quiet);
+  const tunnel = await host().tunnel!(boxSock, hostSock);
+  return { boxSock, broker, tunnel };
+}
+
+test('a shim connection in the box reaches the host broker', async () => {
+  const { boxSock, broker, tunnel } = await tunnelled();
+  try {
+    assert.deepEqual(await askBroker(boxSock, { questions: [q] }), { answers: { a: 'yes 1' } });
+  } finally {
+    tunnel.close();
+    await broker.close();
+  }
+});
+
+test('three requests in a row each get their answer', async () => {
+  const { boxSock, broker, tunnel } = await tunnelled();
+  try {
+    const got = [];
+    for (let i = 0; i < 3; i++) got.push(await askBroker(boxSock, { questions: [q] }));
+    assert.deepEqual(got, [{ answers: { a: 'yes 1' } }, { answers: { a: 'yes 2' } }, { answers: { a: 'yes 3' } }]);
+  } finally {
+    tunnel.close();
+    await broker.close();
+  }
+});
+
+test('close() stops listening', async () => {
+  const { boxSock, broker, tunnel } = await tunnelled();
+  tunnel.close();
+  await new Promise((r) => setTimeout(r, 200));
+  try {
+    await assert.rejects(askBroker(boxSock, { questions: [q] }), /cannot reach the question broker/);
+  } finally {
+    await broker.close();
+  }
+});
+
+test('a process whose host hangs up is killed in the box', async () => {
+  const marker = `${40 + Math.floor(Math.random() * 1000) / 1000}`;
+  const c = host().spawn('sleep', [marker], { cwd: '/' });
+  c.on('error', () => {});
+  await until(() => spawnSync('pgrep', ['-f', `sleep ${marker}`]).status === 0);
+  (c as unknown as { sock: { destroy(): void } }).sock.destroy(); // the host side vanishes, as when run-flow dies
+  await until(() => spawnSync('pgrep', ['-f', `sleep ${marker}`]).status !== 0);
+});

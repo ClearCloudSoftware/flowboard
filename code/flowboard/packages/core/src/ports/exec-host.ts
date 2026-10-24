@@ -49,4 +49,9 @@ export interface ExecHost {
     /** `ports`: the process listens on these, and this machine must reach them on 127.0.0.1 at the same numbers. */
     opts: { cwd: string; env?: NodeJS.ProcessEnv; ports?: number[] },
   ): ChildProcessWithoutNullStreams;
+  /**
+   * For a sandbox that cannot dial this machine: connections to `boxSocket` inside it reach `hostSocket` here.
+   * Absent where the box can reach this machine itself.
+   */
+  tunnel?(boxSocket: string, hostSocket: string): Promise<{ close(): void }>;
 }

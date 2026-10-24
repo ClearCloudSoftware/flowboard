@@ -63,10 +63,59 @@ function runProcess(sock, spec) {
   sock.on('close', () => done || child.kill('SIGKILL')); // the host went away: its process must not live on
 }
 
+// /listen: a Unix socket in the box whose connections the host takes, one per waiting upgrade (ask_user's
+// shim cannot dial out of the box). Raw bytes, no frames. The listener goes when the host stops waiting.
+const listeners = new Map(); // path -> { server, waiting: socket[], queued: socket[] }
+function pair(l) {
+  while (l.waiting.length && l.queued.length) {
+    const host = l.waiting.shift();
+    const shim = l.queued.shift();
+    host.removeAllListeners('close');
+    host.pipe(shim).pipe(host);
+    host.on('close', () => shim.destroy());
+    shim.on('close', () => host.destroy());
+  }
+}
+function listen(sock, path) {
+  sock.on('error', () => {});
+  sock.resume(); // a paused socket never sees the host hang up; the host sends nothing before it is paired
+  let l = listeners.get(path);
+  if (!l) {
+    require('fs').mkdirSync(require('path').dirname(path), { recursive: true });
+    try { require('fs').unlinkSync(path); } catch {}
+    l = { waiting: [], queued: [] };
+    l.server = require('net').createServer((shim) => {
+      shim.on('error', () => {});
+      shim.pause();
+      l.queued.push(shim);
+      pair(l);
+      shim.resume();
+    });
+    l.ready = new Promise((resolve) => l.server.listen(path, resolve));
+    listeners.set(path, l);
+  }
+  const entry = l;
+  // Accepted only once the socket listens: the host may hand its path to a shim right away.
+  entry.ready.then(() => sock.write(ACCEPT));
+  entry.waiting.push(sock);
+  sock.on('close', () => {
+    entry.waiting = entry.waiting.filter((s) => s !== sock);
+    if (!entry.waiting.length && listeners.get(path) === entry) {
+      listeners.delete(path);
+      entry.server.close();
+      for (const q of entry.queued) q.destroy();
+    }
+  });
+  pair(entry);
+}
+
 const server = http.createServer((req, res) => res.end('relay'));
 server.on('upgrade', (req, sock) => {
+  // HTTP server sockets are half-open: the host hanging up arrives only as 'end', never as 'close'.
+  sock.on('end', () => sock.destroy());
   const url = new URL(req.url, 'http://relay');
   if (url.searchParams.get('token') !== TOKEN) return sock.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+  if (url.pathname === '/listen') return listen(sock, url.searchParams.get('path'));
   if (url.pathname === '/spawn') return runProcess(sock, JSON.parse(Buffer.from(url.searchParams.get('spec') || '', 'base64').toString()));
   sock.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
 });
