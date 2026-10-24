@@ -19,8 +19,14 @@ export const OUTCOME_CLOSING =
 /** `verdict`: its routes or its approval gate use the outcome, so it is offered set_outcome. */
 export interface AiStep { kind: 'ai'; run: RunConfig; timeoutMinutes?: number; verdict: boolean }
 export interface ShellStep { kind: 'shell'; command: string; timeoutMinutes: number }
-/** Where steps run: a throwaway, non-root container from `image` per step. `env`: names of this machine's variables it gets, such as the agents' auth. */
-export interface Sandbox { image: string; env: string[] }
+/**
+ * Where steps run. `docker`: a throwaway, non-root container from `image` per step; `env` names this machine's
+ * variables it gets, such as the agents' auth. `opensandbox`: one OpenSandbox box per run holding the folder;
+ * only `egress` hosts are reachable, and `credentials` are injected on the way out, never put in the box.
+ */
+export type Sandbox =
+  | { runtime: 'docker'; image: string; env: string[] }
+  | { runtime: 'opensandbox'; image: string; egress: string[]; credentials: string[] };
 /** `folder`: the run's; `budgetUsd`: the most the whole flow may spend, 0 for no ceiling. */
 export interface FlowConfig { yamlPath: string; name: string; folder: string; budgetUsd: number; flow: FlowDef; steps: Record<string, AiStep | ShellStep>; warnings: string[]; sandbox?: Sandbox }
 export type FlowLoadResult = { ok: true; config: FlowConfig } | { ok: false; errors: string[] };
@@ -54,12 +60,23 @@ const StepName = z.string({
       ? `YAML reads ${String(i.input)} as a ${typeof i.input}; quote the step name`
       : 'one step name; write one edge per pair of steps',
 });
+const VAR = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'must be a variable name');
+/** What an agent needs to reach, by adapter: its API host and the credential sent there. */
+const NEEDS = { claude: { host: 'api.anthropic.com', credential: 'CLAUDE_CODE_OAUTH_TOKEN' }, openrouter: { host: 'openrouter.ai', credential: 'OPENROUTER_API_KEY' } };
 const RECIPE = 'not in a flow file: a flow is a reusable recipe, and each run gives its';
 const FlowSchema = z.strictObject({
   budget_usd: z.number({ error: 'must be a number of dollars' }).min(0, { error: 'must be 0 or more; 0 means no ceiling' }),
   entry: StepName.optional(),
   defaults: Launch.optional(),
-  sandbox: z.strictObject({ image: z.string().min(1), env: z.array(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'must be a variable name')).default([]) }).optional(),
+  sandbox: z
+    .strictObject({
+      runtime: z.enum(['docker', 'opensandbox']).default('docker'),
+      image: z.string().min(1),
+      env: z.array(VAR).optional(),
+      egress: z.array(z.string().regex(/^(\*\.)?[a-z0-9-]+(\.[a-z0-9-]+)+$/, 'a host name or *.domain; IP addresses are not supported').refine((h) => !/^[\d.]+$/.test(h), 'a host name or *.domain; IP addresses are not supported')).optional(),
+      credentials: z.array(VAR).optional(),
+    })
+    .optional(),
   steps: z.record(z.string(), StepSchema).refine((s) => Object.keys(s).length > 0, 'needs at least one step'),
   edges: z
     .array(
@@ -212,9 +229,22 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs): Fl
   }
 
   if (found.length) return fail(found.sort((a, b) => a[0] - b[0]).map(([, line]) => line));
-  // ponytail: no egress proxy yet, so agents' boxes are online and hold the keys sandbox.env names (Sandboxing Roadmap)
-  if (y.sandbox && Object.values(steps).some((s) => s.kind === 'ai')) warnings.push('sandbox: ai steps have open network access and the variables in sandbox.env');
-  return { ok: true, config: { yamlPath: read.abs, name: basename(read.abs, extname(read.abs)), folder, budgetUsd, flow, steps, warnings, ...(y.sandbox && { sandbox: y.sandbox }) } };
+  let sandbox: Sandbox | undefined;
+  if (y.sandbox?.runtime === 'opensandbox') {
+    if (y.sandbox.env) return fail(['sandbox.env: only for runtime docker']);
+    const needs = Object.values(steps).flatMap((st) =>
+      st.kind !== 'ai' ? [] : st.run.adapter === 'claude-code' ? [NEEDS.claude] : st.run.spec.model.startsWith('openrouter/') ? [NEEDS.openrouter] : [],
+    );
+    const uniq = (xs: string[]) => [...new Set(xs)];
+    sandbox = { runtime: 'opensandbox', image: y.sandbox.image, egress: y.sandbox.egress ?? uniq(needs.map((n) => n.host)), credentials: y.sandbox.credentials ?? uniq(needs.map((n) => n.credential)) };
+    warnings.push("sandbox: agents' edits stay in the sandbox; the run ends with changes.patch to review");
+  } else if (y.sandbox) {
+    for (const key of ['egress', 'credentials'] as const) if (y.sandbox[key]) return fail([`sandbox.${key}: only for runtime opensandbox`]);
+    sandbox = { runtime: 'docker', image: y.sandbox.image, env: y.sandbox.env ?? [] };
+    // ponytail: no egress proxy for docker, so agents' boxes are online and hold the keys sandbox.env names (Sandboxing Roadmap)
+    if (Object.values(steps).some((s) => s.kind === 'ai')) warnings.push('sandbox: ai steps have open network access and the variables in sandbox.env');
+  }
+  return { ok: true, config: { yamlPath: read.abs, name: basename(read.abs, extname(read.abs)), folder, budgetUsd, flow, steps, warnings, ...(sandbox && { sandbox }) } };
 }
 
 /** Rework routes are dotted and marked ↺. */

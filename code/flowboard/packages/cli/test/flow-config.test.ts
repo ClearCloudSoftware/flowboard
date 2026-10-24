@@ -171,8 +171,41 @@ test('toMermaid draws steps, routes and rework loops', () => {
 test('sandbox: every step goes in the image; a flow with ai steps is warned they are online and hold sandbox.env', () => {
   const r = loadFlow('flow.yaml', flowProject(`sandbox: { image: alpine:latest, env: [CLAUDE_CODE_OAUTH_TOKEN] }\n${DELIVERY}`));
   assert.ok(r.ok, JSON.stringify(r));
-  assert.deepEqual(r.config.sandbox, { image: 'alpine:latest', env: ['CLAUDE_CODE_OAUTH_TOKEN'] });
+  assert.deepEqual(r.config.sandbox, { runtime: 'docker', image: 'alpine:latest', env: ['CLAUDE_CODE_OAUTH_TOKEN'] });
   assert.ok(r.config.warnings.includes('sandbox: ai steps have open network access and the variables in sandbox.env'));
   const bad = loadFlow('flow.yaml', flowProject(`sandbox: { image: alpine, network: host }\n${DELIVERY}`));
   assert.ok(!bad.ok && bad.errors.some((e) => e.endsWith('sandbox.network: unknown key')), JSON.stringify(bad));
+});
+
+const osb = (extra = '') => flowProject(`sandbox: { runtime: opensandbox, image: flowboard-sandbox${extra} }\n${DELIVERY}`);
+
+test('opensandbox derives egress and credentials from the steps adapters', () => {
+  const r = loadFlow('flow.yaml', osb());
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.deepEqual(r.config.sandbox, {
+    runtime: 'opensandbox',
+    image: 'flowboard-sandbox',
+    egress: ['api.anthropic.com', 'openrouter.ai'],
+    credentials: ['CLAUDE_CODE_OAUTH_TOKEN', 'OPENROUTER_API_KEY'],
+  });
+  assert.ok(r.config.warnings.includes("sandbox: agents' edits stay in the sandbox; the run ends with changes.patch to review"));
+  assert.ok(!r.config.warnings.some((w) => w.includes('open network access')));
+});
+
+test('an explicit egress list replaces the defaults', () => {
+  const r = loadFlow('flow.yaml', osb(', egress: [registry.npmjs.org, "*.anthropic.com"]'));
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.deepEqual(r.config.sandbox?.runtime === 'opensandbox' && r.config.sandbox.egress, ['registry.npmjs.org', '*.anthropic.com']);
+});
+
+test('keys of the other runtime are errors', () => {
+  const a = loadFlow('flow.yaml', osb(', env: [X]'));
+  assert.ok(!a.ok && a.errors.some((e) => e.endsWith('sandbox.env: only for runtime docker')), JSON.stringify(a));
+  const b = loadFlow('flow.yaml', flowProject(`sandbox: { image: alpine, egress: [openrouter.ai] }\n${DELIVERY}`));
+  assert.ok(!b.ok && b.errors.some((e) => e.endsWith('sandbox.egress: only for runtime opensandbox')), JSON.stringify(b));
+});
+
+test('an IP in egress is an error', () => {
+  const r = loadFlow('flow.yaml', osb(', egress: ["10.0.0.1"]'));
+  assert.ok(!r.ok && r.errors.some((e) => e.endsWith('sandbox.egress.0: a host name or *.domain; IP addresses are not supported')), JSON.stringify(r));
 });

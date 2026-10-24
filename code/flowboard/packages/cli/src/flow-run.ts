@@ -495,7 +495,7 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number 
 const sumCost = (runs: FlowState['runs']) => runs.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
 
 /** Each step's box: the folder (its cwd) and the artifacts read-write, `mounts` read-only; only agents go online. */
-const sandboxFor = (sb: Sandbox, artifactsDir: string): NonNullable<ExecContext['sandbox']> => ({ online, tmpDir, mounts = [] }) =>
+const sandboxFor = (sb: Extract<Sandbox, { runtime: 'docker' }>, artifactsDir: string): NonNullable<ExecContext['sandbox']> => ({ online, tmpDir, mounts = [] }) =>
   dockerExecHost(
     {
       tier: 'container',
@@ -564,7 +564,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     answer: noTerminal,
     onInterrupt: () => interrupt(), // Ctrl+C at an agent's question
     temps,
-    ...(config.sandbox && { sandbox: sandboxFor(config.sandbox, d.artifactsDir) }),
+    ...(config.sandbox?.runtime === 'docker' && { sandbox: sandboxFor(config.sandbox, d.artifactsDir) }),
   };
 
   /** Gate prompts open or waiting their turn, by step. */
