@@ -77,10 +77,11 @@ export const inside = (dir: string, p: string) => {
 
 /**
  * Loads the recipe at `yamlPath` (relative to `baseDir`) for one `run`. Without one, as for `--check`, the recipe
- * is checked on its own: a stand-in folder and task let run-agent's checks run.
+ * is checked on its own: a stand-in folder and task let run-agent's checks run. `text`, the flow designer's unsaved
+ * edit, is checked in place of the file's YAML; its paths still resolve against the file's folder.
  */
-export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs): FlowLoadResult {
-  const read = readYaml(yamlPath, baseDir);
+export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, text?: string): FlowLoadResult {
+  const read = readYaml(yamlPath, baseDir, text);
   if (!read.ok) return read;
   const fail = (lines: string[]): FlowLoadResult => ({ ok: false, errors: lines.map((l) => `${yamlPath}: ${l}`) });
   const moved = [`folder: ${RECIPE} folder with --folder`, `task: ${RECIPE} task with --task`].filter((l) => Object.hasOwn(read.raw, l.split(':')[0]));
@@ -95,7 +96,7 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs): Fl
   // Bad names and yamlgraph's pseudo-steps count as schema errors: nothing else is checked after them.
   const bad: string[] = [];
   // YAML reads an unquoted 007 or true as a number or a boolean, and the key turns into "7" or "true".
-  const doc = parseDocument(readFileSync(read.abs, 'utf8'));
+  const doc = parseDocument(text ?? readFileSync(read.abs, 'utf8'));
   const stepsNode = doc.get('steps');
   for (const item of isMap(stepsNode) ? stepsNode.items : []) {
     if (isScalar(item.key) && typeof item.key.value !== 'string') {

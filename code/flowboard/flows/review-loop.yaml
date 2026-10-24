@@ -1,0 +1,14 @@
+# A reviewer sends the work back to its implementer until a review passes.
+budget_usd: 6      # the most the whole loop may spend, every round included; 0 for no ceiling
+entry: implement   # every step has an edge into it, so name the first
+defaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 30 } }
+steps:
+  implement: { prompt: prompts/implement.md, produces: [notes], max_attempts: 3 }
+  review:
+    prompt: prompts/review.md
+    requires: [notes]
+    produces: [review_notes]
+    guards: { deny_paths: ["src/**", "tests/**"] }   # it reports issues; it doesn't fix them
+edges:
+  - { from: implement, to: review }
+  - { from: review, to: implement, condition: on_fail }   # the loop

@@ -1,0 +1,23 @@
+# Plan, then implement and write tests side by side; a check gates the review, and failures go back to implement.
+budget_usd: 5                      # required: the most the whole flow may spend, in dollars; 0 for no ceiling
+defaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 30 } }
+steps:
+  plan: { prompt: prompts/plan.md, produces: [plan], gate: approval }   # prompts/ sits beside this file
+  implement: { prompt: prompts/implement.md, requires: [plan], produces: [notes], max_attempts: 2 }
+  tests:
+    adapter: opencode              # a second provider in the same flow
+    model: openrouter/deepseek/deepseek-v4.1-flash
+    prompt: prompts/tests.md
+    requires: [plan]
+    produces: [test_notes]
+    write_roots: [tests]           # this step may only edit files under <folder>/tests
+  check: { shell: pnpm test, produces: [check_output] }   # exit 0 is pass
+  review: { prompt: prompts/review.md, requires: [notes, test_notes, check_output], produces: [review_notes] }
+edges:
+  - { from: plan, to: implement }                        # plan fans out to implement and tests
+  - { from: plan, to: tests }
+  - { from: implement, to: check }                       # check waits for both: a join
+  - { from: tests, to: check }
+  - { from: check, to: review, condition: on_pass }
+  - { from: check, to: implement, condition: on_fail }   # rework: spends implement's attempts
+  - { from: review, to: implement, condition: on_fail }  # implement reads review_notes next time

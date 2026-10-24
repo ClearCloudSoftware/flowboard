@@ -2,6 +2,7 @@
   "name": "flowboard",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,12 +12,19 @@
     "typecheck:packages": "tsc -p packages",
     "test:live": "FLOWBOARD_LIVE=1 node --test packages/adapters/test/claude-live.test.ts packages/adapters/test/opencode-live.test.ts packages/cli/test/cli-live.test.ts packages/cli/test/ask-live.test.ts packages/cli/test/flow-live.test.ts",
     "run-agent": "node packages/cli/src/main.ts",
-    "run-flow": "node packages/cli/src/flow-main.ts"
+    "run-flow": "node packages/cli/src/flow-main.ts",
+    "test:app": "node --test \"app/**/*.test.ts\""
   },
   "dependencies": {
+    "@tanstack/react-form": "1.33.5",
+    "@tanstack/react-pacer": "0.24.1",
+    "@tanstack/react-query": "5.104.1",
+    "@tanstack/react-store": "0.11.2",
+    "@xyflow/react": "12.12.0",
     "next": "16.4.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
@@ -26,7 +34,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "yaml": "2.9.1"
   },
   "packageManager": "pnpm@10.23.0"
 }

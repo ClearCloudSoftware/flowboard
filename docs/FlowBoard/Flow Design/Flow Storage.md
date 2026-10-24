@@ -38,7 +38,7 @@ As built in run-flow (2026-10-23), a flow file is a reusable recipe (Alex's call
 
 ## Not stored
 
-- **Node positions** — undecided (backlog D4 says no). See [[Canvas Layout And Board Order]]. A run-flow file has no position keys; for now a canvas keeps positions in its own file (Claude's call, 2026-10-23, open to Alex's review).
+- **Node positions** — not stored, as backlog D4 has it: the flow designer lays a flow out from its routes, the same way on every open, and a run-flow file has no position keys (Claude's call, 2026-10-24, open to Alex's review). See [[Canvas Layout And Board Order]].
 - **Draft mode** — a setting, not part of the flow.
 - **Artifacts** — on disk in the task's worktree, not in the flow. See [[Artifact Contract]].
 

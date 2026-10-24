@@ -96,7 +96,7 @@ export function buildLaunch(
   const keep = (k: string) => (k.startsWith('OPENCODE_') ? OPENCODE_CREDENTIALS.includes(k) : !ANTHROPIC_KEYS.includes(k));
   const inherited = Object.fromEntries(Object.entries(base.env).filter(([k]) => keep(k)));
   const env: NodeJS.ProcessEnv = {
-    ...inherited,
+    ...(inherited as NodeJS.ProcessEnv), // a cast for the web app's typecheck: Next's types require NODE_ENV of ProcessEnv
     XDG_CONFIG_HOME: base.configHome,
     OPENCODE_DISABLE_PROJECT_CONFIG: '1',
     OPENCODE_DISABLE_CLAUDE_CODE: '1',

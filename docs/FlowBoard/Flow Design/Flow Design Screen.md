@@ -59,7 +59,9 @@ As built in run-flow (2026-10-23), a flow states its ceiling instead of summing 
 
 Each node shows: name (+ gate glyph), agent, then chips `model · effort · $budget`. Edge marks are in [[Connections And Routes]].
 
-As built in run-flow (2026-10-23), a flow file has no display name or agent reference for a node to show: a step's key is its only name (`name` and `label` are `unknown key`), and positions, display names, an agent reference and sandbox fields stay out of the file until the canvas settles them (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). `--mermaid` labels a node with its key, plus `(approval)` on a gated step.
+As built in run-flow (2026-10-23), a flow file has no display name or agent reference for a node to show: a step's key is its only name (`name` and `label` are `unknown key`), and positions, display names, an agent reference and sandbox fields stay out of the file (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). `--mermaid` labels a node with its key, plus `(approval)` on a gated step.
+
+As built in the flow designer (2026-10-24), a node shows the step's key (and the gate glyph), then what it runs: its command (`$ pnpm test`), skill or prompt file. Its chips are the model and effort, with an OpenCode id cut to the model's own name, and its `limits.budget_usd`, all with the flow's `defaults` filled in. There is no preview state.
 
 ## States of the screen
 
@@ -89,6 +91,21 @@ Light only, zero radius, IBM Plex Mono and Sans, hairlines not shadows. PRD §13
 
 > [!warning] Two designs of the editor
 > PRD §13 accepts *"A vertical list of steps with an "add step" button and a connections panel"* for v1, and the drawio *Flow editor* card (page *FlowBoard ideation*) reads *"Vertical step list + connections panel"*. The mockup is a canvas, and so is the drawio *Harness architecture* page's *Flow designer* card: *"xyflow canvas; live requires / produces check"*. See [[Flow Design Open Questions]] #27.
+
+## As built in the flow designer (2026-10-24)
+
+The screen is `/flows` in the web app, `code/flowboard/app/flows/` (`pnpm dev`, then `http://localhost:3000/flows`). It edits run-flow recipe files, the YAML that `pnpm run-flow` runs, in `code/flowboard/flows/` or the folder `FLOWBOARD_FLOWS_DIR` names. The canvas is React Flow (xyflow); data, form, state and debouncing are TanStack Query, Form, Store and Pacer (Alex's call, 2026-10-24). Styles are plain CSS in the mockup's tokens, light only, without shadcn/ui (Claude's call, 2026-10-24, open to Alex's review).
+
+| Region | As built |
+|---|---|
+| Version chip | The flow's name, its file, and `saved`, or `edited — not saved` in amber. There are no versions: see [[Editing And Saving A Flow]] |
+| Library | Every `<name>.yaml` in the flows folder: its shape glyph, worked out from the routes; its first line, when that is a comment, as the description; steps, gates and budget; and a problem count when `--check` refuses it. Search matches name and description. A name field at the foot starts a new recipe, holding only `budget_usd: 0`. There are no domains, authors, variants, preview or **Use this flow**: there is no shared library to draw them from, and authors wait on accounts ([[Flow Design Roadmap#Out of scope (v1)]]) |
+| Canvas | Drag a step to arrange it; drag from a step's right edge to another step to draw a route; click a route's label to cycle `always → on_pass → on_fail`; `Delete` or `Backspace` removes the selected step or route. A route drawn back to a step before it starts as `on_fail`, a rework. The layout: [[Canvas Layout And Board Order]]. A **yaml** tab shows the file as saved, or what Save will write |
+| Inspector | The selected step, the selected route, or, with nothing selected, the flow itself: `budget_usd`, `entry:` and `defaults`. The fields: [[Flow Design Controls]] |
+| Validation strip | `run-flow --check` on the draft, a quarter of a second after the last edit. Errors in amber disable Save; warnings follow them. Each line is a button that selects the step or route it names. When green, it shows the command that runs the flow |
+| Status bar | How many flows there are, and that a run pins its own copy of the flow, so saving never changes a run already started; the keys |
+
+Not built: draft mode ([[Flow Design Open Questions]] #28), versions, the board order, the library's metadata, and prompt files: a step's `prompt` names a file the designer neither creates nor edits. The flows API answers only requests addressed to `localhost` ([[Flow Design API And Routes]]).
 
 ## Related
 
