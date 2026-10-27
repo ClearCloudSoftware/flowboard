@@ -867,6 +867,7 @@ function fakeBox(o: { missing?: string[]; gone?: boolean } = {}) {
       calls.push('patch');
       return Buffer.from('diff --git a/x b/x\n');
     },
+    allow: async (hosts) => void calls.push(`allow:${hosts.join(',')}`),
     kill: async () => void calls.push('kill'),
   };
   const deps: Pick<RunDeps, 'openBox' | 'connectBox'> = {
@@ -904,6 +905,21 @@ test('a paused opensandbox flow keeps its box and --resume reconnects to it', as
   assert.ok(s.out.includes('-- sandbox box-1 kept for --resume'), s.out.join('\n'));
   await runFlow(['--resume', join('runs', STAMPED)], { ...s.deps, ...fb.deps });
   assert.ok(fb.calls.includes('connect:box-1'), fb.calls.join());
+});
+
+test('a failed sandboxed step can be retried with a host let through first, and the run pins that host', async () => {
+  const s = setup(BOXED(TIMEOUT));
+  const fb = fakeBox();
+  const asked: Question[][] = [];
+  s.deps.answer = async (questions) => {
+    asked.push(questions);
+    return asked.length === 1 ? { decision: 'retry', note: null, allow_host: 'Registry.npmjs.org ' } : { decision: 'fail', note: null, allow_host: null };
+  };
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fb.deps }), 1, s.out.join('\n'));
+  assert.ok(asked[0].some((q) => q.id === 'allow_host'), JSON.stringify(asked[0]));
+  assert.ok(fb.calls.includes('allow:registry.npmjs.org'), fb.calls.join());
+  assert.ok(s.out.includes('-- sandbox: egress now allows registry.npmjs.org'), s.out.join('\n'));
+  assert.ok(JSON.parse(readFileSync(join(s.runDir, 'flow.json'), 'utf8')).config.sandbox.egress.includes('registry.npmjs.org'));
 });
 
 test('--resume refuses when the box is gone', async () => {

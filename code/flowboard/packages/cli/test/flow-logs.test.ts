@@ -1,9 +1,10 @@
 import { test } from 'node:test';
+import { execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { answerAsk, listRuns, readLogs, readRun, stopRun } from '../src/flow-logs.ts';
+import { answerAsk, builtOf, listRuns, planOf, readLogs, readRun, stopRun, waitingOf } from '../src/flow-logs.ts';
 
 test('runs are listed newest first, and each step log is read line by line, a half-written line left out', () => {
   const runs = mkdtempSync(join(tmpdir(), 'fb-runs-'));
@@ -95,4 +96,39 @@ test("the page's answer is written only when it fits the open question", () => {
   writeFileSync(join(dir, 'host.json'), JSON.stringify({ pid: 999999, page: true }));
   assert.equal(answerAsk(runs, 'r1', 'a', { decision: 'approve' }), 'this run does not take answers from the page; start it with --page');
   assert.equal(stopRun(runs, 'r1'), 'the run is paused; nothing to stop');
+});
+
+test('time waiting on you runs from a gate opening to its decision, a resume asking again included', () => {
+  const gate = (step: string) => ({ type: 'gate', step });
+  const lines = [
+    { at: '2026-10-27T10:00:00.000Z', event: { type: 'run_ended' }, commands: [gate('review')] },
+    { at: '2026-10-27T10:01:00.000Z', event: { type: 'resume' }, commands: [gate('review')] },
+    { at: '2026-10-27T10:02:00.000Z', event: { type: 'decide', step: 'review' }, commands: [] },
+    { at: '2026-10-27T10:03:00.000Z', event: { type: 'run_ended' }, commands: [gate('ship')] },
+  ];
+  assert.equal(waitingOf(lines, Date.parse('2026-10-27T10:03:30.000Z')), 150_000);
+});
+
+test('what a run built: its patch, else the folder against HEAD, and its plan is the plan artifact', () => {
+  const runs = mkdtempSync(join(tmpdir(), 'fb-runs-'));
+  const folder = join(runs, 'w');
+  mkdirSync(folder);
+  const git = (...a: string[]) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...a], { cwd: folder, stdio: 'pipe' });
+  git('init', '-q');
+  writeFileSync(join(folder, 'a.txt'), 'one\n');
+  git('add', '.');
+  git('commit', '-qm', 'one');
+  writeFileSync(join(folder, 'a.txt'), 'two\n');
+  const dir = join(runs, 'r');
+  mkdirSync(dir);
+  const config = { name: 'f', folder, budgetUsd: 0, warnings: [], flow: { steps: [{ id: 'p', requires: [], produces: ['notes'], approval: false, maxAttempts: 3 }], edges: [] }, steps: { p: { kind: 'shell', command: 'x', timeoutMinutes: 1 } } };
+  mkdirSync(join(runs, 'arts'));
+  writeFileSync(join(runs, 'arts', 'notes.md'), 'n');
+  writeFileSync(join(dir, 'flow.json'), JSON.stringify({ version: 1, config, artifactsDir: join(runs, 'arts') }));
+  const folderDiff = builtOf(runs, 'r')!;
+  assert.equal(folderDiff.from, 'folder');
+  assert.match(folderDiff.text, /^-one\n\+two$/m);
+  assert.equal(planOf(readRun(runs, 'r')!), 'notes');
+  writeFileSync(join(dir, 'changes.patch'), 'P');
+  assert.deepEqual(builtOf(runs, 'r'), { from: 'patch', text: 'P', cut: false });
 });

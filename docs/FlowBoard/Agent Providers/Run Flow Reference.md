@@ -42,9 +42,9 @@ Saved as `delivery.yaml`, it runs with `pnpm run-flow --folder proj --task task.
 ## Commands
 
 ```
-pnpm run-flow --folder <dir> --task <file> [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] <flow.yaml>
+pnpm run-flow --folder <dir> --task <file> [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] <flow.yaml>
 pnpm run-flow --check | --mermaid [--folder <dir> --task <file>] <flow.yaml>
-pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>]
+pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page]
 ```
 
 Any other mix of options prints these three lines, the first headed `usage:`, and exits 2: a run without both `--folder` and `--task`, for example, a check with only one of them, or a resume with either.
@@ -60,6 +60,7 @@ Any other mix of options prints these three lines, the first headed `usage:`, an
 | `--max-runs <n>` | At most `n` runs at once; with `1`, parallel branches take turns. No limit by default. Anything but a whole number above 0 is `--max-runs: must be a whole number above 0`. It is pinned in `flow.json`, so `--resume` keeps it unless `--max-runs` is given again |
 | `--allow-dirty` | Runs even with uncommitted changes in the folder (see *Safety*). Not allowed with `--check`, `--mermaid` or `--resume` |
 | `--resume <run folder>` | Continues a stopped, paused or crashed flow (see *Stopping and resuming*) |
+| `--page` | The runs page (`/runs` in the app) may also decide gates, answer the agents' questions and stop the flow (see *The runs page*). Without a terminal, the page is the only one asked. Not allowed with `--check` or `--mermaid` |
 
 `--folder` and `--task` resolve against the folder you run the command from.
 
@@ -207,6 +208,16 @@ Reject is offered only when the step has an `on_fail` edge.
   - `folder not found: <path>`, when the run's folder has been moved or deleted (it is never made again);
   - `the budget is spent, $0.20 of $0.15; give a larger one, or 0 for none, with --budget-usd`, while what the runs have spent reaches the ceiling it would use, the pinned one or the `--budget-usd` given;
   - the lock line, when another `run-flow` holds the folder.
+
+## The runs page
+
+`/runs` in the app lists the run folders in `runs/` beside it (or `FLOWBOARD_RUNS_DIR`) and shows one run: a summary, a cell per step, each run's log, artifacts, `changes.patch`, spend and the sandbox. It reads the run folder only, so any run shows, with or without `--page`. With `--page` the page can also act:
+
+- **Questions.** Every batch the terminal would ask, a gate's decision or an agent's question, is also written to `<run folder>/asks/<id>.json` as `{ id, heading, questions, at }`. The page answers by writing `<run folder>/answers/<id>.json`; the first answer, terminal or page, wins and the other is withdrawn. Both files go once it is settled.
+- **Stop.** A `<run folder>/stop` file stops the flow as one Ctrl+C does; `--resume` continues it.
+- **Host.** `<run folder>/host.json`, `{ pid, page }`, is there while a `run-flow` drives the run; the page reads a run with no live host as paused.
+- **Resume.** The page's *Resume* runs `run-flow --resume <run folder> --page` in the background, with `--budget-usd` when a new budget is given; its output goes to `<run folder>/resume.log`.
+- **Allow host & retry.** At a *run failed* or escalation gate of an OpenSandbox run, a third question, *Host to allow before the retry*, takes a host name. With Retry, the box is let reach it at once and the host is added to `sandbox.egress` in `flow.json`, so a resumed run's box allows it too.
 
 ## Safety
 

@@ -1,12 +1,20 @@
 /** A step log's JSONL lines as the drawer shows them: a time, a type, one line of text, and a tone. */
 export interface Line { at: string; type: string; text: string; tone?: 'tool' | 'ok' | 'bad' | 'quiet' | 'cost' }
 
-const time = (at: unknown) => (typeof at === 'string' ? at.slice(11, 19) : '');
+/** A log line's time, as this machine's clock shows it, like the rest of the page. */
+const time = (at: unknown) => {
+  const d = typeof at === 'string' ? new Date(at) : undefined;
+  if (!d || Number.isNaN(d.getTime())) return '';
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+};
 const short = (v: unknown, n = 160) => {
   const s = (typeof v === 'string' ? v : JSON.stringify(v) ?? '').replace(/\s+/g, ' ').trim();
   return s.length > n ? `${s.slice(0, n)}…` : s;
 };
-const money = (u: number | undefined) => (typeof u === 'number' ? ` · $${u.toFixed(2)}` : '');
+/** Dollars; below a cent, to the tenth of a cent, so a cheap model's run does not read as free. */
+export const usd = (n: number) => (n > 0 && n < 0.01 ? `$${n.toFixed(3)}` : `$${n.toFixed(2)}`);
+const money = (u: number | undefined) => (typeof u === 'number' ? ` · ${usd(u)}` : '');
 
 /** One log line, or null for the bookkeeping the drawer leaves out (pids). */
 export function lineOf(l: Record<string, unknown>): Line | null {
@@ -103,6 +111,26 @@ export function totalsOf(lines: Record<string, unknown>[]) {
     turns: (u.numTurns as number) ?? 0,
     input: (u.input as number) ?? 0,
     output: (u.output as number) ?? 0,
+    cacheRead: (u.cacheRead as number) ?? 0,
+    cacheWrite: (u.cacheWrite as number) ?? 0,
     costUsd: u.costUsd as number | undefined,
   };
+}
+
+/**
+ * USD per million tokens, input and output, by model family: Claude reports cost only on its result, so the
+ * footer estimates it from tokens until then. Cache reads cost a tenth of input, cache writes a quarter more.
+ * ponytail: list prices by family name; a model outside these gets no estimate.
+ */
+const PRICES: [RegExp, number, number][] = [
+  [/haiku/, 1, 5],
+  [/sonnet/, 3, 15],
+  [/opus/, 5, 25],
+];
+
+export function estimateUsd(model: string | undefined, u: { input: number; output: number; cacheRead?: number; cacheWrite?: number }): number | undefined {
+  const price = PRICES.find(([re]) => re.test(model ?? ''));
+  if (!price) return undefined;
+  const [, inp, out] = price;
+  return ((u.input + (u.cacheRead ?? 0) * 0.1 + (u.cacheWrite ?? 0) * 1.25) * inp + u.output * out) / 1e6;
 }

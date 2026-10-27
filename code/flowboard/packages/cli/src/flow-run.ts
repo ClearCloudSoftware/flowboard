@@ -43,6 +43,9 @@ export const DISCARD_COMMANDS = [
   String.raw`${GIT}clean\b(?![^;&|\n]*\s(?:-n|--dry-run)${END})`,
   String.raw`${GIT}stash\b(?!\s+(?:list|show)\b)`,
 ];
+/** A host the box may be let reach, as `sandbox.egress` takes it. */
+const HOST = /^(\*\.)?[a-z0-9-]+(\.[a-z0-9-]+)+$/;
+
 const DECISION_LABELS: Record<Decision, string> = {
   approve: 'Approve (pass)',
   reject: 'Reject (fail)',
@@ -626,6 +629,24 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     }),
   };
 
+  /** Lets the box reach `host` and pins it to the run's egress, so a resumed run's box allows it too. */
+  const allowHost = async (host: string) => {
+    if (!HOST.test(host) || /^[\d.]+$/.test(host)) return show(`-- ${host}: not a host name or *.domain; nothing allowed`);
+    const sb = d.config.sandbox;
+    if (!d.box || sb?.runtime !== 'opensandbox' || sb.egress.includes(host)) return;
+    try {
+      await d.box.allow([host]);
+    } catch (e) {
+      return show(`-- sandbox: could not allow ${host}: ${(e as Error).message}`);
+    }
+    sb.egress.push(host);
+    const pin = JSON.parse(d.pinned) as { config: FlowConfig };
+    pin.config.sandbox = sb;
+    d.pinned = JSON.stringify(pin, null, 2) + '\n';
+    writeFileSync(join(d.runDir, 'flow.json'), d.pinned);
+    show(`-- sandbox: egress now allows ${host}`);
+  };
+
   /** Gate prompts open or waiting their turn, by step. */
   const asks = new Map<string, AbortController>();
   const askGate = (step: string, gate: Gate, ask: NonNullable<typeof asker>) => {
@@ -646,9 +667,17 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
         options: gate.decisions.map((value) => ({ value, label: DECISION_LABELS[value] })),
       },
       { id: 'note', kind: 'text', prompt: 'Note for the next run (optional)', required: false },
+      // A sandboxed step that failed may have been refused a host: a retry can let the box reach it first.
+      ...(d.box && gate.decisions.includes('retry') && gate.kind !== 'verdict'
+        ? [{ id: 'allow_host', kind: 'text' as const, prompt: 'Host to allow before the retry, like registry.npmjs.org (optional)', required: false }]
+        : []),
     ];
     ask(questions, abort.signal)
-      .then((a) => post({ type: 'decide', step, decision: a.decision as Decision, ...(typeof a.note === 'string' && a.note && { note: a.note }) }))
+      .then(async (a) => {
+        const host = typeof a.allow_host === 'string' ? a.allow_host.trim().toLowerCase() : '';
+        if (host && a.decision === 'retry') await allowHost(host);
+        post({ type: 'decide', step, decision: a.decision as Decision, ...(typeof a.note === 'string' && a.note && { note: a.note }) });
+      })
       .catch((e) => {
         if (abort.signal.aborted) return;
         if ((e as Error).name === 'ExitPromptError') interrupt(); // Ctrl+C at the prompt

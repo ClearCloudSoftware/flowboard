@@ -899,6 +899,10 @@
   .rv-kv .w {
     color: var(--fail);
   }
+  .rv-kv > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
   .rv-deny {
     border: 1px solid var(--fail-edge);
     background: var(--fail-soft);
@@ -920,6 +924,39 @@
     flex-wrap: wrap;
     gap: 6px;
     margin-top: 10px;
+  }
+  .rv-cmp {
+    width: min(1200px, calc(100vw - 32px));
+  }
+  .rv-cmp-b {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-top: 1px solid var(--line);
+  }
+  .rv-cmp-b section {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 12px;
+  }
+  .rv-cmp-b section + section {
+    border-left: 1px solid var(--line);
+  }
+  .rv-cmp-b h3 {
+    margin: 0 0 6px;
+    font-size: 10.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--ink-3);
+  }
+  .rv-cmp-b .rv-file,
+  .rv-cmp-b .rv-diff {
+    flex: 1;
+    max-height: none;
+    margin: 0;
   }
   @media (max-width: 1100px) {
     .rv-body {

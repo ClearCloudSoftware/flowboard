@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Question } from '../../packages/core/src/hitl/question.ts';
 import type { PageAsk } from '../../packages/cli/src/ask/page.ts';
-import { answerRun, artifactQuery, LIVE, logsQuery, resumeRun, runQuery, stopRun } from './api.ts';
+import { answerRun, artifactQuery, builtQuery, LIVE, logsQuery, resumeRun, runQuery, stopRun } from './api.ts';
 import type { RunDetail, StepLog } from './api.ts';
-import { entriesOf, totalsOf } from './log-lines.ts';
+import { entriesOf, estimateUsd, totalsOf, usd as dollars } from './log-lines.ts';
 import type { Entry, Filter, ToolEntry } from './log-lines.ts';
 
-const usd = (n: number | null | undefined) => (typeof n === 'number' ? `$${n.toFixed(2)}` : '—');
+const usd = (n: number | null | undefined) => (typeof n === 'number' ? dollars(n) : '—');
 const span = (from?: string, to?: string) => {
   if (!from) return '—';
   const s = Math.max(0, Math.round(((to ? Date.parse(to) : Date.now()) - Date.parse(from)) / 1000));
@@ -21,12 +21,31 @@ const CELL: Record<string, string> = { pending: 'pending', running: 'running', a
 const stepOfAsk = (a: PageAsk) => /^-- (\S+) asks:/.exec(a.heading)?.[1] ?? /^(\S+):/.exec(a.questions[0]?.prompt ?? '')?.[1];
 const isGate = (a: PageAsk) => a.questions[0]?.id === 'decision';
 
+/** Refetches the run whenever its folder changes (server-sent events); `lost` while the stream is down. */
+function usePush(name: string) {
+  const queryClient = useQueryClient();
+  const [lost, setLost] = useState(false);
+  useEffect(() => {
+    const es = new EventSource(`/api/runs/${encodeURIComponent(name)}/events`);
+    es.onopen = () => setLost(false);
+    es.onerror = () => setLost(true); // EventSource reconnects by itself; the first change it sends catches up
+    es.onmessage = () => {
+      void queryClient.invalidateQueries({ queryKey: ['run', name] });
+      void queryClient.invalidateQueries({ queryKey: ['logs', name] });
+    };
+    return () => es.close();
+  }, [name, queryClient]);
+  return lost;
+}
+
 export function RunView({ name }: { name: string }) {
-  const runs = useQuery(runQuery(name, true));
+  const pushLost = usePush(name);
+  const runs = useQuery(runQuery(name, false));
   const run = runs.data;
   const live = !!run && LIVE.has(run.status);
-  const logs = useQuery({ ...logsQuery(name, live), enabled: !!run });
+  const logs = useQuery({ ...logsQuery(name, false), enabled: !!run });
   const [tab, setTab] = useState<number>();
+  const [comparing, setComparing] = useState(false);
   const shown = logs.data?.find((l) => l.run === tab) ?? logs.data?.at(-1);
   const pick = (step: string) => {
     const last = logs.data?.findLast((l) => l.step === step);
@@ -38,7 +57,7 @@ export function RunView({ name }: { name: string }) {
   const asks = run.asks;
   const gates = asks.filter(isGate);
   const questions = asks.filter((a) => !isGate(a));
-  const lost = runs.isError || logs.isError;
+  const lost = runs.isError || logs.isError || (pushLost && live);
   const waitingOnYou = run.steps.filter((s) => s.state === 'awaiting_approval');
 
   return (
@@ -60,7 +79,7 @@ export function RunView({ name }: { name: string }) {
       </nav>
       {lost && <div className="rv-banner lost">⋯ lost the connection to the run; retrying, and the log catches up when it is back</div>}
       {gates.map((a) => (
-        <Gate key={a.id} run={run} ask={a} />
+        <Gate key={a.id} run={run} ask={a} logs={logs.data} onCompare={() => setComparing(true)} />
       ))}
       {!run.page && waitingOnYou.length > 0 && run.status !== 'paused' && (
         <div className="rv-banner">
@@ -74,8 +93,9 @@ export function RunView({ name }: { name: string }) {
       )}
       <div className="rv-body">
         <Log run={run} logs={logs.data} shown={shown} setTab={setTab} questions={questions} live={live} />
-        <Side run={run} />
+        <Side run={run} onCompare={() => setComparing(true)} />
       </div>
+      {comparing && <Compare run={run} onClose={() => setComparing(false)} />}
     </div>
   );
 }
@@ -97,6 +117,10 @@ function Summary({ run, logs }: { run: RunDetail; logs: StepLog[] }) {
       <div>
         <span className="lbl">started</span>
         <b>{started ? new Date(started).toLocaleTimeString() : '—'}</b>
+      </div>
+      <div>
+        <span className="lbl">waiting on you</span>
+        <b>{span(new Date(0).toISOString(), new Date(run.waitingMs).toISOString())}</b>
       </div>
       <div>
         <span className="lbl">retries</span>
@@ -135,15 +159,32 @@ const DECISION: Record<string, { label: string; tone: string; key?: string }> = 
   fail: { label: 'Fail', tone: 'danger' },
 };
 
-function Gate({ run, ask }: { run: RunDetail; ask: PageAsk }) {
+/** Host names in a failed run's error and failed tool output that its sandbox does not allow yet: the likely refusal. */
+function refusedHosts(run: RunDetail, step: string | undefined, logs: StepLog[] | undefined): string[] {
+  const r = run.runs.findLast((x) => x.step === step);
+  const log = logs?.find((l) => l.run === r?.id);
+  const failedOutput = (log?.lines ?? []).flatMap((l) => {
+    const e = (l.event ?? {}) as { type?: string; ok?: boolean; output?: unknown; message?: string };
+    return e.type === 'tool_result' && !e.ok ? [JSON.stringify(e.output)] : e.type === 'error' ? [String(e.message)] : [];
+  });
+  const text = [r?.error ?? '', ...failedOutput].join(' ').toLowerCase();
+  const found = text.match(/\b(?:[a-z0-9-]+\.)+[a-z]{2,}\b/g) ?? [];
+  return [...new Set(found)].filter((h) => !/\.(ts|js|md|json|tsx|py|txt|log|yaml|lock)$/.test(h) && !run.sandbox.includes(h));
+}
+
+function Gate({ run, ask, logs, onCompare }: { run: RunDetail; ask: PageAsk; logs?: StepLog[]; onCompare: () => void }) {
   const [note, setNote] = useState('');
   const answer = useAnswer(run.name);
-  const [decision, noteQ] = ask.questions;
+  const decision = ask.questions[0];
+  const noteQ = ask.questions.find((q) => q.id === 'note');
+  const hostQ = ask.questions.find((q) => q.id === 'allow_host');
   const step = stepOfAsk(ask);
+  const [host, setHost] = useState(() => (hostQ ? (refusedHosts(run, step, logs)[0] ?? '') : ''));
   const instance = run.steps.find((s) => s.name === step);
   const kind = instance?.gate?.kind;
   const evidence = instance?.gate?.evidence ?? [];
-  const decide = (value: string) => answer.mutate({ id: ask.id, answers: { decision: value, ...(noteQ && { [noteQ.id]: note || null }) } });
+  const decide = (value: string) =>
+    answer.mutate({ id: ask.id, answers: { decision: value, ...(noteQ && { note: note || null }), ...(hostQ && { allow_host: value === 'retry' && host.trim() ? host.trim() : null }) } });
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.metaKey || e.ctrlKey) return;
@@ -158,11 +199,17 @@ function Gate({ run, ask }: { run: RunDetail; ask: PageAsk }) {
       <b>{step}</b>
       <span>{decision.prompt.replace(/^\S+: /, '')}</span>
       {evidence.length > 0 && <span className="lbl">reads {evidence.join(', ')}</span>}
+      <button type="button" className="act" onClick={onCompare}>
+        Compare plan vs built
+      </button>
       <span className="sp" />
+      {hostQ && (
+        <input className="rv-note" value={host} onChange={(e) => setHost(e.target.value)} placeholder="host to allow, like registry.npmjs.org" aria-label={hostQ.prompt} spellCheck={false} />
+      )}
       {noteQ && <input className="rv-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder={kind === 'verdict' ? 'reason, for the next run' : 'note for the next run'} aria-label={noteQ.prompt} />}
       {decision.options?.map((o) => (
         <button key={o.value} type="button" className={`act ${DECISION[o.value]?.tone ?? ''}`} disabled={answer.isPending} onClick={() => decide(o.value)}>
-          {DECISION[o.value]?.label ?? o.label}
+          {o.value === 'retry' && hostQ && host.trim() ? 'Allow host & retry' : (DECISION[o.value]?.label ?? o.label)}
           {DECISION[o.value]?.key && <span className="kbd">{DECISION[o.value]!.key}</span>}
         </button>
       ))}
@@ -188,6 +235,7 @@ function Log({ run, logs, shown, setTab, questions, live }: { run: RunDetail; lo
   const step = run.steps.find((s) => s.name === shown?.step);
   const record = run.runs.find((r) => r.id === shown?.run);
   const totals = totalsOf(lines);
+  const estimate = step?.kind === 'ai' ? estimateUsd(step.model, totals) : undefined;
   const mine = questions.filter((q) => stepOfAsk(q) === shown?.step);
   const toggle = (k: string) => setOn((s) => (s.has(k) ? new Set([...s].filter((x) => x !== k)) : new Set([...s, k])));
   const visible = (e: Entry) => (e.kind === 'line' ? on.has(e.filter) || (e.filter === 'other' && !on.has('raw')) : on.has('tools') || (e.kind === 'tool' && e.ok === false && on.has('errors')));
@@ -236,7 +284,7 @@ function Log({ run, logs, shown, setTab, questions, live }: { run: RunDetail; lo
         ) : on.has('raw') ? (
           <pre className="rv-raw">{lines.map((l) => JSON.stringify(l)).join('\n')}</pre>
         ) : (
-          entries.filter(visible).map((e, i) => <EntryView key={i} e={e} />)
+          entries.filter(visible).map((e, i) => <EntryView key={i} e={e} folder={run.folder} />)
         )}
         {mine.map((q) => (
           <Ask key={q.id} run={run.name} ask={q} />
@@ -253,8 +301,15 @@ function Log({ run, logs, shown, setTab, questions, live }: { run: RunDetail; lo
           <span className="lbl">tokens</span> <b>{kTokens(totals.input)} in · {kTokens(totals.output)} out</b>
         </span>
         <span>
-          <span className="lbl">cost</span> <b>{usd(totals.costUsd ?? record?.costUsd)}</b>
-          {totals.costUsd === undefined && live && !totals.endedAt && <span className="lbl"> reported at the result</span>}
+          <span className="lbl">cost</span>{' '}
+          {totals.costUsd !== undefined || totals.endedAt || !estimate ? (
+            <b>{usd(totals.costUsd ?? record?.costUsd)}</b>
+          ) : (
+            <>
+              <b>≈ {usd(estimate)}</b>
+              <span className="lbl"> estimated from tokens until the result</span>
+            </>
+          )}
         </span>
       </div>
     </section>
@@ -268,7 +323,7 @@ function dot(l: StepLog, run: RunDetail) {
   return 'done';
 }
 
-function EntryView({ e }: { e: Entry }) {
+function EntryView({ e, folder }: { e: Entry; folder: string }) {
   const [open, setOpen] = useState(false);
   if (e.kind === 'line')
     return (
@@ -285,7 +340,7 @@ function EntryView({ e }: { e: Entry }) {
           ▾ {e.tools.length} tool calls
         </button>
         {e.tools.map((t, i) => (
-          <Tool key={i} t={t} />
+          <Tool key={i} t={t} folder={folder} />
         ))}
       </>
     ) : (
@@ -294,19 +349,24 @@ function EntryView({ e }: { e: Entry }) {
         {e.tools.some((t) => t.ok === false) && <span className="bad"> · {e.tools.filter((t) => t.ok === false).length} failed</span>}
       </button>
     );
-  return <Tool t={e} />;
+  return <Tool t={e} folder={folder} />;
 }
 
 const text = (v: unknown) => (typeof v === 'string' ? v : JSON.stringify(v, null, 2));
 
-function Tool({ t }: { t: ToolEntry }) {
+/** Paths in the run's folder, shown relative to it: the folder is in the side panel once. */
+const inFolder = (text: string, folder: string) => (folder ? text.split(`${folder}/`).join('') : text);
+
+function Tool({ t, folder }: { t: ToolEntry; folder: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div className={`rv-tool${t.ok === false ? ' bad' : ''}`}>
       <button type="button" className="h" aria-expanded={open} onClick={() => setOpen(!open)}>
         <span className="t">{t.at}</span>
         {open ? '▾' : '▸'} <b>{t.name}</b>
-        <span className="s">{t.summary.replace(new RegExp(`^${t.name}\\s*`), '')}</span>
+        <span className="s" title={t.summary}>
+          {inFolder(t.summary.replace(new RegExp(`^${t.name}:?\\s*`), ''), folder)}
+        </span>
         <span className="r">{t.ok === undefined ? '⋯' : t.ok ? '✓' : '✗'}</span>
       </button>
       {open && (
@@ -385,7 +445,7 @@ function Ask({ run, ask }: { run: string; ask: PageAsk }) {
   );
 }
 
-function Side({ run }: { run: RunDetail }) {
+function Side({ run, onCompare }: { run: RunDetail; onCompare: () => void }) {
   const [open, setOpen] = useState<string>();
   const artifact = useQuery({ ...artifactQuery(run.name, open ?? ''), enabled: !!open && open !== 'patch' });
   const byStep = run.steps.map((s) => ({ s, cost: run.runs.filter((r) => r.step === s.name).reduce((n, r) => n + (r.costUsd ?? 0), 0), n: run.runs.filter((r) => r.step === s.name).length })).filter((x) => x.n);
@@ -460,6 +520,9 @@ function Side({ run }: { run: RunDetail }) {
           <span>{run.page ? 'here and in its terminal' : 'its terminal only'}</span>
         </div>
         <div className="rv-btns">
+          <button type="button" className="act" onClick={onCompare}>
+            Compare plan vs built
+          </button>
           <a className="act" href="/flows">
             Open the flow
           </a>
@@ -527,5 +590,35 @@ export function RunActions({ run }: { run: RunDetail }) {
         </button>
       )}
     </>
+  );
+}
+
+/** The run's plan beside what it built (task-detail's "Compare plan vs built"), in a modal sheet. */
+export function Compare({ run, onClose }: { run: RunDetail; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const plan = run.artifacts.find((a) => a.type === 'plan')?.type ?? run.artifacts.find((a) => a.by === run.steps[0]?.name)?.type;
+  const planText = useQuery({ ...artifactQuery(run.name, plan ?? ''), enabled: !!plan });
+  const built = useQuery(builtQuery(run.name));
+  useEffect(() => ref.current?.showModal(), []);
+  return (
+    <dialog ref={ref} className="pe rv-cmp" onClose={onClose}>
+      <div className="ph">
+        <span className="lbl">plan vs built</span>
+        <span className="sp" />
+        <button type="button" className="act" onClick={() => ref.current?.close()}>
+          Close
+        </button>
+      </div>
+      <div className="rv-cmp-b">
+        <section>
+          <h3>plan{plan ? ` · ${plan}` : ''}</h3>
+          <pre className="rv-file">{!plan ? 'This run has no plan artifact.' : (planText.data?.text ?? (planText.isError ? planText.error.message : 'Loading…'))}</pre>
+        </section>
+        <section>
+          <h3>built · {built.data?.from === 'patch' ? 'changes.patch' : built.data?.from === 'folder' ? `${run.folder} against its last commit` : 'no changes'}</h3>
+          {built.data?.text ? <Diff text={built.data.text} cut={built.data.cut} /> : <pre className="rv-file">{built.isPending ? 'Loading…' : built.error?.message ?? 'Nothing changed.'}</pre>}
+        </section>
+      </div>
+    </dialog>
   );
 }

@@ -2,6 +2,7 @@
  * The flow designer's view of run-flow's run folders: `runs/<stamp>-<flow>/`, each with its pinned `flow.json`,
  * its `state.json`, and one `<NNN>-<step>.jsonl` log per step run, a line per event as the adapter emitted it.
  */
+import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FlowState, Gate, RunRecord } from '../../core/src/flow/engine.ts';
@@ -123,7 +124,39 @@ export interface RunDetail {
   /** `changes.patch` (an OpenSandbox run's edits), cut at PATCH_MAX bytes. */
   patch?: { text: string; cut: boolean };
   asks: PageAsk[];
+  /** Time gates have waited on a person, in ms: from each gate opening to its decision, or to now if still open. */
+  waitingMs: number;
 }
+
+/** Gate waits from `flow.jsonl`: a gate opens with its command (a resume asking it again keeps it open) and closes on its decide. */
+export function waitingOf(lines: Record<string, any>[], now = Date.now()): number {
+  const open = new Map<string, number>();
+  let ms = 0;
+  for (const l of lines) {
+    const at = Date.parse(l.at);
+    if (l.event?.type === 'decide' && open.has(l.event.step)) {
+      ms += at - open.get(l.event.step)!;
+      open.delete(l.event.step);
+    }
+    for (const c of l.commands ?? []) if (c.type === 'gate' && !open.has(c.step)) open.set(c.step, at);
+    if (l.commands?.some((c: { type: string }) => c.type === 'end')) open.clear();
+  }
+  for (const at of open.values()) ms += now - at;
+  return ms;
+}
+
+const jsonl = (path: string): Record<string, any>[] =>
+  isFile(path)
+    ? readFileSync(path, 'utf8')
+        .split('\n')
+        .flatMap((l) => {
+          try {
+            return l ? [JSON.parse(l)] : [];
+          } catch {
+            return [];
+          }
+        })
+    : [];
 
 const PATCH_MAX = 300_000;
 
@@ -185,6 +218,7 @@ export function readRun(runsDir: string, name: string): RunDetail | undefined {
     artifacts,
     ...(patch && { patch }),
     asks: asksOf(dir),
+    waitingMs: waitingOf(jsonl(join(dir, 'flow.jsonl'))),
   };
 }
 
@@ -230,4 +264,22 @@ export function stopRun(runsDir: string, name: string): string | undefined {
   if (run.status !== 'running' && run.status !== 'waiting' && run.status !== 'starting') return `the run is ${run.status}; nothing to stop`;
   writeFileSync(join(runsDir, name, 'stop'), '');
   return undefined;
+}
+
+/**
+ * What the run built, as a diff: its `changes.patch` (an OpenSandbox run never touches the folder), else the
+ * folder's uncommitted changes against HEAD, `.flowboard/` left out. `from` says which.
+ */
+export function builtOf(runsDir: string, name: string): { from: 'patch' | 'folder' | 'none'; text: string; cut: boolean } | undefined {
+  const run = readRun(runsDir, name);
+  if (!run) return undefined;
+  if (run.patch) return { from: 'patch', ...run.patch };
+  const git = spawnSync('git', ['diff', '--no-color', 'HEAD', '--', '.', ':(exclude).flowboard'], { cwd: run.folder, encoding: 'utf8', maxBuffer: 16 * PATCH_MAX });
+  if (git.status !== 0 || !git.stdout) return { from: 'none', text: '', cut: false };
+  return { from: 'folder', text: git.stdout.slice(0, PATCH_MAX), cut: git.stdout.length > PATCH_MAX };
+}
+
+/** The run's plan, to set beside what it built: the `plan` artifact, else the first step's first artifact. */
+export function planOf(run: RunDetail): string | undefined {
+  return run.artifacts.find((a) => a.type === 'plan')?.type ?? run.artifacts.find((a) => a.by === run.steps[0]?.name)?.type;
 }
