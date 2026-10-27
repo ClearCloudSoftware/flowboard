@@ -433,6 +433,119 @@
   .route-label:hover {
     border-color: var(--ink-3);
   }
+  /* the log drawer: a terminal pane under the canvas, a tab per step run */
+  .lg {
+    flex-shrink: 0;
+    border-top: 1px solid var(--line-2);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+  }
+  .lg.open {
+    height: 260px;
+    min-height: 120px;
+    max-height: 70%;
+    resize: vertical;
+    overflow: hidden;
+  }
+  .lg-h {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    min-height: 32px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+  }
+  .lg-t {
+    border: 0;
+    background: none;
+    padding: 6px 0;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .lg-h select {
+    border: 1px solid var(--line-2);
+    background: var(--paper);
+    font-size: 11px;
+    padding: 2px 4px;
+    max-width: 280px;
+  }
+  .lg-tabs {
+    display: flex;
+    align-self: stretch;
+    overflow-x: auto;
+  }
+  .lg-tabs button {
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    padding: 0 10px;
+    color: var(--ink-2);
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .lg-tabs button[aria-selected='true'] {
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+  }
+  .lg-tabs small {
+    color: var(--ink-3);
+  }
+  .lg-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--done);
+  }
+  .lg-dot.live {
+    background: var(--run);
+  }
+  .lg-dot.bad {
+    background: var(--fail);
+  }
+  .lg-f {
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .lg-b {
+    flex: 1;
+    overflow: auto;
+    padding: 6px 0;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .lg-l {
+    display: grid;
+    grid-template-columns: 62px 76px 1fr;
+    gap: 10px;
+    padding: 0 12px;
+  }
+  .lg-l > span:not(:last-child) {
+    color: var(--ink-3);
+  }
+  .lg-l > span:last-child {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .lg-l.tool > span:nth-child(2),
+  .lg-l.ok > span:nth-child(2) {
+    color: var(--run);
+  }
+  .lg-l.bad {
+    background: var(--fail-soft);
+  }
+  .lg-l.bad > span:nth-child(2) {
+    color: var(--fail);
+  }
+  .lg-l.quiet > span:last-child {
+    color: var(--ink-3);
+  }
+  .lg-l.cost > span:nth-child(2) {
+    color: var(--wait);
+  }
   .cv-bar {
     flex-shrink: 0;
     display: flex;

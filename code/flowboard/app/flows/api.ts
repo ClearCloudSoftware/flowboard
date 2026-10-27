@@ -1,8 +1,9 @@
 /** The flows API, as TanStack Query options and calls. Types are the server's own (`packages/cli/src/flow-files.ts`). */
 import { keepPreviousData, queryOptions } from '@tanstack/react-query';
 import type { FlowCheck, FlowFile, FlowSummary, PromptFile } from '../../packages/cli/src/flow-files.ts';
+import type { RunSummary, StepLog } from '../../packages/cli/src/flow-logs.ts';
 
-export type { FlowCheck, FlowFile, FlowSummary, PromptFile };
+export type { FlowCheck, FlowFile, FlowSummary, PromptFile, RunSummary, StepLog };
 /** `dir`: where the recipes are, as `pnpm run-flow` in the app's folder would name it: relative when inside it. */
 export interface Library { dir: string; flows: FlowSummary[] }
 export interface Draft { text: string; check: FlowCheck }
@@ -48,3 +49,19 @@ export const promptQuery = (path: string) =>
 
 export const savePrompt = (path: string, text: string, version: string | null) =>
   call<PromptFile>('/api/prompts', { method: 'PUT', body: JSON.stringify({ path, text, version }) });
+
+/** A flow's runs, newest first; polled while the newest is still going. */
+export const runsQuery = (flow: string) =>
+  queryOptions({
+    queryKey: ['runs', flow],
+    queryFn: () => call<RunSummary[]>(`/api/runs?flow=${encodeURIComponent(flow)}`),
+    refetchInterval: 5000,
+  });
+
+/** One run's step logs; `live` polls them while it runs. */
+export const logsQuery = (run: string, live: boolean) =>
+  queryOptions({
+    queryKey: ['logs', run],
+    queryFn: () => call<StepLog[]>(`/api/runs/${encodeURIComponent(run)}`),
+    refetchInterval: live ? 1500 : false,
+  });
