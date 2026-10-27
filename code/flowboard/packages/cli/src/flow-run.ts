@@ -12,6 +12,7 @@ import type { Box } from '@flowboard/adapters';
 import { advance, entries, GIT, newFlowState } from '@flowboard/core';
 import type { Answers, Decision, FlowCommand, FlowEvent, FlowState, Gate, Question, RunCommand } from '@flowboard/core';
 import type { Answerer } from './ask/broker.ts';
+import { either, pageAnswerer, watchStop } from './ask/page.ts';
 import { noTerminal, terminalAnswerer } from './ask/terminal.ts';
 import { isDir } from './config.ts';
 import { inside, loadFlow, toMermaid } from './flow-config.ts';
@@ -22,9 +23,9 @@ import { defaultProvider, stamp } from './run.ts';
 import type { RunDeps } from './run.ts';
 
 const USAGE = [
-  'usage: pnpm run-flow --folder <dir> --task <file> [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] <flow.yaml>',
+  'usage: pnpm run-flow --folder <dir> --task <file> [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] <flow.yaml>',
   '       pnpm run-flow --check | --mermaid [--folder <dir> --task <file>] <flow.yaml>',
-  '       pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>]',
+  '       pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page]',
 ];
 /** setTimeout's longest delay; a longer one fires at once. */
 const MAX_TIMER_MS = 2 ** 31 - 1;
@@ -72,6 +73,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
         'budget-usd': { type: 'string' },
         'max-runs': { type: 'string' },
         'allow-dirty': { type: 'boolean' },
+        page: { type: 'boolean' },
       },
     });
   } catch {
@@ -79,7 +81,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
   }
   const { values: v, positionals } = parsed;
   const modes = [v.check, v.mermaid, v.resume !== undefined].filter(Boolean).length;
-  if (modes > 1 || (v['allow-dirty'] && modes > 0)) return usage();
+  if (modes > 1 || (v['allow-dirty'] && modes > 0) || (v.page && (v.check || v.mermaid))) return usage();
   if (v.resume !== undefined ? positionals.length > 0 : positionals.length !== 1) return usage();
   // A flow is a recipe: a run says where to work and what to do; a check may say both, or neither; a resume has them.
   const inputs = [v.folder, v.task].filter((x) => x !== undefined).length;
@@ -101,7 +103,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
     budget = Number(v['budget-usd']);
   }
 
-  if (v.resume !== undefined) return resume(v.resume, { maxRuns, budget }, deps);
+  if (v.resume !== undefined) return resume(v.resume, { maxRuns, budget, page: v.page }, deps);
   const yaml = positionals[0];
   const loaded = loadFlow(yaml, deps.cwd, v.folder !== undefined && v.task !== undefined ? { folder: v.folder, task: v.task, budgetUsd: budget } : undefined);
   if (!loaded.ok) {
@@ -205,7 +207,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
       print(`-- sandbox ${box.id}: ${config.folder} at its last commit; egress ${sb.egress.join(', ') || 'none'}`);
       for (const name of box.missing) print(`-- warning: sandbox: ${name} is not set; steps that need it will fail`);
     }
-    return await drive({ config, runDir, artifactsDir, shown, pinned, lockPath, state: newFlowState(), first: { type: 'start' }, maxRuns: maxRuns ?? Infinity, ...(box && { box }) }, deps);
+    return await drive({ config, runDir, artifactsDir, shown, pinned, lockPath, state: newFlowState(), first: { type: 'start' }, maxRuns: maxRuns ?? Infinity, page: !!v.page, ...(box && { box }) }, deps);
   } finally {
     releaseLock(lockPath);
   }
@@ -461,7 +463,7 @@ function parseJson(text: string | undefined): unknown {
  * `--resume <dir>`: continues a stopped, paused or crashed flow from its pinned flow.json and its state.json,
  * with the `--max-runs` and budget it started with unless others are given.
  */
-async function resume(typed: string, given: { maxRuns?: number; budget?: number }, deps: RunDeps): Promise<number> {
+async function resume(typed: string, given: { maxRuns?: number; budget?: number; page?: boolean }, deps: RunDeps): Promise<number> {
   const print = deps.print ?? console.log;
   const printErr = deps.printErr ?? console.error;
   const refuse = (why: string) => {
@@ -509,7 +511,7 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number 
         return refuse(`${(e as Error).message}: its edits cannot be resumed; start the flow again`);
       }
     }
-    return await drive({ config, runDir, artifactsDir: pinned.artifactsDir, shown: typed, pinned: pin, lockPath, state, first: { type: 'resume' }, maxRuns: runs, ...(box && { box }) }, deps);
+    return await drive({ config, runDir, artifactsDir: pinned.artifactsDir, shown: typed, pinned: pin, lockPath, state, first: { type: 'resume' }, maxRuns: runs, page: !!given.page, ...(box && { box }) }, deps);
   } finally {
     releaseLock(lockPath);
   }
@@ -565,6 +567,8 @@ interface Drive {
   maxRuns: number;
   /** runtime: opensandbox: the box the whole run works in. */
   box?: Box;
+  /** `--page`: the runs page may also answer, decide and stop (ask/page.ts). */
+  page: boolean;
 }
 
 /** Feeds the engine from `first` until the flow ends or waits on a person, and resolves with the exit code. */
@@ -601,6 +605,9 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   // The answerer prints its own lines ("question 1 of 2") while its prompt is open, so it gets the bare print.
   const answer = deps.answer ?? (process.stdin.isTTY ? terminalAnswerer(undefined, print) : undefined);
   const term = answer && terminal(answer, print);
+  const page = d.page ? pageAnswerer(d.runDir) : undefined;
+  /** Whoever can answer: the terminal, the page, or both, the first answer winning. */
+  const asker = term && page ? either(term.ask, page) : (term?.ask ?? page);
   const show = term ? (line: string) => term.show(line) : print;
   const temps = new Set<string>();
   const ctx: ExecContext = {
@@ -621,7 +628,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
 
   /** Gate prompts open or waiting their turn, by step. */
   const asks = new Map<string, AbortController>();
-  const askGate = (step: string, gate: Gate, ask: NonNullable<typeof term>['ask']) => {
+  const askGate = (step: string, gate: Gate, ask: NonNullable<typeof asker>) => {
     asks.get(step)?.abort();
     const abort = new AbortController();
     asks.set(step, abort);
@@ -697,7 +704,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     if (c.type === 'run') queued.push(c);
     else if (c.type === 'gate') {
       show(`-- ${c.step} needs a decision`);
-      if (term && !stopping) askGate(c.step, c.gate, term.ask); // once stopping, --resume asks it again
+      if (asker && !stopping) askGate(c.step, c.gate, asker); // once stopping, --resume asks it again
     }
     else if (c.type === 'stop') {
       for (const id of c.runs) {
@@ -736,12 +743,12 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     const ask: Answerer = async (qs, signal) => {
       stopClock();
       try {
-        return await term!.ask(qs, signal, `-- ${cmd.step} asks:`);
+        return await asker!(qs, signal, `-- ${cmd.step} asks:`);
       } finally {
         startClock();
       }
     };
-    const runCtx: ExecContext = { ...ctx, answer: term ? ask : noTerminal };
+    const runCtx: ExecContext = { ...ctx, answer: asker ? ask : noTerminal };
     // ponytail: parallel runs may each spend all that is left; the ceiling is checked again as each one ends.
     const capUsd = budget > 0 ? budget - sumCost(state.runs) : undefined;
     const run = step.kind === 'shell' ? execShell(step.command, config.folder, cmd, produces, runCtx) : execAi(step.run, cmd, produces, runCtx, { verdict: step.verdict, capUsd });
@@ -803,6 +810,9 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   const signals = deps.signals ?? process;
   const STOP_SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'];
   for (const sig of STOP_SIGNALS) signals.on(sig, interrupt);
+  // The page sees which host drives this run, and stops it as a first Ctrl+C would.
+  writeFileSync(join(d.runDir, 'host.json'), JSON.stringify({ pid: process.pid, page: d.page }) + '\n');
+  const unwatch = watchStop(d.runDir, () => interrupt());
 
   try {
     feed(d.first);
@@ -836,6 +846,8 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     throw e;
   } finally {
     for (const sig of STOP_SIGNALS) signals.off(sig, interrupt);
+    unwatch();
+    rmSync(join(d.runDir, 'host.json'), { force: true });
   }
 
   const status = ended ?? (stopAsked ? 'stopped' : 'paused');

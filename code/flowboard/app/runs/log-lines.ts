@@ -47,3 +47,62 @@ export function lineOf(l: Record<string, unknown>): Line | null {
   }
   return { at, type: String(l.kind ?? '?'), text: short(l), tone: 'quiet' };
 }
+
+/** A tool call with its result, when it has come. */
+export interface ToolEntry { kind: 'tool'; at: string; name: string; summary: string; input: unknown; ok?: boolean; output?: unknown }
+/** What the log shows, in order: a line, a tool call, or a fold of tool calls in a row. */
+export type Entry = { kind: 'line'; line: Line; filter: Filter; raw: Record<string, unknown> } | ToolEntry | { kind: 'fold'; tools: ToolEntry[] };
+export type Filter = 'said' | 'thinking' | 'errors' | 'other';
+
+/** Tool calls in a row, past this many, fold into one line. */
+export const FOLD_AT = 3;
+
+/** A step log as entries: each tool call paired with its result, and a run of tool calls folded. */
+export function entriesOf(lines: Record<string, unknown>[]): Entry[] {
+  const out: Entry[] = [];
+  let row: ToolEntry[] = [];
+  const flush = () => {
+    if (row.length > FOLD_AT) out.push({ kind: 'fold', tools: row });
+    else out.push(...row);
+    row = [];
+  };
+  for (const raw of lines) {
+    const e = (raw.event ?? {}) as Record<string, any>;
+    if (raw.kind === 'event' && e.type === 'tool_use') {
+      row.push({ kind: 'tool', at: time(raw.at), name: String(e.name ?? 'tool'), summary: e.summary || `${e.name} ${short(e.input, 100)}`, input: e.input });
+      continue;
+    }
+    if (raw.kind === 'event' && e.type === 'tool_result') {
+      const open = row.findLast((t) => t.ok === undefined) ?? [...out].reverse().find((t): t is ToolEntry => t.kind === 'tool' && t.ok === undefined);
+      if (open) Object.assign(open, { ok: !!e.ok, output: e.output });
+      continue;
+    }
+    const line = lineOf(raw);
+    if (!line) continue;
+    // usage lines are running totals: the footer shows them, the log need not
+    if (raw.kind === 'event' && e.type === 'usage') continue;
+    flush();
+    const filter: Filter = line.tone === 'bad' ? 'errors' : line.type === 'text' ? 'said' : line.type === 'thinking' ? 'thinking' : 'other';
+    out.push({ kind: 'line', line, filter, raw });
+  }
+  flush();
+  return out;
+}
+
+/** A step log's totals for the footer: when it ran, its turns and tokens, and its cost once reported. */
+export function totalsOf(lines: Record<string, unknown>[]) {
+  const usages = lines.flatMap((l) => {
+    const e = (l.event ?? {}) as Record<string, any>;
+    return l.kind === 'event' && (e.type === 'usage' || e.type === 'result') && e.usage ? [e.usage] : [];
+  });
+  const end = lines.findLast((l) => l.kind === 'result');
+  const u = (end?.result as Record<string, any> | undefined)?.usage ?? usages.at(-1) ?? {};
+  return {
+    startedAt: lines[0]?.at as string | undefined,
+    endedAt: end?.at as string | undefined,
+    turns: (u.numTurns as number) ?? 0,
+    input: (u.input as number) ?? 0,
+    output: (u.output as number) ?? 0,
+    costUsd: u.costUsd as number | undefined,
+  };
+}
