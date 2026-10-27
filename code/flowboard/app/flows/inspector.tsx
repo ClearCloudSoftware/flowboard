@@ -22,9 +22,11 @@ import {
   toValues,
   upstream,
 } from './draft.ts';
-import type { Condition, Draft } from './draft.ts';
+import type { Condition, Draft, StepValues } from './draft.ts';
 import { editor, selectedStep } from './editor.ts';
+import { Pencil } from 'lucide-react';
 import { WarnIcon } from './icons.tsx';
+import { PromptFileEditor, SystemPromptEditor } from './prompt-editor.tsx';
 
 const ADAPTERS = ['claude-code', 'opencode'];
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
@@ -134,8 +136,16 @@ function StepPanel({ id, draft, problems }: { id: string; draft: Draft; problems
   const inherited = (v: unknown, none = 'not set') => (v === undefined ? none : `${String(v)} (flow default)`);
   const supplied = upstream(draft, id);
   const attempts = reworked(draft).has(id) || step.max_attempts !== undefined;
+  // ponytail: one group open at a time, all closed on a new selection (the panel remounts per step)
+  const [open, setOpen] = useState<string | null>(null);
+  const [editing, setEditing] = useState<'prompt' | 'system' | null>(null);
+  const pencil = (what: 'prompt' | 'system', label: string, disabled = false) => (
+    <button type="button" className="in-pen" disabled={disabled} onClick={() => setEditing(what)} title={label} aria-label={label}>
+      <Pencil size={13} strokeWidth={1.75} aria-hidden />
+    </button>
+  );
 
-  const input = (name: TextKey, label: string, props: InputHTMLAttributes<HTMLInputElement> = {}, check?: (v: string) => string | undefined) => (
+  const input = (name: TextKey, label: string, props: InputHTMLAttributes<HTMLInputElement> = {}, check?: (v: string) => string | undefined, after?: ReactNode) => (
     <form.Field name={name} validators={check && { onChange: ({ value }) => check(value) }}>
       {(f) => (
         <Row id={`f-${name}`} label={label} errors={f.state.meta.errors}>
@@ -148,6 +158,7 @@ function StepPanel({ id, draft, problems }: { id: string; draft: Draft; problems
             autoComplete="off"
             {...props}
           />
+          {after}
         </Row>
       )}
     </form.Field>
@@ -198,6 +209,18 @@ function StepPanel({ id, draft, problems }: { id: string; draft: Draft; problems
     </form.Field>
   );
 
+  const group = (key: string, title: string, summary: (v: StepValues) => string, body: ReactNode) => (
+    <div className={cls('in-g', open === key && 'open')}>
+      <button type="button" className="in-gh" aria-expanded={open === key} onClick={() => setOpen(open === key ? null : key)}>
+        <b>{title}</b>
+        <form.Subscribe selector={(s) => s.values}>{(v) => <span>{summary(v)}</span>}</form.Subscribe>
+      </button>
+      {open === key && body}
+    </div>
+  );
+  const or = (v: string, d: unknown) => v || (d === undefined ? '' : String(d));
+  const list = (l: string[], none: string) => (l.length ? l.join(', ') : none);
+
   return (
     <form onSubmit={(e) => e.preventDefault()}>
       <Head kind="step" name={id} />
@@ -237,111 +260,162 @@ function StepPanel({ id, draft, problems }: { id: string; draft: Draft; problems
             )}
           </form.Field>
         </div>
-      </div>
-
-      <form.Subscribe selector={(s) => [s.values.kind, s.values.adapter || defaults.adapter] as const}>
-        {([kind, adapter]) =>
-          kind === 'shell' ? (
-            <div className="in-b">
-              <div className="in-f">
-                {input('shell', 'Command', { placeholder: 'pnpm test' })}
-                {input('timeout', 'Timeout', { type: 'number', min: 1, step: 1, placeholder: '30 (minutes)' }, positive)}
-              </div>
-              <p className="in-note">Exit 0 is a pass, any other a fail. It runs in the run&rsquo;s folder, with no sandbox.</p>
-            </div>
-          ) : (
-            <>
-              <div className="in-b">
-                <div className="in-f">
-                  {select('adapter', 'Adapter', ADAPTERS, inherited(defaults.adapter))}
-                  {input('model', 'Model', {
-                    placeholder: inherited(defaults.model, adapter === 'opencode' ? 'provider/model' : 'sonnet'),
-                    list: adapter === 'opencode' ? undefined : 'claude-models',
-                  })}
-                  {select('effort', 'Effort', EFFORTS, inherited(defaults.effort, "the model's own"))}
-                  {input('budget', 'Budget', { type: 'number', min: 0.01, step: 0.1, placeholder: inherited(defaults.limits?.budget_usd) }, positive)}
-                  {input('max_turns', 'Max turns', { type: 'number', min: 1, step: 1, placeholder: inherited(defaults.limits?.max_turns) }, whole)}
-                  {input('timeout', 'Timeout', { type: 'number', min: 1, step: 1, placeholder: 'none (minutes)' }, positive)}
-                </div>
-                <datalist id="claude-models">
-                  {CLAUDE_MODELS.map((m) => (
-                    <option key={m} value={m} />
-                  ))}
-                </datalist>
-              </div>
-              <div className="in-b">
-                <div className="in-f">
-                  {input('prompt', 'Prompt', { placeholder: inherited(defaults.prompt, 'prompts/step.md') })}
-                  {input('skill', 'Skill', { placeholder: '/plugin:name' })}
-                  <form.Field name="system_prompt">
-                    {(f) => (
-                      <Row id="f-system_prompt" label="System">
-                        <textarea
-                          id="f-system_prompt"
-                          rows={3}
-                          value={f.state.value}
-                          placeholder="who the agent is, inline"
-                          onChange={(e) => f.handleChange(e.target.value)}
-                          onBlur={f.handleBlur}
-                        />
-                      </Row>
-                    )}
-                  </form.Field>
-                </div>
-                <p className="in-note">The prompt is a file beside the flow file. The run&rsquo;s task comes first, then the prompt.</p>
-              </div>
-            </>
-          )
-        }
-      </form.Subscribe>
-
-      <div className="in-b">
-        <div className="in-f">
-          <form.Field name="gate">
-            {(f) => (
-              <Row id="f-gate" label="Approval">
-                <label className="check">
-                  <input id="f-gate" type="checkbox" checked={f.state.value} onChange={(e) => f.handleChange(e.target.checked)} /> waits for you
-                </label>
-              </Row>
-            )}
-          </form.Field>
-          {attempts && input('attempts', 'Attempts', { type: 'number', min: 1, step: 1, placeholder: '3' }, whole)}
-        </div>
-        {attempts && <p className="in-note">A rework route leads back here; this is how many times the step may run in all.</p>}
-      </div>
-
-      <div className="in-b">
-        <div className="in-h">
-          <span className="lbl">needs</span>
-          <span className="sp" />
-          <span className="lbl hint">files an earlier step must write</span>
-        </div>
-        {chips('requires', { none: 'nothing — it can start cold', add: 'add a type an earlier step makes', check: typeName, bad: (t) => !supplied.has(t), options: [...supplied] })}
-        <div className="in-h gap">
-          <span className="lbl">produces</span>
-        </div>
-        {chips('produces', { none: 'nothing', add: 'add a type it writes', check: typeName, tone: 'out' })}
-        <form.Subscribe selector={(s) => s.values.kind}>
-          {(kind) =>
-            kind === 'agent' && (
-              <>
-                <div className="in-h gap">
-                  <span className="lbl">may write</span>
-                  <span className="sp" />
-                  <span className="lbl hint">paths in the run&rsquo;s folder</span>
-                </div>
-                {chips('write_roots', { none: 'anywhere in the folder', add: 'add a path, like src', check: inFolder })}
-              </>
-            )
-          }
-        </form.Subscribe>
         {problems.length > 0 && (
           <div className="chip bad problems">
             <WarnIcon /> {plural(problems.length, 'problem')} — see the strip below
           </div>
         )}
       </div>
+
+      <form.Subscribe selector={(s) => [s.values.kind, s.values.adapter || defaults.adapter] as const}>
+        {([kind, adapter]) =>
+          kind === 'shell' ? (
+            group(
+              'command',
+              'Command',
+              (v) => [v.shell || 'no command', v.timeout ? `${v.timeout} min` : '30 min'].join(' · '),
+              <>
+                <div className="in-f">
+                  {input('shell', 'Command', { placeholder: 'pnpm test' })}
+                  {input('timeout', 'Timeout', { type: 'number', min: 1, step: 1, placeholder: '30 (minutes)' }, positive)}
+                </div>
+                <p className="in-note">Exit 0 is a pass, any other a fail. It runs in the run&rsquo;s folder, with no sandbox.</p>
+              </>,
+            )
+          ) : (
+            <>
+              {group(
+                'agent',
+                'Agent',
+                (v) => [or(v.adapter, defaults.adapter) || 'no adapter', or(v.model, defaults.model) || 'default model', or(v.effort, defaults.effort)].filter(Boolean).join(' · '),
+                <>
+                  <div className="in-f">
+                    {select('adapter', 'Adapter', ADAPTERS, inherited(defaults.adapter))}
+                    {input('model', 'Model', {
+                      placeholder: inherited(defaults.model, adapter === 'opencode' ? 'provider/model' : 'sonnet'),
+                      list: adapter === 'opencode' ? undefined : 'claude-models',
+                    })}
+                    {select('effort', 'Effort', EFFORTS, inherited(defaults.effort, "the model's own"))}
+                  </div>
+                  <datalist id="claude-models">
+                    {CLAUDE_MODELS.map((m) => (
+                      <option key={m} value={m} />
+                    ))}
+                  </datalist>
+                </>,
+              )}
+              {group(
+                'limits',
+                'Limits',
+                (v) => {
+                  const budget = or(v.budget, defaults.limits?.budget_usd);
+                  const turns = or(v.max_turns, defaults.limits?.max_turns);
+                  return [budget ? `$${budget}` : 'no budget', turns ? `${turns} turns` : 'no turn cap', v.timeout ? `${v.timeout} min` : 'no timeout'].join(' · ');
+                },
+                <div className="in-f">
+                  {input('budget', 'Budget', { type: 'number', min: 0.01, step: 0.1, placeholder: inherited(defaults.limits?.budget_usd) }, positive)}
+                  {input('max_turns', 'Max turns', { type: 'number', min: 1, step: 1, placeholder: inherited(defaults.limits?.max_turns) }, whole)}
+                  {input('timeout', 'Timeout', { type: 'number', min: 1, step: 1, placeholder: 'none (minutes)' }, positive)}
+                </div>,
+              )}
+              {group(
+                'prompt',
+                'Prompt',
+                (v) => [or(v.prompt, defaults.prompt) || 'no prompt', v.skill, v.system_prompt && 'system'].filter(Boolean).join(' · '),
+                <>
+                  <div className="in-f">
+                    <form.Subscribe selector={(s) => or(s.values.prompt, defaults.prompt)}>
+                      {(path) => input('prompt', 'Prompt', { placeholder: inherited(defaults.prompt, 'prompts/step.md') }, undefined, pencil('prompt', path ? `Edit ${path}` : 'Name a prompt file first', !path))}
+                    </form.Subscribe>
+                    {input('skill', 'Skill', { placeholder: '/plugin:name' })}
+                    <form.Field name="system_prompt">
+                      {(f) => (
+                        <Row id="f-system_prompt" label="System">
+                          <textarea
+                            id="f-system_prompt"
+                            rows={3}
+                            value={f.state.value}
+                            placeholder="who the agent is, inline"
+                            onChange={(e) => f.handleChange(e.target.value)}
+                            onBlur={f.handleBlur}
+                          />
+                          {pencil('system', 'Edit the system prompt')}
+                        </Row>
+                      )}
+                    </form.Field>
+                  </div>
+                  <form.Subscribe selector={(s) => or(s.values.prompt, defaults.prompt)}>
+                    {(path) => editing === 'prompt' && path && <PromptFileEditor path={path} onClose={() => setEditing(null)} />}
+                  </form.Subscribe>
+                  {editing === 'system' && (
+                    <form.Field name="system_prompt">
+                      {(f) => <SystemPromptEditor text={f.state.value} onSave={(t) => f.handleChange(t)} onClose={() => setEditing(null)} />}
+                    </form.Field>
+                  )}
+                  <p className="in-note">The prompt is a file beside the flow file. The run&rsquo;s task comes first, then the prompt.</p>
+                </>,
+              )}
+            </>
+          )
+        }
+      </form.Subscribe>
+
+      {group(
+        'files',
+        'Files',
+        (v) =>
+          [`needs ${list(v.requires, 'nothing')}`, `makes ${list(v.produces, 'nothing')}`, v.kind === 'agent' && v.write_roots.length > 0 && `writes ${v.write_roots.join(', ')}`]
+            .filter(Boolean)
+            .join(' · '),
+        <>
+          <div className="in-h">
+            <span className="lbl">needs</span>
+            <span className="sp" />
+            <span className="lbl hint">files an earlier step must write</span>
+          </div>
+          {chips('requires', { none: 'nothing — it can start cold', add: 'add a type an earlier step makes', check: typeName, bad: (t) => !supplied.has(t), options: [...supplied] })}
+          <div className="in-h gap">
+            <span className="lbl">produces</span>
+          </div>
+          {chips('produces', { none: 'nothing', add: 'add a type it writes', check: typeName, tone: 'out' })}
+          <form.Subscribe selector={(s) => s.values.kind}>
+            {(kind) =>
+              kind === 'agent' && (
+                <>
+                  <div className="in-h gap">
+                    <span className="lbl">may write</span>
+                    <span className="sp" />
+                    <span className="lbl hint">paths in the run&rsquo;s folder</span>
+                  </div>
+                  {chips('write_roots', { none: 'anywhere in the folder', add: 'add a path, like src', check: inFolder })}
+                </>
+              )
+            }
+          </form.Subscribe>
+        </>,
+      )}
+
+      {group(
+        'control',
+        'Control',
+        (v) => [v.gate ? 'waits for you' : 'runs on its own', attempts && `${v.attempts || 3} attempts`].filter(Boolean).join(' · '),
+        <>
+          <div className="in-f">
+            <form.Field name="gate">
+              {(f) => (
+                <Row id="f-gate" label="Approval">
+                  <label className="check">
+                    <input id="f-gate" type="checkbox" checked={f.state.value} onChange={(e) => f.handleChange(e.target.checked)} /> waits for you
+                  </label>
+                </Row>
+              )}
+            </form.Field>
+            {attempts && input('attempts', 'Attempts', { type: 'number', min: 1, step: 1, placeholder: '3' }, whole)}
+          </div>
+          {attempts && <p className="in-note">A rework route leads back here; this is how many times the step may run in all.</p>}
+        </>,
+      )}
+
       <div className="in-b">
         <button
           type="button"

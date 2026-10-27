@@ -1,8 +1,8 @@
 /** The flows API, as TanStack Query options and calls. Types are the server's own (`packages/cli/src/flow-files.ts`). */
 import { keepPreviousData, queryOptions } from '@tanstack/react-query';
-import type { FlowCheck, FlowFile, FlowSummary } from '../../packages/cli/src/flow-files.ts';
+import type { FlowCheck, FlowFile, FlowSummary, PromptFile } from '../../packages/cli/src/flow-files.ts';
 
-export type { FlowCheck, FlowFile, FlowSummary };
+export type { FlowCheck, FlowFile, FlowSummary, PromptFile };
 /** `dir`: where the recipes are, as `pnpm run-flow` in the app's folder would name it: relative when inside it. */
 export interface Library { dir: string; flows: FlowSummary[] }
 export interface Draft { text: string; check: FlowCheck }
@@ -42,3 +42,9 @@ export const saveFlow = (name: string, draft: unknown, version: string) =>
   call<FlowFile>(`/api/flows/${name}`, { method: 'PUT', body: JSON.stringify({ draft, version }) });
 
 export const createFlow = (name: string) => call<FlowFile>('/api/flows', { method: 'POST', body: JSON.stringify({ name }) });
+
+export const promptQuery = (path: string) =>
+  queryOptions({ queryKey: ['prompt', path], queryFn: () => call<PromptFile>(`/api/prompts?path=${encodeURIComponent(path)}`) });
+
+export const savePrompt = (path: string, text: string, version: string | null) =>
+  call<PromptFile>('/api/prompts', { method: 'PUT', body: JSON.stringify({ path, text, version }) });
