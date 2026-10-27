@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { LIVE, runQuery, runsQuery } from './api.ts';
 import type { RunStatus } from './api.ts';
+import { useState } from 'react';
+import { NewRun } from './new-run.tsx';
 import { RunActions, RunView } from './run-view.tsx';
 
 const PILL: Record<RunStatus, string> = {
@@ -23,6 +25,8 @@ export function Runs() {
   const router = useRouter();
   const picked = runs.data?.find((r) => r.name === params.get('run')) ?? runs.data?.[0];
   const run = useQuery({ ...runQuery(picked?.name ?? '', true), enabled: !!picked });
+  const [creating, setCreating] = useState(false);
+  const show = (name: string) => router.replace(`/runs?run=${encodeURIComponent(name)}`);
 
   return (
     <div className="fd">
@@ -40,6 +44,9 @@ export function Runs() {
         )}
         <span className="sp" />
         {run.data && <RunActions run={run.data} />}
+        <button type="button" className="act primary" onClick={() => setCreating(true)}>
+          + New run
+        </button>
         <Link className="act" href="/flows">
           Flows
         </Link>
@@ -52,9 +59,9 @@ export function Runs() {
             <span className="lbl">{runs.data?.length ?? 0}</span>
           </div>
           {runs.isError && <div className="in-empty">{runs.error.message}</div>}
-          {runs.data?.length === 0 && <div className="in-empty">No runs yet. Start one with pnpm run-flow --page in the app&rsquo;s folder; it shows here as it runs.</div>}
+          {runs.data?.length === 0 && <div className="in-empty">No runs yet. Start one with + New run.</div>}
           {runs.data?.map((r) => (
-            <button key={r.name} type="button" className="rn-row" aria-current={r.name === picked?.name} onClick={() => router.replace(`/runs?run=${encodeURIComponent(r.name)}`)}>
+            <button key={r.name} type="button" className="rn-row" aria-current={r.name === picked?.name} onClick={() => show(r.name)}>
               <i className={`lg-dot ${tone(r.status)}`} />
               <b>{r.flow || '?'}</b>
               <small>
@@ -65,6 +72,7 @@ export function Runs() {
         </aside>
         <main className="pane rn-main">{picked && <RunView key={picked.name} name={picked.name} />}</main>
       </div>
+      {creating && <NewRun onStarted={show} onClose={() => setCreating(false)} />}
     </div>
   );
 }

@@ -357,6 +357,13 @@ const text = (v: unknown) => (typeof v === 'string' ? v : JSON.stringify(v, null
 /** Paths in the run's folder, shown relative to it: the folder is in the side panel once. */
 const inFolder = (text: string, folder: string) => (folder ? text.split(`${folder}/`).join('') : text);
 
+/** What a tool call acted on: its path, pattern or command from the input, whole; else the adapter's summary. */
+const detailOf = (t: ToolEntry) => {
+  const i = (t.input ?? {}) as Record<string, unknown>;
+  const v = [i.filePath, i.file_path, i.path, i.pattern, i.command, i.url].find((x) => typeof x === 'string');
+  return typeof v === 'string' ? v : t.summary.replace(new RegExp(`^${t.name}:?\\s*`), '');
+};
+
 function Tool({ t, folder }: { t: ToolEntry; folder: string }) {
   const [open, setOpen] = useState(false);
   return (
@@ -365,7 +372,7 @@ function Tool({ t, folder }: { t: ToolEntry; folder: string }) {
         <span className="t">{t.at}</span>
         {open ? '▾' : '▸'} <b>{t.name}</b>
         <span className="s" title={t.summary}>
-          {inFolder(t.summary.replace(new RegExp(`^${t.name}:?\\s*`), ''), folder)}
+          {inFolder(detailOf(t), folder)}
         </span>
         <span className="r">{t.ok === undefined ? '⋯' : t.ok ? '✓' : '✗'}</span>
       </button>
@@ -511,7 +518,7 @@ function Side({ run, onCompare }: { run: RunDetail; onCompare: () => void }) {
       </div>
       <div className="rv-sec">
         <h3>run</h3>
-        <div className="rv-kv">
+        <div className="rv-kv wide">
           <span>folder</span>
           <span title={run.folder}>{run.folder.replace(/^\/Users\/[^/]+/, '~')}</span>
           <span>flow</span>

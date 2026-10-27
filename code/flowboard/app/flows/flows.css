@@ -899,8 +899,10 @@
   .rv-kv .w {
     color: var(--fail);
   }
-  .rv-kv > span {
-    min-width: 0;
+  .rv-kv.wide {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .rv-kv.wide > span:nth-child(even) {
     overflow-wrap: anywhere;
   }
   .rv-deny {
@@ -924,6 +926,31 @@
     flex-wrap: wrap;
     gap: 6px;
     margin-top: 10px;
+  }
+  .nr {
+    width: min(640px, calc(100vw - 32px));
+    height: auto;
+  }
+  .nr-b {
+    padding: 14px;
+    grid-template-columns: 70px 1fr;
+    align-items: start;
+  }
+  .nr-b > label {
+    padding-top: 4px;
+  }
+  .nr-b textarea {
+    font-family: var(--sans);
+    font-size: 13px;
+  }
+  .nr-err {
+    margin: 0 14px 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--fail-edge);
+    background: var(--fail-soft);
+    color: var(--fail);
+    white-space: pre-wrap;
+    font-size: 12px;
   }
   .rv-cmp {
     width: min(1200px, calc(100vw - 32px));

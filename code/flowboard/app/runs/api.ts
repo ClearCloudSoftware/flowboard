@@ -32,3 +32,6 @@ export const resumeRun = (run: string, budgetUsd?: number) => post(`${at(run)}/r
 
 export const builtQuery = (run: string) =>
   queryOptions({ queryKey: ['built', run], queryFn: () => call<{ from: 'patch' | 'folder' | 'none'; text: string; cut: boolean }>(`${at(run)}/built`) });
+
+export const startRun = (input: { flow: string; folder: string; task: string; budgetUsd?: number; allowDirty?: boolean }) =>
+  call<{ name: string }>('/api/runs', { method: 'POST', body: JSON.stringify(input) });
