@@ -50,13 +50,12 @@ export const promptQuery = (path: string) =>
 export const savePrompt = (path: string, text: string, version: string | null) =>
   call<PromptFile>('/api/prompts', { method: 'PUT', body: JSON.stringify({ path, text, version }) });
 
-/** A flow's runs, newest first; polled while the newest is still going. */
-export const runsQuery = (flow: string) =>
-  queryOptions({
-    queryKey: ['runs', flow],
-    queryFn: () => call<RunSummary[]>(`/api/runs?flow=${encodeURIComponent(flow)}`),
-    refetchInterval: 5000,
-  });
+/** Every run, newest first, polled so a new one shows up. */
+export const runsQuery = queryOptions({
+  queryKey: ['runs'],
+  queryFn: () => call<RunSummary[]>('/api/runs'),
+  refetchInterval: 5000,
+});
 
 /** One run's step logs; `live` polls them while it runs. */
 export const logsQuery = (run: string, live: boolean) =>

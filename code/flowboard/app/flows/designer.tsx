@@ -3,7 +3,6 @@
  * The flow designer (docs/FlowBoard/Flow Design/Flow Design Screen.md): a library rail, the canvas, the inspector,
  * and a validation strip that stands between the draft and Save. What it edits is a run-flow recipe file.
  */
-import { Logs } from './logs.tsx';
 import { useEffect, useEffectEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDebouncedValue } from '@tanstack/react-pacer';
@@ -236,7 +235,6 @@ export function Designer() {
                 </span>
               </div>
             )}
-            {file && <Logs flow={file.name} />}
           </main>
 
           <aside className="pane insp">

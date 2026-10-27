@@ -433,7 +433,7 @@
   .route-label:hover {
     border-color: var(--ink-3);
   }
-  /* the log drawer: a terminal pane under the canvas, a tab per step run */
+  /* a run's log (the runs screen): a terminal pane, a tab per step run */
   .lg {
     flex-shrink: 0;
     border-top: 1px solid var(--line-2);
@@ -442,11 +442,37 @@
     flex-direction: column;
   }
   .lg.open {
-    height: 260px;
-    min-height: 120px;
-    max-height: 70%;
-    resize: vertical;
-    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+    border-top: 0;
+  }
+  /* the runs screen: the run list, then the picked run's log */
+  .body:has(> .rn-list) {
+    grid-template-columns: 300px 1fr;
+  }
+  .rn-row {
+    display: grid;
+    grid-template-columns: 7px 1fr;
+    gap: 2px 9px;
+    align-items: center;
+    padding: 9px 12px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: none;
+    text-align: left;
+    cursor: pointer;
+  }
+  .rn-row small {
+    grid-column: 2;
+    color: var(--ink-3);
+    font-size: 11px;
+  }
+  .rn-row:hover {
+    background: var(--surface-2);
+  }
+  .rn-row[aria-current='true'] {
+    background: var(--surface-2);
+    box-shadow: inset 3px 0 0 var(--ink);
   }
   .lg-h {
     display: flex;
@@ -456,20 +482,6 @@
     min-height: 32px;
     border-bottom: 1px solid var(--line);
     font-size: 12px;
-  }
-  .lg-t {
-    border: 0;
-    background: none;
-    padding: 6px 0;
-    cursor: pointer;
-    font-weight: 600;
-  }
-  .lg-h select {
-    border: 1px solid var(--line-2);
-    background: var(--paper);
-    font-size: 11px;
-    padding: 2px 4px;
-    max-width: 280px;
   }
   .lg-tabs {
     display: flex;
