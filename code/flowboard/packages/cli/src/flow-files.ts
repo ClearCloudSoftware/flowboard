@@ -3,8 +3,8 @@
  * one. A save writes the edit into the file's own YAML, so the lines it leaves alone stay as they were written.
  */
 import { createHash } from 'node:crypto';
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { isCollection, isMap, isScalar, isSeq, Pair, parse, parseDocument } from 'yaml';
 import type { Document } from 'yaml';
 import { isDir, isFile } from './config.ts';
@@ -180,4 +180,44 @@ function align(a: string[], b: string[]): (number | undefined)[] {
     else j++;
   }
   return match;
+}
+
+/** A prompt file as read: `version` is null when it does not exist yet, so the first save creates it. */
+export interface PromptFile { path: string; text: string; version: string | null }
+export type PromptSave = { ok: true; file: PromptFile } | { ok: false; conflict: string } | { ok: false; refused: string };
+
+/** `rel` as a file inside `dir`, or undefined: no absolute or `~` path, no `..` out, no recipe, no symlink out. */
+function promptPath(dir: string, rel: string): string | undefined {
+  if (!rel || isAbsolute(rel) || rel.startsWith('~') || rel.endsWith('.yaml')) return undefined;
+  const root = realpathSync(dir);
+  const abs = resolve(root, rel);
+  const inside = (p: string) => {
+    const r = relative(root, p);
+    return r !== '' && !r.startsWith('..') && !isAbsolute(r);
+  };
+  if (!inside(abs)) return undefined;
+  let at = abs; // the nearest part that exists must not lead out through a symlink
+  while (!existsSync(at)) at = dirname(at);
+  if (at !== root && !inside(realpathSync(at))) return undefined;
+  if (existsSync(abs) && !isFile(abs)) return undefined;
+  return abs;
+}
+
+export function readPrompt(dir: string, rel: string): PromptFile | undefined {
+  const abs = promptPath(dir, rel);
+  if (!abs) return undefined;
+  if (!existsSync(abs)) return { path: rel, text: '', version: null };
+  const text = readFileSync(abs, 'utf8');
+  return { path: rel, text, version: versionOf(text) };
+}
+
+/** Writes `text` over the prompt opened at `version` (null: it did not exist), unless it changed since. */
+export function writePrompt(dir: string, rel: string, text: string, version: string | null): PromptSave {
+  const abs = promptPath(dir, rel);
+  if (!abs) return { ok: false, refused: `${rel}: a prompt must be a file inside the flows folder` };
+  const now = existsSync(abs) ? versionOf(readFileSync(abs, 'utf8')) : null;
+  if (now !== version) return { ok: false, conflict: `${rel} changed on disk after it was opened; open it again to see the change` };
+  mkdirSync(dirname(abs), { recursive: true });
+  writeFileSync(abs, text);
+  return { ok: true, file: { path: rel, text, version: versionOf(text) } };
 }

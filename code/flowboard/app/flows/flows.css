@@ -433,6 +433,131 @@
   .route-label:hover {
     border-color: var(--ink-3);
   }
+  /* a run's log (the runs screen): a terminal pane, a tab per step run */
+  .lg {
+    flex-shrink: 0;
+    border-top: 1px solid var(--line-2);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+  }
+  .lg.open {
+    flex: 1;
+    min-height: 0;
+    border-top: 0;
+  }
+  /* the runs screen: the run list, then the picked run's log */
+  .body:has(> .rn-list) {
+    grid-template-columns: 300px 1fr;
+  }
+  .rn-row {
+    display: grid;
+    grid-template-columns: 7px 1fr;
+    gap: 2px 9px;
+    align-items: center;
+    padding: 9px 12px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: none;
+    text-align: left;
+    cursor: pointer;
+  }
+  .rn-row small {
+    grid-column: 2;
+    color: var(--ink-3);
+    font-size: 11px;
+  }
+  .rn-row:hover {
+    background: var(--surface-2);
+  }
+  .rn-row[aria-current='true'] {
+    background: var(--surface-2);
+    box-shadow: inset 3px 0 0 var(--ink);
+  }
+  .lg-h {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    min-height: 32px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+  }
+  .lg-tabs {
+    display: flex;
+    align-self: stretch;
+    overflow-x: auto;
+  }
+  .lg-tabs button {
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    padding: 0 10px;
+    color: var(--ink-2);
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .lg-tabs button[aria-selected='true'] {
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+  }
+  .lg-tabs small {
+    color: var(--ink-3);
+  }
+  .lg-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--done);
+  }
+  .lg-dot.live {
+    background: var(--run);
+  }
+  .lg-dot.bad {
+    background: var(--fail);
+  }
+  .lg-f {
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .lg-b {
+    flex: 1;
+    overflow: auto;
+    padding: 6px 0;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .lg-l {
+    display: grid;
+    grid-template-columns: 62px 76px 1fr;
+    gap: 10px;
+    padding: 0 12px;
+  }
+  .lg-l > span:not(:last-child) {
+    color: var(--ink-3);
+  }
+  .lg-l > span:last-child {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .lg-l.tool > span:nth-child(2),
+  .lg-l.ok > span:nth-child(2) {
+    color: var(--run);
+  }
+  .lg-l.bad {
+    background: var(--fail-soft);
+  }
+  .lg-l.bad > span:nth-child(2) {
+    color: var(--fail);
+  }
+  .lg-l.quiet > span:last-child {
+    color: var(--ink-3);
+  }
+  .lg-l.cost > span:nth-child(2) {
+    color: var(--wait);
+  }
   .cv-bar {
     flex-shrink: 0;
     display: flex;
@@ -457,6 +582,115 @@
   .in-b {
     padding: 10px 12px;
     border-bottom: 1px solid var(--line);
+  }
+  /* a step's fields, one group open at a time; a closed group reads as one line */
+  .in-g {
+    border-bottom: 1px solid var(--line);
+  }
+  .in-g.open {
+    background: var(--surface-2);
+    padding-bottom: 10px;
+  }
+  .in-g > :not(.in-gh, dialog) {
+    margin: 0 12px;
+  }
+  .in-gh {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+    align-items: baseline;
+    padding: 9px 12px;
+    border: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .in-gh b {
+    font-weight: 600;
+    flex: none;
+  }
+  .in-gh span {
+    margin-left: auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .in-gh:hover b {
+    text-decoration: underline;
+  }
+  /* the pencil that opens a prompt in the large editor, set into its field's corner */
+  .in-v:has(> .in-pen) {
+    position: relative;
+  }
+  .in-v:has(> .in-pen) > input,
+  .in-v:has(> .in-pen) > textarea {
+    padding-right: 24px;
+  }
+  .in-pen {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border: 0;
+    background: none;
+    color: var(--ink-3);
+    cursor: pointer;
+  }
+  .in-pen:hover:not(:disabled) {
+    color: var(--ink);
+    background: var(--surface-2);
+  }
+  .in-pen:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  /* the prompt editor: a modal sheet, wide enough to read a prompt as written */
+  .pe {
+    width: min(860px, calc(100vw - 32px));
+    height: min(720px, calc(100vh - 48px));
+    /* Tailwind's reset zeroes the margin a modal dialog centres itself with */
+    margin: auto;
+    inset: 0;
+    padding: 0;
+    border: 1px solid var(--line-2);
+    background: var(--surface);
+    color: var(--ink);
+    flex-direction: column;
+  }
+  .pe[open] {
+    display: flex;
+  }
+  .pe::backdrop {
+    background: #17171c33;
+  }
+  .pe textarea {
+    flex: 1;
+    border: 0;
+    border-block: 1px solid var(--line);
+    padding: 12px 14px;
+    resize: none;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.55;
+    background: var(--paper);
+    outline: none;
+  }
+  .pe-f {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 12px;
+  }
+  .pe-f .sp {
+    flex: 1;
   }
   .in-h {
     display: flex;

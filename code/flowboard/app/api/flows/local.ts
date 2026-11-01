@@ -5,6 +5,9 @@ import { FLOW_NAME } from '../../../packages/cli/src/flow-files.ts';
 /** `FLOWBOARD_FLOWS_DIR`, else `flows/` in the app's folder. */
 export const flowsDir = () => (process.env.FLOWBOARD_FLOWS_DIR ? resolve(process.env.FLOWBOARD_FLOWS_DIR) : join(process.cwd(), 'flows'));
 
+/** `FLOWBOARD_RUNS_DIR`, else `runs/` in the app's folder, where `pnpm run-flow` run there puts its run folders. */
+export const runsDir = () => (process.env.FLOWBOARD_RUNS_DIR ? resolve(process.env.FLOWBOARD_RUNS_DIR) : join(process.cwd(), 'runs'));
+
 const LOCAL = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 /**

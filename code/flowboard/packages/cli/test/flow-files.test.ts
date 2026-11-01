@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
-import { checkFlow, createFlow, draftFlow, listFlows, readFlow, saveFlow, toYaml } from '../src/flow-files.ts';
+import { checkFlow, createFlow, draftFlow, listFlows, readFlow, readPrompt, saveFlow, toYaml, writePrompt } from '../src/flow-files.ts';
 import { DELIVERY, flowProject } from './fixtures/flow.ts';
 
 /** A recipe written by hand: aligned comments, flow style, a comment on its own line. */
@@ -125,4 +125,20 @@ test('a save writes only a recipe that passes the check, over the version it was
   writeFileSync(join(dir, 'flow.yaml'), DELIVERY);
   assert.equal(saveFlow(dir, 'flow', d, good.file.version).ok, false);
   assert.deepEqual(saveFlow(dir, 'gone', d, opened.version), { ok: false, conflict: `gone.yaml is no longer in ${dir}` });
+});
+
+test('a prompt file beside the recipes is read and written, but never one outside the folder', () => {
+  const dir = flowProject(DELIVERY);
+  assert.deepEqual(readPrompt(dir, 'prompts/new.md'), { path: 'prompts/new.md', text: '', version: null });
+  const made = writePrompt(dir, 'prompts/new.md', 'Do the thing.\n', null);
+  assert.ok(made.ok);
+  assert.equal(readFileSync(join(dir, 'prompts/new.md'), 'utf8'), 'Do the thing.\n');
+  const opened = readPrompt(dir, 'prompts/new.md')!;
+  assert.equal(opened.text, 'Do the thing.\n');
+  assert.deepEqual(writePrompt(dir, 'prompts/new.md', 'again', null), { ok: false, conflict: 'prompts/new.md changed on disk after it was opened; open it again to see the change' });
+  assert.ok(writePrompt(dir, 'prompts/new.md', 'Do it twice.\n', opened.version!).ok);
+  for (const p of ['../x.md', '/etc/passwd', '~/x.md', 'flow.yaml', 'prompts/../../x.md']) {
+    assert.equal(readPrompt(dir, p), undefined, p);
+    assert.equal(writePrompt(dir, p, 'x', null).ok, false, p);
+  }
 });
