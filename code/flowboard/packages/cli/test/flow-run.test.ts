@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { ZERO_USAGE } from '@flowboard/core';
@@ -17,9 +17,9 @@ import type { RunDeps } from '../src/run.ts';
 import { DELIVERY, flowProject, RUN } from './fixtures/flow.ts';
 
 const USAGE = [
-  'usage: pnpm run-flow --folder <dir> --task <file> [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] <flow.yaml>',
+  'usage: pnpm run-flow --folder <dir> --task <file> [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] <flow.yaml>',
   '       pnpm run-flow --check | --mermaid [--folder <dir> --task <file>] <flow.yaml>',
-  '       pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>]',
+  '       pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page]',
 ];
 
 type Play = 'pass' | 'fail' | 'none' | 'no-output' | 'error' | 'hang' | 'ask' | 'slow';
@@ -127,7 +127,7 @@ test('--mermaid prints the diagram', async () => {
 
 test('bad arguments print the usage and exit 2', async () => {
   const cases = [
-    [], ['--nope', 'flow.yaml'], ['--check', '--mermaid', 'flow.yaml'], ['--allow-dirty', '--check', 'flow.yaml'], ['--resume', 'runs/x', 'flow.yaml'], [...RUN, 'a.yaml', 'b.yaml'],
+    [], ['--nope', 'flow.yaml'], ['--check', '--mermaid', 'flow.yaml'], ['--allow-dirty', '--check', 'flow.yaml'], ['--page', '--check', 'flow.yaml'], ['--resume', 'runs/x', 'flow.yaml'], [...RUN, 'a.yaml', 'b.yaml'],
     ['flow.yaml'], ['--folder', 'proj', 'flow.yaml'], ['--check', '--task', 'task.md', 'flow.yaml'], ['--resume', 'runs/x', '--folder', 'proj'],
   ];
   for (const args of cases) {
@@ -253,6 +253,34 @@ test('a gate with no one to answer it pauses the flow', async () => {
   assert.ok(out.includes('-- review needs a decision'), out.join('\n'));
   assert.ok(out.some((l) => l.startsWith('-- flow paused: ')));
   assert.deepEqual(out.slice(-2), ['-- waiting for a decision: review', `-- continue with: pnpm run-flow --resume ${join('runs', STAMPED)}`]);
+});
+
+test('with --page, the runs page answers a gate no terminal is there for, and can stop the flow', async () => {
+  const { out, deps, runDir } = setup(GATE, { review: ['none'] });
+  const answering = (async () => {
+    for (let i = 0; i < 200; i++) {
+      await delay(25);
+      const asks = existsSync(join(runDir, 'asks')) ? readdirSync(join(runDir, 'asks')) : [];
+      if (!asks.length) continue;
+      assert.ok(existsSync(join(runDir, 'host.json')));
+      const ask = JSON.parse(readFileSync(join(runDir, 'asks', asks[0]), 'utf8'));
+      assert.equal(ask.questions[0].id, 'decision');
+      writeFileSync(join(runDir, 'answers', asks[0]), JSON.stringify({ decision: 'approve', note: null }));
+      return;
+    }
+  })();
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], deps), 0, out.join('\n'));
+  await answering;
+  assert.equal(existsSync(join(runDir, 'host.json')), false);
+});
+
+test('with --page, a stop file from the runs page stops the flow so --resume can continue it', async () => {
+  const { out, deps, runDir } = setup(GATE, { review: ['none'] });
+  void (async () => {
+    while (!existsSync(join(runDir, 'host.json'))) await delay(20);
+    writeFileSync(join(runDir, 'stop'), '');
+  })();
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], deps), 130, out.join('\n'));
 });
 
 test('a step that runs past timeout_minutes is stopped and waits at a run_failed gate', async () => {
@@ -839,6 +867,7 @@ function fakeBox(o: { missing?: string[]; gone?: boolean } = {}) {
       calls.push('patch');
       return Buffer.from('diff --git a/x b/x\n');
     },
+    allow: async (hosts) => void calls.push(`allow:${hosts.join(',')}`),
     kill: async () => void calls.push('kill'),
   };
   const deps: Pick<RunDeps, 'openBox' | 'connectBox'> = {
@@ -876,6 +905,21 @@ test('a paused opensandbox flow keeps its box and --resume reconnects to it', as
   assert.ok(s.out.includes('-- sandbox box-1 kept for --resume'), s.out.join('\n'));
   await runFlow(['--resume', join('runs', STAMPED)], { ...s.deps, ...fb.deps });
   assert.ok(fb.calls.includes('connect:box-1'), fb.calls.join());
+});
+
+test('a failed sandboxed step can be retried with a host let through first, and the run pins that host', async () => {
+  const s = setup(BOXED(TIMEOUT));
+  const fb = fakeBox();
+  const asked: Question[][] = [];
+  s.deps.answer = async (questions) => {
+    asked.push(questions);
+    return asked.length === 1 ? { decision: 'retry', note: null, allow_host: 'Registry.npmjs.org ' } : { decision: 'fail', note: null, allow_host: null };
+  };
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fb.deps }), 1, s.out.join('\n'));
+  assert.ok(asked[0].some((q) => q.id === 'allow_host'), JSON.stringify(asked[0]));
+  assert.ok(fb.calls.includes('allow:registry.npmjs.org'), fb.calls.join());
+  assert.ok(s.out.includes('-- sandbox: egress now allows registry.npmjs.org'), s.out.join('\n'));
+  assert.ok(JSON.parse(readFileSync(join(s.runDir, 'flow.json'), 'utf8')).config.sandbox.egress.includes('registry.npmjs.org'));
 });
 
 test('--resume refuses when the box is gone', async () => {

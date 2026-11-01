@@ -39,6 +39,8 @@ export interface Box {
   pullFiles(files: string[]): Promise<void>;
   /** `git diff --binary` of the folder against the commit it started from, new files included; bytes, as git wrote them. */
   patch(): Promise<Buffer>;
+  /** Lets the box reach `hosts` from now on, beside the egress it was opened with. */
+  allow(hosts: string[]): Promise<void>;
   kill(): Promise<void>;
 }
 
@@ -207,6 +209,9 @@ function boxOf(sb: Sandbox, folder: string, token: string, missing: string[]): B
       const patch = Buffer.from(await sb.files.readBytes(file)); // never decoded: a file in Latin-1 is not UTF-8
       await root(sb, `rm -f ${file}`);
       return patch;
+    },
+    async allow(hosts) {
+      await sb.patchEgressRules(hosts.map((target) => ({ action: 'allow' as const, target })));
     },
     async kill() {
       await sb.kill();

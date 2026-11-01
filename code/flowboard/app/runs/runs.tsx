@@ -1,18 +1,32 @@
 'use client';
-/** The runs screen: every run-flow run, newest first, and the log of the one picked. */
+/** The runs screen: every run-flow run, newest first, and the picked one in full. */
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { runsQuery } from '../flows/api.ts';
-import { RunLog } from './run-log.tsx';
+import { LIVE, runQuery, runsQuery } from './api.ts';
+import type { RunStatus } from './api.ts';
+import { useState } from 'react';
+import { NewRun } from './new-run.tsx';
+import { RunActions, RunView } from './run-view.tsx';
 
-const LIVE = new Set(['running', 'starting']);
+const PILL: Record<RunStatus, string> = {
+  starting: '● starting',
+  running: '● running',
+  waiting: '‖ waiting on you',
+  paused: '‖ paused',
+  done: '✓ done',
+  failed: '✕ failed',
+};
+const tone = (s: RunStatus) => (s === 'waiting' || s === 'paused' ? 'wait' : s === 'failed' ? 'bad' : LIVE.has(s) ? 'live' : 'done');
 
 export function Runs() {
   const runs = useQuery(runsQuery);
   const params = useSearchParams();
   const router = useRouter();
-  const run = runs.data?.find((r) => r.name === params.get('run')) ?? runs.data?.[0];
+  const picked = runs.data?.find((r) => r.name === params.get('run')) ?? runs.data?.[0];
+  const run = useQuery({ ...runQuery(picked?.name ?? '', true), enabled: !!picked });
+  const [creating, setCreating] = useState(false);
+  const show = (name: string) => router.replace(`/runs?run=${encodeURIComponent(name)}`);
 
   return (
     <div className="fd">
@@ -21,14 +35,18 @@ export function Runs() {
           flowboard<em>/</em>
           <span>runs</span>
         </div>
-        {run && (
+        {picked && (
           <span className="vchip">
-            <b>{run.flow || run.name}</b>
-            <span className="lbl ident">runs/{run.name}</span>
-            <span className="lbl">{run.status}</span>
+            <b>{picked.flow || picked.name}</b>
+            <span className="lbl ident">runs/{picked.name}</span>
+            <span className={`rv-pill ${tone(run.data?.status ?? picked.status)}`}>{PILL[run.data?.status ?? picked.status]}</span>
           </span>
         )}
         <span className="sp" />
+        {run.data && <RunActions run={run.data} />}
+        <button type="button" className="act primary" onClick={() => setCreating(true)}>
+          + New run
+        </button>
         <Link className="act" href="/flows">
           Flows
         </Link>
@@ -41,10 +59,10 @@ export function Runs() {
             <span className="lbl">{runs.data?.length ?? 0}</span>
           </div>
           {runs.isError && <div className="in-empty">{runs.error.message}</div>}
-          {runs.data?.length === 0 && <div className="in-empty">No runs yet. Start one with pnpm run-flow in the app&rsquo;s folder; it shows here as it runs.</div>}
+          {runs.data?.length === 0 && <div className="in-empty">No runs yet. Start one with + New run.</div>}
           {runs.data?.map((r) => (
-            <button key={r.name} type="button" className="rn-row" aria-current={r.name === run?.name} onClick={() => router.replace(`/runs?run=${encodeURIComponent(r.name)}`)}>
-              <i className={`lg-dot ${LIVE.has(r.status) ? 'live' : r.status === 'failed' ? 'bad' : 'done'}`} />
+            <button key={r.name} type="button" className="rn-row" aria-current={r.name === picked?.name} onClick={() => show(r.name)}>
+              <i className={`lg-dot ${tone(r.status)}`} />
               <b>{r.flow || '?'}</b>
               <small>
                 {r.name.slice(0, 19).replace('T', ' ').replace(/-(\d\d)-(\d\d)$/, ':$1:$2')} · {r.status}
@@ -52,8 +70,9 @@ export function Runs() {
             </button>
           ))}
         </aside>
-        <main className="pane rn-log">{run && <RunLog key={run.name} run={run.name} live={LIVE.has(run.status)} />}</main>
+        <main className="pane rn-main">{picked && <RunView key={picked.name} name={picked.name} />}</main>
       </div>
+      {creating && <NewRun onStarted={show} onClose={() => setCreating(false)} />}
     </div>
   );
 }

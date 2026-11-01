@@ -1,0 +1,11 @@
+# All-OpenCode trial for the run page: plan, an approval gate, build, a check; start it with --page to decide in the browser.
+budget_usd: 0.5                    # cheap model; a ceiling so a loop cannot run away
+defaults: { adapter: opencode, model: openrouter/deepseek/deepseek-v4.1-flash, limits: { max_turns: 15 } }
+steps:
+  plan: { prompt: prompts/plan.md, produces: [plan], gate: approval }
+  build: { prompt: prompts/implement.md, requires: [plan], produces: [notes], max_attempts: 2 }
+  check: { shell: "test -n \"$(git status --porcelain)\"", produces: [check_output] }   # passes once build changed something
+edges:
+  - { from: plan, to: build }
+  - { from: build, to: check }
+  - { from: check, to: build, condition: on_fail }
