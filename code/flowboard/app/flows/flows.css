@@ -117,6 +117,10 @@
     opacity: 0.4;
     cursor: default;
   }
+  .act > svg {
+    vertical-align: -2px;
+    margin-right: 5px;
+  }
   .act.primary {
     border-color: var(--run);
     color: var(--run);

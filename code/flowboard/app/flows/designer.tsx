@@ -8,6 +8,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDebouncedValue } from '@tanstack/react-pacer';
 import { useSelector } from '@tanstack/react-store';
 import { ReactFlowProvider } from '@xyflow/react';
+import { Play } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { ApiError, checkQuery, createFlow, flowQuery, libraryQuery, saveFlow } from './api.ts';
 import type { FlowFile } from './api.ts';
 import { Canvas } from './canvas.tsx';
@@ -22,6 +24,7 @@ const isField = (t: EventTarget | null) => t instanceof HTMLElement && /^(INPUT|
 
 export function Designer() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const library = useQuery(libraryQuery);
   const file = useSelector(editor, (s) => s.file);
   const draft = useSelector(editor, (s) => s.draft);
@@ -170,6 +173,17 @@ export function Designer() {
           </button>
           <button type="button" className="act primary" onClick={() => save.mutate()} disabled={!canSave} title="Save (⌘S)">
             {save.isPending ? 'Saving…' : 'Save'}
+          </button>
+          {/* A run reads the saved file, so an unsaved or failing recipe has nothing to run yet. */}
+          <button
+            type="button"
+            className="act"
+            onClick={() => file && router.push(`/runs?new=${encodeURIComponent(file.name)}`)}
+            disabled={!file || dirty || errors.length > 0}
+            title={dirty ? 'Save first: a run uses the saved file' : errors.length ? 'Fix the problems first' : 'Start a run of this flow'}
+          >
+            <Play size={12} strokeWidth={1.75} aria-hidden />
+            Run
           </button>
         </header>
 
