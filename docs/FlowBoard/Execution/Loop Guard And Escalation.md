@@ -63,19 +63,8 @@ The choices read **Retry this step** and **Fail the flow**, since run-flow has n
 
 ## Escalate or fail: the sources disagree
 
-> [!warning] Many sources still say the task fails
-> PRD §8, `02` §3, the drawio *Loop guard* card and backlog D3 (decided 2026-10-15) all say **escalate**. These still say **fail**:
->
-> | Source | Wording |
-> |---|---|
-> | PRD §16 acceptance | *"Rejecting a review sends the task back to `implement` as attempt 2, and three failed attempts fail the task"* |
-> | Backlog 10.1 | *"Reject → attempt 2; three failures fail the task."* |
-> | drawio *FlowBoard ideation* | Card *D3 · max_attempts = attempts allowed*: *"Fail on the 4th (default 3). Loops are guarded."* |
-> | Flow designer guide | *Retries*: *"How many attempts before the step gives up and fails the task."* |
-> | Monitor guide | *"Retries are capped, then the task fails."*; *"The loop can run a few times before the engine gives up and fails the task outright"* |
-> | Task-detail guide | *"After the limit the engine gives up and fails the task rather than looping on your money forever."* |
->
-> On the count, the drawio card agrees with PRD §8: *"max_attempts = attempts allowed"*, *"Fail on the 4th (default 3)"* allows three runs and refuses a fourth, as PRD §8 escalates *"when a rework edge would start a run past `max_attempts`"*. The conflict is only fail versus escalate. See [[Execution Open Questions]] #14.
+> [!check] Sources brought in line, 2026-11-10
+> PRD §8, `02` §3, the drawio *Loop guard* card and backlog D3 (decided 2026-10-15) all say **escalate**. PRD §16, backlog 10.1, the drawio card *D3 · max_attempts = attempts allowed* (now *"Escalate to a gate instead of a 4th run (default 3)"*), and the flow designer, monitor and task-detail guides used to say **fail**; they now say escalate too. See [[Execution Open Questions]] #14.
 >
 > The flow designer's *Retries* field is not `max_attempts` one-to-one: the mockup defaults it to 2 against the PRD's 3. See [[Execution Open Questions]] #15.
 

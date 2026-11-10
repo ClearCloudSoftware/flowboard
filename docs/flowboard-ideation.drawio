@@ -85,7 +85,7 @@
         <mxCell id="engine-4" parent="engine" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Parallel branches + join&lt;/b&gt;&lt;br&gt;Card sits at the split point and shows which branches are active." vertex="1">
           <mxGeometry height="76" width="290" x="322" y="164" as="geometry" />
         </mxCell>
-        <mxCell id="engine-5" parent="engine" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;D3 · max_attempts = attempts allowed&lt;/b&gt;&lt;br&gt;Fail on the 4th (default 3). Loops are guarded." vertex="1">
+        <mxCell id="engine-5" parent="engine" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#3bb273;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;D3 · max_attempts = attempts allowed&lt;/b&gt;&lt;br&gt;Escalate to a gate instead of a 4th run (default 3). Loops are guarded." vertex="1">
           <mxGeometry height="76" width="290" x="16" y="276" as="geometry" />
         </mxCell>
         <mxCell id="engine-6" parent="engine" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2f6fed;strokeWidth=2;fillColor=#ffffff;fontColor=#1c1f26;align=left;verticalAlign=top;spacing=6;" value="&lt;b&gt;Artifact contracts&lt;/b&gt;&lt;br&gt;requires / produces declared per step, validated at design time." vertex="1">

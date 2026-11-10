@@ -554,7 +554,7 @@ T('#fieldTbl', [['Field','nm'],['What it does'],['Get it wrong and']], [
   ['Model','Which model runs it. Cheap ones for reading and summarising; expensive ones where a wrong answer is costly to unwind.','Opus on a summarize step burns money for no gain; haiku on a plan step costs you the whole task.'],
   ['Effort','How hard it thinks before acting. Trades latency and cost against care.','High effort everywhere is the most common way a flow quietly doubles in price.'],
   ['Budget','The most this step may spend on one attempt. The canvas bar totals these into a ceiling per task.','No ceiling means a looping agent has no financial brake — only the sandbox\'s time limit.'],
-  ['Retries','How many attempts before the step gives up and fails the task.','Set high on a step that fails deterministically and you pay for the same failure several times.'],
+  ['Retries','How many redos a rework loop gets before the task stops and waits for you: one more try with a note, or fail it.','Set high on a step that fails deterministically and you pay for the same failure several times.'],
   ['Approval','Whether the step stops and waits for you when it\'s done. This is what puts it in the monitor\'s <em>Needs you</em> band.','No gate on the last step before a merge means nothing human ever sees the result.'],
   ['Sandbox','How locked down the run is: none, a container, or a sealed container with no network.','<b>none</b> on an unattended step is an agent with your machine and your keys, reading untrusted content.'],
 ]);

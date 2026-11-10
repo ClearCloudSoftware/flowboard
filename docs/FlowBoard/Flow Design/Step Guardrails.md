@@ -16,7 +16,7 @@ The flow-designer guide: *"Each field is a guardrail — the things that decide 
 | Budget | `max_budget_usd` | **Budget** ($, step 0.10) | *"The most this step may spend on one attempt. The canvas bar totals these into a ceiling per task."* | *"No ceiling means a looping agent has no financial brake — only the sandbox's time limit."* |
 | Turns | `max_turns` | — | Limit on back-and-forth turns | — |
 | Tools | `allowed_tools` (JSON; null = unrestricted) | — | Allowed tool list | — |
-| Attempts | `max_attempts` (default 3) | **Retries** (0–5) | *"How many attempts before the step gives up and fails the task."* (guide) | *"Set high on a step that fails deterministically and you pay for the same failure several times."* |
+| Attempts | `max_attempts` (default 3) | **Retries** (0–5) | *"How many redos a rework loop gets before the task stops and waits for you: one more try with a note, or fail it."* (guide) | *"Set high on a step that fails deterministically and you pay for the same failure several times."* |
 | Approval | `advance_mode` | **Approval** | See [[Approval Gates]] | *"No gate on the last step before a merge means nothing human ever sees the result."* |
 | Sandbox | no column; `settings.sandbox_profile` is *"overridable per step"* (§11.1). Backlog 1.1 adds optional `step_defs.sandbox_profile`. As built, one flow-level `sandbox:` key, no per-step override ([[#The sandbox rule]]) | **Sandbox** | *"How locked down the run is: none, a container, or a sealed container with no network."* | *"**none** on an unattended step is an agent with your machine and your keys, reading untrusted content."* |
 | Egress allowlist | no column; the allowlist is part of `settings.sandbox_profile`, *"overridable per step"* (§11.1) | — | Hosts the step's sandbox may reach. Four other mockups speak of a per-step allowlist (*"that step's allowlist"*, *"this step's egress allowlist"*) | — |
@@ -93,7 +93,7 @@ Two PRD §11.1 rules bite at run time on a step whose sandbox is `none` (host): 
 
 ## Retries versus `max_attempts`
 
-The mockup's **Retries** (default 2) and the PRD's `max_attempts` (default 3, total runs) likely describe the same budget counted differently. **Proposal:** Retries = `max_attempts − 1`. The guide says the step *"fails the task"* at the limit; PRD §8 says *"Escalate, don't fail, when a loop is spent or stuck."* Decision D3: *"escalate to a gate, never auto-fail"*. Also, the counter is spent by the rework **target**, not the failing step. See [[Flow Design Open Questions]] #11 and [[Branching Joining And Loops]]. As built in run-flow (2026-10-23), a spent loop escalates and never fails by itself, and `max_attempts` set on a step that no rework route leads back to is an error.
+The mockup's **Retries** (default 2) and the PRD's `max_attempts` (default 3, total runs) likely describe the same budget counted differently. **Proposal:** Retries = `max_attempts − 1`. At the limit the guide and PRD §8 agree: *"Escalate, don't fail, when a loop is spent or stuck."* Decision D3: *"escalate to a gate, never auto-fail"*. Also, the counter is spent by the rework **target**, not the failing step. See [[Flow Design Open Questions]] #11 and [[Branching Joining And Loops]]. As built in run-flow (2026-10-23), a spent loop escalates and never fails by itself, and `max_attempts` set on a step that no rework route leads back to is an error.
 
 ## Ceiling per task
 

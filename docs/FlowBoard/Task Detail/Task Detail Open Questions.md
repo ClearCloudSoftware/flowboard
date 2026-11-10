@@ -53,6 +53,9 @@ The guide's lifecycle goes backlog → running on *"you promote it"*, with no `t
 
 ### 11. Does the engine auto-fail a task?
 
+> [!check] Answered, 2026-11-10
+> No. Backlog D3 holds, run-flow escalates (2026-10-23), and the six sources below were updated to say so. See [[Task Lifecycle]].
+
 The task-detail guide (*"After the limit the engine gives up and fails the task"*), the monitor guide, the flow-designer guide (*Retries*: *"How many attempts before the step gives up and fails the task."*), the drawio D3 card (*"Fail on the 4th"*), PRD §16 (*"three failed attempts fail the task"*) and backlog Story 10.1 (*"Reject → attempt 2; three failures fail the task."*) say yes. PRD §4 (*"hands the task to me with the last error"*), PRD §8, backlog D3 (*"escalate to a gate, never auto-fail"*, decided 2026-10-15), feature map §4 and `02` §3 say no. Backlog D3 is the latest decision. **The guide, monitor guide, flow-designer guide, drawio D3 card, PRD §16 and backlog Story 10.1 need updating.** The drawio also disagrees with itself: its *Loop guard* node already says *"gate: Retry + note / Fail task"*. See [[Task Lifecycle]].
 
 ### 12. Was the egress failure an attempt?
@@ -161,7 +164,7 @@ A 1 s timer redraws the gate banner while a gate is open, and the reason box wit
 
 ### 33. Decision numbers collide across documents
 
-The backlog decisions (D1–D9: D1 Start, D3 attempt cap, D5 hook isolation), the drawio decision cards (D1–D6 on the same topics, though drawio D3 *"Fail on the 4th"* contradicts backlog D3 *"never auto-fail"*, see #11; and D10 memory hosting, which has no backlog row) and [[Capability Library Decisions]] (D1 Claude-only, D3 no bundle packs, D5 skills store, D10 tasks pin capabilities) share one numbering. An unqualified "D3" or "D10" is ambiguous. These notes prefix every id with its source. Renumbering one set, e.g. `CL-D10`, would remove the clash. Same as [[Memory Open Questions]] #27. See [[Task Detail Sources]].
+The backlog decisions (D1–D9: D1 Start, D3 attempt cap, D5 hook isolation), the drawio decision cards (D1–D6 on the same topics; and D10 memory hosting, which has no backlog row) and [[Capability Library Decisions]] (D1 Claude-only, D3 no bundle packs, D5 skills store, D10 tasks pin capabilities) share one numbering. An unqualified "D3" or "D10" is ambiguous. These notes prefix every id with its source. Renumbering one set, e.g. `CL-D10`, would remove the clash. Same as [[Memory Open Questions]] #27. See [[Task Detail Sources]].
 
 Capability Library D1 (Claude-only) has since been overtaken by the build: OpenCode was built on 2026-10-18 as a second provider, and whether it is in v1 is [[Agent Providers Open Questions]] #38.
 

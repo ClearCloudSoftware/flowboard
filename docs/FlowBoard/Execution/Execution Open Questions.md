@@ -88,13 +88,13 @@ The monitor and task-detail mockups show a **queued** state, *"ready, no free wo
 ## Loops
 
 ### 14. Escalate or fail at `max_attempts`?
-PRD §8, `02` §3, the drawio *Loop guard* card and backlog D3 (decided 2026-10-15): escalate. PRD §16, backlog 10.1, the drawio D3 card, the flow designer guide, the monitor guide and the task-detail guide: fail. Update the stragglers. → [[Loop Guard And Escalation]]
+PRD §8, `02` §3, the drawio *Loop guard* card and backlog D3 (decided 2026-10-15): escalate. PRD §16, backlog 10.1, the drawio D3 card, the flow designer guide, the monitor guide and the task-detail guide: fail. Update the stragglers (done 2026-11-10). → [[Loop Guard And Escalation]]
 
 > [!check] Answered by run-flow, 2026-10-23
 > Escalate, as backlog D3 decided: a rework whose target has used up `max_attempts` opens an escalation gate (Retry this step or Fail the flow) on the target and starts nothing, and only a person's Fail the flow fails a flow (the run-flow plan). The escalation also stops and discards the work below its target, since Retry and Fail would both discard it (Claude's call, 2026-10-23, open to Alex's review). See [[Run Flow Reference#Loops]].
 
 ### 15. The Retries field versus `max_attempts`
-The flow designer's *Retries* field defaults to 2 (`flow-designer.html`); PRD §5's `max_attempts` defaults to 3. [[Flow Data Model]] maps Retries as `max_attempts − 1`, a proposal ([[Flow Design Open Questions]] #11). (The drawio's *"Fail on the 4th (default 3)"* agrees with PRD §8 on the count; only fail versus escalate differs, which is #14.)
+The flow designer's *Retries* field defaults to 2 (`flow-designer.html`); PRD §5's `max_attempts` defaults to 3. [[Flow Data Model]] maps Retries as `max_attempts − 1`, a proposal ([[Flow Design Open Questions]] #11). (The drawio's *"Escalate to a gate instead of a 4th run (default 3)"* agrees with PRD §8 on the count.)
 
 > [!check] Answered by run-flow, 2026-10-23
 > The flow file has PRD §5's `max_attempts`, a whole number of 1 or more, default 3, counting the first run, and no Retries field (the run-flow plan). Setting it on a step no rework route leads back to is an error, since nothing reads it. The designer's field is [[Flow Design Open Questions]] #11. See [[Run Flow Reference#Step fields]].

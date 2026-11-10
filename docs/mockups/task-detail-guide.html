@@ -330,13 +330,13 @@ line — and without taking the agent's word for what it did.</p>
       <path class="d-e you" d="M150,175 H244" marker-end="url(#tw)"/>
       <text class="d-l you" x="197" y="140" text-anchor="middle">you promote it</text>
       <path class="d-e" d="M380,168 H464" marker-end="url(#ta)"/>
-      <text class="d-l" x="422" y="140" text-anchor="middle">a gate, or a question</text>
+      <text class="d-l" x="422" y="140" text-anchor="middle">a gate, a question, or retries spent</text>
       <path class="d-e you" d="M470,192 C440,218 410,218 382,194" marker-end="url(#tw)"/>
       <text class="d-l you" x="440" y="232" text-anchor="middle">you answer, approve, or send back</text>
       <path class="d-e" d="M600,175 H674" marker-end="url(#ta)"/>
       <text class="d-l" x="637" y="140" text-anchor="middle">approved</text>
-      <path class="d-e" d="M315,200 V250" marker-end="url(#ta)"/>
-      <text class="d-l" x="305" y="230" text-anchor="end">retries exhausted</text>
+      <path class="d-e you" d="M580,200 V275 H386" marker-end="url(#tw)"/>
+      <text class="d-l you" x="590" y="245">you fail it</text>
       <path class="d-e you" d="M250,285 H200 V175 H238" marker-end="url(#tw)"/>
       <text class="d-l you" x="196" y="230" text-anchor="end">you retry</text>
       <g><rect class="d-box" x="20" y="150" width="130" height="50"/>
@@ -564,7 +564,7 @@ const TAIL_REJECT = [
         <span><span class="lbl">bill</span> <b style="font-size:15px">$2.61</b></span></div>
       <div style="color:var(--ink-3);font-size:11.5px">61% of this task's spend is now on work that was thrown away</div></div>`,
     why:'Build runs again, review re-runs, and the gate re-opens. If the second attempt also deviates, the same money goes again — which is why a gate you keep re-opening is usually a sign the plan was unclear, not the agent.',
-    ask:'Retries are capped. After the limit the engine gives up and fails the task rather than looping on your money forever.' },
+    ask:'Retries are capped. After the limit the engine stops and hands the task to you, one more try with a note or fail it, rather than looping on your money forever.' },
 ];
 
 let branch = 'approve', beat = 0;

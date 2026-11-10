@@ -284,7 +284,7 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 - [ ] 20‑min park + resume with answers in context. 
 - [ ] `explain` and `review` gate; rest auto. 
 - [ ] `implement` ∥ `tests`, `review` joins. 
-- [ ] Reject → attempt 2; three failures fail the task. 
+- [ ] Reject → attempt 2; three failures escalate to a gate (Retry / Fail task). 
 - [ ] Bad flow save rejected readably. 
 - [ ] Sheet diffs plan vs summary. 
 - [ ] `/costs` per step + wasted. 

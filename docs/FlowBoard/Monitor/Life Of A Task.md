@@ -48,12 +48,12 @@ Some of the guide's explanations:
 |---|---|---|---|---|
 | 13 | You send it back | $0.84 | $1.12 | *"**review** discarded → **build** queued, attempt 2 · $1.12 moved to wasted."* |
 | 14 | Build runs again | $1.19 | $1.12 | *"**build** running, attempt 2 · **tests** untouched."* |
-| 15 | And you're back at the gate | $1.68 | $1.12 | *"Back at beat 12, one attempt and $1.12 poorer. Retries are capped, then the task fails."* |
+| 15 | And you're back at the gate | $1.68 | $1.12 | *"Back at beat 12, one attempt and $1.12 poorer. Retries are capped, then the task waits for you."* |
 
 *"Everything the first build spent is now counted as wasted — the work is gone, the money isn't."* And: *"a gate you keep re-opening is a signal the recipe needs fixing, not the code."*
 
 > [!note] Reading the figures
-> The cost column is kept spend and the bill is cost + wasted. In beat 13 the bill is $0.84 + $1.12 = $1.96, so nothing disappears in the guide's figures. The mockup code differs: `reject()` deletes the review run, so its cost leaves the bill ([[Monitor Open Questions]] #17). That is the accounting rule from [[Burn Today And Wasted]]. Beat 15's *"then the task fails"* contradicts backlog decision D3, though PRD §16's checklist agrees with the guide ([[Flow Design Open Questions]] #11).
+> The cost column is kept spend and the bill is cost + wasted. In beat 13 the bill is $0.84 + $1.12 = $1.96, so nothing disappears in the guide's figures. The mockup code differs: `reject()` deletes the review run, so its cost leaves the bill ([[Monitor Open Questions]] #17). That is the accounting rule from [[Burn Today And Wasted]]. Beat 15 once said *"then the task fails"*, against backlog decision D3; it and PRD §16 were brought in line on 2026-11-10 ([[Flow Design Open Questions]] #11).
 
 ## Related
 

@@ -668,7 +668,7 @@ When you are done, all of these must be true:
 - [ ] A question left for 20 minutes parks the run; answering resumes it with the answers in context
 - [ ] `explain` and `review` stop and wait for my approval; the rest advance automatically
 - [ ] `implement` and `tests` start at the same time and `review` waits for both
-- [ ] Rejecting a review sends the task back to `implement` as attempt 2, and three failed attempts fail the task
+- [ ] Rejecting a review sends the task back to `implement` as attempt 2, and a third failed attempt stops at an escalation gate offering Retry or Fail task
 - [ ] Saving a flow whose step requires an artifact nobody produces is rejected with a readable error
 - [ ] The task detail sheet diffs `plan.md` against `summary.md`
 - [ ] `/costs` shows spend per step definition and a separate wasted-spend figure

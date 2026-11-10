@@ -46,7 +46,7 @@ At the cap, PRD §8 escalates rather than fails: *"Set the target step instance 
 > [!warning] Conflicts
 > - The monitor's *"Attempt 3 of 3"* counts a sandbox denial as an attempt. Under PRD §7 a non-zero agent exit is an infrastructure failure, *"never a verdict on the work"*. §7 says a transient one does not count toward `max_attempts`; for a non-transient one (which blocks the task) it is silent. That assumes a denial ends the run with a non-zero exit; no source says whether it does or only fails the tool call (inference). [[Monitor Open Questions]] #11.
 > - The monitor's failure card has no **Fail task** and its retry takes no note. [[Monitor Open Questions]] #12.
-> - The guide's walkthrough: *"Retries are capped, then the task fails."* (`monitor-guide.html:691`). That contradicts backlog D3, though PRD §16's checklist agrees with the guide (*"three failed attempts fail the task"*); already tracked as [[Flow Design Open Questions]] #11.
+> - The guide's walkthrough: *"Retries are capped, then the task waits for you."* (`monitor-guide.html:691`). It and PRD §16 once failed the task at the cap; both were brought in line with backlog D3 on 2026-11-10 ([[Flow Design Open Questions]] #11).
 
 ## Stop
 

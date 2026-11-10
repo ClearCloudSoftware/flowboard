@@ -63,7 +63,7 @@ From PRD §16 and backlog 10.1:
 - [ ] A step runs, streams live to `/runs/[id]`, and records a non-zero cost *(backlog 10.1 adds "and live turns/cost during the run")*
 - [ ] `explain` and `review` stop and wait for my approval; the rest advance automatically
 - [ ] `implement` and `tests` start at the same time and `review` waits for both
-- [ ] Rejecting a review sends the task back to `implement` as attempt 2, and three failed attempts fail the task *(conflicts with PRD §8; see [[Loop Guard And Escalation]] and [[Execution Open Questions]] #14)*
+- [ ] Rejecting a review sends the task back to `implement` as attempt 2, and a third failed attempt stops at an escalation gate offering Retry or Fail task *(see [[Loop Guard And Escalation]] and [[Execution Open Questions]] #14)*
 - [ ] Draft mode forces every step to haiku/low
 - [ ] A question left for 20 minutes parks the run; answering resumes it with the answers in context
 - [ ] With memory enabled, a preference answered in the inbox is recalled into the next task's run and not asked again

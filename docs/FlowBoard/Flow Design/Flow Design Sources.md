@@ -40,7 +40,7 @@ Every fact in these notes comes from the files below (paths relative to the repo
 | `docs/old/design/brief.md` | §6 Flow editor: *"Propose the cheapest thing that communicates branching honestly"* |
 | `docs/old/design/README.md` | `standard-flow · 8 steps`, *"Plan needs approval"*, 11 columns, ≤ ~14 columns, dark artboards with a *1f — Light mode* variant |
 | `docs/mockups/README.md` | Summary of the designer and guide |
-| `docs/mockups/monitor.html`, `monitor-guide.html` | The flow as data (`STEPS`, `COLS`, `NEXT`, `DEPS`); the four hand-off rules; pipeline view loop edge; *"Retries are capped, then the task fails"* |
+| `docs/mockups/monitor.html`, `monitor-guide.html` | The flow as data (`STEPS`, `COLS`, `NEXT`, `DEPS`); the four hand-off rules; pipeline view loop edge; *"Retries are capped, then the task waits for you"* |
 | `docs/mockups/task-detail.html`, `task-detail-guide.html` | Pinned version (`v4`, *v5 exists*); per-step agent/model/effort; Files tab as the contract |
 | `docs/mockups/inbox.html`, `inbox-guide.html` | *Allow host & retry* edits a step's allowlist; *Attempt 3 of 3 failed* |
 | `docs/mockups/capability-library.html`, `capability-library-guide.html` | *Used by* per flow version and step; steps using a skill and an agent; packs containing flows; provider-match *refuses to save*; flows not pinned to capability versions; *"that step's allowlist"* |

@@ -43,7 +43,7 @@ As built in run-flow (2026-10-23), only a person's **Fail the flow** fails a flo
 
 The missing-row guard is not built. `advance` assumes a valid flow, which `validateFlow` checked first, and throws on a state that names a step the flow lacks. run-flow reaches that only through a hand-edited `state.json` or `flow.json`, and treats it as an error of its own: it stops every run, saves the state, prints `-- continue with: pnpm run-flow --resume <run folder>` and exits 1. The worker must check its rows before it calls `advance`, or have `advance` fail the flow cleanly.
 
-A spent loop does **not** fail the task under PRD §8; see [[Loop Guard And Escalation]] for the sources that still say it does.
+A spent loop does **not** fail the task under PRD §8; see [[Loop Guard And Escalation]] for the sources that said it did until 2026-11-10.
 
 ## Stranded
 

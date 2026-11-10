@@ -59,7 +59,7 @@ The monitor shows *"Attempt 3 of 3 failed — egress denied"*. PRD §7: a non-ze
 
 ### 12. Retry with a note, and Fail task
 
-PRD §8's escalation gate offers **Retry** (*"carries my note into it … does not reset the counter"*) and **Fail task**. The monitor's failure card has *Allow host & retry*, *Retry as-is* and *Open the log*: no note and no way to fail the task. The guide's alternative is to *"leave it and let the spend stop there"*. The *"Retries are capped, then the task fails"* conflict is [[Flow Design Open Questions]] #11. Same as [[Human In The Loop Open Questions]] #24; the missing Fail task endpoint is [[Execution Open Questions]] #47.
+PRD §8's escalation gate offers **Retry** (*"carries my note into it … does not reset the counter"*) and **Fail task**. The monitor's failure card has *Allow host & retry*, *Retry as-is* and *Open the log*: no note and no way to fail the task. The guide's alternative is to *"leave it and let the spend stop there"*. The guide's *"Retries are capped, then the task fails"* now says *"waits for you"* ([[Flow Design Open Questions]] #11). Same as [[Human In The Loop Open Questions]] #24; the missing Fail task endpoint is [[Execution Open Questions]] #47.
 
 ### 13. What does Allow host & retry write?
 

@@ -687,8 +687,8 @@ const TAIL_REJECT = [
     rule:'<b>build</b> running, attempt 2 · <b>tests</b> untouched.' }),
   B({ t:'And you\'re back at the gate', where:'review', ico:'gate', bar:'done,done,done:done,gate,pending', attempts:2,
     cost:1.68, waste:1.12, slots:0, card:'gate', loop:true,
-    why:'Build lands, the join is satisfied again, review re-runs and the gate re-opens. The loop can run a few times before the engine gives up and fails the task outright, so a gate you keep re-opening is a signal the recipe needs fixing, not the code.',
-    rule:'Back at beat 12, one attempt and $1.12 poorer. Retries are capped, then the task fails.' }),
+    why:'Build lands, the join is satisfied again, review re-runs and the gate re-opens. The loop can run a few times before the engine stops and hands the task to you, so a gate you keep re-opening is a signal the recipe needs fixing, not the code.',
+    rule:'Back at beat 12, one attempt and $1.12 poorer. Retries are capped, then the task waits for you.' }),
 ];
 const CARDS = {
   ask:`<div class="sc-card"><span class="h">? auth-refactor · plan</span>

@@ -49,7 +49,7 @@ The monitor guide's *Failed* status: *"A step errored, hit its retry limit, or y
 > - An egress denial is not obviously a counted attempt. Under PRD §7 a non-zero agent exit is an *infrastructure failure*, *"never a verdict on the work"*. A transient one retries automatically and uncounted. Anything else puts the task straight into `blocked`, outside the rework loop that `max_attempts` guards. The card reads *Attempt 3 of 3*. Same as [[Sandboxing Open Questions]] #14.
 > - *Retry as-is* is offered for *"a rate limit, a transient error"*, which PRD §7 already retries automatically (30 s, 2 min, 8 min).
 > - *Allow host & retry* changes a step definition from outside the designer. Same as [[Flow Design Open Questions]] #14.
-> - Some sources still fail the task at the cap instead of escalating: PRD §16 (*"three failed attempts fail the task"*), backlog Story 10.1, the drawio card *D3 · max_attempts = attempts allowed* (*"Fail on the 4th"*), and the monitor and task-detail guides (*"Retries are capped, then the task fails."*; *"After the limit the engine gives up and fails the task rather than looping on your money forever."*). See [[Flow Design Open Questions]] #11.
+> - The sources that failed the task at the cap instead of escalating (PRD §16, backlog Story 10.1, the drawio card *D3 · max_attempts = attempts allowed*, and the monitor, task-detail and flow-designer guides) were brought in line on 2026-11-10. See [[Flow Design Open Questions]] #11.
 
 ## Infra failures never reach you as attempts
 

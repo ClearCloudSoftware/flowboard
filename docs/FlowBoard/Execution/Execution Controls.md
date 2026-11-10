@@ -81,7 +81,7 @@ In the sources, the two retry buttons are mockup-only, and the PRD's Retry and F
 | Control | Where | Effect on execution |
 |---|---|---|
 | Draft mode | Flow designer topbar, settings | every next run on haiku / low ([[Draft Mode And Spec Transforms]]) |
-| Retries | Flow designer inspector | the loop budget, mapped as `max_attempts − 1` (a proposal, [[Flow Design Open Questions]] #11); mockup default 2 against the PRD's `max_attempts` default 3. Guide: *"How many attempts before the step gives up and fails the task."* The "fails the task" part conflicts with PRD §8's escalation ([[Execution Open Questions]] #14, #15). |
+| Retries | Flow designer inspector | the loop budget, mapped as `max_attempts − 1` (a proposal, [[Flow Design Open Questions]] #11); mockup default 2 against the PRD's `max_attempts` default 3. Guide: *"How many redos a rework loop gets before the task stops and waits for you: one more try with a note, or fail it."* ([[Execution Open Questions]] #14, #15). |
 | Approval | Flow designer inspector | `advance_mode` |
 | Budget | Flow designer inspector | `max_budget_usd`: *"The most this step may spend on one attempt."* |
 | Expand workers | Monitor | `w`: shows slots; no effect |
