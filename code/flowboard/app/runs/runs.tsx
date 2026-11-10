@@ -55,6 +55,9 @@ export function Runs() {
         <Link className="act" href="/flows">
           Flows
         </Link>
+        <Link className="act" href="/docs">
+          Docs
+        </Link>
       </header>
       <div className="body">
         <aside className="pane rn-list">

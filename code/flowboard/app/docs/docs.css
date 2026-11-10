@@ -1,0 +1,183 @@
+/* The docs page: prose in sans, code in mono, hairlines and zero radius like the rest of FlowBoard. */
+.fd .doc-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  gap: 48px;
+  padding: 32px 24px 96px;
+  scroll-padding-top: 16px;
+}
+
+.fd .doc-toc {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+
+  .lbl {
+    margin-bottom: 8px;
+  }
+  a {
+    padding: 3px 0 3px 10px;
+    border-left: 1px solid var(--line);
+    color: var(--ink-2);
+    text-decoration: none;
+    transition: color var(--t), border-color var(--t);
+  }
+  a:hover {
+    color: var(--ink);
+    border-color: var(--run);
+  }
+}
+
+.fd .doc {
+  flex: 0 1 820px;
+  min-width: 0;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink);
+
+  h1,
+  h2,
+  h3 {
+    font-weight: 600;
+    line-height: 1.25;
+    scroll-margin-top: 16px;
+  }
+  h1 {
+    font-size: 28px;
+    margin: 0 0 16px;
+  }
+  h2 {
+    font-size: 21px;
+    margin: 56px 0 12px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line-2);
+  }
+  h3 {
+    font-size: 16px;
+    margin: 32px 0 8px;
+  }
+  p,
+  ul,
+  ol,
+  table,
+  pre,
+  blockquote {
+    margin: 0 0 14px;
+  }
+  ul,
+  ol {
+    padding-left: 22px;
+  }
+  ul {
+    list-style: square;
+  }
+  ol {
+    list-style: decimal;
+  }
+  li {
+    margin: 3px 0;
+  }
+  li > ul,
+  li > ol,
+  li > pre {
+    margin: 6px 0;
+  }
+  a {
+    color: var(--run);
+    text-decoration: underline;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    text-decoration-color: var(--run);
+  }
+  strong {
+    font-weight: 600;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    padding: 1px 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+  }
+  pre {
+    overflow-x: auto;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  pre code {
+    padding: 0;
+    background: none;
+    border: 0;
+    font-size: inherit;
+  }
+  pre.mermaid {
+    display: flex;
+    justify-content: center;
+    background: var(--surface);
+    font-family: var(--mono);
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+  th,
+  td {
+    padding: 7px 12px 7px 0;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom-color: var(--line-2);
+  }
+
+  blockquote {
+    padding: 10px 14px;
+    border-left: 2px solid var(--line-2);
+    background: var(--surface-2);
+  }
+  blockquote.callout {
+    border-left-color: var(--run);
+    background: var(--run-soft);
+  }
+  blockquote.callout.important,
+  blockquote.callout.warning {
+    border-left-color: var(--wait);
+    background: var(--wait-soft);
+  }
+  blockquote p:last-child {
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .fd .doc-toc {
+    display: none;
+  }
+  .fd .doc-body {
+    padding: 20px 16px 64px;
+  }
+}
