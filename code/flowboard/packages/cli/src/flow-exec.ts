@@ -3,7 +3,7 @@
  * with a RunEnd for the engine and never rejects.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { appendFileSync, closeSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { SHIM_ENTRY } from '@flowboard/ask-user';
@@ -88,8 +88,10 @@ function runLog(ctx: ExecContext, run: RunCommand) {
 }
 
 /** A shell that could not run its command, or that died by a signal: the setup failed, not the work. */
-function setupFailure(code: number | null, sig: NodeJS.Signals | null): string | undefined {
+function setupFailure(code: number | null, sig: NodeJS.Signals | null, sandboxed = false): string | undefined {
   if (sig) return `killed by ${sig}`;
+  // docker run's own failure (no image, no daemon): the container never ran. On the host 125 is the check's own.
+  if (code === 125 && sandboxed) return 'exit code 125: the sandbox could not start the command';
   if (code === 126) return 'exit code 126: the command cannot run';
   if (code === 127) return 'exit code 127: command not found';
   return undefined;
@@ -174,7 +176,7 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
     }
     const last = tail.split('\n').findLast((l) => l.trim());
     if (last) ctx.show(`-- ${run.step}: last output: ${last.trim().slice(0, 300)}`);
-    const error = stopReason ?? unsaved ?? setupFailure(code, sig);
+    const error = stopReason ?? unsaved ?? setupFailure(code, sig, !!exec);
     if (error) return finish({ costUsd: 0, error }, code);
     const end: RunEnd = { costUsd: 0, outcome: code === 0 ? 'pass' : 'fail' };
     if (code !== 0 && tail.trim()) end.fingerprint = fingerprint(tail);
@@ -256,7 +258,8 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
       }
     };
     // In a box that keeps its own disk, the verdict comes back with the artifacts; the run folder never goes in.
-    const outcomeFile = ctx.pull ? join(ctx.artifactsDir, '.outcomes', `${runName(run)}.json`) : join(ctx.logDir, `${runName(run)}.outcome.json`);
+    const keptOutcome = ctx.pull ? join(ctx.artifactsDir, '.outcomes', `${runName(run)}.json`) : join(ctx.logDir, `${runName(run)}.outcome.json`);
+    let outcomeFile = keptOutcome;
     let tmp: string | undefined;
     let hostDir: string | undefined;
     let tunnel: { close(): void } | undefined;
@@ -276,6 +279,8 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
         // In a sandbox the shim reaches the broker over TCP: a Unix socket cannot cross Docker Desktop's VM.
         // In an OpenSandbox box it reaches it through the relay's tunnel: the box cannot dial this machine at all.
         const token = ctx.sandbox && !ctx.pull && randomBytes(24).toString('hex');
+        // A container sees the run folder read-only: the verdict is written in tmp and kept in the run folder after.
+        if (token) outcomeFile = join(tmp, 'outcome.json');
         if (ctx.pull) hostDir = realpathSync(mkdtempSync('/tmp/fb-h-')); // apart from tmp, which is copied into the box
         broker = await startBroker(token ? { token } : join(hostDir ?? tmp, 'ask.sock'), ctx.answer, {
           onQuestion: (questions, batch) => quietly('question', { batch, questions }),
@@ -353,7 +358,8 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
       const error = stopReason ?? result.error ?? (result.exitCode !== 0 ? `exit code ${result.exitCode}` : undefined);
       if (error) return { costUsd, error };
       const end: RunEnd = { costUsd };
-      const reported = verdict ? readOutcome(outcomeFile) : undefined;
+      if (outcomeFile !== keptOutcome && existsSync(outcomeFile)) copyFileSync(outcomeFile, keptOutcome);
+      const reported = verdict ? readOutcome(keptOutcome) : undefined;
       if (reported) Object.assign(end, reported);
       else if (verdict && result.outcome) end.outcome = result.outcome;
       const unwritten = produces.filter((type) => !writtenSince(artifactPath(ctx.artifactsDir, type), startedAt));

@@ -150,7 +150,8 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
     excludeFromGit(config.folder);
 
     // The run folder is claimed by making it: a name another host made first, even this second, is passed over.
-    const runsDir = join(deps.cwd, 'runs');
+    // FLOWBOARD_RUNS_DIR is where the runs page looks, so a run it starts lands where it lists them.
+    const runsDir = process.env.FLOWBOARD_RUNS_DIR ? resolve(deps.cwd, process.env.FLOWBOARD_RUNS_DIR) : join(deps.cwd, 'runs');
     const stem = `${stamp(now())}-${config.name.replace(/[^\w.-]/g, '_')}`;
     let name = stem;
     try {
@@ -544,14 +545,15 @@ export function pushable(artifactsDir: string, producing: Set<string>): string[]
 const BOX_SECONDS = 86_400;
 
 /** Each step's box: the folder (its cwd) and the artifacts read-write, `mounts` read-only; only agents go online. */
-const sandboxFor = (sb: Extract<Sandbox, { runtime: 'docker' }>, artifactsDir: string): NonNullable<ExecContext['sandbox']> => ({ online, tmpDir, mounts = [] }) =>
+export const sandboxFor = (sb: Extract<Sandbox, { runtime: 'docker' }>, artifactsDir: string): NonNullable<ExecContext['sandbox']> => ({ online, tmpDir, mounts = [] }) =>
   dockerExecHost(
     {
       tier: 'container',
       image: sb.image,
       egressAllow: online ? ['*'] : [],
       mounts: [{ source: artifactsDir, target: artifactsDir }, ...mounts.map((m) => ({ source: m, target: m, readOnly: true }))],
-      env: Object.fromEntries(sb.env.flatMap((k) => (process.env[k] === undefined ? [] : [[k, process.env[k]!]]))),
+      // sandbox.env is for the agents; a check gets none of it, only what run-flow sets (FLOWBOARD_*)
+      env: online ? Object.fromEntries(sb.env.flatMap((k) => (process.env[k] === undefined ? [] : [[k, process.env[k]!]]))) : {},
     },
     { ...(tmpDir && { tmpDir }) },
   );
@@ -570,7 +572,7 @@ interface Drive {
   maxRuns: number;
   /** runtime: opensandbox: the box the whole run works in. */
   box?: Box;
-  /** `--page`: the runs page may also answer, decide and stop (ask/page.ts). */
+  /** `--page`: the runs page may also answer and decide (ask/page.ts); its Stop works on any run. */
   page: boolean;
 }
 
@@ -841,7 +843,8 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   for (const sig of STOP_SIGNALS) signals.on(sig, interrupt);
   // The page sees which host drives this run, and stops it as a first Ctrl+C would.
   writeFileSync(join(d.runDir, 'host.json'), JSON.stringify({ pid: process.pid, page: d.page }) + '\n');
-  const unwatch = watchStop(d.runDir, () => interrupt());
+  // A second Stop on the page is a repeat, not a second Ctrl+C: the page promises --resume can continue the run.
+  const unwatch = watchStop(d.runDir, () => stopAsked || interrupt());
 
   try {
     feed(d.first);

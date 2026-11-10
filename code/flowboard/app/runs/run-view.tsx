@@ -78,8 +78,8 @@ export function RunView({ name }: { name: string }) {
         })}
       </nav>
       {lost && <div className="rv-banner lost">⋯ lost the connection to the run; retrying, and the log catches up when it is back</div>}
-      {gates.map((a) => (
-        <Gate key={a.id} run={run} ask={a} logs={logs.data} onCompare={() => setComparing(true)} />
+      {gates.map((a, i) => (
+        <Gate key={a.id} run={run} ask={a} logs={logs.data} keys={i === 0} onCompare={() => setComparing(true)} />
       ))}
       {!run.page && waitingOnYou.length > 0 && run.status !== 'paused' && (
         <div className="rv-banner">
@@ -172,7 +172,7 @@ function refusedHosts(run: RunDetail, step: string | undefined, logs: StepLog[] 
   return [...new Set(found)].filter((h) => !/\.(ts|js|md|json|tsx|py|txt|log|yaml|lock)$/.test(h) && !run.sandbox.includes(h));
 }
 
-function Gate({ run, ask, logs, onCompare }: { run: RunDetail; ask: PageAsk; logs?: StepLog[]; onCompare: () => void }) {
+function Gate({ run, ask, logs, keys, onCompare }: { run: RunDetail; ask: PageAsk; logs?: StepLog[]; keys: boolean; onCompare: () => void }) {
   const [note, setNote] = useState('');
   const answer = useAnswer(run.name);
   const decision = ask.questions[0];
@@ -186,6 +186,7 @@ function Gate({ run, ask, logs, onCompare }: { run: RunDetail; ask: PageAsk; log
   const decide = (value: string) =>
     answer.mutate({ id: ask.id, answers: { decision: value, ...(noteQ && { note: note || null }), ...(hostQ && { allow_host: value === 'retry' && host.trim() ? host.trim() : null }) } });
   useEffect(() => {
+    if (!keys) return; // with several gates open, only the first takes keys: one press decides one gate
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.metaKey || e.ctrlKey) return;
       const hit = decision.options?.find((o) => DECISION[o.value]?.key === e.key);
@@ -210,7 +211,7 @@ function Gate({ run, ask, logs, onCompare }: { run: RunDetail; ask: PageAsk; log
       {decision.options?.map((o) => (
         <button key={o.value} type="button" className={`act ${DECISION[o.value]?.tone ?? ''}`} disabled={answer.isPending} onClick={() => decide(o.value)}>
           {o.value === 'retry' && hostQ && host.trim() ? 'Allow host & retry' : (DECISION[o.value]?.label ?? o.label)}
-          {DECISION[o.value]?.key && <span className="kbd">{DECISION[o.value]!.key}</span>}
+          {keys && DECISION[o.value]?.key && <span className="kbd">{DECISION[o.value]!.key}</span>}
         </button>
       ))}
       {answer.error && <em className="in-err">{answer.error.message}</em>}

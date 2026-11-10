@@ -113,6 +113,9 @@ function AddChip({ id, placeholder, options, check, onAdd }: { id: string; place
 
 type TextKey = 'shell' | 'model' | 'prompt' | 'skill' | 'budget' | 'max_turns' | 'timeout' | 'attempts';
 
+/** The flow file's `sandbox:` key, which the designer keeps as written. */
+const sandboxed = (draft: Draft) => typeof draft.sandbox === 'object' && draft.sandbox !== null;
+
 function StepPanel({ id, draft, problems }: { id: string; draft: Draft; problems: string[] }) {
   const step = stepsOf(draft)[id];
   // The form holds every field it shows, so each change is laid over the step as it was when selected: a field
@@ -279,7 +282,7 @@ function StepPanel({ id, draft, problems }: { id: string; draft: Draft; problems
                   {input('shell', 'Command', { placeholder: 'pnpm test' })}
                   {input('timeout', 'Timeout', { type: 'number', min: 1, step: 1, placeholder: '30 (minutes)' }, positive)}
                 </div>
-                <p className="in-note">Exit 0 is a pass, any other a fail. It runs in the run&rsquo;s folder, with no sandbox.</p>
+                <p className="in-note">Exit 0 is a pass, any other a fail. It runs in the run&rsquo;s folder{sandboxed(draft) ? ', in the flow’s sandbox' : ', on this machine: the flow has no sandbox'}.</p>
               </>,
             )
           ) : (
