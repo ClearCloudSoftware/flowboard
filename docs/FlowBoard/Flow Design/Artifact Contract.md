@@ -28,9 +28,9 @@ The architecture README: *"**Artifacts flow along the edges.** … the graph is 
 |---|---|---|
 | Validator | Every `requires` produced by an ancestor; reject otherwise | PRD §6; [[Flow Validation]] |
 | Prompt builder | Part 2: *"input artifacts with their absolute paths, one per `requires` entry, phrased as 'read these first'"*. Part 3: *"The exact output path the step should write, one per `produces` entry."* | PRD §7 |
-| Artifact scanner | After a run, registers files created or modified during it *"that match the step's declared `produces` types"* | PRD §6 |
-| Park / resume | *"Resume prompt must repeat the requires/produces paths, not only the answers."* (BUG) | backlog Story 3.2 |
-| Questions | Questions can be an artifact type: the engine watches the `produces:questions` path | `04-hitl-and-notify.md` §9 |
+| Artifact scanner | After a run, registers files created or modified during it *"that match the step's declared `produces` types"*. Not built (2026-11-10) | PRD §6 |
+| Park / resume | *"Resume prompt must repeat the requires/produces paths, not only the answers."* (BUG). Not built (2026-11-10) | backlog Story 3.2 |
+| Questions | Questions can be an artifact type: the engine watches the `produces:questions` path. Not built (2026-11-10): questions go through `ask_user` | `04-hitl-and-notify.md` §9 |
 | Task detail | Files tab: *"what each step produced — the contract the next step reads"* | task-detail mockup |
 
 ## How the inspector shows it

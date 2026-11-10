@@ -39,7 +39,7 @@ flowchart TD
 | Fail task at an escalation gate | *"**Fail task** ends it."* (PRD §8) |
 | A missing row | *"Guard `getInstance()!` / `defs.find()!` so a missing row fails the task cleanly instead of throwing."* (`02` §3; backlog 5.2 adds *"three times"*) |
 
-As built in run-flow (2026-10-23), only a person's **Fail the flow** fails a flow. Reject is offered only when the step has an `on_fail` route (the run-flow plan), and a `fail` that no route handles waits at a gate offering Approve, Retry this step and Fail the flow (Alex's call in the run-flow plan).
+As built in run-flow (2026-10-23), only a person's **Fail the flow** fails a flow, in the terminal or, since 2026-11-10, on the runs page (**Fail**) for a run started with `--page`. Reject is offered only when the step has an `on_fail` route (the run-flow plan), and a `fail` that no route handles waits at a gate offering Approve, Retry this step and Fail the flow (Alex's call in the run-flow plan).
 
 The missing-row guard is not built. `advance` assumes a valid flow, which `validateFlow` checked first, and throws on a state that names a step the flow lacks. run-flow reaches that only through a hand-edited `state.json` or `flow.json`, and treats it as an error of its own: it stops every run, saves the state, prints `-- continue with: pnpm run-flow --resume <run folder>` and exits 1. The worker must check its rows before it calls `advance`, or have `advance` fail the flow cleanly.
 
@@ -61,6 +61,7 @@ As built in run-flow (2026-10-23), C runs. It starts once nothing live can still
 - **Summary.** In the seeded flow the last step is `summarize`, producing `summary`, which the task detail diffs against `plan` (PRD §13).
 - **Memory.** After a successful run, the runner `write()`s salient output (PRD §7, §11.2). No source adds a memory step at task done (see [[Memory Commit]]).
 - **Cleanup.** *"offer a "clean up worktree" action; never remove it automatically"* (PRD §11), for a task that reaches `done` or `cancelled`. Backlog 2.1 widens it: *"Cleanup worktree only via explicit action, only when done/cancelled/failed."* `05` §11 and `workspace.ts` also allow `failed`. The task-detail guide says *"Only offered once the task is finished or cancelled."* Feature map §14 agrees: *"only once the task is finished or cancelled"*. See [[Cleaning Up A Workspace]] and [[Execution Open Questions]] #60.
+- **Sandboxed edits.** As built in run-flow (2026-11-10), an OpenSandbox run never touches the folder: when it ends `done` or `failed`, the host writes the box's edits to `<run folder>/changes.patch`, prints `-- changes: <run folder>/changes.patch (<n> files); review it, then: git -C <folder> apply <patch>`, and kills the box. If it cannot bring the patch back, it keeps the box and says so. A paused or stopped run keeps its box for `--resume` ([[Stopping And Cancelling]], [[OpenSandbox Runtime]]).
 
 ## Related
 

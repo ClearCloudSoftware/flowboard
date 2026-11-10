@@ -54,6 +54,28 @@ Sibling sets propose different shapes for the same actions; pick one ([[Executio
 
 The proposals agree elsewhere: Stop as `POST /api/runs/:id/stop` (Task Detail, Monitor), demote as `POST /api/tasks/:id/demote` (Task Detail, Workspaces). Clean-up of the workspace, `POST /api/tasks/:id/cleanup`, is proposed by Task Detail and Workspaces; it does not touch execution.
 
+## As built in the app
+
+As built (2026-11-10), the Next.js app has run routes under `app/api/runs/`, keyed by run folder name, not by task or step instance. They read and write run-flow's run folders in `runs/` (or `FLOWBOARD_RUNS_DIR`) through `cli/src/flow-logs.ts` and `cli/src/flow-start.ts`. Every route answers 403 to a request whose `Host` is not `localhost`, `127.0.0.1` or `[::1]` (`app/api/flows/local.ts`).
+
+| Method | Path | Does | Errors |
+|---|---|---|---|
+| `GET` | `/api/runs` | The run folders, newest first, each `{ name, flow, status }`; `?flow=` keeps one flow's runs | |
+| `POST` | `/api/runs` | `{ flow, folder, task, budgetUsd?, allowDirty? }`: writes the task to `runs/.started/<id>.task.md`, starts a detached `run-flow --page` on `<flows dir>/<flow>.yaml`, and waits up to 20 s for its `-- run folder` line; returns `{ name }` | 400 bad body; 422 with run-flow's own refusal |
+| `GET` | `/api/runs/[run]` | The run as the page shows it: status, steps, runs, spend, artifacts, `changes.patch`, open asks, time waited at gates, the sandbox | 404 |
+| `GET` | `/api/runs/[run]/logs` | Every step log, a parsed line per event | 404 |
+| `GET` | `/api/runs/[run]/artifact?type=` | One artifact's text | 404 |
+| `GET` | `/api/runs/[run]/built` | What the run built: its `changes.patch`, else the folder's `git diff HEAD` without `.flowboard/` | 404 |
+| `GET` | `/api/runs/[run]/events` | Server-sent events: `data: change` whenever a file in the run folder changes (`fs.watch`, 150 ms debounce), and a comment every 15 s | 404 |
+| `POST` | `/api/runs/[run]/answer` | `{ id, answers }`: writes `answers/<id>.json` for an open ask, once each answer fits its question | 400 bad body; 409 when the host does not take page answers, the ask is closed or an answer does not fit |
+| `POST` | `/api/runs/[run]/stop` | Writes `<run folder>/stop`; the host stops as on a first Ctrl+C | 409 unless the run is `starting`, `running` or `waiting` |
+| `POST` | `/api/runs/[run]/resume` | `{ budgetUsd? }`: starts a detached `run-flow --resume <run folder> --page`, with `--budget-usd` when given, its output appended to `<run folder>/resume.log`; returns `{ ok, pid }` | 400; 404; 409 unless the run is `paused` |
+
+Approve, Send back, Retry, Fail the flow and Allow host & retry are not endpoints: they are values of a gate's `decision` and `allow_host` answers, sent through `/answer`. Stopping a single run, rather than the whole flow, is not built.
+
+> [!warning] Routes that spawn
+> `POST /api/runs` and `POST /api/runs/[run]/resume` start a process, which PRD §2 forbids (*"Next.js route handlers must never spawn a long-lived child process"*, [[Job Queue]]), and the routes call `packages/cli`, not `packages/core`. The spawned `run-flow` is detached and runs on its own, so the route returns at once; there is no queue. Nothing records this as a decision; it is open to Alex's review.
+
 ## What a route does, step by step
 
 *Illustrative* for Approve:
@@ -76,7 +98,7 @@ sequenceDiagram
 
 - *"Every port is called from `src/lib/`, **never from a route**"* (`06` §15). `06` uses the first build's layout (`src/app/api/`, `src/lib/`); in the PRD's layout that is `apps/web/app/api/` calling `packages/core` (PRD §3, §12).
 - *"If a route ever needs to know whether it's Claude or Codex, something leaked upward."* (`06` §15)
-- Stop is the one route that touches a process (by pid): *"SIGTERM by pid from the route (same machine)"* (backlog 3.4; `03` §8). As built, a signal from outside is reported as a failed run (exit 1), not as a stop, and OpenCode's pid is its server's ([[Agent Run Handle And Result]]). As built in run-flow (2026-10-23), each run's log records its pid as a `pid` line: the agent CLI's, or for a shell step its process group's, which a stop has to signal as a group. The line also holds the process's start time, and run-flow, stopping what a dead host left running, signals a pid only while that still matches, since the pid may be another process's by now (Claude's call, 2026-10-23, open to Alex's review).
+- Stop is the one route that touches a process (by pid): *"SIGTERM by pid from the route (same machine)"* (backlog 3.4; `03` §8). As built in the app (2026-11-10), the stop route signals nothing: it writes a `stop` file, and the run's host, which holds the processes, stops them and saves the state. A second `stop` is ignored. As built, a signal from outside is reported as a failed run (exit 1), not as a stop, and OpenCode's pid is its server's ([[Agent Run Handle And Result]]). As built in run-flow (2026-10-23), each run's log records its pid as a `pid` line: the agent CLI's, or for a shell step its process group's, which a stop has to signal as a group. The line also holds the process's start time, and run-flow, stopping what a dead host left running, signals a pid only while that still matches, since the pid may be another process's by now (Claude's call, 2026-10-23, open to Alex's review).
 
 ## Related
 

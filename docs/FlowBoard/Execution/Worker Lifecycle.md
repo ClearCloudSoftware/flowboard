@@ -11,7 +11,7 @@ The worker is the second Node process, `apps/worker`: *"job loop, runner, ask_us
 
 - One command starts both processes: *"`concurrently` to run `next dev` and the worker together under `npm run dev`"* (PRD §2). The PRD's package manager is pnpm, and its acceptance check says *"`pnpm dev` starts Next.js and the worker together"* (PRD §16); the drawio host card: *"pnpm dev → concurrently starts both processes"*. See [[Process Topology]].
 - It opens the same SQLite file as the web process: *"WAL + `busy_timeout=5000` + `foreign_keys=ON`, opened via `VIBE_DB_PATH` so worker and MCP (foreign cwd) hit the same file."* (`02` §1; backlog 1.1, **FIX**, says the same). See [[Database And Connection]].
-- *"Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`."* (PRD §11.1). `08` adds *"(or warn)"*; backlog 0.1 probes *"Docker (or Podman)"*.
+- *"Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`."* (PRD §11.1). `08` adds *"(or warn)"*; backlog 0.1 probes *"Docker (or Podman)"*. As built in run-flow (2026-11-10), nothing probes: a flow names its runtime in `sandbox:`, and a missing image or daemon shows only when a step runs; a check then exits 125, a setup failure at a *run failed* gate ([[Infra Retries]]). There is no `bypassPermissions` to disable, since no tier allows it ([[Run Guardrails At Launch]]).
 
 > [!warning] Does the MCP process open the database?
 > `02` §1 and backlog 1.1 have the MCP server open the same SQLite file. The PRD says it never does: *"Only `apps/web` and `apps/worker` open the SQLite file; the MCP shim never does"* (PRD §3), and the shim *"never opens the database and needs no network"* (PRD §9). The drawio *SQLite* card agrees with the PRD. Under the PRD's broker-and-shim design no MCP process opens the database. See [[Execution Open Questions]] #54.
@@ -29,6 +29,8 @@ The worker is the second Node process, `apps/worker`: *"job loop, runner, ask_us
 `03` §7: *"the worker is a **generic executor host** — nothing about it knows the provider. This is the decoupling point that later allows remote executors or a fleet without touching the core."*
 
 As built in run-flow (2026-10-23), one `pnpm run-flow` process stands in for the worker, for one flow. It runs the engine, launches each run, hosts an `ask_user` broker per agent run, and is the only writer of the run folder's `state.json`. The folder's lock, `<folder>/.flowboard/lock`, keeps a second host out. There is no job loop and no escalation timer. See [[Run Flow Reference]].
+
+As built in the app (2026-11-10), the runs page can start such a host, `run-flow --page`, detached, and talks to it only through files in its run folder: `host.json` (`{ pid, page }`, while it runs), `asks/` and `answers/`, and `stop` ([[Execution API And Routes]], [[Execution Storage]]). The page reads a run whose `host.json` pid is not alive as paused.
 
 ## Restart recovery
 
@@ -67,13 +69,15 @@ As built in run-flow (2026-10-23), nothing re-attaches: what a dead host left ru
 - `…; check that none of its agents or checks are still running` when it has no run folder to look in: the lock names none, as when its host died before making one, or the folder it names is not there;
 - `-- warning: pid <n> (<log>) is running but may not be the process its run started; check it yourself` for a pid whose start time no longer matches.
 
-`--resume` also looks in its own run folder, in case the dead host's lock was deleted by hand, and says `-- stopped 1 run the last run-flow left running`. An agent is signalled by its CLI's pid alone, since the adapters give it no process group of its own, so whatever that CLI started and left behind is not reached (a `ponytail:` comment in `cli/src/flow-run.ts`).
+`--resume` also looks in its own run folder, in case the dead host's lock was deleted by hand, and says `-- stopped 1 run the last run-flow left running`. An agent is signalled by its CLI's pid alone, since the adapters give it no process group of its own, so whatever that CLI started and left behind is not reached (a `ponytail:` comment in `cli/src/flow-run.ts`). A check in a sandbox logs no `pid` line, so nothing here stops one a dead host left; under Docker the code relies on `--rm` ending the container with its client (2026-11-10, `cli/src/flow-exec.ts`). An OpenSandbox box outlives a dead host until its 24 h lifetime ends, and `--resume` reconnects to it ([[OpenSandbox Runtime]]).
 
 ## Shutting down
 
 *"Graceful shutdown: SIGTERM children, mark runs `cancelled`, not `failed`."* (`03` §7; backlog 3.3 **GAP**). Whether those runs are re-queued when the worker returns is not stated ([[Execution Open Questions]] #32). See [[Stopping And Cancelling]].
 
 As built in run-flow (2026-10-23), Ctrl+C, SIGTERM or SIGHUP stops every live run and saves the state. Each stopped run is recorded `interrupted` and wasted, and its step stays `running`, so `--resume` reruns it at the same attempt. A run still queued is `not launched` instead. The host exits 130 with `-- continue with: pnpm run-flow --resume <run folder>`. A second Ctrl+C, more than 300 ms after the first, exits at once: it kills (SIGKILL) every run still going, each check's process group and each agent's CLI process, removes the live agent runs' `/tmp/fb-*` folders and leaves the lock, so the next host warns.
+
+As built in run-flow (2026-11-10), the runs page's **Stop run** writes `<run folder>/stop`. The host looks for it every 400 ms, removes it and stops as on a first Ctrl+C, exit 130. A second `stop` file is a repeat and is ignored: it never acts as the quit-at-once second Ctrl+C, so `--resume` can always continue a run stopped from the page. The route refuses unless the run is `starting`, `running` or `waiting`.
 
 ## Other fixes recorded against the worker
 

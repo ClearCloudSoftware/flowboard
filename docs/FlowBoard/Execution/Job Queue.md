@@ -13,6 +13,8 @@ The `jobs` table is how the web process hands work to the worker. Feature map §
 - *"**Hand off the slow work** — The screens never run agents directly; they drop a job on the queue and a background worker picks it up."* (feature map §8)
 - *"Job queue decoupling route handlers from process spawning → the worker can become a fleet later, for free."* (architecture README). The drawio *Job queue + worker* card: *"Route handlers enqueue; the worker spawns processes. Becomes a fleet later, for free."*
 
+As built in the app (2026-11-10), two route handlers do spawn: `POST /api/runs` (`cli/src/flow-start.ts`) and `POST /api/runs/[run]/resume` each start a detached `run-flow --page`, which then runs on its own, outside the web process ([[Execution API And Routes]]). There is no queue between them. Nothing records this as a decision; it is open to Alex's review.
+
 ## The table
 
 ```sql

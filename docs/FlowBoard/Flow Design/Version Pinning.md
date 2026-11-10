@@ -44,6 +44,8 @@ sequenceDiagram
 
 As built in run-flow (2026-10-23), a run pins its loaded flow in `flow.json`: the graph, the run's folder and task text, the budget ceiling, each step's prompt text and inline `system_prompt`, and its launch settings, so `--resume` takes no `--folder` or `--task`. Skills and plugins are not pinned: `flow.json` keeps their folders' absolute paths, and every launch, `--resume` included, reads them afresh, so an edited `SKILL.md` or plugin reaches the next run of a flow already under way. Pinning comes with the capability library's pins (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
+As built in run-flow (2026-11-10), `flow.json` also pins the flow's `sandbox:` settings, the artifacts folder and `--max-runs`. The pin is not immutable: `--resume --budget-usd <n>` writes the new budget into it, and on an OpenSandbox run, **Allow host & retry** adds the host to its `sandbox.egress` while the run goes on. Neither touches the recipe file.
+
 > [!note] The mockups read capability updates differently
 > The capability-library mockup and guide say an update changes behaviour *"for every flow using it **on its next run**"* and that *"flows are not pinned to a capability version the way tasks are pinned to a flow version"*. D10 and PRD §7 narrow that: the update reaches the next **task**, never a running one. [[Capability Library Open Questions]] #4 is resolved by D10.
 

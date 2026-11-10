@@ -7,6 +7,9 @@ module: Execution
 
 Draft mode is a global switch that runs every step on the cheapest model while you work on the recipe rather than the code. Execution applies it at launch. The rule and its cost effects are in [[Draft Mode]] (Cost And Control); where the setting lives is in [[Draft Mode Setting]].
 
+> [!warning] Not built
+> This note is design only. As of 2026-11-10 no code implements draft mode, a `SpecTransform` chain or a draft toggle: run-flow and the app have no setting that overrides a step's model or effort. The flow designer's `draftFlow` is an unsaved edit of a recipe, not draft mode. The sandbox is not a transform either: run-flow sets `RunSpec.exec` directly for a flow with `sandbox:` ([[Agent Launch Contract]]).
+
 ## What it does
 
 | Source | Wording |

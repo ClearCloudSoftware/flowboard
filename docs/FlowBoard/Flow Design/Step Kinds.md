@@ -22,7 +22,9 @@ As built in run-flow (2026-10-23), there is no `kind` key: a step with `shell:` 
 When adding a step: *"choose an AI, shell or manual step; for an AI step pick an agent, a skill or both (from defined agents and installed skills), then set model, effort, advance mode, requires, produces, and limits"* (PRD §13). The drawio card *Add step form* still reads *"Skill or Agent"*. The pickers list what the [[Capability Library Index|Capability Library]] has installed, and a new install *"becomes selectable in the step editor straight away"* (capability-library mockup). Details of how a step references a capability: [[Capabilities In Flows]].
 
 > [!check] One step, agent and skill (D27)
-> The capability-library mockup already had steps that use a skill **and** an agent at once (`plan`: `architect` + `/plan-implementation`; `review`: `reviewer` + `/code-review`), and the schema already had both columns, so the `kind` exclusivity was dropped. With both, the step's tools are the agent's ∩ the skill's, narrowed by the step's own `allowed_tools`; the editor warns when that drops a tool the skill declares (D28). The flow-designer inspector still shows only a free-text **Agent** field and needs agent and skill pickers — [[Flow Design Open Questions]] #10.
+> The capability-library mockup already had steps that use a skill **and** an agent at once (`plan`: `architect` + `/plan-implementation`; `review`: `reviewer` + `/code-review`), and the schema already had both columns, so the `kind` exclusivity was dropped. With both, the step's tools are the agent's ∩ the skill's, narrowed by the step's own `allowed_tools`; the editor warns when that drops a tool the skill declares (D28). The flow-designer mockup's inspector shows only a free-text **Agent** field and needs agent and skill pickers — [[Flow Design Open Questions]] #10.
+
+As built in the flow designer (2026-11-10), the step panel's **Runs** select chooses *an agent* or *a shell command*. An agent step's skill is free text and its agent is the inline `system_prompt`; there is no picker and no manual kind ([[Flow Design Controls]]).
 
 ## `manual`
 
@@ -46,7 +48,7 @@ interface StepExecutor {
 
 Status: *"Decided for `shell`, open for the rest"*. The drawio card *StepExecutor generalization — A step could be shell, HTTP, pure transform or a human task, not only an agent* is amber (page *FlowBoard ideation*), with an association line to the editor card *Vertical step list + connections panel*. The parking lot: *"More steps that aren't AI — plain commands are now in scope … A step could also call a service or be a simple human checklist."* See [[Flow Design Open Questions]] #21.
 
-As built in run-flow (2026-10-23), the host has the two kinds, `AiStep` and `ShellStep` (`cli/src/flow-config.ts`), and core's `StepDef` has none: the step rules stay in the CLI loader until a second reader needs them ([[Flow Definition Internals]]).
+As built in run-flow (2026-10-23), the host has the two kinds, `AiStep` and `ShellStep` (`cli/src/flow-config.ts`), and core's `StepDef` has none: the step rules stay in the CLI loader. The flow designer, the second reader, calls the same loader rather than moving them (2026-11-10; [[Flow Definition Internals]]).
 
 ## Related
 

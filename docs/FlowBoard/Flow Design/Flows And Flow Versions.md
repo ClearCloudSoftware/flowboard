@@ -44,6 +44,8 @@ Old versions can be archived (`flows.is_archived`, PRD §5); no source describes
 
 As built in run-flow (2026-10-23), there are no flow versions. A flow is a YAML file named by its file name. Each run pins its loaded copy in `runs/<stamp>-<flow name>/flow.json`, and `--resume` never re-reads the YAML, so an edit never reaches a run under way. `flow.json`'s `version: 1` is the file format `--resume` checks, not a flow version: runs of an edited YAML and of the original can be told apart only by their `flow.json` files, so cost cannot yet be trended by version. Now that a flow file is a reusable recipe (Alex's call, 2026-10-23), a hash of it would identify a flow version, but none is recorded until something reads it, the flow library or the Monitor (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
+As built in the flow designer (2026-11-10), the library hashes each file it reads: a 12-character sha1 of its text, which names the copy the designer opened. Save uses it only to refuse writing over a file that changed on disk ([[Editing And Saving A Flow]]). The hash is not recorded in a run's `flow.json`, so runs still cannot be grouped by version.
+
 ## Adopted version
 
 A project points at one version, the one new tasks start on. The feature map: *"A default recipe per project — Each project remembers which recipe to use"* (§1). Reading that as the PRD's `projects.default_flow_id`, and as the board's *"active flow"* (PRD §13), is an inference: the column has no comment, and the PRD never says what moves it. The mockup shows it in the version chip: `Software delivery  @core v4  adopted 12 Sep`. Saving *"Writes a new version and points the project at it"* (guide, *Every control*). The PRD stores no adoption date ([[Flow Design Open Questions]] #36). How a project gets its first flow (*"choose which recipe new tasks should follow (or start empty)"*, feature map §1; backlog Story 1.3) is in [[Project Default Flow]] and [[Creating A Project]].
@@ -55,7 +57,7 @@ A project points at one version, the one new tasks start on. The feature map: *"
 
 ## Who owns a flow
 
-The PRD scopes a flow to one project (`flows.project_id`). The mockups show a shared library where flows have **authors** and a project adopts one. These are not reconciled — see [[Flow Design Open Questions]] #1 and #2, and [[Flow Library]]. As built in run-flow (2026-10-23), a flow is a reusable recipe that names no folder or task, which each run gives (Alex's call); no project or library holds it yet.
+The PRD scopes a flow to one project (`flows.project_id`). The mockups show a shared library where flows have **authors** and a project adopts one. These are not reconciled — see [[Flow Design Open Questions]] #1 and #2, and [[Flow Library]]. As built in run-flow (2026-10-23), a flow is a reusable recipe that names no folder or task, which each run gives (Alex's call); no project holds it. The flow designer's library is a folder of recipe files, `flows/` in the app's folder or `FLOWBOARD_FLOWS_DIR` ([[Flow Library]]).
 
 ## Related
 

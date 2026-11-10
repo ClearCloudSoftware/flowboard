@@ -93,6 +93,7 @@ Any other mix of options prints these three lines, the first headed `usage:`, an
 | `defaults` | no | none | Any `run-agent` key except `folder`, applied to every agent step. A step's own key replaces the default whole: a step with `limits: { max_turns: 5 }` drops a default `budget_usd` |
 | `steps` | yes | | A mapping of step name to step; at least one |
 | `edges` | no | `[]` | The routes between steps, in the order written (see *Edges, loops and joins*) |
+| `sandbox` | no | none: steps run on the host | Where steps run: `runtime` (`docker`, the default, or `opensandbox`), `image` (required), `env` (Docker only), `egress` and `credentials` (OpenSandbox only). It is the flow's; a step has no `sandbox` key. See [[OpenSandbox Runtime]] |
 
 ## Step fields
 
@@ -214,7 +215,7 @@ Reject is offered only when the step has an `on_fail` edge.
 `/runs` in the app lists the run folders in `runs/` beside it (or `FLOWBOARD_RUNS_DIR`) and shows one run: a summary, a cell per step, each run's log, artifacts, `changes.patch`, spend and the sandbox. It reads the run folder only, so any run shows, with or without `--page`. With `--page` the page can also act:
 
 - **Questions.** Every batch the terminal would ask, a gate's decision or an agent's question, is also written to `<run folder>/asks/<id>.json` as `{ id, heading, questions, at }`. The page answers by writing `<run folder>/answers/<id>.json`; the first answer, terminal or page, wins and the other is withdrawn. Both files go once it is settled.
-- **Stop.** A `<run folder>/stop` file stops the flow as one Ctrl+C does; `--resume` continues it.
+- **Stop.** A `<run folder>/stop` file stops the flow as one Ctrl+C does; `--resume` continues it. This works with or without `--page`: every host watches for the file. Another stop file while it stops is a repeat, never the quit-at-once second Ctrl+C.
 - **Host.** `<run folder>/host.json`, `{ pid, page }`, is there while a `run-flow` drives the run; the page reads a run with no live host as paused.
 - **Resume.** The page's *Resume* runs `run-flow --resume <run folder> --page` in the background, with `--budget-usd` when a new budget is given; its output goes to `<run folder>/resume.log`.
 - **Allow host & retry.** At a *run failed* or escalation gate of an OpenSandbox run, a third question, *Host to allow before the retry*, takes a host name. With Retry, the box is let reach it at once and the host is added to `sandbox.egress` in `flow.json`, so a resumed run's box allows it too.
@@ -237,7 +238,7 @@ Reject is offered only when the step has an `on_fail` edge.
 
 | Path | What |
 |---|---|
-| `runs/<YYYY-MM-DDTHH-MM-SS>-<flow name>/` | The run folder, in the folder you ran the command from. It is claimed by making it, so a name taken, even this second by another host, gets `-2`, `-3`, … In the flow name, any character but letters, digits, `_`, `.` and `-` becomes `_`: `a[1].yaml` runs in `<stamp>-a_1_` |
+| `runs/<YYYY-MM-DDTHH-MM-SS>-<flow name>/` | The run folder, in `runs/` in the folder you ran the command from, or in `FLOWBOARD_RUNS_DIR` when it is set (as the runs page reads it, so a run + New run starts lands where the page lists runs). It is claimed by making it, so a name taken, even this second by another host, gets `-2`, `-3`, … In the flow name, any character but letters, digits, `_`, `.` and `-` becomes `_`: `a[1].yaml` runs in `<stamp>-a_1_` |
 | `…/flow.json` | `{ version: 1, config, artifactsDir, maxRuns }`: the loaded flow, pinned for `--resume`. `config` holds the run's folder and ceiling too (`config.folder`, `config.budgetUsd`), and `maxRuns` is `null` for no `--max-runs` |
 | `…/state.json` | The engine's state after the last transition. Written whole or not at all, through `state.json.<pid>.tmp`. A run is `queued: true` until the host launches it; `costUsd` is `null` when the provider reported no price |
 | `…/flow.jsonl` | One line per transition: `{ at, event, commands }`, which says why the engine did what it did. Each launch is a `launched` event |
@@ -305,7 +306,7 @@ The open questions in the Execution and Flow Design notes that `run-flow` answer
 | Flow Design #25: which artifact types | An open set: any lowercase name, with no known-types check. A typo in `requires` already fails as *no step before it produces that* *(Claude's call, 2026-10-23, open to Alex's review)* |
 | Where the step rules live | In the CLI loader, `flow-config.ts`. The flow designer's API calls the same loader (2026-10-24), so one set of rules judges a flow file at `--check`, at a run and in the designer. Moving them into core waits for the worker, and means adding a `kind` to `StepDef` *(Claude's call, 2026-10-23, open to Alex's review)* |
 | Execution #6, Flow Design #39: manual steps | Left out, blocked on Flow Design #39. The stand-in is a shell step running `true` with `gate: approval` *(Claude's call, 2026-10-23, open to Alex's review)* |
-| Canvas fields: positions, display names, an agent reference, sandbox fields | Not in the flow file: the schema stays strict, and a step's key is its name. The flow designer keeps no positions: it lays a flow out from its routes, the same way on every open (backlog D4), and a dragged step stays put only until the page closes. An `agent:` key and sandbox fields stay left out *(Claude's calls, 2026-10-23 and 2026-10-24, open to Alex's review)* |
+| Canvas fields: positions, display names, an agent reference, sandbox fields | Not in the flow file: the schema stays strict, and a step's key is its name. The flow designer keeps no positions: it lays a flow out from its routes, the same way on every open (backlog D4), and a dragged step stays put only until a flow is opened again. An `agent:` key stays left out, and so does a per-step sandbox: the sandbox is the flow-level `sandbox:` key (2026-11-10) *(Claude's calls, 2026-10-23 and 2026-10-24, open to Alex's review)* |
 | A version identity for what a run ran | `flow.json` is the record. Now that a flow file is a recipe, a hash of it would identify a flow version; none is made yet, because nothing reads one (the flow library or the Monitor) *(Claude's call, 2026-10-23, open to Alex's review)* |
 | Pinning skills and plugins | Not pinned: they are read at every launch, `--resume` included. Pinning comes with the capability library's pins *(Claude's call, 2026-10-23, open to Alex's review)* |
 | Execution #13: queued versus running | A run is `queued: true` in `state.json` until the host reports its launch. One cut off before that is `not launched`, not wasted, and the summary does not count it *(Claude's call, 2026-10-23, open to Alex's review)* |

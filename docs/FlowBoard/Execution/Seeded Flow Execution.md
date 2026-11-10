@@ -59,7 +59,7 @@ Illustrative, assembled from PRD §8, §9 and §15. No source walks the seeded f
 | Approve | → `summarize` | summarize running |
 | summarize done | no outgoing edges, nothing active | task `done` |
 
-As built in run-flow (2026-10-23), the seeded flow runs these beats as listed. The seeded flow's steps and edges pass `validateFlow`, and `research` goes first because no route points to it. One beat differs: `grill`'s questions are answered while its run waits, with no parking. Each approval gate reads `approval needed`, plus `; it reported pass: <reason>` when the agent reported a verdict.
+As built in run-flow (2026-10-23), the seeded flow runs these beats as listed. The seeded flow's steps and edges pass `validateFlow`, and `research` goes first because no route points to it. One beat differs: `grill`'s questions are answered while its run waits, with no parking, in the terminal or, since 2026-11-10, on the runs page for a run started with `--page`. Each approval gate reads `approval needed`, plus `; it reported pass: <reason>` when the agent reported a verdict.
 
 ## The two loops
 

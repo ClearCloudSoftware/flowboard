@@ -39,6 +39,8 @@ Four cards make up the *Flow design* box on that page, all solid (in v1):
 
 On the *Logical components* page, the **Flow editor** `/p/[slug]/flow` (*edit DAG → new flow version*) feeds the **Flow engine** in Core (*versioned DAG, advance modes, attempts, artifact contracts*). The architecture catalogues it as component **#2 Flow definition & validation** (`02-core-and-engine.md` §2).
 
+As built (2026-11-10), the designer is `/flows` in the Next app, and it edits recipe files, not project rows. Its **Run** button opens the *New run* sheet on `/runs`, which starts `run-flow --page` on the saved file ([[Flow Design Screen]]).
+
 Downstream, a flow version decides:
 
 - **The board's columns** — *"Columns come from the recipe"* (feature map §5), ordered by `board_order`. See [[Canvas Layout And Board Order]].
@@ -64,7 +66,7 @@ Downstream, a flow version decides:
 As built in run-flow (2026-10-23), two principles hold only in part:
 
 - **Provider-agnostic.** The graph names no provider, but a step's launch settings do: each agent step names an `adapter` and a native model id (`sonnet` on Claude Code, `provider/model` on OpenCode), so moving a step to another provider means editing both (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
-- **Pure and portable.** `validateFlow` is pure, but the step rules sit in the CLI loader ([[Flow Definition Internals]]). The flow file itself is portable: a reusable recipe (Alex's call, 2026-10-23) whose own paths resolve against its folder, so it runs in whatever folder a run names ([[Flow Storage]]).
+- **Pure and portable.** `validateFlow` is pure, but the step rules sit in the CLI loader, which the flow designer calls too ([[Flow Definition Internals]]). The flow file itself is portable: a reusable recipe (Alex's call, 2026-10-23) whose own paths resolve against its folder, so it runs in whatever folder a run names ([[Flow Storage]]).
 
 ## What it is not
 

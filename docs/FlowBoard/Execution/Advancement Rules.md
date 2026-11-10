@@ -17,7 +17,7 @@ What the engine does after a run finishes. The rules are PRD §8; the code lives
 
 "Succeeds" means the process exited 0 (*"On exit code 0, set the run to `succeeded`, scan for artifacts, then apply the advancement rules in §8"*, PRD §7). A shell step with a non-zero exit also follows its edges (PRD §7). See [[Run Outcomes]].
 
-As built in run-flow (2026-10-23), a run that ends with an error never reaches these rules: an agent's error or non-zero exit, a timeout, or a shell exit of 126 or 127 or a death by a signal waits at a *run failed* gate ([[Infra Retries]]). Any other run is checked in this order as it ends (`core/src/flow/engine.ts`):
+As built in run-flow (2026-10-23), a run that ends with an error never reaches these rules: an agent's error or non-zero exit, a timeout, or a shell exit of 126 or 127 or a death by a signal waits at a *run failed* gate ([[Infra Retries]]), as does, since 2026-11-10, a sandboxed check's exit 125. Any other run is checked in this order as it ends (`core/src/flow/engine.ts`):
 
 1. An output the run did not write: a gate, `did not write: <types>`.
 2. An approval step: a gate, `approval needed`, plus `; it reported <outcome>` and `: <reason>` when the step reported them. So the PRD's rule 1 holds even when the step reported an outcome.
@@ -77,7 +77,7 @@ Assembled from PRD §8, with the done rule from `02` §3 (see [[Task Completion]
 
 The drawio *Flow engine* card in the worker: *"advance_task: always / on_pass / on_fail · fan-out + join · approval and answer gates · no outcome → gate, never pass"*.
 
-As built in run-flow (2026-10-23), the person wins: Approve sets `pass` and Reject sets `fail`, whatever the agent reported (the run-flow plan). Reject is offered only when the step has an `on_fail` route, so it never fails a flow; only a person's *Fail the flow* does. A Reject is a `fail`, so it also fires the step's `always` routes; a route a Reject must not take is written `on_pass`. A note typed at the gate goes to the runs the decision starts: Approve's to the steps its `on_pass` and `always` routes start, Reject's to the rework target, or to the targets of the forward routes it fires. These two rules are Claude's calls (2026-10-23, open to Alex's review).
+As built in run-flow (2026-10-23), the person wins: Approve sets `pass` and Reject sets `fail`, whatever the agent reported (the run-flow plan). Reject is offered only when the step has an `on_fail` route, so it never fails a flow; only a person's *Fail the flow* does. A Reject is a `fail`, so it also fires the step's `always` routes; a route a Reject must not take is written `on_pass`. A note typed at the gate goes to the runs the decision starts: Approve's to the steps its `on_pass` and `always` routes start, Reject's to the rework target, or to the targets of the forward routes it fires. These two rules are Claude's calls (2026-10-23, open to Alex's review). Since 2026-11-10, a run started with `--page` takes its gate decisions on the runs page too, and the first answer, terminal or page, wins ([[Execution Controls]]).
 
 ## The feature map's version
 

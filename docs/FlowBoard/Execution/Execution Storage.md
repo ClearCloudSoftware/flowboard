@@ -22,12 +22,29 @@ The drawio *Logical components* page splits it in two: **Database** holds *"flow
 
 As built in run-flow (2026-10-23), there is no database and no worktree. The host works in place in the folder each run names with `--folder` and writes:
 
-- **The run folder**, `runs/<YYYY-MM-DDTHH-MM-SS>-<flow name>/`, beside where the command runs. It is claimed with a non-recursive `mkdir`, so a name already taken, even by another host in the same second, gets `-2`, `-3` and so on. In the flow name, any character but a letter, digit, `_`, `.` or `-` becomes `_`. It holds `flow.json`, the pinned flow (`{ version: 1, config, artifactsDir, maxRuns }`, whose `config` also keeps the run's folder and the flow's budget); `state.json`, the engine's state, written whole through `state.json.<pid>.tmp`; `flow.jsonl`, one line per transition; and per run `<NNN>-<step>.jsonl`, its log, and `<NNN>-<step>.outcome.json`, its `set_outcome` verdict. If a check deletes the run folder, the next save writes `flow.json` and `state.json` again, so the flow can still be resumed; earlier logs and `flow.jsonl` lines are lost.
+- **The run folder**, `runs/<YYYY-MM-DDTHH-MM-SS>-<flow name>/`, beside where the command runs, or in `FLOWBOARD_RUNS_DIR` when it is set (resolved against that folder; 2026-11-10). It is claimed with a non-recursive `mkdir`, so a name already taken, even by another host in the same second, gets `-2`, `-3` and so on. In the flow name, any character but a letter, digit, `_`, `.` or `-` becomes `_`. It holds `flow.json`, the pinned flow (`{ version: 1, config, artifactsDir, maxRuns }`, whose `config` also keeps the run's folder and the flow's budget); `state.json`, the engine's state, written whole through `state.json.<pid>.tmp`; `flow.jsonl`, one line per transition; and per run `<NNN>-<step>.jsonl`, its log, and `<NNN>-<step>.outcome.json`, its `set_outcome` verdict. If a check deletes the run folder, the next save writes `flow.json` and `state.json` again, so the flow can still be resumed; earlier logs and `flow.jsonl` lines are lost.
 - **The artifacts**, `<folder>/.flowboard/<run folder name>/<type>.md`.
 - **The lock**, `<folder>/.flowboard/lock`, holding `{ pid, runDir }`, the host's pid and its run folder's absolute path, which keeps one `run-flow` per folder. Making it creates only `.flowboard/`, never the folder itself.
 - **The broker socket**, `ask.sock`, in a temp folder `/tmp/fb-*` per agent run, with the copied `skills:` folders. A second Ctrl+C removes these folders before it exits.
 
 When `runs/` lies inside the run's folder, agent steps may not write to the run folder. See [[Run Flow Reference#Files written]].
+
+As built (2026-11-10), the sandboxes and the runs page add these:
+
+| Path | What |
+|---|---|
+| `<run folder>/host.json` | `{ pid, page }`, while a `run-flow` drives the run; `page` is `true` under `--page`. Removed when the host exits |
+| `<run folder>/asks/<id>.json`, `answers/<id>.json` | Under `--page`, a question or gate the host asks, `{ id, heading, questions, at }`, and the page's answer. Both go once it is settled |
+| `<run folder>/stop` | Written by the page's Stop; the host removes it and stops |
+| `<run folder>/sandbox.json` | OpenSandbox only: `{ id, token }`, the box and its relay token, mode 0600, for `--resume` |
+| `<run folder>/changes.patch` | OpenSandbox only: the box's edits when the run is `done` or `failed`, for `git apply` |
+| `<run folder>/resume.log` | The output of a `run-flow --resume` started from the page |
+| `runs/.started/<id>.task.md`, `<id>.log` | A run started from the page: its task text and `run-flow`'s output. A dot folder, so it is never listed as a run |
+| `<artifacts>/.outcomes/<NNN>-<step>.json` | OpenSandbox only: where `set_outcome` writes in the box; pulled back after the step, in place of `<NNN>-<step>.outcome.json` |
+
+- **The verdict under Docker.** The run folder is mounted read-only in an agent's container, so `set_outcome` writes in the run's temp folder, and the host copies it to `<run folder>/<NNN>-<step>.outcome.json` after the run.
+- **The broker under a sandbox.** Under Docker there is no socket: the shim reaches the broker over TCP, `host.docker.internal:<port>`, with a per-run token. Under OpenSandbox the shim's `ask.sock` is in the box's copy of the temp folder, and a tunnel joins it to the broker's socket in a second host folder, `/tmp/fb-h-*`.
+- **Where the app looks.** The app reads `runs/` and `flows/` in its own folder, or `FLOWBOARD_RUNS_DIR` and `FLOWBOARD_FLOWS_DIR` (`app/api/flows/local.ts`). `run-flow` reads `FLOWBOARD_RUNS_DIR` too (`cli/src/flow-run.ts`), and a run started from the page inherits it, so its run folder always lands where the page lists runs. A terminal `run-flow` started with the same `FLOWBOARD_RUNS_DIR` shows there as well.
 
 ## The database is the only shared state
 
@@ -55,6 +72,8 @@ Where `mcp.json` and `settings.json` are written is not stated. *Proposal:* `dat
 
 The read-only mount differs: the drawio mounts all of `skills/`, while PRD §11.1 allows *"the step's plugin dirs, read-only (§7)"* and PRD §7 says *"Mount only the plugins the step names, never every installed one"*. See [[Sandbox Mounts]].
 
+As built in run-flow (2026-11-10), a Docker container mounts, each at its host path, the folder and the artifacts folder read-write, and for an agent also its temp folder read-write and FlowBoard's own code, the run folder and the step's plugin folders read-only. Nothing else is mounted. An OpenSandbox box mounts nothing from this machine: it gets the folder's last commit, and files are copied in and out ([[OpenSandbox Runtime#Artifacts in and out]]).
+
 ## Lifetimes
 
 | Item | Removed |
@@ -63,6 +82,8 @@ The read-only mount differs: the drawio mounts all of `skills/`, while PRD §11.
 | Worktree | *"never remove it automatically"*; a clean-up action once `done` or `cancelled` (PRD §11). Backlog 2.1: *"only when done/cancelled/failed"*. Task-detail guide: *"Only offered once the task is finished or cancelled"* ([[Execution Open Questions]] #60). |
 | Run records, events | not stated. PRD §5 deletes them with their task (`ON DELETE CASCADE` from `tasks` through `step_instances` and `runs`), but no source deletes a task |
 | Jobs | not stated |
+
+As built in run-flow (2026-11-10), a Docker container lasts one step run (`docker run --rm`). An OpenSandbox box lasts the flow run: a `done` or `failed` run writes `changes.patch` and kills it, and a paused or stopped one keeps it for `--resume`, for at most 24 h; a box that cannot give back its changes is kept too.
 
 As built in run-flow (2026-10-23), the run folder and the artifacts are never removed. An agent run's temp folder goes when the run ends, and the lock when its host exits, but only while it still holds that host's pid. A host killed with `kill -9`, or quit by a second Ctrl+C, leaves its lock behind; the next run-flow in that folder replaces it and stops what that host left running ([[Worker Lifecycle]]).
 

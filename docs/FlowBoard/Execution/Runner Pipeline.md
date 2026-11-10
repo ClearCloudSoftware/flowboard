@@ -30,11 +30,11 @@ The drawio *Runner* card: *"builds the RunSpec · draft-mode transform · writes
 > [!warning] The shipped code differs
 > Stages 5 and 6 write no file. The adapters take the tool servers, `permissionMode` and `guards` from the `RunSpec` and set up the provider in memory: Agent SDK options on Claude, `OPENCODE_CONFIG_CONTENT` on OpenCode ([[Agent Providers Open Questions]] #4). The SDK builds the CLI's arguments itself, so there is no final command line to snapshot; `run-agent` logs the launched `RunSpec` as its `start` line ([[Agent Providers Storage]]). As of 2026-10-18.
 
-As built in run-flow (2026-10-23), the run-flow host runs this pipeline for each agent run, with no memory, no draft mode or sandbox transforms and no permission gate:
+As built in run-flow (2026-10-23), the run-flow host runs this pipeline for each agent run, with no memory, no draft mode and no permission gate beyond the loader's refusal of unrestricted modes:
 
 - **Stage 1** takes the step from the pinned flow, the run folder's `flow.json`, which holds the flow, the run's folder, the task text and each step's prompt text. Skills and plugins are not pinned: `skills:` folders are copied afresh at every launch and `plugins:` folders mounted as they stand, `--resume` included (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 - **Stage 4** changes one thing when the flow has a budget: the run's `limits.maxBudgetUsd` becomes what is left of it, or the step's own `limits.budget_usd` if that is lower (Claude's call, 2026-10-23, open to Alex's review).
-- **Stages 5 and 7** write no file, as above, and leave `exec` unset, so both adapters spawn on the host `ExecHost`.
+- **Stages 5 and 7** write no file, as above. Without `sandbox:` they leave `exec` unset, so both adapters spawn on the host `ExecHost`. With `sandbox:` (2026-11-10), stage 7 sets `spec.exec` directly, not through a transform: a Docker container per run, or the run's OpenSandbox box, with the broker reached over TCP and a token, or through a tunnel ([[Agent Launch Contract]]).
 - **Stage 6** is the run's log, `runs/<stamp>-<flow>/<NNN>-<step>.jsonl`: a `start` line holding the launched `RunSpec`, a `pid` line with the process's start time, the events, and a `result` line.
 
 ## The illustrative code
@@ -73,7 +73,7 @@ export async function runStep(deps, step, task, produces) {
 > [!warning] The shipped code differs
 > Nothing reads stdout lines: the Claude adapter iterates the Agent SDK's typed messages, and OpenCode reads its server's SSE events. The adapters keep the running totals and emit them as `usage` events, which count the main agent's turns; Claude's carry no cost until the result. They build `summary` for `tool_use` only. `run_events` and `seq` wait for the runner; `run-agent` appends every event to `runs/<stamp>-<adapter>.jsonl`. See [[Normalized Event Envelope]].
 
-As built in run-flow (2026-10-23), a run's cost is its result's. A run cut off before its result, by a stop, a timeout or a stream that dies, keeps the totals of its last `usage` event: OpenCode's carry dollars, Claude's only tokens. A run with tokens but no dollar figure is recorded with an unknown cost, `costUsd: null` rather than $0, and the terminal says so: `-- <step> attempt <n>: failed: stopped, cost unknown`, and the flow's summary ends `, cost unknown for 1 run`. Only the terminal and the run's log show a run as it goes; the live running number waits for the Monitor ([[Run Flow Monitor Readiness]]).
+As built in run-flow (2026-10-23), a run's cost is its result's. A run cut off before its result, by a stop, a timeout or a stream that dies, keeps the totals of its last `usage` event: OpenCode's carry dollars, Claude's only tokens. A run with tokens but no dollar figure is recorded with an unknown cost, `costUsd: null` rather than $0, and the terminal says so: `-- <step> attempt <n>: failed: stopped, cost unknown`, and the flow's summary ends `, cost unknown for 1 run`. Only the terminal and the run's log show a run as it goes; the live running number waits for the Monitor ([[Run Flow Monitor Readiness]]). As built in the app (2026-11-10), the runs page follows a run's log as it goes and, for a Claude run before its result, shows a cost estimated from its tokens at list prices by model family (`app/runs/log-lines.ts`); `state.json` still records only the result's cost.
 
 ## On exit
 
@@ -95,7 +95,7 @@ As built in run-flow (2026-10-23), nothing retries a run. An agent error, a nonz
 
 Same pipeline, no provider: *"runs `command` (or the project's `check_command`) through the same `ExecHost`"* (`03` §6). See [[Shell Step Execution]].
 
-As built in run-flow (2026-10-23), shell steps bypass `ExecHost`: the host spawns `sh -c` directly, in its own process group, because `ExecHost` cannot kill a process group. A `ponytail:` comment in `cli/src/flow-exec.ts` marks the way back, and the sandbox work must route checks through `ExecHost` again, with a group kill (the run-flow plan's design review, landmine 3).
+As built in run-flow (2026-11-10), without `sandbox:` shell steps bypass `ExecHost`: the host spawns `sh -c` directly, in its own process group, so a stop reaches what the check started. With `sandbox:` they go through the run's `ExecHost`, where the container (Docker, one per check run, offline) or the box's process group (OpenSandbox) is the group ([[Shell Step Execution]]).
 
 ## Gaps
 

@@ -19,13 +19,13 @@ What is in v1, what the designs add beyond the PRD, ideas, and what is out of sc
 | M7 | The `import_backlog` job | *"Library and import. Skills install from GitHub, agent CRUD, markdown backlog import."* |
 | M9 | Memory recall and commit around a run | *"Memory (optional, additive)."* |
 
-As built in run-flow (2026-10-23), the order changed: M5's engine came first, in `core/src/flow/`, ahead of M3's worker, job queue, SSE viewer and database and M4's parking (the run-flow plan: *CLI or worker first: CLI*). The terminal command `run-flow` hosts it, with steps and routes from a YAML file: fan-out, joins, conditional routes, approval gates, rework with `max_attempts` escalation, shell checks and the `requires`/`produces` contract. Runs stream to the terminal and to JSONL logs, and their costs land in `state.json`; no API sits in front of the engine yet. The worker is to run the same engine ([[Multi-Agent Orchestration Analysis]] §6.6). See [[Run Flow Reference]].
+As built in run-flow (2026-10-23), the order changed: M5's engine came first, in `core/src/flow/`, ahead of M3's worker, job queue, SSE viewer and database and M4's parking (the run-flow plan: *CLI or worker first: CLI*). The terminal command `run-flow` hosts it, with steps and routes from a YAML file: fan-out, joins, conditional routes, approval gates, rework with `max_attempts` escalation, shell checks and the `requires`/`produces` contract. Runs stream to the terminal and to JSONL logs, and their costs land in `state.json`. As of 2026-11-10 an API does sit in front of it: the app's `/api/runs` routes start, answer, stop and resume `run-flow` through its run folder, and the runs page streams a run over SSE ([[Execution API And Routes]], [[Execution Surfaces]]). M3's queue, database and `run_events` are still not built. The worker is to run the same engine ([[Multi-Agent Orchestration Analysis]] §6.6). See [[Run Flow Reference]].
 
 Draft mode (PRD §13) is assigned to no milestone. PRD §13 describes the toggle right after the `/costs` views, which M8 builds, and the drawio puts it on the costs screen (*"rollups and draft-mode toggle"*, *Logical components*), so M8 is the likely home (*inference*). The backlog implements the override in the runner (3.2) and the toggle in settings (8.3).
 
 The pitch counts *"eight build milestones"*, ending with *"the cost/sandbox views"*. It leaves out M9 memory, and names the sandbox views where PRD §14's M8 has the flow editor UI.
 
-Sandboxed execution (PRD §11.1) is *"in scope but optional"* (PRD §17).
+Sandboxed execution (PRD §11.1) is *"in scope but optional"* (PRD §17). As built in run-flow (2026-11-10), it is a flow-level `sandbox:` key, still optional: `runtime: docker` runs each step run in its own container, and `runtime: opensandbox` runs the whole flow in one box with an egress allowlist and injected credentials ([[OpenSandbox Runtime]]). Docker's egress proxy is not built.
 
 ## Designed beyond the PRD
 
@@ -33,10 +33,10 @@ A status's *run-flow:* part says what the terminal host had built by 2026-10-23 
 
 | Item | Where | Status |
 |---|---|---|
-| Explicit **Start** button | backlog 2.1, D1, drawio | decision default, not in PRD §12 |
+| Explicit **Start** button | backlog 2.1, D1, drawio | decision default, not in PRD §12. *app:* + New run on the runs page, and the designer's Run, start a flow (2026-11-10); there are no tasks to start |
 | **Demote** keeping the worktree | backlog 2.1 (**NEW**) | no endpoint |
-| **Pause** a task | feature map §3 (named), task-detail guide (rule) | no status, no endpoint. *run-flow:* partly: Ctrl+C, or a spent flow budget, stops the live runs mid-flight and `--resume` carries on; nothing pauses after the current run |
-| **Retry as-is**, **Allow host & retry** | monitor and inbox mockups | not in PRD. *run-flow:* Retry as-is is built as Retry this step at a *run failed* gate (the same attempt, not counted); Allow host waits for the sandbox's egress allowlist |
+| **Pause** a task | feature map §3 (named), task-detail guide (rule) | no status, no endpoint. *run-flow:* partly: Ctrl+C, or a spent flow budget, stops the live runs mid-flight and `--resume` carries on; nothing pauses after the current run. The runs page's Stop does the same as Ctrl+C, and its Resume continues (2026-11-10) |
+| **Retry as-is**, **Allow host & retry** | monitor and inbox mockups | not in PRD. *run-flow:* Retry as-is is built as Retry this step at a *run failed* gate (the same attempt, not counted). Allow host & retry is built for OpenSandbox runs only, at a *run failed* or escalation gate (2026-11-10): it lets the box reach the host and pins it in the run's `flow.json`, never the recipe |
 | `queued` as a visible step state | monitor and task-detail mockups | not a PRD state. *run-flow:* on the run record, not the step: a run is `queued: true` in `state.json` until it launches, while its step shows `running` |
 | Worker slots strip with per-slot Stop | monitor mockup | cap from `VIBE_MAX_RUNS` |
 | Restart re-attach by pid | `03` §7, backlog 3.3 | fix (backlog **BUG**). *run-flow:* no re-attach: the next run-flow in the folder, or `--resume`, stops what a dead host left running, by the pids in its run logs (Alex's call, 2026-10-23), and `--resume` reruns those runs |

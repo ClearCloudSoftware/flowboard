@@ -25,6 +25,8 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 | **ExecHost** | *"WHERE a process runs, decoupled from WHICH agent runs it"*. See [[ExecHost Port]]. | `exec-host.ts` |
 | **Fingerprint** | A hash of a failing shell step's normalised output tail, on `runs.fingerprint`. In run-flow, `fingerprint` on the run's record in `state.json` ([[Stuck Detection And Fingerprints]]) | PRD §8 |
 | **Run record** | `data/runs/<id>/`: `args.json` (PRD §7) or `spec.json` (`03` §6), plus *"raw stream"* (drawio *Run records*). Not built; `run-agent` keeps `runs/<stamp>-<adapter>.jsonl`, whose `start` line holds the launched `RunSpec` ([[Agent Providers Storage]]). run-flow keeps the engine's fields for each run in `state.json`, and a log per run, `<NNN>-<step>.jsonl`, with its launch config, pid, events and result (Claude's call, 2026-10-23, open to Alex's review) | PRD §7, `03` §6, drawio |
+| **Sandbox tier** | Where a run's processes run. As built in run-flow (2026-11-10): the host, when the flow has no `sandbox:`; `docker`, a fresh container per step run; or `opensandbox`, one box per flow run ([[OpenSandbox Runtime]]) | `flow-config.ts`, `flow-run.ts` |
+| **Run status** | As built (2026-11-10), what the runs page shows for a run folder: `starting`, `running`, `waiting`, `paused`, `done` or `failed`. It is derived from `state.json`, the host pid in `host.json` and the open asks; nothing stores it ([[Execution State Machines]]) | `cli/src/flow-logs.ts` |
 
 ## Actors
 
@@ -35,7 +37,7 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 | **Worker** ⚠ | (1) The separate Node process `apps/worker` that leases jobs (PRD §2, §3). (2) On the monitor and in the guides, a **slot**: *"a worker slot frees up"*, *"Two of your four slots are on this task"* (monitor guide). | see [[Worker Lifecycle]], [[Worker Slots]] |
 | **Loop guard** | The rule set that caps rework and escalates. A drawio card of its own. | drawio *Harness architecture* |
 | **Infra-retry classifier** | Sorts a non-zero agent exit into transient or not | drawio *Harness architecture* |
-| **Broker** | The worker-side half of `ask_user`; *"the only writer of the `questions` table"*. As built, it runs inside `run-agent` (`cli/src/ask/broker.ts`) and asks in the terminal ([[Ask User MCP Server]]) | PRD §9 |
+| **Broker** | The worker-side half of `ask_user`; *"the only writer of the `questions` table"*. As built, `run-agent` starts one (`cli/src/ask/broker.ts`) and asks in the terminal ([[Ask User MCP Server]]). run-flow starts one per agent run; under `--page` (2026-11-10) its questions also go to the runs page, and the first answer, terminal or page, wins | PRD §9 |
 
 ## Moves
 
@@ -49,8 +51,8 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 | **Rework** | An `on_fail` edge to an earlier step: same instance, `attempts++`, a new run. As built in run-flow, an `on_fail` route to the step itself or to an ancestor along `always`/`on_pass` routes, which must be its step's only `on_fail` route; the steps below the target are deleted, not `skipped` | PRD §8, `02` §3 |
 | **Escalate** ⚠ | (1) Engine: a spent or stuck loop parks the target at `awaiting_approval`, task `blocked` (PRD §8). In run-flow, an escalation gate on the target, which also stops everything below it; there is no task status. (2) Notifier: post a pending question to Slack after a timer (PRD §10). | [[Loop Guard And Escalation]] |
 | **Park** | Exit the agent process with state saved; the run becomes `parked`. Not in run-flow, where questions are answered while the run waits (the run-flow plan's Left out list) | PRD §9 |
-| **Resume** | A new `start_run` with `--resume <session> --fork-session`. The drawio *Flow engine* card instead says *"park / resume via prompt replay"*, the context-replay path ([[Prompt Assembly]]). run-flow's `--resume <run folder>` is different: it continues a stopped, paused or crashed flow, rerunning each cut-off step at the same attempt, after stopping anything a crashed host left running; a flow paused on a spent budget needs `--budget-usd <more>` too | PRD §9; drawio card `engine-3` |
-| **Stop** ⚠ | (1) Kill one run's process (PRD §13, `03` §8). (2) Monitor guide: *"Ends that run now. It is recorded as failed"*. (3) At a gate *"the task stops here and asks for you"* (monitor guide). (4) In run-flow, the engine's `stop` command ends runs a rework or an escalation superseded (`error: 'superseded'`, wasted) or that *Fail the flow* cut off (`error: 'stopped'`, not wasted). A person can only press Ctrl+C, which stops every run, records each as `interrupted` and wasted, and lets `--resume` rerun it at the same attempt; a spent flow budget does the same and pauses the flow. Only `timeout_minutes` stops a single run, which then waits at a *run failed* gate. | [[Stopping And Cancelling]] |
+| **Resume** | A new `start_run` with `--resume <session> --fork-session`. The drawio *Flow engine* card instead says *"park / resume via prompt replay"*, the context-replay path ([[Prompt Assembly]]). run-flow's `--resume <run folder>` is different: it continues a stopped, paused or crashed flow, rerunning each cut-off step at the same attempt, after stopping anything a crashed host left running; a flow paused on a spent budget needs `--budget-usd <more>` too. The runs page's **Resume** (2026-11-10) runs `run-flow --resume <run folder> --page` in the background | PRD §9; drawio card `engine-3` |
+| **Stop** ⚠ | (1) Kill one run's process (PRD §13, `03` §8). (2) Monitor guide: *"Ends that run now. It is recorded as failed"*. (3) At a gate *"the task stops here and asks for you"* (monitor guide). (4) In run-flow, the engine's `stop` command ends runs a rework or an escalation superseded (`error: 'superseded'`, wasted) or that *Fail the flow* cut off (`error: 'stopped'`, not wasted). A person stops the whole flow with Ctrl+C or, since 2026-11-10, the runs page's **Stop run**, which writes `<run folder>/stop` for the host to act on as a first Ctrl+C. Either stops every run, records each as `interrupted` and wasted, and lets `--resume` rerun it at the same attempt; a spent flow budget does the same and pauses the flow. Only `timeout_minutes` stops a single run, which then waits at a *run failed* gate. | [[Stopping And Cancelling]] |
 | **Cancel** | End a task: stop runs, cancel questions, skip instances. Not in run-flow (the run-flow plan's Left out list); *Fail the flow* at a gate stops every run and marks the steps `failed` | backlog 2.1 |
 
 ## Overloaded words
@@ -65,7 +67,7 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 > - **Infra retry**: the runner re-runs a transient failure on its own, *"up to 3 times"* (PRD §7). Not counted. Not in run-flow, which retries nothing by itself.
 > - **Rework**: an `on_fail` loop. Counted. The flow designer's *Retries* field sets this budget, but not one-to-one: the mockup defaults it to 2 against `max_attempts`' 3, and [[Flow Data Model]] maps it as `max_attempts − 1`, a proposal ([[Flow Design Open Questions]] #11).
 > - **Retry at an escalation gate**: *"**Retry** grants one more attempt and carries my note into it"* (PRD §8).
-> - **Retry as-is** and **Allow host & retry**: mockup buttons on a failure card (monitor, inbox).
+> - **Retry as-is** and **Allow host & retry**: mockup buttons on a failure card (monitor, inbox). As built (2026-11-10), the runs page has Allow host & retry on an OpenSandbox run, at a *run failed* or escalation gate ([[Execution Controls]]).
 > - **`POST /api/step-instances/:id/retry`**: the one PRD endpoint (PRD §12).
 > - **Retry this step** in run-flow, a person's choice at three kinds of gate. At a *run failed* gate, the same attempt again, not counted. At an escalation, one more attempt, past the budget for a spent loop. At a verdict gate, the next attempt, wasting the run it replaces. That attempt counts against `max_attempts` but is never refused there, so a later rework can escalate at once (`impl has used 2 attempts, past its max_attempts of 1`).
 
@@ -73,7 +75,7 @@ Terms used across the execution notes. ⚠ marks a word the sources use in more 
 > - **Task status `blocked`**: set for an infra failure that is not transient (PRD §7), a spent or stuck loop (PRD §8), and a parked run (backlog 4.2).
 > - **"blocked on you"**: the task-detail status bar while a gate waits (`task-detail.html`); the header pill on the same screen says *"waiting on you"*. Not a task status.
 > - Not the same as **queued**: the monitor's *"ready, no free worker"*.
-> - **run-flow** keeps no `blocked` status: the flow stays `running` while a step waits at a gate (Claude's call, 2026-10-23, open to Alex's review). See [[Execution State Machines]].
+> - **run-flow** keeps no `blocked` status: the flow stays `running` while a step waits at a gate (Claude's call, 2026-10-23, open to Alex's review). The runs page shows such a run as `waiting` while its `--page` host has a question open (2026-11-10). See [[Execution State Machines]].
 
 > [!warning] Job, run and step
 > A *job* is a queue row; a *run* is a process attempt; a *step* is either a definition or an instance. The drawio's *"enqueue step"* edge enqueues a `start_run` job, which creates a run against a step instance.

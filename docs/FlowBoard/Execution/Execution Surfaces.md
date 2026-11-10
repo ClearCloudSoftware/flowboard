@@ -7,6 +7,11 @@ module: Execution
 
 Execution has **no screen of its own**. The tracker lists its mockup as *"partial (via task detail) — also `monitor`, `inbox`, `flow-designer`"*. Its state shows up on six other screens, and its controls are spread across them. This note stands in for an *Execution Screen* note; every control is in [[Execution Controls]].
 
+> [!note] As built in the app (2026-11-10)
+> Of the six screens, two are built, both in the Next.js app: the runs page and the flow designer. `/` redirects to `/flows`. The board, the Monitor, task detail and the inbox are design only: none of their routes exist.
+> - **The runs page**, `/runs`, lists run-flow's run folders and shows one, picked with `?run=<run folder>` (the newest by default); `?new=<flow>` opens the **+ New run** sheet on a flow. It stands in for the live run viewer, at a different path than `/runs/[id]`, and shows any run, started from the page or the terminal. Its status pill reads the derived run status, `starting`, `running`, `waiting`, `paused`, `done` or `failed` ([[Execution Data Model]]). It shows a summary with spend against the budget, a steps bar with a cell per step (attempts, model or `shell`, time, cost), the gates and questions open for the page, each run's log, and side panes for the artifacts, spend, failures, the sandbox and the run. A *plan vs built* view sets the run's plan beside what it built, `changes.patch` or the folder's diff. A Claude run's cost is estimated from its tokens until its result arrives. Its actions are **Stop run** for a live run, **Resume** and **Resume with more budget…** for a paused one. It follows the run through `/api/runs/[run]/events` ([[Execution API And Routes]]).
+> - **The flow designer**, `/flows` (`?flow=<name>`), edits recipe files, not `/p/[slug]/flow`. Its **Run** button opens `/runs?new=<flow>` ([[Flow Design Index]]).
+
 ## Where execution shows
 
 | Screen | What of execution it shows | Mockup | Notes |
@@ -39,7 +44,7 @@ Transitions the guide draws between them: *"its dependencies are done"* (pending
 > [!check] Answered by run-flow, 2026-10-23
 > Queued is on the run, not the step: a run is `queued: true` in `state.json` from the engine's run command until the host reports it launched, which behind `--max-runs` means *"ready, no free worker"*; its step is already `running`. A run cut off while still queued is recorded `error: 'not launched'`, not wasted, the summary's run count leaves it out, and `--resume` starts it (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
-As built in run-flow (2026-10-23), two other marks map as follows. *asking* has no state of its own: the step stays `running` while its agent's question waits in the terminal, and the step's `timeout_minutes` clock stops meanwhile (Claude's call, open to Alex's review). *failed* is a step at a *run failed* gate, `awaiting_approval` with gate kind `run_failed`, whose run counts as wasted; a step is `failed` only when a person fails the flow.
+As built in run-flow (2026-10-23), two other marks map as follows. *asking* has no state of its own: the step stays `running` while its agent's question waits in the terminal, and the step's `timeout_minutes` clock stops meanwhile (Claude's call, open to Alex's review). *failed* is a step at a *run failed* gate, `awaiting_approval` with gate kind `run_failed`, whose run counts as wasted; a step is `failed` only when a person fails the flow. On the runs page (2026-11-10), a run whose host is asking the page reads `waiting`, an agent's question and a gate alike.
 
 Full mark tables: [[Flow Bar And Step States]], [[Task Status Icons]], [[Task Detail Marks]].
 
@@ -49,7 +54,7 @@ Full mark tables: [[Flow Bar And Step States]], [[Task Status Icons]], [[Task De
 
 ## Empty and loading states
 
-No execution-specific empty state is designed. Backlog 3.4 (**GAP**) asks the run viewer for *"Loading, 404 and stream‑lost states"*, and backlog 4.3 asks the inbox for a *"lost the orchestrator"* card. The inbox's empty state *"tells you what is still running and when to expect the next interruption"* (inbox guide); the drawio *FlowBoard ideation* inbox card: *"Empty state shows what's running / Not a shrug illustration."*
+No execution-specific empty state is designed. As built (2026-11-10), the runs page has two: an empty list reads *"No runs yet. Start one with + New run."*, and a lost stream shows a banner, *"⋯ lost the connection to the run; retrying, and the log catches up when it is back"*. A run whose gates wait but whose host does not take page answers shows *"… needs a decision; this run takes them in its terminal only. Start runs with `--page` to decide here."*, and a paused one *"… waits for a decision; resume the run to take it."* Backlog 3.4 (**GAP**) asks the run viewer for *"Loading, 404 and stream‑lost states"*, and backlog 4.3 asks the inbox for a *"lost the orchestrator"* card. The inbox's empty state *"tells you what is still running and when to expect the next interruption"* (inbox guide); the drawio *FlowBoard ideation* inbox card: *"Empty state shows what's running / Not a shrug illustration."*
 
 ## Related
 

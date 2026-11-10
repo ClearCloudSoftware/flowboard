@@ -29,13 +29,14 @@ Beat A covers two triggers, but only one goes through the web process. *Inferenc
 > - **G.** No stdout parser: the Claude adapter reads the Agent SDK's typed messages, and OpenCode its server's SSE events ([[Normalized Event Envelope]]).
 > - **H.** The shim (`packages/ask-user`) forwards over `ask.sock` to a broker inside `run-agent`, which asks in the terminal ([[Ask User MCP Server]]).
 
-As built in run-flow (2026-10-23), the run-flow host stands in for the worker from C to I, in one process, with no web process, job or lease (A, B):
+As built in run-flow (2026-10-23), the run-flow host stands in for the worker from C to I, in one process, with no job or lease (B). Corrected 2026-11-10 for the sandboxes and the runs page:
 
+- **A.** Start is `pnpm run-flow` or the runs page's **+ New run**. The route that serves + New run spawns `run-flow --page` itself, rather than writing rows and a job ([[Starting A Task]]).
 - **C.** The engine picks the step. The host builds the `RunSpec` from the inputs that exist, the output paths, and the task text plus any note and missing-inputs lines ([[Prompt Assembly]]).
-- **D, E, F.** No memory, no permission tier and no sandbox: the host adds the `flowboard` server (`ask_user`, and `set_outcome` where the verdict is read) and the guards, and the agent runs on the host with the owner's login ([[Run Guardrails At Launch]]).
-- **G.** Each event goes to the run's log, `<NNN>-<step>.jsonl`, and to a terminal line; the run's cost is printed when it ends.
-- **H.** A broker per agent run asks in the terminal, one prompt at a time; with no terminal, the agent is told *"No one can answer questions in this run."* There is no inbox, Slack or parking (the run-flow plan's *Left out* list).
-- **I.** As drawn, except that a check runs on the host in the run's folder.
+- **D, E, F.** No memory and no permission tier: the host adds the `flowboard` server (`ask_user`, and `set_outcome` where the verdict is read) and the guards ([[Run Guardrails At Launch]]). With no `sandbox:` the agent runs on the host with the owner's login. Under `runtime: docker` each agent run is its own container, with open network and the variables `sandbox.env` names, since Docker has no egress proxy yet. Under `runtime: opensandbox` it runs in the run's one box, which holds fake keys that the server's credential vault swaps for the real ones on the way out, and lets out only the allowed hosts ([[OpenSandbox Runtime]]).
+- **G.** Each event goes to the run's log, `<NNN>-<step>.jsonl`, and to a terminal line; the run's cost is printed when it ends. The runs page reads the log again whenever its SSE stream says a file in the run folder changed.
+- **H.** A broker per agent run asks in the terminal, one prompt at a time, and, under `--page`, on the runs page too, where the first answer wins. With neither, the agent is told *"No one can answer questions in this run."* There is no inbox, Slack or parking (the run-flow plan's *Left out* list).
+- **I.** As drawn, except where a check runs: on the host in the run's folder with no `sandbox:`, in a fresh offline container under `docker`, and in the run's box under `opensandbox`.
 
 See [[Run Flow Reference]].
 
