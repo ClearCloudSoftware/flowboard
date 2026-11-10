@@ -40,7 +40,8 @@ As built in run-flow (2026-10-23), `pnpm run-flow --check <flow.yaml>` runs the 
 | `max_attempts` is read | `steps.review.max_attempts: no rework route leads back to review, so nothing reads it` | Error |
 | Edges | `edges.2: unknown step "x"`; `edges.3: repeats the edge a → b; keep one and set its condition` | Error |
 | Names | `steps.Plan: name may only use lowercase letters, digits, - and _`; `steps.007: YAML reads this name as a number; quote it: "007"` | Error |
-| Agent step | `steps.a: an ai step needs prompt, skill or system_prompt`, then the step's `run-agent` checks (`steps.a.model: required`) | Error |
+| Agent step | `steps.a: an ai step needs prompt, skill or system_prompt; set one on the step or in defaults`, then the step's `run-agent` checks (`steps.a.model: required`) | Error |
+| A plugin skill exists (2026-11-10) | When the skill's plugin is one of the step's `plugins:` folders, matched by folder name: `steps.a.skill: plugin "tools" has no skills/plan/SKILL.md or commands/plan.md`. A plugin not in `plugins:` is the agent's own and is not checked: `-- warning: steps.a.skill: plugin "tools" is not in plugins:, so nothing checks it; the agent must already have it` | Error; warning when unlisted |
 | Write roots | `steps.a.write_roots.0: must be a path inside the folder, relative to it` | Error |
 | Join behind a conditional route | `steps.d: waits for "a", whose route here is conditional; if it does not fire, d runs without it`; further up, `steps.d: waits for "c", which runs only if the conditional route a → b fires; if it does not, d runs without it` | Warning |
 | Rework with nothing to read | `steps.check: reworks "impl" on a failure but produces nothing, so impl runs again without seeing why` | Warning |

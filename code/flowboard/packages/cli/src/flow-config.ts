@@ -196,7 +196,11 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
         if (PLACEHOLDER.test(template)) warnings.push(`${at}.prompt: {{…}} is not filled in; the agent reads it as written`);
       }
     } else if (merged.skill === undefined && merged.system_prompt === undefined) {
-      err(3, `${at}: an ai step needs prompt, skill or system_prompt`);
+      err(3, `${at}: an ai step needs prompt, skill or system_prompt; set one on the step or in defaults`);
+    }
+    const plugin = merged.skill?.includes(':') ? merged.skill.slice(1).split(':')[0] : undefined;
+    if (plugin && !(merged.plugins ?? []).some((p) => basename(p) === plugin)) {
+      warnings.push(`${at}.skill: plugin "${plugin}" is not in plugins:, so nothing checks it; the agent must already have it`);
     }
     // A recipe runs in many folders: its write roots are paths inside whichever one, relative to it.
     (st.write_roots ?? []).forEach((r, i) => {

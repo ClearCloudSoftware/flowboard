@@ -15,12 +15,13 @@ function tempDir(prefix: string) {
   return dir;
 }
 
-/** A temp base dir holding proj/, task.md, plugins/fbecho/ and the given task.yaml. */
+/** A temp base dir holding proj/, task.md, plugins/fbecho/ (with skill echo) and the given task.yaml. */
 function project(yaml: string, prompt = 'Fix the bug.') {
   // Real path: macOS's temp folder is a link, and loadConfig resolves folders to real paths.
   const base = realpathSync(tempDir(join(tmpdir(), 'fb-cli-')));
   mkdirSync(join(base, 'proj'));
-  mkdirSync(join(base, 'plugins', 'fbecho'), { recursive: true });
+  mkdirSync(join(base, 'plugins', 'fbecho', 'skills', 'echo'), { recursive: true });
+  writeFileSync(join(base, 'plugins', 'fbecho', 'skills', 'echo', 'SKILL.md'), 'Echo.');
   writeFileSync(join(base, 'task.md'), prompt);
   writeFileSync(join(base, 'task.yaml'), yaml);
   return base;
@@ -168,6 +169,10 @@ test('a blank prompt with no skill is reported', () => {
 test('a blank prompt is fine when a skill is set', () => {
   const r = loadConfig('task.yaml', project(MINIMAL + 'skill: /fbecho:echo\n', ''));
   assert.ok(r.ok, JSON.stringify(r));
+});
+
+test('a skill of a listed plugin must exist in it', () => {
+  assert.deepEqual(errorsOf(MINIMAL + 'plugins: [plugins/fbecho]\nskill: /fbecho:nope\n').errors, ['task.yaml: skill: plugin "fbecho" has no skills/nope/SKILL.md or commands/nope.md']);
 });
 
 test('skill must start with /', () => {

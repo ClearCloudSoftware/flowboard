@@ -183,6 +183,13 @@ export function configFromObject(
     // A skills: folder that failed its own check already has an error line.
     if (skills.some((s) => s.name === name)) invocation = `/${SKILLS_PLUGIN}:${name}`;
     else if (!(y.skills ?? []).some((p) => basename(toAbs(p, baseDir)) === name)) errors.push(`skill: no skill "${name}" in skills`);
+  } else if (y.skill !== undefined) {
+    // ponytail: a plugin is matched by folder name, as its capability id is; one not in plugins: is the agent's own and goes unchecked.
+    const [plugin, name] = y.skill.slice(1).split(':');
+    const dir = pluginDirs.find((d) => basename(d) === plugin && isDir(d));
+    if (dir && !isFile(join(dir, 'skills', name, 'SKILL.md')) && !isFile(join(dir, 'commands', `${name}.md`))) {
+      errors.push(`skill: plugin "${plugin}" has no skills/${name}/SKILL.md or commands/${name}.md`);
+    }
   }
   if (y.adapter === 'opencode' && !y.model.includes('/')) errors.push('model: opencode model must be "providerID/modelID"');
   (y.guards?.deny_commands ?? []).forEach((src, i) => {
