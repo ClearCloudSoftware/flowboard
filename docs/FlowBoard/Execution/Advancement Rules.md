@@ -17,7 +17,7 @@ What the engine does after a run finishes. The rules are PRD §8; the code lives
 
 "Succeeds" means the process exited 0 (*"On exit code 0, set the run to `succeeded`, scan for artifacts, then apply the advancement rules in §8"*, PRD §7). A shell step with a non-zero exit also follows its edges (PRD §7). See [[Run Outcomes]].
 
-As built in run-flow (2026-10-23), a run that ends with an error never reaches these rules: an agent's error or non-zero exit, a timeout, or a shell exit of 126 or 127 or a death by a signal waits at a *run failed* gate ([[Infra Retries]]), as does, since 2026-11-10, a sandboxed check's exit 125. Any other run is checked in this order as it ends (`core/src/flow/engine.ts`):
+As built in run-flow (2026-10-23), a run that ends with an error never reaches these rules: an agent's error or non-zero exit, a timeout, or a shell exit of 126 or 127 or a death by a signal waits at a *run failed* gate ([[Infra Retries]]), as does, since 2026-11-10, a sandboxed check's exit 125 and any check's exit 137 (killed by SIGKILL). Any other run is checked in this order as it ends (`core/src/flow/engine.ts`):
 
 1. An output the run did not write: a gate, `did not write: <types>`.
 2. An approval step: a gate, `approval needed`, plus `; it reported <outcome>` and `: <reason>` when the step reported them. So the PRD's rule 1 holds even when the step reported an outcome.

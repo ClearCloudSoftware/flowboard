@@ -60,6 +60,9 @@ Mockups count it (*"Attempt 3 of 3"*); PRD §7 treats non-zero exits as infrastr
 ### 15. How does a physical limit hit get classified?
 Backlog 3.5: *"marks the run failed with reason."* PRD §7's transient list does not name it, but does list *"process killed by a signal or lost on restart"*; an out-of-memory or wall-clock kill is a signal kill, so (inference) PRD §7 would retry it as transient. For a shell step a non-zero exit is an outcome, so an out-of-memory kill would loop as `fail`. → [[Resource Limits]], [[Infra Retries]]; [[Execution Open Questions]] #68, #41.
 
+> [!check] Answered for shell steps, 2026-11-10
+> run-flow reads a check's exit 137 (128 + SIGKILL) as a setup failure, `exit code 137: killed by SIGKILL, out of memory most likely`, which waits at a *run failed* gate rather than looping as `fail`, on the host and in a container. It does not ask Docker whether the kill was the OOM killer, and it does not retry ([[Execution Open Questions]] #41).
+
 As built (2026-10-18), the result does not show the signal: both adapters report a process killed from outside as exit 1 with an error text, so a runner cannot tell an out-of-memory kill from a plain failure ([[Agent Run Handle And Result]]).
 
 ### 16. How does the runner learn the denied host?
