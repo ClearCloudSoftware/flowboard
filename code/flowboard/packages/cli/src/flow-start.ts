@@ -33,7 +33,7 @@ export async function startRun(runsDir: string, flowsDir: string, input: StartIn
   if (input.allowDirty) args.push('--allow-dirty');
   args.push(join(flowsDir, `${input.flow}.yaml`));
   const out = openSync(log, 'a');
-  // run-flow makes runs/ in the folder it starts in.
+  // run-flow makes its run folder in FLOWBOARD_RUNS_DIR, which it inherits, else in runs/ where it starts.
   const child = spawn(process.execPath, args, { cwd: dirname(runsDir), detached: true, stdio: ['ignore', out, out] });
   child.unref();
   let exited: number | null | undefined;

@@ -30,8 +30,8 @@ Each source lists a different subset of fields. ✓ = present.
 | Budget | `max_budget_usd` | limits* | limits* | **Budget** | `limits.budget_usd` | [[Step Guardrails]] |
 | Attempts | `max_attempts` default 3 | limits* | limits* | **Retries** (0–5) | `max_attempts`, default 3 | Not the same number — [[Flow Design Open Questions]] #11 |
 | Advance mode | `advance_mode` `auto`/`approval` | advance mode | ✓ | **Approval** checkbox | `gate: approval` | [[Approval Gates]] |
-| Sandbox | no column; `settings.sandbox_profile` is *"overridable per step"* (§11.1). Backlog 1.1 adds an optional `step_defs.sandbox_profile` | — | — | **Sandbox** | — (`unknown key`) | [[Step Guardrails]]; [[Sandbox Configuration]] |
-| Egress allowlist | no column; part of the same `sandbox_profile` override | — | — | — | — | [[Flow Design Open Questions]] #14 |
+| Sandbox | no column; `settings.sandbox_profile` is *"overridable per step"* (§11.1). Backlog 1.1 adds an optional `step_defs.sandbox_profile` | — | — | **Sandbox** | — (`unknown key`); the flow-level `sandbox:` sets it for every step | [[Step Guardrails]]; [[Sandbox Configuration]] |
+| Egress allowlist | no column; part of the same `sandbox_profile` override | — | — | — | — (the flow-level `sandbox.egress`, OpenSandbox only) | [[Flow Design Open Questions]] #14 |
 | Requires | `requires` (JSON array of artifact type keys) | requires | ✓ | **needs** | `requires` | [[Artifact Contract]] |
 | Produces | `produces` | produces | ✓ | **produces** | `produces` | [[Artifact Contract]] |
 | Board order | `board_order` | — | — | — | — | [[Canvas Layout And Board Order]] |
@@ -42,11 +42,12 @@ Bold = control label in the flow-designer mockup. *limits\** = the generic word 
 
 The run-flow column is the flow file's key as built on 2026-10-23 ([[Run Flow Reference#Step fields]]):
 
-- **Launch keys** are `run-agent`'s, and the flow's `defaults` can set them once for every agent step; a step's own key replaces the default whole. run-flow also has keys no source lists: `adapter`, `write_roots`, `timeout_minutes` and `guards`.
-- **Defaults differ from the PRD's.** A missing `model` fails (`steps.a.model: required`), unset `effort` means the model's own, and `permissions.mode` defaults to `acceptEdits` while there is no sandbox ([[Run Agent CLI Decisions]] R8).
+- **Launch keys** are `run-agent`'s, and the flow's `defaults` can set them once for every agent step; a step's own key replaces the default whole. run-flow also has keys no source lists: `adapter`, `write_roots`, `timeout_minutes` and `guards`. `timeout_minutes` defaults to 30 on a shell step and to none on an agent step, whose `limits` bound it.
+- **Defaults differ from the PRD's.** A missing `model` fails (`steps.a.model: required`), unset `effort` means the model's own, and `permissions.mode` defaults to `acceptEdits`, with or without a sandbox ([[Run Agent CLI Decisions]] R8).
 - **Caps are optional.** The flow's required `budget_usd` caps the whole flow, `0` for none (Alex's call, 2026-10-23), and each agent run may spend only what is left of it. In a flow with no ceiling, `--check` warns about an agent step with neither `limits.max_turns` nor `limits.budget_usd` (the run-flow plan, Flow Design #37).
 - **`max_attempts`** (1 or more) is read only when a rework route leads back to the step; anywhere else it is an error (`steps.review.max_attempts: no rework route leads back to review, so nothing reads it`).
-- **The entry is derived**, the one step no route points to, unless the flow names it with `entry:`, which it must when every step has a route into it. A step's key is its only name, and positions, display names, an agent reference and sandbox fields have no key (Claude's calls, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
+- **The entry is derived**, the one step no route points to, unless the flow names it with `entry:`, which it must when every step has a route into it. A step's key is its only name, and positions, display names and an agent reference have no key (Claude's calls, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
+- **The sandbox is the flow's** (2026-11-10). A top-level `sandbox:` holds `runtime` (`docker`, the default, or `opensandbox`), `image` (required), `env` (Docker only) and `egress` and `credentials` (OpenSandbox only). A step has no sandbox key: `steps.a.sandbox: unknown key`. See [[Flow Validation]] and [[OpenSandbox Runtime]].
 
 ## The prompt template
 

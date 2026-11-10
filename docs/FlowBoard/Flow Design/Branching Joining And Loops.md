@@ -36,7 +36,7 @@ flowchart LR
 ## Designing a fan-out
 
 - **Shared worktree.** *"Parallel steps within one task share the task's worktree. If two concurrent steps both write code they will conflict — so the seeded default flow puts the test-writing agent on the same worktree but scoped to `tests/` via its prompt and `allowedTools`."* (PRD §11). The PRD calls this a known limitation.
-- **Concurrency cap.** Parallel steps compete for workers under the global cap (`VIBE_MAX_RUNS`, drawio *Job loop*).
+- **Concurrency cap.** Parallel steps compete for workers under the global cap (`VIBE_MAX_RUNS`, drawio *Job loop*). As built in run-flow (2026-11-10), there is no global cap: `--max-runs <n>` caps how many runs of one flow go at once, with no cap by default. It is pinned in `flow.json`, and `--resume --max-runs <n>` replaces it for that resume.
 - **The board.** *"When a task has multiple step instances running in parallel, the card sits in the column of the split point and shows a split badge listing the active branches."* (PRD §4)
 
 ## Designing a join

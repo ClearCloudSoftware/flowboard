@@ -32,7 +32,7 @@ The engine also parks a step at a gate when:
 - a step with conditional edges reports **no outcome** (*"no outcome reported"*);
 - a rework loop is **spent** (`max_attempts`) or **stuck** (same check fingerprint twice).
 
-As built in run-flow (2026-10-23), a spent loop reads `<target> has used <n> of <max> attempts` and a stuck one `<step> failed the same way twice`. Three more gates open by themselves: a fail that no route handles (`failed, and no edge handles a failure`), an agent run that did not write a declared output (`did not write: <types>`), and a run that failed rather than reporting a result (`run failed: <error>`), which includes a shell step that exits 126 or 127 or is killed by a signal.
+As built in run-flow (2026-10-23), a spent loop reads `<target> has used <n> of <max> attempts` and a stuck one `<step> failed the same way twice`. Three more gates open by themselves: a fail that no route handles (`failed, and no edge handles a failure`), an agent run that did not write a declared output (`did not write: <types>`), and a run that failed rather than reporting a result (`run failed: <error>`), which includes a shell step that exits 126 or 127 or is killed by a signal, and, in a sandbox, one that exits 125 because the sandbox could not start it (2026-11-10).
 
 The drawio concept 8 *Human escalation*: *"Every stop (gate, question, spent or stuck loop) lands in one inbox, then Slack. Your call overrides the agent's."*
 

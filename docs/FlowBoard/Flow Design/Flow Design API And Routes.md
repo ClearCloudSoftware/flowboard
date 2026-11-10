@@ -15,6 +15,15 @@ module: Flow Design
 
 A library shared across projects (see [[Flow Library]]) does not fit under `/p/[slug]`. See [[Flow Design Open Questions]] #1.
 
+As built (checked 2026-11-10), there are no projects, so no route sits under `/p/[slug]`:
+
+| Route | Screen |
+|---|---|
+| `/` | Redirects to `/flows` |
+| `/flows`, `/flows?flow=<name>` | The flow designer, on the named flow or the library's first ([[Flow Design Screen]]) |
+| `/runs?new=<flow>` | The runs page with the **New run** sheet open on that flow: where the designer's **Run** goes |
+| `/runs`, `/runs?run=<folder>` | The runs page ([[Execution Surfaces]]) |
+
 ## Endpoints in the PRD
 
 From PRD §12. *"All handlers are thin: validate with zod, call a function in `packages/core`, return JSON."*
@@ -56,13 +65,17 @@ Route handlers in `code/flowboard/app/api/flows/`. They are thin, as the PRD ask
 
 | Method | Path | Does |
 |---|---|---|
-| `GET` | `/api/flows` | The library: every recipe's name, description, steps, routes, gates, budget and problem count |
-| `POST` | `/api/flows` | `{ name }`: a new recipe holding only `budget_usd: 0`; `409` if the name is taken |
-| `GET` | `/api/flows/:name` | One recipe: its text, a version (a hash of the text), what it parses to, and what `--check` says of it |
-| `PUT` | `/api/flows/:name` | `{ draft, version }`: saves the draft over the recipe opened at `version`. `409` if the file changed since; `422`, with the problems, if the check refuses the result |
-| `POST` | `/api/flows/:name/check` | The live check: what saving the draft would write, and what `--check` says of it. Writes nothing |
+| `GET` | `/api/flows` | The library: the folder (`dir`) and every recipe's name, description, steps, routes, gates, budget and problem count |
+| `POST` | `/api/flows` | `{ name }`: a new recipe holding only `budget_usd: 0`, `201`. `400` for a bad name; `409` if the name is taken |
+| `GET` | `/api/flows/:name` | One recipe: its text, a version (a hash of the text), what it parses to, and what `--check` says of it. `404` if there is no such file |
+| `PUT` | `/api/flows/:name` | `{ draft, version }`: saves the draft over the recipe opened at `version`. `400` for another body; `409` if the file changed since or is gone; `422`, with the problems, if the check refuses the result |
+| `POST` | `/api/flows/:name/check` | The live check: what saving the draft would write, and what `--check` says of it. Writes nothing. `400` if the body is not a JSON object; `404` if there is no such file |
+| `GET` | `/api/prompts?path=<path>` | A prompt file: its text and a version, or `version: null` and no text when it does not exist yet. `400` for a path outside the flows folder (2026-11-10) |
+| `PUT` | `/api/prompts` | `{ path, text, version }`: writes the prompt file opened at `version`; `null` creates it. `409` if it changed since; `400` for a path outside the flows folder (2026-11-10) |
 
-The check is run-flow's own loader, run on the edited text, so the designer and `run-flow --check` cannot disagree. The routes read and write files on this machine, so they answer only requests whose `Host` is `localhost`, `127.0.0.1` or `[::1]`: a page elsewhere that points its own name at this machine (DNS rebinding) gets `403` (Claude's calls, 2026-10-24, open to Alex's review). There is no preview, adopt, running-tasks, export or import endpoint, as there is nothing for them to serve yet.
+Every route under `/api/flows/:name` answers `400` for a name that breaks the rule for step names. A prompt's `path` is relative to the flows folder. It may not be absolute, start with `~`, lead out with `..` or through a symlink, name a folder, or end in `.yaml`, so the prompt editor cannot overwrite a recipe.
+
+The check is run-flow's own loader, run on the edited text, so the designer and `run-flow --check` cannot disagree. The routes read and write files on this machine, so they answer only requests whose `Host` is `localhost`, `127.0.0.1` or `[::1]`: a page elsewhere that points its own name at this machine (DNS rebinding) gets `403`, *"the flows API answers only on localhost"* (Claude's calls, 2026-10-24, open to Alex's review). The prompt and runs routes share the guard. There is no preview, adopt, running-tasks, export or import endpoint, as there is nothing for them to serve yet. The runs routes, `POST /api/runs` among them, are in [[Execution API And Routes]].
 
 ## Server actions
 

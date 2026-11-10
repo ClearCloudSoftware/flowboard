@@ -5,13 +5,13 @@ module: Flow Design
 
 # Flow Design Open Questions
 
-Places where the sources disagree or leave a gap. Each needs a decision before building. Questions settled by the [[Capability Library Decisions]] (2026-10-15) carry their outcome. Questions that Alex or the run-flow host answered on 2026-10-23 carry the answer ([[Run Flow Reference]]), and so do those the flow designer answered on 2026-10-24 ([[Flow Design Screen#As built in the flow designer (2026-10-24)]]). Anything another note labels a **proposal** is listed here too.
+Places where the sources disagree or leave a gap. Each needs a decision before building. Questions settled by the [[Capability Library Decisions]] (2026-10-15) carry their outcome. Questions that Alex or the run-flow host answered on 2026-10-23 carry the answer ([[Run Flow Reference]]), and so do those the flow designer answered on 2026-10-24 ([[Flow Design Screen#As built in the flow designer (2026-10-24)]]) and those the code answered by 2026-11-10 ([[Flow Design And Execution Gap Audit]]). Anything another note labels a **proposal** is listed here too.
 
 ## Where flows live and who owns them
 
 ### 1. Per project, or one shared library?
 
-> [!check] **Answered — Alex's call (2026-10-23).** A flow is a reusable recipe, not one task's run: the folder and the task belong to each run, as the PRD's task references a flow. As built in run-flow, a flow file has no `folder:` or `task:` (`flow.yaml: folder: not in a flow file: a flow is a reusable recipe, and each run gives its folder with --folder`); a run gives them, `pnpm run-flow --folder <dir> --task <file> <flow.yaml>`, so one recipe runs in any folder. No project or library holds a flow file yet. See [[Run Flow Reference]].
+> [!check] **Answered — Alex's call (2026-10-23).** A flow is a reusable recipe, not one task's run: the folder and the task belong to each run, as the PRD's task references a flow. As built in run-flow, a flow file has no `folder:` or `task:` (`flow.yaml: folder: not in a flow file: a flow is a reusable recipe, and each run gives its folder with --folder`); a run gives them, `pnpm run-flow --folder <dir> --task <file> <flow.yaml>`, so one recipe runs in any folder. No project holds a flow file; the flow designer's library, built since, is one folder of recipe files ([[Flow Library]]). See [[Run Flow Reference]].
 
 The PRD makes a flow belong to a project: `flows.project_id`, the route `/p/[slug]/flow`, and *"Editing a project's flow never moves an in-flight task"* (§4). Backlog Story 8.2 adds a *"Reuse… picker (steps or whole flow from other projects, key uniquified)"*. Story 1.3 creates flow v1 from a flow type when a project is made. The flow-designer mockup instead shows one shared, multi-author library (`@core`, `@alex`, `@team-sec`, `@pm-guild`, `@growth`) that a project *adopts* from. The capability-library mockup ships flows inside bundle packs. The monitor mockup runs one `v4` flow across tasks from six repos (`flowboard/api`, `core`, `docs`, `providers`, `runner`, `web`). See [[Flow Library]] and [[Flows And Flow Versions]].
 
@@ -19,17 +19,23 @@ The PRD makes a flow belong to a project: `flows.project_id`, the route `/p/[slu
 
 > [!check] **Answered — Alex's call (2026-10-23).** A flow is a reusable recipe, apart from any task that runs it. As built in run-flow, a recipe's name is its file's name without the extension, and the file has no name, author or version key (`flow.yaml: name: unknown key`); nothing versions it yet (#4). Who authors a flow is left to the library.
 
+> [!check] **Answered in part by the flow designer, 2026-11-10.** The library identifies a recipe by its file name. A 12-character sha1 of the file's text names the copy the designer opened, and Save uses it only to refuse writing over a file that changed on disk; no run records it. There is still no author.
+
 The PRD says *"No auth, no multi-tenancy, no user table. Do not add them 'for later'"* (§2), and its key is `UNIQUE (project_id, name, version)`. The mockups identify a flow by **name + author + version** (`Software delivery @core v4`, preview slug `@core/software-delivery`). Authors need identities. The feature map calls identities the one new foundation the teams ideas need (*Across everything → Teams & collaboration*).
 
 ### 3. Library metadata has no home in the schema
 
 > [!check] **Answered by run-flow, 2026-10-23.** Not in the flow file, for now: its schema is strict, so a `description:` or `domain:` key is refused as unknown. Fields beyond what a run needs are decided with the canvas (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
+> [!check] **Answered in part by the flow designer, 2026-11-10.** Two fields are derived, not stored. The description is the file's first line when it is a comment (`# …`), and the shape glyph comes from the routes: more than one forward `always` route out of a step is a fan, a rework route a loop, and a step with both a forward `on_pass` and a forward `on_fail` route a branch. Domain, org default, fork lineage, runs, last used and cost have no home yet. See [[Flow Library]].
+
 The library rail shows a domain, description, ★ org default, *forked from*, a difference line, runs, last used, ~$/task, steps, gates and a shape glyph. None of these is a PRD column. **Proposal** in [[Flow Data Model]]: store domain, description, org default, fork lineage and difference line on the flow. Derive steps, gates, shape, runs, last used and cost from the graph, the tasks and the cost ledger.
 
 ### 4. Editing someone else's flow
 
 > [!check] **Answered — Alex's call (2026-10-23).** A flow is a reusable recipe. As built in run-flow, nothing versions it yet: an edit changes the file in place, each run pins the copy it loaded in its run folder's `flow.json`, and `--resume` reads that copy, so an edit never reaches a run already started. A hash of the recipe would now identify a flow version, but none is recorded until something reads it, the flow library or the Monitor (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). How a fork is made is left to the library.
+
+> [!check] **Answered in part by the flow designer, 2026-11-10.** Editing happens in place: Save writes the file over itself, and it is refused when the file's hash changed since it was opened. The hash is not recorded in `flow.json`, so it identifies no version a run can name. There is no fork.
 
 In the mockup, **Use this flow** copies the previewed flow and keeps its author and version, so saving makes `v(n+1)` under that same author. Should adopting create a fork under your name? The rail already shows `forked from @core v5`, but no source says how a fork is made. Separately, the capability-library guide's walkthrough wires a new step into `Code review @team-sec v2` and the version stays `v2`. That contradicts *"editing the graph forks a new version"* (architecture README). See [[Adopting And Adapting A Flow]].
 
@@ -39,7 +45,7 @@ In the mockup, **Use this flow** copies the previewed flow and keeps its author 
 
 > [!check] **Answered by run-flow, 2026-10-23.** Not in the flow file: its schema is strict, with no position field, and a step's key is its only name. A canvas that keeps positions keeps them in its own file, decided with the canvas (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
-> [!check] **Answered by the flow designer, 2026-10-24.** No, as backlog D4 has it: the canvas lays a flow out from its routes, the same way on every open, so it keeps no positions at all. A dragged step stays put until the page closes (Claude's call, 2026-10-24, open to Alex's review; see [[Canvas Layout And Board Order]]).
+> [!check] **Answered by the flow designer, 2026-10-24.** No, as backlog D4 has it: the canvas lays a flow out from its routes, the same way on every open, so it keeps no positions at all. A dragged step stays put until a flow is opened again, this one included (Claude's call, 2026-10-24, open to Alex's review; see [[Canvas Layout And Board Order]]).
 
 The flow-designer guide: *"Position is for your reading comfort, and it's saved with the version so the recipe looks the same to whoever opens it next."* Backlog decision **D4** and the drawio card *D4 · Don't persist node positions* (page *FlowBoard ideation*): *"No; dagre is deterministic."* Backlog Story 8.2 still lists *"**Decide** whether to persist node positions (needs a layout column)."* See [[Canvas Layout And Board Order]].
 
@@ -68,6 +74,8 @@ The two only differ if promote and Start are separate actions. Decision **D1** r
 
 ### 8. Can a saved version fail validation?
 
+> [!check] **Answered by the flow designer, 2026-11-10.** Not one the designer saved: Save is refused with 422 while the edit fails the check. A file edited by hand can still fail it. It opens with its problems in the strip (*won't save*), its **Run** button is disabled, the *New run* sheet greys it out (*does not pass the check*), and `run-flow` refuses it with exit 2. There are no versions or capability removals yet, so the case the question describes, an old adopted version, cannot arise.
+
 The mockup opens with the chip reading *adopted 12 Sep* (nothing edited), yet the strip says *won't save — 1 problem* (`threat-model` needs `design.md`). A saved version should never be invalid. One can become invalid later, if the validation rules change or a capability is removed. Removal protects only some versions: Remove *"is disabled while any step uses the plugin (counting each flow's latest version and any version a running task pins)"* (PRD §13), and [[Capability Library Decisions|D17]] adds *"Old, unpinned flow versions do not block removal."* So an older version that no task pins can name a skill that is gone (see [[Version Pinning]]). What does the designer show for an adopted version that no longer validates, and can tasks still start on it?
 
 ## Steps
@@ -88,6 +96,8 @@ The capability-library guide: *"Steps name their provider individually — one f
 
 > [!check] **Answered by run-flow, 2026-10-23.** A run-flow step has no `kind` key (it is refused as unknown): a step with `shell:` is a check, and any other is an `ai` step that needs `prompt`, `skill` or `system_prompt`, in any combination. There is no manual kind (#39) and no named agent: the agent is the step's inline `system_prompt`, as the run-flow plan's Left out list has it. The rules for each kind stay in run-flow's loader until the canvas or the worker reads flow files too, when the engine's `StepDef` gains a `kind` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
+> [!check] **Answered by the flow designer, 2026-11-10.** The step panel's **Runs** select offers *an agent* or *a shell command*, so the shell kind is in the designer. **Skill** is free text (`/plugin:name`), the agent is the inline **System** prompt, and there is no picker and no manual kind. The designer reads flow files through run-flow's loader, so the step rules did not move and `StepDef` has no `kind` ([[Flow Definition Internals]]).
+
 Before D27, the PRD and the backlog gave a step a `kind` (`skill | agent | shell | manual`) and one `skill_id` or `agent_id`. Since `8561b85` both read `ai | shell | manual` (PRD §5, §13; backlog Story 8.2). The flow-designer inspector has only a free-text **Agent** field. It has no kind, no skill picker, no check step and no manual step. The capability-library mockup's *used by* data has steps that use **both** a skill and an agent: `plan` uses skill `plan-implementation` and agent `architect`, and `review` uses skill `code-review` and agent `reviewer`. One `kind` cannot express that. See [[Step Kinds]].
 
 ### 11. Retries versus `max_attempts`, and what happens at the cap
@@ -104,6 +114,8 @@ The canvas bar shows *est. $X ceiling per task*: the sum of every step's budget.
 
 ### 13. Sandbox levels, and the unattended rule
 
+> [!check] **Answered by run-flow, 2026-11-10.** The levels are the host (no `sandbox:` key), `runtime: docker` (one container per step run) and `runtime: opensandbox` (one box per flow run), set once per flow; a per-step sandbox is `unknown key`. No level relaxes the `bypassPermissions` or `auto` refusal: either needs `permissions.allow_unrestricted_shell: true` on every tier. The *unattended and unsandboxed* flag is not built. See [[Step Guardrails#The sandbox rule]].
+
 Sandbox values differ by source:
 
 - Mockup: `none | container | sealed container`
@@ -116,6 +128,8 @@ Sandbox values differ by source:
 Backlog Story 1.1 adds an optional `step_defs.sandbox_profile` override. PRD §11.1 says the settings `sandbox_profile` is *"overridable per step"* (`PRD.MD:515`) but has no step column for it. The mockup flags a step with no gate and no sandbox as *unattended and unsandboxed*, and the guide says the real product *"refuses outright"*. The PRD rule is narrower: *"`bypassPermissions` is only allowed when the step runs in a sandbox tier"* (§11.1). The mockup has no `permission_mode` field. **Proposal** mapping in [[Step Guardrails]]. The rule itself is [[Permission Gate]].
 
 ### 14. Per-step egress edits made outside the designer
+
+> [!check] **Answered by run-flow, 2026-11-10.** **Allow host & retry** is built for OpenSandbox runs only, at a *run failed* or escalation gate. It lets the live box reach the host and adds it to `sandbox.egress` in the run's pinned `flow.json`, never to the recipe, so it makes no version: a resume of that run keeps the host, and a new run of the flow does not get it. At *run failed*, the retry reruns the same attempt. The list is the flow's, not the step's. See [[OpenSandbox Runtime]].
 
 The monitor and the inbox offer **Allow host & retry**, which *"adds api.stripe.com to this step's egress allowlist"* so that *"the next task down this flow will not pay the same toll"*. That changes a step definition from outside the designer. Does it create a flow version? Partly answered: the PRD keeps the allowlist in `settings.sandbox_profile` (*"tier, image, egress allowlist, limits"*), *"overridable per step"* (§11.1, `PRD.MD:515`), so a per-step allowlist is expected. Whether that override lives on the flow version is still open.
 
@@ -137,7 +151,7 @@ As built in run-flow (2026-10-23), no placeholder is filled in (the run-flow pla
 
 ### 17. Editing routes on the canvas
 
-> [!check] **Answered by the flow designer, 2026-10-24.** As backlog Story 8.2 has it: drag from a step's right edge to another step to draw a route, click its label to cycle `always → on_pass → on_fail`, and `Backspace` or `Delete` removes the selected route (or step). A route drawn back to a step before it starts as `on_fail`, a rework. A selected route also opens in the inspector, with its condition and **Delete this route**. Routes that point back arc over the top, as in the mockup, not under the row (Claude's call, 2026-10-24, open to Alex's review; see [[Flow Design Controls]]).
+> [!check] **Answered by the flow designer, 2026-10-24.** As backlog Story 8.2 has it: drag from a step's right edge to another step to draw a route, click its label to cycle `always → on_pass → on_fail` (the labels read `passed`, `failed` and, on a rework route, `failed ↺`), and `Backspace` or `Delete` removes the selected route (or step). A route drawn back to a step before it starts as `on_fail`, a rework. A selected route also opens in the inspector, with its condition and **Delete this route**. Routes that point back arc over the top, as in the mockup, not under the row (Claude's call, 2026-10-24, open to Alex's review; see [[Flow Design Controls]]).
 
 The feature map promises *"drag steps, draw connections"* (§2). Backlog Story 8.2: *"drag‑to‑connect, edge label cycles `always → on_pass → on_fail`"*. The mockup has no way to draw, select, relabel or delete a route. Routes only appear with **+ Step** and disappear with **Delete this step**.
 
@@ -214,6 +228,8 @@ PRD §13: *"A node graph is nice but not required for v1. A vertical list of ste
 
 PRD §13 and feature map §19 make draft mode a global setting, and `docs/pitch.md` calls it *"a global **draft mode**"*. The drawio puts the toggle on the costs screen (*FlowBoard ideation* group *Costs & settings*; *Logical components*: *Costs /costs — "rollups and draft-mode toggle"*) and, on the *Harness architecture* page, under *Library · Costs · Settings*. The mockup puts a **draft mode** toggle in the designer's topbar. Does it flip the global setting? The guide calls it *"a switch on how runs execute, not an edit to the flow"*. The mockup forces only the model (`haiku`), not the effort. See [[Draft Mode Setting]] and [[Draft Mode]].
 
+Neither is built (2026-11-10): no code implements draft mode ([[Models And Effort#Draft mode]]).
+
 ### 29. The seeded flow
 
 > [!check] **Resolved — D26.** *Software delivery*: the PRD's nine steps (check step and both gates kept) with the mockup's role names and agent + skill pairs. See [[Seeded Flows]].
@@ -222,7 +238,7 @@ PRD §15 seeds nine steps (research, grill, plan, explain, implement, tests, che
 
 ### 30. API for the library
 
-> [!check] **Answered in part by the flow designer, 2026-10-24.** For a library of recipe files: list, create, read, save over a version, and a live check. Preview, adopt or fork, and a project's flow wait for a shared library and for projects (Claude's call, 2026-10-24, open to Alex's review; see [[Flow Design API And Routes#As built in the flow designer (2026-10-24)]]).
+> [!check] **Answered in part by the flow designer, 2026-10-24.** For a library of recipe files: list, create, read, save over a version, and a live check. Preview, adopt or fork, and a project's flow wait for a shared library and for projects (Claude's call, 2026-10-24, open to Alex's review; see [[Flow Design API And Routes#As built in the flow designer (2026-10-24)]]). Since then, `GET` and `PUT /api/prompts` read, create and write a step's prompt file (2026-11-10).
 
 The PRD has three flow endpoints. The mockup also needs to list the library with stats, preview a version, adopt or fork, and set a project's flow. **Proposal** in [[Flow Design API And Routes]].
 
@@ -262,6 +278,8 @@ The feature map's role starter packs bundle *"the skills, tools, and design syst
 
 ### 36. Where does the adoption date live?
 
+> [!check] **Moot for now — the flow designer, 2026-11-10.** Nothing is adopted: a project points at no flow. The designer's chip reads `saved` or `edited — not saved`.
+
 The version chip reads `adopted 12 Sep` and, after **Use this flow**, `adopted just now`. PRD §5's `projects` row has `default_flow_id` and `created_at`, and `flows` has its own `created_at`, but nothing records when a project switched to a version. [[Flow Data Model]] proposes a new column such as `projects.default_flow_adopted_at`. Alternatives: show the version's `created_at` instead (wrong after adopting an old version), or derive it from an audit log no source defines. See [[Project Default Flow]].
 
 ### 37. Must every step have a budget and a turn cap?
@@ -273,6 +291,8 @@ The version chip reads `adopted 12 Sep` and, after **Use this flow**, `adopted j
 ### 38. Steps that cannot run on the host tier
 
 PRD §11.1: *"On the host tier, a step that mounts a git-installed plugin does not run"* ([[Capability Library Decisions|D15]]), and *"Probe for Docker at startup; if absent, fall back to the host tier and disable `bypassPermissions`."* So a step with sandbox `none`, or any step on a machine without Docker, can be valid in the designer and refused at run time. No source says whether the designer warns about this (a design-time check, like the PRD's *"the flow editor says so"* for missing hooks, §7) or only the run fails. See [[Step Guardrails]] and [[Permission Gate]].
+
+As built (2026-11-10), neither rule exists. The tier is the flow's `sandbox:`, plugins are folders, not git installs, and nothing probes for Docker or disables `bypassPermissions` by tier. A sandboxed step whose container cannot start waits at a *run failed* gate (for a check, `exit code 125: the sandbox could not start the command`), and an OpenSandbox box that cannot open stops the start with exit 2. The designer does not warn.
 
 ### 39. What does a manual step do?
 

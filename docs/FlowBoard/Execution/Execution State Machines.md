@@ -38,7 +38,19 @@ stateDiagram-v2
 - **Three failed attempts.** PRD §16 and backlog 10.1 have the task fail after three failed attempts; PRD §8 escalates instead (`blocked`). The diagram follows PRD §8 ([[Execution Open Questions]] #14).
 - **Pause** has no status to hold it. Feature map §3 names it (*"**Pause, send back, or cancel**"*); the task-detail guide defines it: *"Stops after the current run rather than mid-flight."*
 
-As built in run-flow (2026-10-23), the flow's own status, `FlowState.status` in `state.json`, is only `running`, `done` or `failed`; there is no `blocked`. Every gate lives on its step, and the flow stays `running` while it waits. The host reports two more states as it exits, without storing them: `paused` (exit 3), a step at a gate with nothing live and no terminal to answer it, and `stopped` (exit 130), a step `running` with no live run after Ctrl+C. Both can be read from `state.json` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). A flow whose budget is spent is also reported `paused`, with exit 3, but its runs are cut off as by Ctrl+C, so in `state.json` it can look stopped; its spend, against `flow.json`'s `config.budgetUsd`, tells the two apart. The flow ends `failed` only on a person's *Fail the flow*. `backlog`, `todo` and `cancelled` have no counterpart: there is no task, and cancel is on the run-flow plan's Left out list. Whether the worker stores `blocked`, or derives "waiting on you" from the steps at a gate and their gate kinds, is still open.
+As built in run-flow (2026-10-23), the flow's own status, `FlowState.status` in `state.json`, is only `running`, `done` or `failed`; there is no `blocked`. Every gate lives on its step, and the flow stays `running` while it waits. The host reports two more states as it exits, without storing them: `paused` (exit 3), a step at a gate with nothing live and neither a terminal nor the runs page (`--page`) to answer it, and `stopped` (exit 130), a step `running` with no live run after Ctrl+C or the runs page's Stop. Both can be read from `state.json` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). A flow whose budget is spent is also reported `paused`, with exit 3, but its runs are cut off as by Ctrl+C, so in `state.json` it can look stopped; its spend, against `flow.json`'s `config.budgetUsd`, tells the two apart. The flow ends `failed` only on a person's *Fail the flow*. `backlog`, `todo` and `cancelled` have no counterpart: there is no task, and cancel is on the run-flow plan's Left out list. Whether the worker stores `blocked`, or derives "waiting on you" from the steps at a gate and their gate kinds, is still open.
+
+As built (2026-11-10), the runs page derives a status for each run folder and stores none (`cli/src/flow-logs.ts`). A host is live while the pid in its `host.json` is.
+
+| Status | When |
+|---|---|
+| `starting` | A live host, no `state.json` yet |
+| `running` | A live host, no open ask |
+| `waiting` | A live host with an ask open in `asks/`, a gate or an agent's question; only a `--page` host writes asks |
+| `paused` | No live host, and no `state.json` or one not ended: stopped, paused at a gate or on the budget, or crashed. `--resume` continues it once it has a `state.json` |
+| `done`, `failed` | `state.json`'s `status` |
+
+So a Ctrl+C stop, a budget pause and a crash all read `paused`, and a run without `--page` reads `running` while a gate waits for its terminal.
 
 Full task-level treatment: [[Task Lifecycle]].
 
@@ -90,7 +102,7 @@ As built in run-flow (2026-10-23), `InstanceState` is `pending | running | await
 - A rework takes its target from `done` to `running`, at its next attempt.
 - A rework or an escalation deletes every step below its target, in whatever state, and stops their live runs. A step that a route from outside the reset already fed is put back as `pending` (Claude's call, 2026-10-23, open to Alex's review).
 - *Fail the flow* marks every `pending`, `running` or `awaiting_approval` step `failed`; nothing else does. An infra failure leaves its step `awaiting_approval` at a `run_failed` gate.
-- Ctrl+C, a crash or a spent budget leaves a step `running`; its cut-off run is recorded `interrupted`, and `--resume` starts it again at the same attempt.
+- Ctrl+C, the runs page's Stop, a crash or a spent budget leaves a step `running`; its cut-off run is recorded `interrupted`, and `--resume` starts it again at the same attempt.
 
 ## Run state
 
@@ -126,8 +138,8 @@ As built in run-flow (2026-10-23), a run record (`RunRecord` in `state.json`) ha
 | `starting` | `queued: true`, from the run command until the host reports the launch, a wait behind `--max-runs` included (Claude's call, 2026-10-23, open to Alex's review) |
 | `running` | `live: true`, no `queued` |
 | `succeeded` | `live: false`, no `error`; `outcome` is `pass`, `fail` or absent |
-| `failed` | `error` from the run itself: the provider's error, `exit code <n>`, `timed out after <n> minutes`, or a shell setup failure such as `exit code 127: command not found`. Always wasted |
-| `cancelled` | `error` set by the engine: `interrupted` (Ctrl+C, a crash or a spent budget; wasted), `superseded` (a rework or escalation; wasted), `stopped` (*Fail the flow*; not wasted), or `not launched` (cut off while still queued; not wasted) |
+| `failed` | `error` from the run itself: the provider's error, `exit code <n>`, `timed out after <n> minutes`, or a shell setup failure such as `exit code 127: command not found`, or, in a sandbox, `exit code 125: the sandbox could not start the command` (2026-11-10). Always wasted |
+| `cancelled` | `error` set by the engine: `interrupted` (Ctrl+C, the runs page's Stop, a crash or a spent budget; wasted), `superseded` (a rework or escalation; wasted), `stopped` (*Fail the flow*; not wasted), or `not launched` (cut off while still queued; not wasted) |
 | `parked` | none: parking is on the run-flow plan's Left out list |
 
 A failing check ends with `outcome: 'fail'` and no `error`: a result, not a run failure, which settles #57 for run-flow. With no worker, a restart is `--resume`, which first stops what the dead host left running (Alex's call, 2026-10-23), then records each run still marked live as `interrupted` and reruns its step at the same attempt. No single run can be stopped by hand.

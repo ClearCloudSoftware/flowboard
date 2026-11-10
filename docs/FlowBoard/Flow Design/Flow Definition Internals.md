@@ -21,6 +21,8 @@ From `docs/old/architecture/02-core-and-engine.md` §2:
 
 As built in run-flow (2026-10-23), core's `validateFlow` (`core/src/flow/flow.ts`) is pure, as the seam says, but checks only the graph and the artifact contract. The step rules stay in the CLI loader, `loadFlow` (`cli/src/flow-config.ts`), beside its file reads: the name rule, no `START` or `END`, `an ai step needs prompt, skill or system_prompt`, `a shell step writes one artifact`, launch keys on a shell step, `max_attempts` with no rework route back, `write_roots` inside the folder, and the placeholder and no-limits warnings. They stay there until a second reader, the canvas or the worker, exists; moving them means adding `kind` to `StepDef` (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
 
+As built in the flow designer (2026-11-10), the designer is that second reader, and the rules did not move: `checkFlow` (`cli/src/flow-files.ts`) calls `loadFlow` on the file or the unsaved edit, so the designer's checks are `--check`'s word for word. `StepDef` still has no `kind`.
+
 ## Where the code lives
 
 The PRD's rule (§3): *"**`packages/core` imports no framework, no database driver and no CLI.**"* The architecture README's module layout:
@@ -48,6 +50,7 @@ flowchart LR
 - The drawio *Harness architecture* page puts *Flow validation on save* in **Process 1 · apps/web** (*"thin: validates, calls core, enqueues; never spawns agents"*) and the **Flow engine** in **Process 2 · apps/worker** (*"its rules come from packages/core"*).
 - API handlers are thin: *"validate with zod, call a function in `packages/core`, return JSON"* (PRD §12).
 - As built in run-flow (2026-10-23), `pnpm run-flow --check`, `--mermaid` and every start call `loadFlow`, which calls `validateFlow`. The engine, `advance` (`core/src/flow/engine.ts`), assumes a flow that passed.
+- As built in the flow designer (2026-11-10), the `/api/flows` routes call `loadFlow` too, through `checkFlow`: on every read, on each check of an unsaved edit, and before a save, which is refused with 422 on an error. The routes import `packages/cli`, not only `packages/core`. See [[Flow Design API And Routes]].
 
 ## Inputs validation needs
 
@@ -77,7 +80,7 @@ The engine *"Depends only on the AgentProvider port's `RunResult`, never on how 
 
 The reference tree (`docs/old/reference/`) has no `StepDef`, `FlowDef`, `Edge` or `FlowVersion` type. `StepDef` appears only as an undeclared name, in three places: `02-core-and-engine.md` (`run(step: StepDef, …)`), `07-ports-in-practice.md` (`runStep`) and `docs/old/design/README.md` (`columns: StepDef[]`). The nearest typed shapes are `RunSpec`, `PromptParts` and `RunResult` in `agent-provider.ts`.
 
-As built in run-flow (2026-10-23), core defines `FlowDef`, `StepDef` and `FlowEdge` (`core/src/flow/flow.ts`), holding only what the engine reads: a `StepDef` is `id`, `requires`, `produces`, `approval` and `maxAttempts`; an edge is `from`, `to` and `condition`; `FlowDef.entry` names the first step when the routes cannot. The CLI's `FlowConfig` (`cli/src/flow-config.ts`) wraps the `FlowDef` with the rest: the flow's name, the run's `folder` (from `--folder`), the flow's `budgetUsd`, the warnings, and `steps`, which maps each step to an `AiStep` (a `run-agent` `RunConfig`) or a `ShellStep` (its command and timeout).
+As built in run-flow (2026-10-23), core defines `FlowDef`, `StepDef` and `FlowEdge` (`core/src/flow/flow.ts`), holding only what the engine reads: a `StepDef` is `id`, `requires`, `produces`, `approval` and `maxAttempts`; an edge is `from`, `to` and `condition`; `FlowDef.entry` names the first step when the routes cannot. The CLI's `FlowConfig` (`cli/src/flow-config.ts`) wraps the `FlowDef` with the rest: the flow's name, the run's `folder` (from `--folder`), the flow's `budgetUsd`, the warnings, and `steps`, which maps each step to an `AiStep` (a `run-agent` `RunConfig`) or a `ShellStep` (its command and timeout). As of 2026-11-10 it also holds `yamlPath`, the recipe's absolute path, and an optional `sandbox`, the flow's `sandbox:` settings; an `AiStep` also holds `verdict`, true when a route or a gate reads its outcome, and an optional `timeoutMinutes`.
 
 ## Tests
 

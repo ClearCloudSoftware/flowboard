@@ -12,7 +12,7 @@ import { hostExecHost, ReplayProvider } from '@flowboard/adapters';
 import type { Box } from '@flowboard/adapters';
 import { askBroker } from '@flowboard/ask-user';
 import { processStart } from '../src/flow-exec.ts';
-import { DISCARD_COMMANDS, pushable, runFlow } from '../src/flow-run.ts';
+import { DISCARD_COMMANDS, pushable, runFlow, sandboxFor } from '../src/flow-run.ts';
 import type { RunDeps } from '../src/run.ts';
 import { DELIVERY, flowProject, RUN } from './fixtures/flow.ts';
 
@@ -281,6 +281,26 @@ test('with --page, a stop file from the runs page stops the flow so --resume can
     writeFileSync(join(runDir, 'stop'), '');
   })();
   assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], deps), 130, out.join('\n'));
+});
+
+test('with --page, a second stop file is a repeat, never the quit-at-once second Ctrl+C', async () => {
+  const { out, deps, runDir, exits } = setup(SHELL_ONLY.replace("shell: 'exit 0'", 'prompt: prompts/build.md'), { build: ['hang'] });
+  const make = deps.makeProvider!;
+  deps.makeProvider = (id) => {
+    const p = make(id);
+    // An agent slow to stop, so the second stop arrives while the first is still under way
+    return { ...p, launch: (spec) => { const run = p.launch(spec); return { ...run, stop: () => void setTimeout(() => run.stop(), 900) }; } };
+  };
+  const t0 = Date.now(); // a clock that moves, from the fixture's time, so the run folder keeps its name
+  deps.now = () => new Date(new Date(2026, 9, 18, 9, 5, 7).getTime() + Date.now() - t0);
+  void (async () => {
+    while (!existsSync(join(runDir, 'host.json'))) await delay(20);
+    writeFileSync(join(runDir, 'stop'), '');
+    await delay(500);
+    writeFileSync(join(runDir, 'stop'), '');
+  })();
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], deps), 130, out.join('\n'));
+  assert.deepEqual(exits, []);
 });
 
 test('a step that runs past timeout_minutes is stopped and waits at a run_failed gate', async () => {
@@ -942,4 +962,27 @@ test('an artifact a running agent produces is never pushed over its copy in the 
   mkdirSync(join(dir, '.outcomes'));
   writeFileSync(join(dir, '.outcomes', '001-plan.json'), '{}');
   assert.deepEqual(pushable(dir, new Set([join(dir, 'notes.md')])).map((f) => basename(f)).sort(), ['check_output.md', 'plan.md']);
+});
+
+test('a docker sandbox gives sandbox.env to agents only: a check gets none of it', () => {
+  process.env.FB_TEST_TOKEN = 'secret';
+  try {
+    const box = sandboxFor({ runtime: 'docker', image: 'x', env: ['FB_TEST_TOKEN'] }, '/art');
+    assert.deepEqual(box({ online: true }).profile?.env, { FB_TEST_TOKEN: 'secret' });
+    assert.deepEqual(box({}).profile?.env, {});
+  } finally {
+    delete process.env.FB_TEST_TOKEN;
+  }
+});
+
+test('FLOWBOARD_RUNS_DIR names the folder run folders go in, as the runs page reads it', async () => {
+  const { deps, base } = setup(SHELL_ONLY);
+  process.env.FLOWBOARD_RUNS_DIR = 'elsewhere';
+  try {
+    assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0);
+  } finally {
+    delete process.env.FLOWBOARD_RUNS_DIR;
+  }
+  assert.ok(existsSync(join(base, 'elsewhere', STAMPED, 'state.json')));
+  assert.equal(existsSync(join(base, 'runs', STAMPED)), false);
 });

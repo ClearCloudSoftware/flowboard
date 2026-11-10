@@ -18,7 +18,7 @@ The flow-designer guide: *"Each field is a guardrail — the things that decide 
 | Tools | `allowed_tools` (JSON; null = unrestricted) | — | Allowed tool list | — |
 | Attempts | `max_attempts` (default 3) | **Retries** (0–5) | *"How many attempts before the step gives up and fails the task."* (guide) | *"Set high on a step that fails deterministically and you pay for the same failure several times."* |
 | Approval | `advance_mode` | **Approval** | See [[Approval Gates]] | *"No gate on the last step before a merge means nothing human ever sees the result."* |
-| Sandbox | no column; `settings.sandbox_profile` is *"overridable per step"* (§11.1). Backlog 1.1 adds optional `step_defs.sandbox_profile` | **Sandbox** | *"How locked down the run is: none, a container, or a sealed container with no network."* | *"**none** on an unattended step is an agent with your machine and your keys, reading untrusted content."* |
+| Sandbox | no column; `settings.sandbox_profile` is *"overridable per step"* (§11.1). Backlog 1.1 adds optional `step_defs.sandbox_profile`. As built, one flow-level `sandbox:` key, no per-step override ([[#The sandbox rule]]) | **Sandbox** | *"How locked down the run is: none, a container, or a sealed container with no network."* | *"**none** on an unattended step is an agent with your machine and your keys, reading untrusted content."* |
 | Egress allowlist | no column; the allowlist is part of `settings.sandbox_profile`, *"overridable per step"* (§11.1) | — | Hosts the step's sandbox may reach. Four other mockups speak of a per-step allowlist (*"that step's allowlist"*, *"this step's egress allowlist"*) | — |
 | Permission mode | `permission_mode` (default `bypassPermissions`) | — | The agent CLI's permission mode (as built: `RunSpec.permissionMode`; with none passed the adapters use `dontAsk`, while `run-agent` and `run-flow` default to `acceptEdits`, per [[Run Agent CLI Decisions]] R8. run-flow sets `permissions.mode` per step or in `defaults`) | — |
 
@@ -30,6 +30,8 @@ The flow-designer guide: *"Each field is a guardrail — the things that decide 
 ## Logical caps, physical backstops
 
 `max_turns` and `max_budget_usd` are *logical* caps passed to the CLI (`--max-turns`, `--max-budget-usd`). As built, they are `RunSpec.limits`: Claude passes them as Agent SDK options, which become those flags; OpenCode turns `maxTurns` into `steps` on its agents, and its adapter aborts the session once the running cost reaches `maxBudgetUsd` ([[OpenCode Adapter]]). The sandbox adds *physical* ones: *"resource limits (`--memory`, `--cpus`, `--pids-limit`, wall-clock) that physically backstop the logical `max_turns`/`max_budget_usd` caps"* (PRD §11.1). Backlog Story 3.5: *"a limit/timeout hit marks the run failed with reason."*
+
+As built in run-flow (2026-11-10), the only physical backstops are a step's `timeout_minutes` (30 for a shell step, none for an agent) and, under `sandbox: { runtime: docker }`, `--pids-limit 512` on every container. Memory and CPU limits are not set.
 
 Whether a provider enforces them depends on capability flags: `budget_cap` — *"honours maxBudgetUsd; else it is advisory"*; `allowed_tools` — *"tool allow/deny is enforced, not advisory"* (`agent-provider.ts`). No `allowed_tools` → *"tool policy becomes advisory / prompt-level"* (`01-ports.md`).
 
@@ -48,15 +50,29 @@ As built in run-flow (2026-10-23), nothing reads these flags (capability-gap war
 
 Egress is default-deny with an allowlist (PRD §11.1). The capability library, inbox, monitor and task-detail mockups all treat it as **per step**: *"a step using it will still fail closed until you add the host it needs to that step's allowlist"* (capability-library mockup), and **Allow host & retry** *"adds the blocked host to that step's allowlist"* (inbox guide). The flow designer, the one screen that edits steps, has no allowlist field. Where the per-step list is stored, and whether editing it makes a flow version, is [[Flow Design Open Questions]] #14. See [[Egress Allowlist]] and [[Capability Tools And Egress]].
 
+As built in run-flow (2026-11-10), there is no per-step allowlist; egress is set once for the flow, in its `sandbox:` key:
+
+- **`runtime: docker`** is all or nothing. Agent containers have open network access and the variables `sandbox.env` names; check containers run with `--network none` and none of them. An allowlist is refused, because no egress proxy exists yet.
+- **`runtime: opensandbox`** denies egress by default and allows only `sandbox.egress`, which defaults to the API hosts of the steps' adapters. **Allow host & retry** at a *run failed* or escalation gate adds a host to the live box and to the run's pinned `flow.json`, never to the recipe ([[Flow Design Open Questions]] #14).
+
+See [[OpenSandbox Runtime]].
+
 ## The sandbox rule
 
 > **`bypassPermissions` is only allowed when the step runs in a sandbox tier.** On the host tier, refuse it (or downgrade to an approval mode). — PRD §11.1
 
 Backlog decision D7: *"Container + egress allowlist; `host` only for non-bypass or a trusted opt-out."* Feature map §10: *"Fully-autonomous mode (no approval on each action) is only allowed when the agent is inside a box; otherwise FlowBoard refuses it."*
 
-As built in run-flow (2026-10-23), every step runs on the host; there are no tiers yet. `bypassPermissions`, `auto` or an allow entry that permits any shell command is refused unless the step sets `permissions.allow_unrestricted_shell: true` (`steps.a.permissions.mode: bypassPermissions lets shell commands write outside folder; set permissions.allow_unrestricted_shell: true to allow it`), and with that opt-in it runs on the host ([[Run Agent CLI Decisions]] R3, the owner's decision). The opt-in's warning, `-- warning: steps.<step>: unrestricted shell: commands can write outside <folder>`, prints under `--check` and when a flow starts; a recipe checked without `--folder` reads `outside the folder`.
+As built in run-flow (2026-10-23), `bypassPermissions`, `auto` or an allow entry that permits any shell command is refused unless the step sets `permissions.allow_unrestricted_shell: true` (`steps.a.permissions.mode: bypassPermissions lets shell commands write outside folder; set permissions.allow_unrestricted_shell: true to allow it`), and with that opt-in it runs, on the host unless the flow has a sandbox ([[Run Agent CLI Decisions]] R3, the owner's decision). The opt-in's warning, `-- warning: steps.<step>: unrestricted shell: commands can write outside <folder>`, prints under `--check` and when a flow starts; a recipe checked without `--folder` reads `outside the folder`.
 
-The mockup inspector argues with one combination: no approval gate **and** sandbox `none` shows a chip, *unattended and unsandboxed*. The guide: *"The inspector flags it rather than blocking it — but in the real product that's the combination the sandbox rule refuses outright."*
+As built in run-flow (2026-11-10), a flow picks its tier with the top-level `sandbox:` key, not per step (`steps.a.sandbox: unknown key`). Without the key, every step runs on the host. `runtime: docker` runs each step run in its own throwaway container, and `runtime: opensandbox` runs the whole flow in one box. The rule above does not depend on the tier: `bypassPermissions` and `auto` need `permissions.allow_unrestricted_shell: true` with or without a sandbox, so no tier relaxes the refusal ([[Flow Design Open Questions]] #13). `--check` and every start print one warning per tier:
+
+- Docker, when the flow has an agent step: `-- warning: sandbox: ai steps have open network access and the variables in sandbox.env`.
+- OpenSandbox: `-- warning: sandbox: agents' edits stay in the sandbox; the run ends with changes.patch to review`.
+
+The keys and their rules are in [[Flow Validation]] and [[OpenSandbox Runtime]].
+
+The mockup inspector argues with one combination: no approval gate **and** sandbox `none` shows a chip, *unattended and unsandboxed* (not built: the designer has no such chip, 2026-11-10). The guide: *"The inspector flags it rather than blocking it — but in the real product that's the combination the sandbox rule refuses outright."*
 
 > [!warning] Two different rules
 > The PRD rule pairs **permission mode** with the sandbox tier. The mockup pairs **advance mode** (gate) with the sandbox. The mockup's chip would not flag a gated step on the host running `bypassPermissions`, which the PRD rule refuses (§11.1). See [[Flow Design Open Questions]] #13.

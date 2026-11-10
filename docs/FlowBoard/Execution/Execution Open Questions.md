@@ -14,6 +14,9 @@ Callouts mark the questions the code has since answered. *Answered by run-flow* 
 ### 1. Auto-start or an explicit Start?
 Feature map §3 asks; backlog D1 and the drawio default to *"Explicit Start button on card + sheet; promote stays cheap"*. PRD §12 has no start endpoint; the first build added `POST /api/tasks/:id/start`. No mockup draws Start, and the mockup guides draw promote as the start: the task-detail guide's *"you promote it"* goes from `backlog` to `running`, and the monitor guide's beat 2 has the first step queued at once. Same as [[Monitor Open Questions]] #24, [[Task Detail Open Questions]] #10 and [[Intake And Import Open Questions]] #14. → [[Starting A Task]]
 
+> [!check] Answered by run-flow, 2026-11-10
+> Explicit, with no promote: a run starts only when a person starts it, with `pnpm run-flow` or the runs page's **+ New run**, which the flow designer's **Run** opens on its flow (`cli/src/flow-start.ts`). Whether the board's promote also starts a task stays open for the web app. See [[Starting A Task]].
+
 ### 2. What Start does, and what it pins
 No source lists Start's steps. **Proposal:** status `running`, one `pending` instance per entry step, one `start_run` each. The sources also split on when the flow is pinned and the worktree made: at **promotion** (PRD §5 *"pinned on promotion"*, PRD §11–§12, backlog 2.1) or at **start** (PRD §4 *"version-pinned at task start"*, drawio *"Start task / pin flow version"* and *"Tasks pin flow_id at start"*, feature map §3). `capability_pins` is *"set when the task starts"* (PRD §5). Once D1 separates promote from Start, these readings differ. Feature map §14 (*"created when the task starts"*) and the architecture README (*"a task pins its version at start"*) also say start; PRD §14 M2 (*"Promote Backlog → Todo creates a worktree"*) and §16 say promote. Same as [[Workspaces Open Questions]] #1. → [[Starting A Task]]
 
@@ -34,7 +37,7 @@ By PRD §8's definition (*"multiple incoming edges"*) it is: it has `on_fail` ed
 ### 5. Approval and questions on one step
 PRD §8 checks approval before unanswered questions. A step with both parks for approval while questions are still open.
 
-As built in run-flow (2026-10-23), this cannot happen: questions are answered live in the terminal, and any still open are withdrawn when the run ends, before an approval gate opens. Parking is left out of run-flow, so the question stays open for the worker.
+As built in run-flow (2026-10-23), this cannot happen: questions are answered live, in the terminal or, since 2026-11-10, on the runs page of a `--page` run, and any still open are withdrawn when the run ends, before an approval gate opens. Parking is left out of run-flow, so the question stays open for the worker.
 
 ### 6. What a `manual` step does
 PRD §5 allows `kind = 'manual'`. No rule says how the engine runs it, what it waits for, or what sets its outcome.
@@ -68,7 +71,7 @@ PRD has no done rule; `02` §3 gives *"no active instances **and** no reachable 
 ### 11. Task status at a plain approval gate
 `blocked` is stated for infra failures, spent loops and parked runs. Whether an ordinary approval gate sets `blocked` is not. The task-detail status bar says *"blocked on you"* while a gate waits; its header pill says *"waiting on you"*.
 
-As built in run-flow (2026-10-23), the flow stays `running` at every gate, and no blocked or paused status is stored: each gate records its kind (`verdict`, `escalation` or `run_failed`), and a screen can read paused or stopped from `state.json` (Claude's call, 2026-10-23, open to Alex's review). What the web app shows at a plain approval gate is still open.
+As built in run-flow (2026-10-23), the flow stays `running` at every gate, and no blocked or paused status is stored: each gate records its kind (`verdict`, `escalation` or `run_failed`), and a screen can read paused or stopped from `state.json` (Claude's call, 2026-10-23, open to Alex's review). Since 2026-11-10 the runs page shows a run whose `--page` host has a gate open as `waiting`, with a card offering the gate's decisions. A run without `--page` reads `running` there, with a banner saying its terminal takes the decision ([[Execution State Machines]]). What the board shows at a plain approval gate is still open.
 
 ### 12. Instance states after Reject, Fail task and infra failure
 The task status is given; the instance state is not. **Proposal** marked `*` in [[Execution State Machines]]. On screen, the monitor's **failed** chip maps to no settled PRD state: instance `failed`, an escalation gate, or a `blocked` task (see [[Execution Surfaces]]).
@@ -145,6 +148,9 @@ As built in run-flow (2026-10-23), nothing is retried automatically: a run that 
 ### 24. Allow host & retry
 Writes to *"this step's egress allowlist"*. Flows are immutable versions (PRD §4); which version it edits, and whether the running task sees it, are not stated. It does count: the monitor guide re-queues the run *"as the next attempt"*. What is open is a retry past the cap: the inbox card offers it on *"Attempt 3 of 3 failed"*, and no source says whether that attempt is allowed, escalates (PRD §8) or fails the task. Same as [[Sandboxing Open Questions]] #11 and [[Human In The Loop Open Questions]] #26.
 
+> [!check] Answered by run-flow, 2026-11-10
+> For OpenSandbox runs only. At a *run failed* or escalation gate, the terminal and, for a `--page` run, the runs page ask for a host to allow before the retry. With Retry, the host is let through the live box at once and added to `sandbox.egress` in the run's pinned `flow.json`, so a resumed run's box allows it too. It never edits the recipe, so it makes no flow version. At *run failed* it reruns the same attempt, not the next; at an escalation it is the escalation's Retry, one attempt past a spent budget, which is allowed (`cli/src/flow-run.ts`, test `flow-run.test.ts` *a failed sandboxed step can be retried with a host let through first*). Docker runs have no allowlist, so no Allow host. See [[Execution Controls]] and [[OpenSandbox Runtime]].
+
 ### 25. How the runner classifies a failure
 No source lists the exit codes, stderr patterns or events that mean "transient".
 
@@ -158,25 +164,25 @@ Partly answered: backlog 3.3 fails a dead run *"with a Retry hint"*, backlog 2.3
 `03` §8 and backlog 3.4: `cancelled`. Monitor guide: *"recorded as failed, with "stopped by you""*. ([[Monitor Open Questions]] #14)
 
 > [!check] Answered by run-flow, 2026-10-23
-> Neither, and there is no per-run Stop: a run cut off by Ctrl+C, SIGTERM or SIGHUP, or because the flow has spent its budget, is recorded with the error `interrupted` and wasted, and its step stays `running` for `--resume` (the run-flow plan). Runs stopped by Fail the flow get `stopped` (not wasted), runs stopped by a rework or an escalation `superseded` (wasted), and a run cut off before it launched `not launched` (#13). [[Run Flow Monitor Readiness]] suggests a `run failed: stopped by you` gate for a future per-run Stop, which matches the Monitor guide. See [[Run Flow Reference#Stopping and resuming]].
+> Neither, and there is no per-run Stop: a run cut off by Ctrl+C, SIGTERM, SIGHUP or, since 2026-11-10, the runs page's Stop, which stops the whole flow, or because the flow has spent its budget, is recorded with the error `interrupted` and wasted, and its step stays `running` for `--resume` (the run-flow plan). Runs stopped by Fail the flow get `stopped` (not wasted), runs stopped by a rework or an escalation `superseded` (wasted), and a run cut off before it launched `not launched` (#13). [[Run Flow Monitor Readiness]] suggests a `run failed: stopped by you` gate for a future per-run Stop, which matches the Monitor guide. See [[Run Flow Reference#Stopping and resuming]].
 
 ### 28. What the engine does after a Stop
 Not stated. **Proposal:** park the instance at `awaiting_approval` with reason "stopped"; no automatic retry. → [[Stopping And Cancelling]]
 
 > [!check] Answered by run-flow, 2026-10-23
-> After Ctrl+C the step stays `running`, with no gate, and `--resume` reruns it at the same attempt; nothing reruns it by itself (the run-flow plan). A single run stopped on its own, today only by its `timeout_minutes`, ends with an error such as `timed out after 10 minutes` and waits at a *run failed* gate, close to the proposal; a per-run Stop would land there too. See [[Run Flow Reference#Stopping and resuming]].
+> After Ctrl+C, or the runs page's Stop (2026-11-10), the step stays `running`, with no gate, and `--resume` reruns it at the same attempt; nothing reruns it by itself (the run-flow plan). A single run stopped on its own, today only by its `timeout_minutes`, ends with an error such as `timed out after 10 minutes` and waits at a *run failed* gate, close to the proposal; a per-run Stop would land there too. See [[Run Flow Reference#Stopping and resuming]].
 
 ### 29. Pause
 Feature map §3 names it (*"**Pause, send back, or cancel**"*); the task-detail guide gives the rule: *"Stops after the current run rather than mid-flight. The workspace stays."* No status, column, endpoint or engine rule backs it. **Proposal:** a flag checked before enqueuing the next `start_run`.
 
 > [!check] Answered by run-flow, 2026-10-23
-> run-flow pauses mid-flight, not after the current run: Ctrl+C (or SIGTERM or SIGHUP) stops every live run, records it `interrupted` and wasted, saves the state and exits 130, and `--resume` reruns those runs at the same attempt (the run-flow plan). A gate that no terminal can answer also pauses the flow, with exit 3, and so does a spent budget: when a run ends and the flow has spent its `budget_usd`, run-flow stops the live runs as Ctrl+C does and exits 3, and `--resume <run folder> --budget-usd <more>` carries on (Alex's call for the ceiling, 2026-10-23; pausing at it is Claude's call, open to Alex's review). A pause that lets live runs finish and launches nothing new would be a small change to the run-flow host. See [[Run Flow Reference#Stopping and resuming]].
+> run-flow pauses mid-flight, not after the current run: Ctrl+C (or SIGTERM, SIGHUP or, since 2026-11-10, the runs page's Stop) stops every live run, records it `interrupted` and wasted, saves the state and exits 130, and `--resume` reruns those runs at the same attempt (the run-flow plan). A gate that no terminal can answer also pauses the flow, with exit 3, unless the run was started with `--page` (2026-11-10): then the host stays up while the question is open on the runs page, and goes on once it is answered. A spent budget pauses it too, `--page` or not: when a run ends and the flow has spent its `budget_usd`, run-flow stops the live runs as Ctrl+C does and exits 3, and `--resume <run folder> --budget-usd <more>` carries on (Alex's call for the ceiling, 2026-10-23; pausing at it is Claude's call, open to Alex's review). A pause that lets live runs finish and launches nothing new would be a small change to the run-flow host. See [[Run Flow Reference#Stopping and resuming]].
 
 ### 30. Restart: fail with a hint, or retry?
 `03` §7 and backlog 3.3: dead pid → *"fail with a Retry hint"*. PRD §7: *"lost on restart"* is transient → automatic retry. → [[Worker Lifecycle]]
 
 > [!check] Answered by run-flow, 2026-10-23
-> Retry, as PRD §7 says, but not automatically: a person runs `--resume`, which records the runs still marked live as `interrupted` (or `not launched`, if they never started; #13), then reruns each running step at the same attempt (the run-flow plan). A dead host's lock is replaced, and the run-flow that replaces it first stops the agents and checks the dead one left running, which each run log's `pid` line names; `--resume` does the same in its own run folder (Alex's call, 2026-10-23). See [[Run Flow Reference#Stopping and resuming]].
+> Retry, as PRD §7 says, but not automatically: a person runs `--resume`, which records the runs still marked live as `interrupted` (or `not launched`, if they never started; #13), then reruns each running step at the same attempt (the run-flow plan). A dead host's lock is replaced, and the run-flow that replaces it first stops the agents and checks the dead one left running, which each run log's `pid` line names; `--resume` does the same in its own run folder (Alex's call, 2026-10-23). An OpenSandbox run (2026-11-10) resumes in the box it kept, and `--resume` refuses when that box has gone, since the edits so far live only there. See [[Run Flow Reference#Stopping and resuming]].
 
 ### 31. Re-attaching to a live process
 After a worker restart the stdout pipe is gone. How the worker keeps tailing a still-alive run is not stated. *Inferred gap.* Same as [[Agent Providers Open Questions]] #30. **Proposal:** for sandboxed runs, `docker logs -f` on the run's container ([[Worker Lifecycle]]).
@@ -225,16 +231,22 @@ Not stated. **Proposal:** `data/runs/<id>/`.
 > Nowhere: no file is written. The Claude adapter passes `mcpServers`, `settingSources: []` and the guard hook to the Agent SDK in memory; the OpenCode adapter passes one config in `OPENCODE_CONFIG_CONTENT`. See [[Agent Providers Open Questions]] #4 and #24.
 
 > [!check] Answered by run-flow, 2026-10-23
-> run-flow launches through the same adapters, so it writes neither file, and each run's logged spec is the record (#38). Per run it keeps only a `/tmp/fb-*` folder for the question socket and any copied skills, removed when the run ends. See [[Run Flow Reference#Files written]].
+> run-flow launches through the same adapters, so it writes neither file, and each run's logged spec is the record (#38). Per run it keeps only a `/tmp/fb-*` folder for the question socket and any copied skills, removed when the run ends. Under Docker (2026-11-10) the shim reaches the broker over TCP instead, and the folder holds the verdict until the host copies it to the run folder; under OpenSandbox a second folder, `/tmp/fb-h-*`, holds the host's end of the socket. See [[Run Flow Reference#Files written]].
 
 ### 40. Shell step: task host or a fresh container?
 PRD §7: *"through the same execution host"*. drawio: *"in a fresh sandbox"*, *"Check container"*. See also #61; [[Sandboxing Open Questions]] #17, #20. → [[Shell Step Execution]]
+
+> [!check] Answered by run-flow, 2026-11-10
+> It depends on the flow's `sandbox:`. With none, a check runs on the host in the run's folder. Under `runtime: docker` it runs in a fresh container of its own, offline, and gets only FlowBoard's own variables (`FLOWBOARD_ARTIFACTS`, and `FLOWBOARD_NOTE` when set) and `HOME=/tmp` on top of the image's; `sandbox.env` reaches only agent containers. Under `runtime: opensandbox` it runs in the run's one box, as the agents do (`cli/src/flow-run.ts`, `cli/src/flow-exec.ts`). So Docker follows the drawio, and OpenSandbox PRD §7's *"same execution host"*. See [[Shell Step Execution]].
 
 ### 41. Shell steps that cannot start
 A shell step's non-zero exit is an outcome. A missing command, an out-of-memory kill, or a container that never starts would loop as `fail` rather than block. Physical limit kills are #68. Same as [[Sandboxing Open Questions]] #15.
 
 > [!check] Answered by run-flow, 2026-10-23
-> A shell step whose command cannot run, or whose shell is killed by a signal, is a setup failure, not a `fail`: it waits at a *run failed* gate with `exit code 127: command not found`, `exit code 126: the command cannot run` or, for a signal, `killed by SIGKILL` and the like. Any other non-zero exit is a `fail` outcome (Claude's call, 2026-10-23, open to Alex's review). run-flow has no container tier, so a container that never starts does not arise yet. See [[Run Flow Reference#Shell steps]].
+> A shell step whose command cannot run, or whose shell is killed by a signal, is a setup failure, not a `fail`: it waits at a *run failed* gate with `exit code 127: command not found`, `exit code 126: the command cannot run` or, for a signal, `killed by SIGKILL` and the like. Any other non-zero exit is a `fail` outcome (Claude's call, 2026-10-23, open to Alex's review). See [[Run Flow Reference#Shell steps]].
+
+> [!question] Reopened 2026-11-10
+> The sandboxes brought containers, so the container case now arises. The 2026-11-10 audit found that a container that never starts (`docker run` exits 125, for a missing image, say) was read as a `fail` and went into rework ([[Flow Design And Execution Gap Audit]], defect 3). Fixed the same day: a sandboxed check that exits 125 is a setup failure, `exit code 125: the sandbox could not start the command`, and waits at a *run failed* gate; on the host, 125 is still the check's own `fail` (`cli/src/flow-exec.ts`, `setupFailure`). Still open: inside a container, a check killed by a signal, an out-of-memory kill included, reaches the host as the `docker` client's exit code, 128 plus the signal, not as a signal, so it is read as a `fail` (from reading the code; not run). Which exits a sandbox's setup failures cover, beyond 125, is still to decide.
 
 ## Contracts
 
@@ -242,7 +254,7 @@ A shell step's non-zero exit is an outcome. A missing command, an out-of-memory 
 `01-ports.md` has `tool_hooks`; the reference `agent-provider.ts` (`docs/old/reference/`) does not. `01-ports.md`'s sketch lacks `exec`; the reference carries the sandbox tier only through `exec` (`ExecHost.id`, `SandboxProfile.tier`). Neither carries the permission mode, the agent's system prompt or the per-run hook settings. Who generates the session id also differs: PRD §7 has the runner pass a generated `--session-id`, while `AgentRun.sessionId` resolves from `system/init`. Same as [[Agent Providers Open Questions]] #1, #3, #4, #5. → [[Agent Launch Contract]]
 
 > [!check] Implemented 2026-10-18
-> The shipped port (`core/src/ports/agent-provider.ts`) has `tool_hooks` and `RunSpec.exec`, and adds `permissionMode`, `systemPrompt` and `guards`, the provider-neutral hook rules. Claude Code and OpenCode declare `tool_hooks` and enforce `guards` in-agent, so no hook settings file is written. Nothing passes `exec` yet, so runs use the host. No adapter passes a session id: the provider reports it, Claude from the first `system/init` and OpenCode from its session create or fork response. See [[Agent Providers Open Questions]] #1, #3, #4 and #5.
+> The shipped port (`core/src/ports/agent-provider.ts`) has `tool_hooks` and `RunSpec.exec`, and adds `permissionMode`, `systemPrompt` and `guards`, the provider-neutral hook rules. Claude Code and OpenCode declare `tool_hooks` and enforce `guards` in-agent, so no hook settings file is written. Nothing passes `exec` yet, so runs use the host (since 2026-11-10, run-flow sets `spec.exec` for a sandboxed agent step). No adapter passes a session id: the provider reports it, Claude from the first `system/init` and OpenCode from its session create or fork response. See [[Agent Providers Open Questions]] #1, #3, #4 and #5.
 
 ### 43. Step kinds
 PRD §5: `ai | shell | manual`. `02` §3: `skill | agent | shell | manual`. The reference `agent-provider.ts`: *"kind='skill'"*; the shipped port's comment names no kind ([[Prompt Assembly]]).
@@ -267,18 +279,21 @@ PRD §13 and the drawio: `haiku` / `low`. `06` §15: `'fast-cheap'` / `'low'`. P
 ### 47. Missing endpoints
 Start, demote, pause, Fail task and Stop have no PRD endpoint. Sibling sets propose different shapes: Fail task as `POST /api/tasks/:id/fail` ([[Task Detail API And Routes]]) or `POST /api/step-instances/:id/fail-task` ([[Human In The Loop API And Routes]]); Allow host & retry as `retry` with `{ note?, allowHost? }` ([[Monitor API And Routes]]) or `POST /api/step-instances/:id/allow-host` `{ host }` (Human In The Loop and [[Sandboxing API And Routes]]). Stop (`POST /api/runs/:id/stop`) and demote (`POST /api/tasks/:id/demote`) proposals already agree across Task Detail, Monitor and Workspaces. Pick one shape for Fail task and Allow host. → [[Execution API And Routes]]
 
+> [!check] Answered by run-flow, 2026-11-10, for the runs page
+> The built routes are keyed by run folder, not by task or step instance: `GET`/`POST /api/runs`, and under `/api/runs/[run]` the run, `logs`, `artifact`, `built`, `events`, `answer`, `stop` and `resume`. Fail and Allow host are not endpoints: they are answer values, `{ decision: 'fail' }` and `allow_host`, sent with `POST /api/runs/:run/answer`. `POST /api/runs/:run/stop` stops the whole flow; there is still no Stop for one run, and no demote or pause. The task-level shapes stay open for the web app. See [[Execution API And Routes]].
+
 ## Concurrency
 
 ### 48. Shared worktree
 *"If two concurrent steps both write code they will conflict"* (PRD §11). A known constraint until the container workspace. See [[Shared Worktree Within A Task]] and [[Workspaces Open Questions]] #22.
 
-As built in run-flow (2026-10-23), every step works in the one folder the run names with `--folder` (the run-flow plan). `write_roots`, paths inside that folder, narrows an agent step's file-editing tools only, `--max-runs 1` runs branches one at a time, and agent steps may not run git commands that discard uncommitted edits (Claude's call, 2026-10-23, open to Alex's review).
+As built in run-flow (2026-10-23), every step works in the one folder the run names with `--folder` (the run-flow plan). `write_roots`, paths inside that folder, narrows an agent step's file-editing tools only, `--max-runs 1` runs branches one at a time, and agent steps may not run git commands that discard uncommitted edits (Claude's call, 2026-10-23, open to Alex's review). A sandbox (2026-11-10) does not split it: Docker mounts the one folder into every step's container, and OpenSandbox runs every step in one box on its own copy of the folder, which comes back as `changes.patch`.
 
 ### 49. One branch blocked, the other running
 When one fan-out branch escalates, the task is `blocked` while its sibling still runs. Not addressed.
 
 > [!check] Answered by run-flow, 2026-10-23
-> A gate stops only its own step: the other branches keep running, and the flow stays `running` (the run-flow plan). An escalation also stops the work below its target, so a sibling branch keeps running only if it is not below that target (Claude's call, 2026-10-23, open to Alex's review). run-flow pauses, with exit 3, only when nothing else can run and no terminal can answer, or when the flow has spent its budget (#29). See [[Run Flow Reference#Gates and their choices]].
+> A gate stops only its own step: the other branches keep running, and the flow stays `running` (the run-flow plan). An escalation also stops the work below its target, so a sibling branch keeps running only if it is not below that target (Claude's call, 2026-10-23, open to Alex's review). run-flow pauses, with exit 3, only when nothing else can run and no terminal can answer, or when the flow has spent its budget (#29). Since 2026-11-10, a run started with `--page` never pauses at a gate: its host waits for the runs page, which shows the run `waiting`. See [[Run Flow Reference#Gates and their choices]].
 
 ### 50. Cancel mid-fan-out
 Backlog 5.3 asks for the test; no rule beyond Cancel's general effect.
@@ -303,6 +318,9 @@ Refuse (PRD §7, `01-ports.md`), refuse or downgrade (PRD §11.1), downgrade (`0
 > [!check] Answered by the code for the host tier, 2026-10-18
 > Refuse unless the run opts in: `run-agent` refuses `bypassPermissions` or `auto` mode unless `permissions.allow_unrestricted_shell: true` ([[Run Agent CLI Decisions]] R3, R4). Every run-flow agent step goes through the same check, and `--check` and the flow's start then warn: `-- warning: steps.<step>: unrestricted shell: commands can write outside <folder>` (`outside the folder` when `--check` is given no `--folder`). The sandbox tier's half is still open.
 
+> [!check] Answered by run-flow for the sandbox tiers, 2026-11-10
+> No tier relaxes the refusal: `bypassPermissions` or `auto` without `permissions.allow_unrestricted_shell: true` is refused the same way on the host, under `runtime: docker` and under `runtime: opensandbox` (`cli/src/config.ts`, which reads no sandbox). So run-flow's levels are three, the host, `docker` and `opensandbox`, and none is a gVisor or microVM tier. Whether a sandbox should lift the refusal is still open. See [[Run Guardrails At Launch]] and [[OpenSandbox Runtime]].
+
 ### 54. Does the MCP process open the database?
 Yes per `02` §1 and backlog 1.1 (*"so worker and MCP … hit the same file"*); never per PRD §3, §9 and the drawio *SQLite* card. Same as [[Settings And Plumbing Open Questions]] #20 and [[Human In The Loop Open Questions]] #37. → [[Worker Lifecycle]]
 
@@ -310,16 +328,19 @@ Yes per `02` §1 and backlog 1.1 (*"so worker and MCP … hit the same file"*); 
 PRD §7 lists *"process killed by a signal"* as transient. Stop and graceful shutdown are SIGTERMs. On every shipped provider (Claude, OpenCode and Replay), `stop()` before the result settles `{ exitCode: 130, error: 'stopped' }`, while a process killed from outside is reported as exit 1. Same as [[Monitor Open Questions]] #35. Same as [[Agent Providers Open Questions]] #22. → [[Stopping And Cancelling]]
 
 > [!check] Answered by run-flow, 2026-10-23
-> No: nothing reruns a stopped run by itself. A run stopped by Ctrl+C, SIGTERM or SIGHUP is recorded `interrupted`, whatever its exit code, and reruns only on `--resume`; a run stopped by its timeout waits at a *run failed* gate (the run-flow plan: infra failures are not retried automatically). See [[Run Flow Reference#Stopping and resuming]].
+> No: nothing reruns a stopped run by itself. A run stopped by Ctrl+C, SIGTERM, SIGHUP or, since 2026-11-10, the runs page's Stop is recorded `interrupted`, whatever its exit code, and reruns only on `--resume`; a run stopped by its timeout waits at a *run failed* gate (the run-flow plan: infra failures are not retried automatically). See [[Run Flow Reference#Stopping and resuming]].
 
 ### 56. Who finalises a stopped run?
 `03` §7: the worker is *"the only writer of run lifecycle state"*. `03` §8 and backlog 3.4: the route SIGTERMs by pid and should *"finalise as cancelled"*. Same as [[Monitor Open Questions]] #36. **Inferred:** on the container tier the host pid belongs to the `docker` client, not the agent, and the port's `stop()` lives in the worker that holds the handle ([[Stopping And Cancelling]]). As built, the port has no `kill()`, a signal from outside is reported as a failed run (exit 1), not as a stop, and OpenCode's pid is its server's ([[Agent Run Handle And Result]]).
+
+> [!check] Answered by run-flow, 2026-11-10
+> The host that holds the runs' handles. The runs page's Stop route signals no pid: it writes `<run folder>/stop`, and the `run-flow` host, which polls for it every 400 ms, stops its runs through their handles and records them, as on a first Ctrl+C (`cli/src/ask/page.ts`, `cli/src/flow-logs.ts`). That matches `03` §7's single writer. It stops the whole flow; a Stop for one run is not built. See [[Stopping And Cancelling]].
 
 ### 57. A failing shell run's `runs.state`
 PRD §7's completion rule: non-zero → `failed`. Its shell paragraph: *"a result, not a run failure"*. Which run state a failing check records is not stated. → [[Shell Step Execution]]
 
 > [!check] Answered by run-flow, 2026-10-23
-> A result, not a run failure: a check that exits non-zero completes with outcome `fail` and, when it printed something, a fingerprint (the run-flow plan). Run records have no state field; a shell run ends with an error only when it cannot be set up or started, cannot save its output, exits 126 or 127 or is killed by a signal (#41), times out, or is stopped. See [[Run Flow Reference#Shell steps]].
+> A result, not a run failure: a check that exits non-zero completes with outcome `fail` and, when it printed something, a fingerprint (the run-flow plan). Run records have no state field; a shell run ends with an error only when it cannot be set up or started, cannot save its output, exits 126 or 127 (or 125 in a sandbox, since 2026-11-10) or is killed by a signal (#41), times out, or is stopped. See [[Run Flow Reference#Shell steps]].
 
 ### 58. Finding a check's "previous failed run"
 Downstream steps are re-instantiated on rework (`02` §3), so the previous failed `check` run sits on an earlier instance. How the fingerprint lookup crosses instances is not stated. → [[Stuck Detection And Fingerprints]]
@@ -336,13 +357,16 @@ PRD §11 offers cleanup once `done` or `cancelled`; feature map §14 and the tas
 ### 61. Container per task, or per run
 PRD §7 *Sandboxed runs*: *"inside the task's container"*. PRD §11.1: *"one per run, destroyed on completion"*; `08`: *"One container per run/attempt"*; the drawio: *"in a fresh sandbox"* for checks. Backlog 3.5 also says *"ephemeral container per run"*. Same as [[Sandboxing Open Questions]] #17 and [[Workspaces Open Questions]] #23. → [[Shell Step Execution]]
 
+> [!check] Answered by run-flow, 2026-11-10
+> Both, by runtime. `runtime: docker` gives each step run, shell or agent, a `docker run --rm` container of its own, which ends with the process. `runtime: opensandbox` gives the whole flow run one box, opened at start, kept while the run is paused or stopped for `--resume`, and killed once the run ends `done` or `failed` and its `changes.patch` is written (`cli/src/flow-run.ts`). Neither is per task, since run-flow has no task. See [[OpenSandbox Runtime]].
+
 ### 62. The event envelope and live cost
 `events.ts` has no `v`, which `01-ports.md` and PRD §7 require. `Usage` arrives only on `result`, yet PRD §7 wants a running cost from per-message tokens. Same as [[Monitor Open Questions]] #38, #39. `agent-provider.ts` promises *"live token counts"* from `partial_stream`, but no event kind carries them. Same as [[Agent Providers Open Questions]] #6, #9. → [[Agent Launch Contract]]
 
 > [!check] Answered by the code, 2026-10-18
 > The shipped port adds an eighth kind, `usage`, with the run's running totals; Claude's carry no cost until the result. `v` is skipped for now, waiting for the runner and `run_events`. See [[Agent Providers Open Questions]] #6 and #9.
 
-As built in run-flow (2026-10-23), `v` is still missing. run-flow prints and logs each `usage` event as it comes, but records a run's cost only when the run ends (`costUsd` on its record in `state.json`); a Claude run stopped before its result has tokens and no price, so its cost is `null`, printed `cost unknown`.
+As built in run-flow (2026-10-23), `v` is still missing. run-flow prints and logs each `usage` event as it comes, but records a run's cost only when the run ends (`costUsd` on its record in `state.json`); a Claude run stopped before its result has tokens and no price, so its cost is `null`, printed `cost unknown`. Since 2026-11-10 the runs page estimates a running Claude run's cost from its tokens, at list prices by model family (haiku, sonnet, opus), until the result brings the real one; `state.json` still records cost only at the end (`app/runs/log-lines.ts`).
 
 ### 63. `06` §15's file layout
 `06` §15 places routes in `src/app/api/` calling `src/lib/`; PRD §3 and §12 use `apps/web/app/api/` calling `packages/core`. Same as [[Settings And Plumbing Open Questions]] #13. → [[Execution API And Routes]]
@@ -377,7 +401,7 @@ Feature map §4 stops on *"exactly the same error twice in a row"*. PRD §8 comp
 Backlog 3.5: *"a limit/timeout hit marks the run failed with reason."* PRD §7 lists *"budget or turn cap hit"* as non-transient but names no memory, CPU, pid or wall-clock kill. **Inferred:** such a kill is also a *"process killed by a signal"*, which PRD §7 calls transient. Same as [[Sandboxing Open Questions]] #15. → [[Infra Retries]]
 
 > [!check] Answered by run-flow, 2026-10-23
-> As a failure that waits for a person, as backlog 3.5 says, not as a transient one: a `timeout_minutes` stop ends as `timed out after N minutes`, an agent's turn or budget cap as the provider's error, and both wait at a *run failed* gate (the run-flow plan). run-flow sets no memory, CPU or pid limits; a shell step killed by a signal waits at the same gate, and the timeout's clock stops while one of the run's questions waits for a person (Claude's call, 2026-10-23, open to Alex's review). See [[Run Flow Reference#Step fields]].
+> As a failure that waits for a person, as backlog 3.5 says, not as a transient one: a `timeout_minutes` stop ends as `timed out after N minutes`, an agent's turn or budget cap as the provider's error, and both wait at a *run failed* gate (the run-flow plan). run-flow sets no memory or CPU limits; since 2026-11-10 a Docker container is capped at 512 processes (`--pids-limit 512`). A shell step killed by a signal on the host waits at the same gate (inside a container it reads as a `fail`; see #41), and the timeout's clock stops while one of the run's questions waits for a person (Claude's call, 2026-10-23, open to Alex's review). See [[Run Flow Reference#Step fields]].
 
 ### 69. Which process creates the worktree?
 PRD §12 puts *"create worktree"* in the promote route (`apps/web`). The drawio draws the *Workspace manager* (*"git worktree add / remove per task"*) in `apps/worker`, and `apps/web` as *"thin: validates, calls core, enqueues; never spawns agents"*. No `jobs.kind` creates a workspace (PRD §5; drawio *Job loop*). PRD §2 bans only *"a long-lived child process"* from route handlers. Same as [[Workspaces Open Questions]] #2, [[Intake And Import Open Questions]] #15 and [[Projects Open Questions]] #24. → [[Starting A Task]], [[Job Queue]]

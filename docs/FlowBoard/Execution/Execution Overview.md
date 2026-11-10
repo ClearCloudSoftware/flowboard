@@ -23,7 +23,7 @@ The drawio *Functional components* page lists the Execution box (*"dashed = not 
 | Rework loop | *"attempt 2, 3… guarded by max_attempts"* | [[Rework Loop]], [[Loop Guard And Escalation]] |
 | Split & join | *"parallel branches from one card"* | [[Fan-Out And Join]] |
 | Stop | *"kill the process"* | [[Stopping And Cancelling]] |
-| Isolate the workspace (dashed) | *"worktree per task today; devcontainer / Docker sandbox / remote host later"* | Covered by [[Workspaces Index]] and [[Task Workspace]]; the container side by [[Sandboxing Index]] |
+| Isolate the workspace (dashed) | *"worktree per task today; devcontainer / Docker sandbox / remote host later"* | Covered by [[Workspaces Index]] and [[Task Workspace]]; the container side by [[Sandboxing Index]]. As built in run-flow (2026-11-10), a flow-level `sandbox:` runs every step in Docker, a container per step run, or in OpenSandbox, one box per flow run ([[OpenSandbox Runtime]]) |
 
 The tracker scopes the component as *"Start, run a step, advance, rework loop, split and join, stop, cancel, infra retries, loop guard"*, mapping to feature map §4 *The engine*, §7 *The runner*, §8 *The work queue*, and architecture components *"#3 Flow execution engine, #6 Runner / execution host, #7 Job queue & worker lifecycle (also #5, `08-sandboxing.md`)"*.
 
@@ -48,7 +48,7 @@ Edges as drawn on the drawio *Functional components* page. Inside, three archite
 | 6 | Runner / execution host | *"the generic execution loop — build `RunSpec`, `launch()` via the port, tee events to `run_events` + the SSE emitter, scan artifacts on completion, apply the engine's advancement rules"* (`03` §6) |
 | 7 | Job queue & worker lifecycle | *"SQLite-as-queue with leasing; restart recovery; concurrency cap `VIBE_MAX_RUNS`"* (`03` §7) |
 
-As built in run-flow (2026-10-23), component 3 is `core/src/flow/`: one pure function from the flow, its state and an event to the next state and the commands a host carries out. The run-flow host, a terminal command, stands in for components 6 and 7 in one process and one folder, with `--max-runs` as its cap and `--resume` as its restart recovery. See [[Run Flow Reference]].
+As built in run-flow (2026-10-23), component 3 is `core/src/flow/`: one pure function from the flow, its state and an event to the next state and the commands a host carries out. The run-flow host, a terminal command, stands in for components 6 and 7 in one process and one folder, with `--max-runs` as its cap and `--resume` as its restart recovery. See [[Run Flow Reference]]. Since 2026-11-10 the app's runs page, `/runs`, also starts runs (**+ New run**), stops and resumes them, and decides gates and answers agents' questions for a run started with `--page`. It talks to the host only through files in the run folder, and starts `run-flow` itself for a new run or a resume ([[Execution Surfaces]]).
 
 On the drawio *Logical components* page these appear as **Flow engine**, **Job queue** (*"enqueue / claim"*) and **Run orchestrator** (*"spawns run, parses stream-json, emits events"*), wired: engine → queue (*"enqueue step"*), queue → orchestrator (*"claim"*), orchestrator → engine (*"step done → advance"*), orchestrator → **Task & run state** (*"events, cost"*). The orchestrator also has unlabelled edges to the AgentProvider, Workspace and ArtifactStore ports, and one to the MemoryStore port labelled *"recall / commit (host-side)"*.
 
@@ -75,6 +75,8 @@ As built in run-flow (2026-10-23), two of these play out as follows:
 - **Work, not weather.** Nothing below the engine retries, so the engine itself receives infra failures. An agent error, a nonzero exit, a limit hit, a timeout or a shell step's setup failure reaches it as the run's `error`, and any outcome the agent reported is dropped. The engine marks the run wasted and opens a *run failed* gate, where Retry keeps the attempt number, so `max_attempts` still counts only work (the run-flow plan).
 - **Sensors before autonomy.** A check's output feeds the next attempt only as its `produces` artifact, which a rework run reads. A check that declares none keeps its output only in its run log, and `--check` warns about a rework route from it: `steps.check: reworks "impl" on a failure but produces nothing, so impl runs again without seeing why`.
 
+As built (2026-11-10), **routes never spawn** does not hold. `POST /api/runs` and `POST /api/runs/:run/resume` start a detached `run-flow --page`, and the app's routes import `packages/cli`, not only `packages/core` (`cli/src/flow-start.ts`, `app/api/runs/[run]/resume/route.ts`). There is no worker or queue to hand the job to. Nothing records this as a decision: it is what was built, open to Alex's review ([[Execution API And Routes]]).
+
 The drawio *Harness architecture* page names the execution rules as three harness concepts:
 
 - **Loop layer** (6): *"Rework edges share one attempt budget, a repeated fingerprint escalates early, infra retries stay out of the count, and a missing outcome is never a pass."*
@@ -85,7 +87,7 @@ The drawio *Harness architecture* page names the execution rules as three harnes
 
 - Not the recipe: designing steps and edges is [[Flow Design Index]].
 - Not the question protocol: asking and answering is [[Human In The Loop Index]]. Execution only parks and resumes.
-- Not the screens: execution has no screen of its own. See [[Execution Surfaces]].
+- Not the screens: execution has no screen of its own. See [[Execution Surfaces]]. As built (2026-11-10), run-flow's runs page, `/runs`, shows and steers runs.
 - Not the provider: turning a `RunSpec` into a CLI command and its stream into `NormalizedEvent`s is the adapter's job (`03` §5). See [[Agent Providers Index]].
 - Not the sandbox or the workspace: where a process runs and what it may reach is [[Sandboxing Index]]; creating and cleaning up the worktree is [[Workspaces Index]].
 - Not memory: what is recalled and committed is [[Memory Index]]. The runner only brackets the launch with the two calls (`03` §6).

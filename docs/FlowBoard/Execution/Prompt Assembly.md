@@ -30,7 +30,7 @@ As built in run-flow (2026-10-23):
 
 - **Part 1** is the task file the run names with `--task`, as written, the same for every agent step: no title, acceptance-criteria or non-goal fields, and no headings (the run-flow plan, Task 5). So the task file states the goal, and each step's own prompt says what that step does ([[Testing The Run Flow CLI]]). Two lines may follow it: `A person's note for this attempt: <note>`, when a gate's note started the run, then `Missing inputs (an earlier step did not write them): <types>`, when an input does not exist. Part 2 lists only the inputs that do.
 - **Part 5** is the step's `prompt` file as written. No placeholder is substituted (prompt `{{placeholders}}` are on the plan's *Left out* list). `--check` and a normal start warn about any `{{…}}` in a prompt file, `steps.<name>.prompt: {{…}} is not filled in; the agent reads it as written`, or in the task, `--task: {{…}} is not filled in; the agent reads it as written`, which `--check` looks for only when it is given `--task`.
-- **Part 6** is `run-agent`'s closing. When an `on_pass` or `on_fail` route leaves the step, it also asks the agent to report its verdict with `set_outcome`. There is no part 7.
+- **Part 6** is `run-agent`'s closing. When an `on_pass` or `on_fail` route leaves the step, or the step has `gate: approval` (`cli/src/flow-config.ts`), it also asks the agent to report its verdict with `set_outcome`. There is no part 7.
 
 ## Part 7
 

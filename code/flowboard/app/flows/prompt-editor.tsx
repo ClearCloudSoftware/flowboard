@@ -40,6 +40,7 @@ function Editor({ title, note, text, busy, error, onSave, onClose }: {
         onKeyDown={(e) => {
           if (e.key === 's' && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
+            e.stopPropagation(); // ⌘S here saves the prompt file only, not the recipe behind the dialog
             if (dirty) onSave(value);
           }
         }}

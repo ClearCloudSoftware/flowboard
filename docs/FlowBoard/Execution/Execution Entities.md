@@ -34,7 +34,7 @@ As built in run-flow (2026-10-23), the entities are types in `core/src/flow/`, s
 
 - **Step definition**: `StepDef`, in `flow.json`. It holds `id`, `requires`, `produces`, `approval` and `maxAttempts`. `kind`, `command`, `model` and `effort` live in the host's `FlowConfig.steps`, and `is_entry` is derived from the routes or a top-level `entry:`.
 - **Step instance**: `StepInstance`, one per step in `state.json`'s `steps`, with `state`, `attempts`, `outcome`, `inputs`, `note` and `gate`, the decision it waits for (a `Gate`, which on an escalation keeps a Reject's `note` for the Retry).
-- **Run**: `RunRecord`, in `state.json`'s `runs`, with `attempt`, `live`, `queued`, `costUsd` (`null` when unknown), `wasted`, `outcome`, `reason`, `error`, `missing` and `fingerprint`. Its pid, session id, exit code and tokens are in its log, `<NNN>-<step>.jsonl`, whose event lines are its run events.
+- **Run**: `RunRecord`, in `state.json`'s `runs`, with `attempt`, `live`, `queued`, `costUsd` (`null` when unknown), `wasted`, `outcome`, `reason`, `error`, `missing` and `fingerprint`. Its pid, session id, exit code and tokens are in its log, `<NNN>-<step>.jsonl`, whose event lines are its run events. A sandboxed check logs no pid (2026-11-10).
 - **Job**: none. The host launches each run command the engine gives it, at most `--max-runs` at once, and a run is `queued` until then.
 
 ## How they multiply
@@ -53,7 +53,7 @@ A task pins two things, at moments the sources do not agree on ([[Starting A Tas
 - `tasks.flow_id`: *"null while in backlog, pinned on promotion"* (PRD §5). See [[Version Pinning]].
 - `tasks.capability_pins`: *"JSON {plugins:{id:commit_sha}, agents:{id:<agent row>}}, set when the task starts"* (PRD §5). *"Each plugin dir is the commit recorded in the task's `capability_pins`, not the currently installed one, so an update never reaches a running task"* (PRD §7).
 
-As built in run-flow (2026-10-23), a run folder's `flow.json` pins the flow, the task text and the prompt texts, with the folder and the budget the run gave it, since a flow file is a reusable recipe (Alex's call, 2026-10-23); skills and plugins are not pinned ([[Starting A Task]]).
+As built in run-flow (2026-10-23), a run folder's `flow.json` pins the flow, the task text and the prompt texts, with the folder and the budget the run gave it, since a flow file is a reusable recipe (Alex's call, 2026-10-23); skills and plugins are not pinned ([[Starting A Task]]). Since 2026-11-10 it also pins the flow's sandbox, `config.sandbox`. The pin is not immutable: on an OpenSandbox run, Allow host & retry adds the host to its `sandbox.egress` during the run, so a resumed run's box allows it too.
 
 ## What the engine reads, and what it never reads
 

@@ -17,6 +17,14 @@ Every control on the [[Flow Design Screen]]. *What it does* quotes the flow-desi
 
 PRD §13 has draft mode as a global settings toggle that overrides every step to `--model haiku --effort low`; the mockup's topbar toggle forces only the model. See [[Flow Design Open Questions]] #28.
 
+As built in the flow designer (checked 2026-11-10), the topbar is **+ Step · Save · Run**, with no draft mode toggle.
+
+| Control | Does |
+|---|---|
+| **+ Step** | Adds a step named `step-N` with no keys, routed `always` from the selected step when one is selected, and selects it. Disabled when no flow is drawn |
+| **Save** | Writes the recipe file. Reads `Saving…` while it runs; when it is disabled: [[Editing And Saving A Flow#When Save is disabled]] |
+| **Run** | Opens the runs page's **New run** sheet on this flow (`/runs?new=<flow>`). Disabled while the flow has unsaved edits or fails the check, as a run reads the saved file. See [[Flow Design Screen#Run hands off to the runs page]] |
+
 ## In the library rail
 
 | Control | What it does | Effect |
@@ -45,7 +53,8 @@ As built in the flow designer (2026-10-24):
 - **Selecting.** A click on a step, or `Enter` on a focused one, selects it. A click on the empty canvas selects nothing, which opens the flow's own fields.
 - **Dragging a step** moves it on a 10 px grid. It is not an edit.
 - **Drawing a route.** Drag from a step's right edge to another step. The route starts as `always`, or as `on_fail` when it would close a loop, a rework.
-- **A route's label** cycles `always → on_pass → on_fail`; an `always` route shows its label once selected.
+- **A route's label** cycles `always → on_pass → on_fail`. It reads `passed`, `failed`, or `failed ↺` on a rework; an `always` route shows `always` only once selected.
+- **A second route** between the same two steps, in the same direction, cannot be drawn. A route from a step to itself is drawn as an arc over it.
 - **Removing.** `Delete` or `Backspace` removes the selected step, with its routes, or the selected route.
 
 This answers #17 (Claude's call, 2026-10-24, open to Alex's review).
@@ -89,7 +98,24 @@ As built in the flow designer (2026-10-24), the inspector edits the step's own k
 | **produces** | `produces` | Chips; outputs can be added and removed |
 | **may write** | `write_roots` | Agent steps: paths inside the run's folder |
 
-With nothing selected: **Budget** (`budget_usd`, `0` for no ceiling), **Starts at** (`entry:`, blank to let the routes say), and the defaults' adapter, model, effort, budget and max turns. A selected route shows **When**, its condition, with the guide's words for it, and **Delete this route**. There is no Agent or Sandbox field, as there are no such keys. `permissions`, `guards`, `skills` and `plugins` have no field and are kept as written.
+With nothing selected: **Budget** (`budget_usd`, `0` for no ceiling), **Starts at** (`entry:`, blank to let the routes say), and the defaults' adapter, model, effort, budget and max turns. A selected route shows **When**, its condition, with the guide's words for it, and **Delete this route**. There is no Agent field, as there is no such key. `permissions`, `guards`, `skills` and `plugins` have no field and are kept as written.
+
+As of 2026-11-10, a flow file also takes a flow-level `sandbox:` key (a per-step `sandbox` is still `unknown key`). The designer has no field for it and keeps it as written. It reads it for one line only: a shell step's note says *"Exit 0 is a pass, any other a fail. It runs in the run’s folder, in the flow’s sandbox."* when the file has a `sandbox:` key, and *"…It runs in the run’s folder, on this machine: the flow has no sandbox."* when it has none. The key's rules are in [[Step Guardrails]] and [[Run Flow Reference]].
+
+### The step panel
+
+As of 2026-11-10, a step's fields sit in one-line groups. **Name** and **Runs** always show; under them, each group is one line with a summary of its values, and clicking a line opens it. One group is open at a time, and selecting another step closes them all.
+
+| Group | On | Fields | Summary, for example |
+|---|---|---|---|
+| **Agent** | Agent steps | Adapter, Model, Effort | `claude-code · sonnet · high` |
+| **Limits** | Agent steps | Budget, Max turns, Timeout | `$1.5 · 40 turns · no timeout` |
+| **Prompt** | Agent steps | Prompt, Skill, System | `prompts/plan.md · system` |
+| **Command** | Shell steps | Command, Timeout (`30` minutes when blank) | `pnpm test · 30 min` |
+| **Files** | Both | needs, produces, and on agent steps may write | `needs plan · makes code` |
+| **Control** | Both | Approval, and Attempts where a rework route leads back | `waits for you · 3 attempts` |
+
+A step with problems shows `N problems — see the strip below` under its name. A pencil beside **Prompt** opens the prompt file in an editor of its own, and one beside **System** opens the inline system prompt ([[Flow Design Screen#Prompt files]]). The flow's own fields have no groups. Their **Budget** is required: blank shows *"required; 0 for no ceiling"*, and problems with the flow as a whole show as `N problems with the flow — see the strip below`.
 
 ## In the validation strip
 
@@ -109,6 +135,8 @@ As built in the flow designer (2026-10-24), every line `--check` prints is a row
 Keys are ignored while focus is in an input or select. The guide's walkthrough also takes `←` / `→`. Backlog Story 8.2 has *"Backspace deletes"*, but the phrase follows the edge-label text (*"edge label cycles `always → on_pass → on_fail`, Backspace deletes"*), so it is ambiguous whether it deletes steps, routes or any selection.
 
 As built in the flow designer (2026-10-24), `Delete` and `Backspace` remove the selected step, with its routes, or the selected route; `Esc` deselects; `⌘S` or `Ctrl+S` saves. They are ignored while focus is in a field, except `⌘S`.
+
+In the prompt editor (2026-11-10), `⌘S` saves only the prompt file, never the recipe behind it, and `Esc` closes the editor, asking *"Close without saving?"* when it has unsaved text.
 
 ## Related
 

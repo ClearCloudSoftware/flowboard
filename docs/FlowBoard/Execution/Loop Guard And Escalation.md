@@ -57,9 +57,9 @@ The choices read **Retry this step** and **Fail the flow**, since run-flow has n
 
 ## Where the escalation lands
 
-- **In the inbox.** The drawio harness concept 8: *"Every stop (gate, question, spent or stuck loop) lands in one inbox, then Slack."* The inbox guide draws a spent loop as a **failure** card: *"A step ran out of attempts. Nothing is running; nothing is being spent."* That card offers no Retry with a note and no Fail task. See [[Failures And Escalated Loops]] and [[Human In The Loop Open Questions]] #24. As built in run-flow (2026-10-23), the escalation lands in the terminal: `-- impl needs a decision`, then the gate's prompt; with no terminal, the flow pauses with exit 3 once nothing else can run. The card's *"Nothing is running"* holds below the target, whose runs the escalation stopped; other branches keep running (the run-flow plan, Execution #49, #50).
+- **In the inbox.** The drawio harness concept 8: *"Every stop (gate, question, spent or stuck loop) lands in one inbox, then Slack."* The inbox guide draws a spent loop as a **failure** card: *"A step ran out of attempts. Nothing is running; nothing is being spent."* That card offers no Retry with a note and no Fail task. See [[Failures And Escalated Loops]] and [[Human In The Loop Open Questions]] #24. As built in run-flow (2026-10-23), the escalation lands in the terminal: `-- impl needs a decision`, then the gate's prompt. Since 2026-11-10, a run started with `--page` also shows it on the runs page, as a gate banner, and the host waits for an answer there. With neither a terminal nor `--page`, the flow pauses with exit 3 once nothing else can run. The card's *"Nothing is running"* holds below the target, whose runs the escalation stopped; other branches keep running (the run-flow plan, Execution #49, #50).
 - **On the task.** The target instance holds the gate; the evidence is the failing step's last artifact.
-- **API.** Retry is `POST /api/step-instances/:id/retry` (PRD §12). Fail task has no endpoint in the PRD. See [[Execution API And Routes]].
+- **API.** Retry is `POST /api/step-instances/:id/retry` (PRD §12). Fail task has no endpoint in the PRD. See [[Execution API And Routes]]. As built (2026-11-10), the runs page sends Retry and Fail as answers to the gate, `POST /api/runs/:run/answer`, for a run started with `--page`.
 
 ## Escalate or fail: the sources disagree
 
@@ -85,7 +85,7 @@ As built in run-flow (2026-10-23), a spent loop escalates and never fails by its
 
 - Retry *"does not reset the counter"* (PRD §8). So after a Retry the target is at `max_attempts + 1`; its next failure escalates again at once. *Inferred* from the rule; not stated ([[Execution Open Questions]] #16). As built in run-flow (2026-10-23), that is what happens (the run-flow plan, Execution #14, #16). At a stuck check with attempts left, the Retry's attempt is within the budget, and a later failure escalates again only if it fails the same way or spends the budget.
 - PRD §4 and the drawio card *Step def → step instance → run* say rework loops *"create attempt 2, 3, 4"*. With the default of 3, a fourth run comes only from a Retry at the gate or a raised `max_attempts` (inference).
-- The monitor and inbox mockups add **Retry as-is** and **Allow host & retry** on a failure card. Allow host & retry *"Adds the blocked host to this step's egress allowlist, then re-queues the run as the next attempt"* (monitor guide). Neither is in the PRD.
+- The monitor and inbox mockups add **Retry as-is** and **Allow host & retry** on a failure card. Allow host & retry *"Adds the blocked host to this step's egress allowlist, then re-queues the run as the next attempt"* (monitor guide). Neither is in the PRD. As built (2026-11-10), the runs page has Allow host & retry on an OpenSandbox run, at a *run failed* or escalation gate: a host typed before Retry is let through the box at once and added to `sandbox.egress` in the run's `flow.json`, never in the recipe. At an escalation the Retry is the escalation's, one attempt past a spent budget; at a *run failed* gate it reruns the same attempt ([[Execution Controls]], [[OpenSandbox Runtime]]).
 
 ## Related
 

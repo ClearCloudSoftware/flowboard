@@ -15,6 +15,21 @@ Deleting a project cascades to its flows, and deleting a flow cascades to its st
 
 As built in run-flow (2026-10-23), a flow is a YAML file, a reusable recipe named by its file name, and there are no flow rows. Each run gives it a folder and a task (`--folder`, `--task`) and pins its loaded copy in `runs/<stamp>-<flow name>/flow.json`, which `--resume` reads instead of the YAML. See [[Run Flow Reference]].
 
+### Where the files are
+
+As built (checked 2026-11-10):
+
+| What | Where |
+|---|---|
+| Recipes | `<name>.yaml` in `FLOWBOARD_FLOWS_DIR`, else `flows/` in the web app's folder (`code/flowboard/flows/`). The designer and its API read and write only here |
+| Prompt files | Beside the recipes, by the path a step's `prompt` names, such as `flows/prompts/plan.md`. The prompt editor writes only inside the recipes folder ([[Flow Design API And Routes]]) |
+| Run folders | `runs/<stamp>-<flow name>/` in the folder `run-flow` starts in, or in `FLOWBOARD_RUNS_DIR` when it is set. The runs page reads the same: `FLOWBOARD_RUNS_DIR`, else `runs/` in the web app's folder |
+| Runs started from the page | **+ New run** writes the task to `runs/.started/<id>.task.md` and run-flow's output to `runs/.started/<id>.log`. A dot folder is never listed as a run. It starts run-flow in the folder above the runs folder, so the run lands in that folder's `runs/` |
+
+run-flow reads `FLOWBOARD_RUNS_DIR` too (2026-11-10), and a run that **+ New run** starts inherits it, so the page always lists the runs it starts. The run-folder files are in [[Execution Storage]].
+
+The flow file's `sandbox:` key lives in the recipe like any other key. The designer has no field for it and writes it back as read, and each run pins it in `flow.json`, under `config.sandbox`.
+
 ## Templates: JSON files
 
 | File | Contents | Source |
@@ -39,7 +54,7 @@ As built in run-flow (2026-10-23), a flow file is a reusable recipe (Alex's call
 ## Not stored
 
 - **Node positions** — not stored, as backlog D4 has it: the flow designer lays a flow out from its routes, the same way on every open, and a run-flow file has no position keys (Claude's call, 2026-10-24, open to Alex's review). See [[Canvas Layout And Board Order]].
-- **Draft mode** — a setting, not part of the flow.
+- **Draft mode** — a setting, not part of the flow. Not built as of 2026-11-10: no setting, flag or field forces a cheaper model. The designer's `draftFlow` (`packages/cli/src/flow-files.ts`) is the check of an unsaved edit, not draft mode.
 - **Artifacts** — on disk in the task's worktree, not in the flow. See [[Artifact Contract]].
 
 ## Related

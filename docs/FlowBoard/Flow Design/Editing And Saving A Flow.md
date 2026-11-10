@@ -66,13 +66,17 @@ As built in the flow designer (2026-10-24), **Save** is disabled when nothing ha
 - Leaves running tasks on their version (see [[Version Pinning]]).
 - In the API: `PUT /api/flows/:id -- creates a new version` (PRD §12). Backlog Story 8.2 BUG: *"Save as new version; redirect from a slug prop, not `location.pathname`."*
 
-As built in the flow designer (2026-10-24), a save writes the recipe file in place: there are no versions, and no project to point at one. What versions protect is kept another way. A run pins its own copy of the flow (`flow.json` in its run folder), so a save never changes a run already started, as the status bar says. The save writes the edit into the file's own YAML. Lines whose meaning did not change are written back as they were, comments and spacing included, so a save changes only the lines it must; a no-op save leaves the file byte for byte. The server checks the result again before writing. It refuses a recipe that fails the check (HTTP 422, with the problems) and a file that changed on disk since it was opened (409); the designer then offers to load the file from disk (Claude's call, 2026-10-24, open to Alex's review).
+As built in the flow designer (2026-10-24), a save writes the recipe file in place: there are no versions, and no project to point at one. What versions protect is kept another way. A run pins its own copy of the flow (`flow.json` in its run folder), so a save never changes a run already started, as the status bar says. The save writes the edit into the file's own YAML. Lines whose meaning did not change are written back as they were, comments and spacing included, so a save changes only the lines it must; a no-op save leaves the file byte for byte. The server checks the result again before writing. It refuses a recipe that fails the check (HTTP 422, with the problems) and a file that changed on disk since it was opened, or was deleted (409); the strip shows the refusal as a `not saved` row (Claude's call, 2026-10-24, open to Alex's review).
+
+A prompt file is saved apart from the recipe (2026-11-10). Its editor's **Save**, or `⌘S` inside it, writes only that file through `PUT /api/prompts`, with the same guard: a file that changed on disk since the editor opened it gets 409. The recipe's **Save** never writes a prompt file. A saved prompt file re-runs the check, which can clear a problem about a missing file. An inline system prompt is part of the recipe and is saved with it. See [[Flow Design Screen#Prompt files]].
 
 ## Leaving without saving
 
 No source designs a discard or *unsaved changes* prompt. In the mockup, **Use this flow** replaces the canvas without asking (its effect column says *"Replaces what is on the canvas"*).
 
 As built in the flow designer (2026-10-24), opening another flow or starting a new one with unsaved edits asks first (*Discard your changes to delivery.yaml?*), and so does leaving the page. A file edited by hand while open is read again when the window regains focus, if there are no unsaved edits to lose.
+
+With unsaved edits, the designer does not wait for a 409 (corrected 2026-11-10). When the window regains focus and the file has changed on disk, a notice appears under the topbar, *"delivery.yaml changed on disk while you were editing it, so Save would be refused."*, and **Save** is disabled. Its **Load the file from disk** button asks *"Drop your edit and load the file as it is on disk?"* and then loads it. A 409 from a save reads the file again, so the same notice follows.
 
 ## Related
 

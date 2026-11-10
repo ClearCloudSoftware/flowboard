@@ -23,6 +23,8 @@ In the mockup the arc depends on direction, not condition (`edgePath()`): any ba
 
 As built in run-flow (2026-10-23), the condition and the graph decide, not where a step sits: an `on_fail` route to its own step, or to a step that reaches it along `always` and `on_pass` routes, is a **rework** route, and every other route is forward (the run-flow plan, Execution #9). `pnpm run-flow --mermaid` draws a flow left to right: `always` as `-->`, `on_pass` as `-->|pass|`, a forward `on_fail` as a solid `-->|fail|`, and a rework route as a dotted `-.->|fail ↺|`. A gated step reads `<step> (approval)`; shell and agent steps look alike, and `requires` and `produces` are not drawn. An invalid flow prints its errors instead, with exit 2.
 
+As built in the flow designer (2026-11-10), the canvas labels an `on_pass` route `passed`, an `on_fail` route `failed`, or `failed ↺` when it is a rework route, and an `always` route only while it is selected. Clicking a label cycles always → passed → failed. See [[Flow Design Controls]].
+
 ## How the engine resolves edges
 
 From PRD §8:
@@ -32,7 +34,7 @@ From PRD §8:
 - *"**A missing outcome is never a pass.** If the step has an `on_pass` or `on_fail` edge and the run ended without setting an outcome, set the step instance to `awaiting_approval` with the reason "no outcome reported" and stop."*
 - *"Steps with only `always` edges need no outcome."*
 
-As built in run-flow (2026-10-23), the ask-user shim (`packages/ask-user`) also offers `set_outcome`, which writes `{"outcome","reason"}` to the file `FLOWBOARD_OUTCOME_FILE` names. run-flow offers it only to agent steps whose routes or gate read the verdict (an `on_pass` or `on_fail` route, or `gate: approval`), and ignores an outcome any other step reports (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). Neither real adapter sets `RunResult.outcome`, and there is no `{"outcome":…}` JSON fallback (the run-flow plan's Left out list), so an agent step that does not call `set_outcome` ends with no outcome ([[Agent Run Handle And Result]]).
+As built in run-flow (2026-10-23), the ask-user shim (`packages/ask-user`) also offers `set_outcome`, which writes `{"outcome","reason"}` to the file `FLOWBOARD_OUTCOME_FILE` names. run-flow offers it only to agent steps whose routes or gate read the verdict (an `on_pass` or `on_fail` route, or `gate: approval`), and ignores an outcome any other step reports (Claude's call, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]). Neither real adapter sets `RunResult.outcome`, and there is no `{"outcome":…}` JSON fallback (the run-flow plan's Left out list), so an agent step that does not call `set_outcome` ends with no outcome ([[Agent Run Handle And Result]]). Under `sandbox: { runtime: docker }` (2026-11-10), the container sees the run folder read-only, so the shim writes the verdict in the run's temp folder (`/tmp/fb-*`), and run-flow copies it to `<run folder>/<NNN>-<step>.outcome.json` when the run ends. Under OpenSandbox it comes back with the artifacts ([[OpenSandbox Runtime]]).
 
 > [!tip] Design implication
 > Adding any conditional edge to a step obliges that step to report an outcome. A skill used on such a step must call `set_outcome` (the seeded `/code-review` *"must call `set_outcome`"*, PRD §15). The capability-library mockup shows this in skill manifests as `invokes: set_outcome`.

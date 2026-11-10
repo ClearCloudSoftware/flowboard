@@ -7,6 +7,9 @@ module: Flow Design
 
 Two ways to start from someone else's work: **adopt** a whole library flow, or **adapt** your own by borrowing one step.
 
+> [!warning] Not built
+> As of 2026-11-10, none of this note is built. The flow designer has no preview, **Use this flow**, **Back to yours** or versions, and its library is one folder of recipe files with one author ([[Flow Library#As built in the flow designer]]). Of the walkthrough, beats 6–8 work: add a step with **+ Step**, see the strip refuse a need that nothing upstream makes (`steps.<step>: requires "<type>", and no step before it produces that`), and click the problem to select the step. Beat 9's save writes the file in place instead of making a version ([[Editing And Saving A Flow]]). To borrow a step from another recipe, copy its keys by hand, in the inspector or in the file.
+
 ## Preview
 
 Clicking a variant *"draws *that author's* graph on the canvas, ghosted and read-only. You can see its shape, its gates and its costs without touching your own recipe."* (guide)

@@ -85,6 +85,19 @@ The mockup **opens** on *Software delivery @core v4* with `review` selected, the
 | Needs, none | `nothing — it can start cold` |
 | Produces, none | `nothing` |
 
+As built in the flow designer (checked 2026-11-10), the texts are:
+
+| Where | Text |
+|---|---|
+| Library, no match | *"No flow matches that. Clear the search."* There are no domains to try. |
+| Library, empty folder | *"No flows in `<dir>` yet. Name one below to start."* |
+| Canvas, no flow open | *"Pick a flow from the library, or name a new one."* |
+| A file the canvas cannot draw | The **yaml** view, with the notice *"This file cannot be drawn: `<why>`. Fix it by hand; the strip below says what is wrong."* The inspector reads *"This file cannot be drawn. Fix it by hand; the strip below says what is wrong."* |
+| Inspector, no selection | The flow's own fields, under *"Select a step on the canvas to edit it."* |
+| Needs, none | `nothing — it can start cold` |
+| Produces, none | `nothing` |
+| May write, none | `anywhere in the folder` |
+
 ## Design system
 
 Light only, zero radius, IBM Plex Mono and Sans, hairlines not shadows. PRD §13 says *"Dark-first, dense, keyboard-friendly"* instead — [[Flow Design Open Questions]] #34. Colour roles: petrol `--run` for pass and primary actions, amber `--wait` for problems and edits, red `--fail` for fail routes and delete. The drawio *Harness architecture* page lists the target stack: *"shadcn/ui + Tailwind (light, zero radius, IBM Plex) · xyflow for the designer"*.
@@ -98,14 +111,27 @@ The screen is `/flows` in the web app, `code/flowboard/app/flows/` (`pnpm dev`, 
 
 | Region | As built |
 |---|---|
-| Version chip | The flow's name, its file, and `saved`, or `edited — not saved` in amber. There are no versions: see [[Editing And Saving A Flow]] |
-| Library | Every `<name>.yaml` in the flows folder: its shape glyph, worked out from the routes; its first line, when that is a comment, as the description; steps, gates and budget; and a problem count when `--check` refuses it. Search matches name and description. A name field at the foot starts a new recipe, holding only `budget_usd: 0`. There are no domains, authors, variants, preview or **Use this flow**: there is no shared library to draw them from, and authors wait on accounts ([[Flow Design Roadmap#Out of scope (v1)]]) |
-| Canvas | Drag a step to arrange it; drag from a step's right edge to another step to draw a route; click a route's label to cycle `always → on_pass → on_fail`; `Delete` or `Backspace` removes the selected step or route. A route drawn back to a step before it starts as `on_fail`, a rework. The layout: [[Canvas Layout And Board Order]]. A **yaml** tab shows the file as saved, or what Save will write |
-| Inspector | The selected step, the selected route, or, with nothing selected, the flow itself: `budget_usd`, `entry:` and `defaults`. The fields: [[Flow Design Controls]] |
+| Topbar | `flowboard/flows`, the version chip, then **+ Step**, **Save** and **Run** ([[#Run hands off to the runs page]]) |
+| Version chip | The flow's name, its file (`flows/delivery.yaml`), and `saved`, or `edited — not saved` in amber. There are no versions: see [[Editing And Saving A Flow]] |
+| Notice | A line under the topbar when a flow cannot be opened (the server's reason), or when the open file changed on disk while you have unsaved edits, with **Load the file from disk** ([[Editing And Saving A Flow#Leaving without saving]]) |
+| Library | Every `<name>.yaml` in the flows folder: its shape glyph, worked out from the routes; its first line, when that is a comment, as the description; steps, gates and budget; and a problem count when `--check` refuses it, or `open now` on the open flow. Search matches name and description. A name field and **New flow** at the foot start a new recipe, holding only `budget_usd: 0`. There are no domains, authors, variants, preview or **Use this flow**: there is no shared library to draw them from, and authors wait on accounts ([[Flow Design Roadmap#Out of scope (v1)]]). See [[Flow Library]] |
+| Canvas | Drag a step to arrange it; drag from a step's right edge to another step to draw a route; click a route's label to cycle its condition, `always → on_pass → on_fail`; `Delete` or `Backspace` removes the selected step or route. The labels read `passed`, `failed`, or `failed ↺` on a rework; an `always` route shows `always` only while selected. A route drawn back to a step before it starts as `on_fail`, a rework. The hint reads *"drag to arrange · drag from a step’s right edge to route it · click to edit"*. The layout: [[Canvas Layout And Board Order]]. A **yaml** tab shows the file as saved, or what Save will write |
+| Canvas bar | `N steps · N conditional routes · N approval gates`, then `budget $N.NN for the whole flow`, `no budget ceiling` for `0`, or `no budget set` |
+| Inspector | The selected step, the selected route, or, with nothing selected, the flow itself: `budget_usd`, `entry:` and `defaults`. A step's fields sit in one-line groups. The fields: [[Flow Design Controls]] |
 | Validation strip | `run-flow --check` on the draft, a quarter of a second after the last edit. Errors in amber disable Save; warnings follow them. Each line is a button that selects the step or route it names. When green, it shows the command that runs the flow |
-| Status bar | How many flows there are, and that a run pins its own copy of the flow, so saving never changes a run already started; the keys |
+| Status bar | `N flows in <dir>/ · a run pins its own copy of the flow, so saving here never changes a run already started`, then `del remove · esc deselect · ⌘S save` |
 
-Not built: draft mode ([[Flow Design Open Questions]] #28), versions, the board order, the library's metadata, and prompt files: a step's `prompt` names a file the designer neither creates nor edits. The flows API answers only requests addressed to `localhost` ([[Flow Design API And Routes]]).
+The address names the open flow: `/flows?flow=<name>`. On arrival the designer opens the flow the address names, or else the first in the library, and opening another flow rewrites the address. `/` redirects to `/flows`.
+
+Not built: draft mode ([[Flow Design Open Questions]] #28), versions, the board order and the library's metadata. The flow's `sandbox:` has no field: the designer keeps it as written ([[Flow Design Controls]]). The flows API answers only requests addressed to `localhost` ([[Flow Design API And Routes]]).
+
+### Prompt files
+
+As of 2026-11-10, the designer edits prompt files. The pencil beside a step's **Prompt** field opens the file in a large editor, once the field, or the flow's default, names a file; until then the pencil is disabled, with the tooltip *"Name a prompt file first"*. The file is read and written through `/api/prompts` ([[Flow Design API And Routes]]), and must sit inside the flows folder: any other path opens as *cannot open*, with the server's reason. A file that does not exist yet opens empty, marked *"new file — saving creates it"*; saving creates it. The editor saves the prompt file on its own, apart from the recipe, so `⌘S` inside it saves only the prompt file. The pencil beside **System** opens the inline system prompt the same way, but that text is part of the recipe and is saved with it. See [[Flow Design Controls#In the inspector]].
+
+### Run hands off to the runs page
+
+As of 2026-11-10, **Run** in the topbar goes to `/runs?new=<flow>`, which opens the runs page's **New run** sheet on this flow. A run reads the saved file, so **Run** is disabled while the flow has unsaved edits (*"Save first: a run uses the saved file"*) or fails the check (*"Fix the problems first"*). The sheet has **Flow** (a flow that fails the check is listed but disabled), **Folder** (remembered in this browser), **Task**, a **Budget** that overrides the flow's, and *run even with uncommitted changes in the folder*. **Start run** starts `run-flow --page` in the background. The runs page is in [[Execution Surfaces]]; the flags are in [[Run Flow Reference]].
 
 ## Related
 

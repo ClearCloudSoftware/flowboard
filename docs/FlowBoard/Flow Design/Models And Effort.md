@@ -37,6 +37,9 @@ As built in run-flow (2026-10-23), capability negotiation is deferred: nothing r
 
 > **Draft mode** — A switch that forces every step onto the cheapest, fastest AI while you're tinkering with the recipe rather than the code. — feature map §7
 
+> [!warning] Not built (2026-11-10)
+> Draft mode is designed only. Neither run-flow nor the flow designer has a draft switch, and nothing overrides a step's `model` or `effort`. `draftFlow` (`cli/src/flow-files.ts`) checks the designer's unsaved edit; it is not draft mode.
+
 | Source | What it does |
 |---|---|
 | PRD §13 | *"a global **draft mode** toggle in settings that overrides every step to `--model haiku --effort low`, for when I am iterating on the flow itself rather than on code."* PRD §16: *"Draft mode forces every step to haiku/low"* |

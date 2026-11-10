@@ -6,9 +6,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { SHIM_ENTRY } from '@flowboard/ask-user';
 import { startBroker } from '../src/ask/broker.ts';
-import { dockerExecHost } from '@flowboard/adapters';
+import { dockerExecHost, hostExecHost } from '@flowboard/adapters';
 import { fingerprint, ZERO_USAGE } from '@flowboard/core';
-import type { AgentProvider, NormalizedEvent, RunCommand, RunResult, RunSpec } from '@flowboard/core';
+import type { AgentProvider, ExecHost, NormalizedEvent, RunCommand, RunResult, RunSpec } from '@flowboard/core';
 import { configFromObject } from '../src/config.ts';
 import type { RunConfig } from '../src/config.ts';
 import { artifactPath, execAi, execShell, OUTPUT_TAIL, shellEnv } from '../src/flow-exec.ts';
@@ -87,6 +87,12 @@ test('a background command that redirected its output is stopped too', async () 
 test('a shell that cannot run its command, or dies by a signal, is a setup failure, not a fail', async () => {
   assert.deepEqual(await check('no-such-command-here').run.ended, { costUsd: 0, error: 'exit code 127: command not found' });
   assert.deepEqual(await check('kill -9 $$').run.ended, { costUsd: 0, error: 'killed by SIGKILL' });
+});
+
+test("exit 125 is the sandbox failing to start the check; on the host it is the check's own fail", async () => {
+  assert.deepEqual(await check('exit 125').run.ended, { costUsd: 0, outcome: 'fail' });
+  const s = stepSetup({ sandbox: () => hostExecHost });
+  assert.deepEqual(await execShell('exit 125', s.folder, RUN, [], s.ctx).ended, { costUsd: 0, error: 'exit code 125: the sandbox could not start the command' });
 });
 
 test('a check says its last line of output, and its log keeps the tail, with or without produces', async () => {
@@ -225,6 +231,17 @@ test('the set_outcome file beats the result outcome; with neither, the outcome i
   assert.deepEqual((await plan({ write: ['plan'], reported: { outcome: 'fail', reason: 'r' }, outcome: 'pass' })).end, { costUsd: 0.1, outcome: 'fail', reason: 'r' });
   assert.deepEqual((await plan({ write: ['plan'], outcome: 'pass' })).end, { costUsd: 0.1, outcome: 'pass' });
   assert.deepEqual((await plan({ write: ['plan'] })).end, { costUsd: 0.1 });
+});
+
+test('in a container the verdict is written in the temp folder, then kept in the run folder', async () => {
+  const { provider, specs } = agent({ write: ['plan'], reported: { outcome: 'fail', reason: 'r' } });
+  const fakeBox = { id: 'container', profile: { tier: 'container', egressAllow: [] }, spawn: () => assert.fail('the fake agent spawns nothing') } as unknown as ExecHost;
+  const s = stepSetup({ makeProvider: () => provider, sandbox: () => fakeBox });
+  const end = await execAi(aiConfig(s.folder), PLAN, ['plan'], s.ctx).ended;
+  assert.deepEqual(end, { costUsd: 0.1, outcome: 'fail', reason: 'r' });
+  const file = specs[0].tools?.find((x) => x.name === 'flowboard')?.env?.FLOWBOARD_OUTCOME_FILE ?? '';
+  assert.ok(!file.startsWith(s.ctx.logDir), file); // the run folder is read-only in the container
+  assert.deepEqual(JSON.parse(readFileSync(join(s.ctx.logDir, '007-plan.outcome.json'), 'utf8')), { outcome: 'fail', reason: 'r' });
 });
 
 test('an output not written by this run is missing, even when an old copy is there', async () => {
