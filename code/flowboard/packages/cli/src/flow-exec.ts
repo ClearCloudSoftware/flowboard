@@ -92,6 +92,10 @@ function setupFailure(code: number | null, sig: NodeJS.Signals | null, sandboxed
   if (sig) return `killed by ${sig}`;
   // docker run's own failure (no image, no daemon): the container never ran. On the host 125 is the check's own.
   if (code === 125 && sandboxed) return 'exit code 125: the sandbox could not start the command';
+  // 128 + SIGKILL: something in the check was killed from outside (the OOM killer, a sandbox limit). A container
+  // and a shell that ran it in a child both hand on a signal as this code, not as a signal (Open Questions #41).
+  // ponytail: only SIGKILL; 139 (SIGSEGV) and the like are the code under test crashing, which is its fail
+  if (code === 137) return 'exit code 137: killed by SIGKILL, out of memory most likely';
   if (code === 126) return 'exit code 126: the command cannot run';
   if (code === 127) return 'exit code 127: command not found';
   return undefined;
@@ -105,7 +109,7 @@ function missingInputs(run: RunCommand, ctx: ExecContext): string[] {
 }
 
 /**
- * Runs `command` in `folder`: exit 0 is pass, any other exit a fail, except 126, 127 and a death by a signal,
+ * Runs `command` in `folder`: exit 0 is pass, any other exit a fail, except 126, 127, 137 and a death by a signal,
  * which are setup failures. The output's tail is `produces[0]`'s artifact and the run log's last line.
  */
 export function execShell(command: string, folder: string, run: RunCommand, produces: string[], ctx: ExecContext): StepRun {

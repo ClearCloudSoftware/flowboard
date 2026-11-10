@@ -89,6 +89,14 @@ test('a shell that cannot run its command, or dies by a signal, is a setup failu
   assert.deepEqual(await check('kill -9 $$').run.ended, { costUsd: 0, error: 'killed by SIGKILL' });
 });
 
+test('a child killed by SIGKILL is a setup failure too: the shell, or a container, hands it on as exit 137', async () => {
+  const killed = { costUsd: 0, error: 'exit code 137: killed by SIGKILL, out of memory most likely' };
+  assert.deepEqual(await check('true; sh -c "kill -9 \\$\\$"').run.ended, killed);
+  const s = stepSetup({ sandbox: () => hostExecHost });
+  assert.deepEqual(await execShell('exit 137', s.folder, RUN, [], s.ctx).ended, killed);
+  assert.deepEqual(await check('exit 139').run.ended, { costUsd: 0, outcome: 'fail' }, 'a crash is the check failing');
+});
+
 test("exit 125 is the sandbox failing to start the check; on the host it is the check's own fail", async () => {
   assert.deepEqual(await check('exit 125').run.ended, { costUsd: 0, outcome: 'fail' });
   const s = stepSetup({ sandbox: () => hostExecHost });
