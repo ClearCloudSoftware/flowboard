@@ -10,7 +10,7 @@ import { isMap, isScalar, parseDocument } from 'yaml';
 import { z } from 'zod';
 import { DEFAULT_MAX_ATTEMPTS, isRework, validateFlow } from '@flowboard/core';
 import type { FlowDef } from '@flowboard/core';
-import { CLOSING, configFromObject, isDir, isFile, issueLines, readYaml, RunSchema, toAbs } from './config.ts';
+import { CLOSING, configFromObject, isDir, isFile, issueLines, readPlugin, readYaml, RunSchema, toAbs } from './config.ts';
 import type { RunConfig } from './config.ts';
 
 export const OUTCOME_CLOSING =
@@ -199,7 +199,8 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
       err(3, `${at}: an ai step needs prompt, skill or system_prompt; set one on the step or in defaults`);
     }
     const plugin = merged.skill?.includes(':') ? merged.skill.slice(1).split(':')[0] : undefined;
-    if (plugin && !(merged.plugins ?? []).some((p) => basename(p) === plugin)) {
+    const listed = (merged.plugins ?? []).map((p) => toAbs(p, recipeDir)).filter(isDir);
+    if (plugin && !listed.some((d) => readPlugin(d).name === plugin)) {
       warnings.push(`${at}.skill: plugin "${plugin}" is not in plugins:, so nothing checks it; the agent must already have it`);
     }
     // A recipe runs in many folders: its write roots are paths inside whichever one, relative to it.

@@ -60,7 +60,7 @@ limits:
     cwd: join(base, 'proj'),
     prompt: { preamble: 'Fix the bug.', inputs: [], outputs: [], invocation: '/fbecho:echo', closing: CLOSING },
     systemPrompt: 'Be careful.',
-    capabilities: [{ id: 'fbecho', provider: 'claude-code', mount: { kind: 'plugin_dir', path: join(base, 'plugins/fbecho') } }],
+    capabilities: [{ id: 'fbecho', provider: 'claude-code', mount: { kind: 'plugin_dir', path: join(base, 'plugins/fbecho'), skills: ['skills'] } }],
     permissionMode: 'dontAsk',
     toolPolicy: { allow: ['Read', 'Bash(pnpm *)'], deny: ['WebFetch'] },
     guards: {
@@ -172,7 +172,50 @@ test('a blank prompt is fine when a skill is set', () => {
 });
 
 test('a skill of a listed plugin must exist in it', () => {
-  assert.deepEqual(errorsOf(MINIMAL + 'plugins: [plugins/fbecho]\nskill: /fbecho:nope\n').errors, ['task.yaml: skill: plugin "fbecho" has no skills/nope/SKILL.md or commands/nope.md']);
+  assert.deepEqual(errorsOf(MINIMAL + 'plugins: [plugins/fbecho]\nskill: /fbecho:nope\n').errors, ['task.yaml: skill: plugin "fbecho" has no skill or command "nope"']);
+});
+
+/** A plugin at plugins/4.8.3, an installed one's folder, with `files` (path in it → text). */
+function installed(yaml: string, files: Record<string, string>) {
+  const base = project(MINIMAL + 'plugins: [plugins/4.8.3]\n' + yaml);
+  for (const [path, text] of Object.entries(files)) {
+    mkdirSync(join(base, 'plugins', '4.8.3', path, '..'), { recursive: true });
+    writeFileSync(join(base, 'plugins', '4.8.3', path), text);
+  }
+  return base;
+}
+const SKILL = (name: string) => `---\nname: ${name}\ndescription: d\n---\nBody\n`;
+
+test("a plugin is named by its plugin.json, and its skills are where Claude Code looks", () => {
+  // As installed plugins sit in ~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/, and as mattpocock-skills and
+  // ui-ux-pro-max list their skills: one level under skills/, or at a path the manifest names, hidden folders included.
+  const files = {
+    '.claude-plugin/plugin.json': JSON.stringify({ name: 'tools', skills: ['./skills/eng/tdd', './.claude/skills/deep', '../outside'] }),
+    'skills/flat/SKILL.md': SKILL('flat'),
+    'skills/eng/tdd/SKILL.md': SKILL('tdd'),
+    'skills/eng/hidden/SKILL.md': SKILL('hidden'),
+    '.claude/skills/deep/SKILL.md': SKILL('deep'),
+    'commands/hello.md': 'Hi.',
+  };
+  for (const skill of ['flat', 'tdd', 'deep', 'hello']) {
+    const r = loadConfig('task.yaml', installed(`skill: /tools:${skill}\n`, files));
+    assert.ok(r.ok, `${skill}: ${JSON.stringify(r)}`);
+    assert.deepEqual(r.config.spec.capabilities?.map((c) => [c.id, c.mount.kind === 'plugin_dir' && c.mount.skills]), [['tools', ['skills', 'skills/eng/tdd', '.claude/skills/deep']]]);
+  }
+  // Two levels down, and listed by no manifest path: Claude Code does not find it.
+  const hidden = loadConfig('task.yaml', installed('skill: /tools:hidden\n', files));
+  assert.deepEqual(hidden.ok ? [] : hidden.errors, ['task.yaml: skill: plugin "tools" has no skill or command "hidden"']);
+  // Named by its folder when it has no manifest: the folder name is then the namespace.
+  assert.ok(loadConfig('task.yaml', installed('skill: /4.8.3:flat\n', { 'skills/flat/SKILL.md': SKILL('flat') })).ok);
+});
+
+test('OpenCode loads only skills, so a plugin command is no skill for it', () => {
+  const yaml = 'skill: /tools:hello\n';
+  const files = { '.claude-plugin/plugin.json': '{"name":"tools"}', 'commands/hello.md': 'Hi.' };
+  const base = installed(yaml, files);
+  writeFileSync(join(base, 'task.yaml'), (MINIMAL + 'plugins: [plugins/4.8.3]\n' + yaml).replace('claude-code', 'opencode').replace('sonnet', 'openrouter/x'));
+  const r = loadConfig('task.yaml', base);
+  assert.deepEqual(r.ok ? [] : r.errors, ['task.yaml: skill: "hello" is a command of plugin "tools", and OpenCode loads only skills (SKILL.md)']);
 });
 
 test('skill must start with /', () => {

@@ -163,7 +163,7 @@ test('a plugin skill is checked when its plugin is in plugins:, and warned about
   const listed = (extra: Record<string, string>) => loadFlow('flow.yaml', flowProject(plan('plugins: [tools], skill: /tools:plan'), { 'tools/.keep': '', ...extra }));
   // Checked on the recipe alone, as the designer and the run sheet check it.
   const missing = listed({});
-  assert.deepEqual(missing.ok ? [] : missing.errors, ['flow.yaml: steps.plan.skill: plugin "tools" has no skills/plan/SKILL.md or commands/plan.md']);
+  assert.deepEqual(missing.ok ? [] : missing.errors, ['flow.yaml: steps.plan.skill: plugin "tools" has no skill or command "plan"']);
   assert.ok(listed({ 'tools/skills/plan/SKILL.md': 'x' }).ok);
   assert.ok(listed({ 'tools/commands/plan.md': 'x' }).ok);
   const unlisted = loadFlow('flow.yaml', flowProject(plan('skill: /tools:plan')));

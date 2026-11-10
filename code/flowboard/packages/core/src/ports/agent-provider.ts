@@ -112,7 +112,8 @@ export interface CapabilityPack {
   id: string;
   provider: ProviderId;
   mount:
-    | { kind: 'plugin_dir'; path: string } // Claude: plugins [{ type: 'local', path }]
+    // Claude: plugins [{ type: 'local', path }]. `skills`: its skill folders, relative to `path`; absent means skills/.
+    | { kind: 'plugin_dir'; path: string; skills?: string[] }
     | { kind: 'system_prompt'; text: string } // provider without plugins
     | { kind: 'native'; config: Record<string, unknown> };
 }
