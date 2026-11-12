@@ -6,11 +6,11 @@
  */
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, sep } from 'node:path';
 import { parse } from 'yaml';
-import { isDir, isFile } from './config.ts';
+import { isDir, isFile, writeJsonFile } from './config.ts';
 import { createFlow, FLOW_NAME } from './flow-files.ts';
 import type { RunStatus, RunSummary } from './flow-logs.ts';
 import { excludeFromGit, PROJECT_FILE, projectSettings, setCheckCommand } from './project.ts';
@@ -32,12 +32,7 @@ export function readProjects(dataDir: string): Project[] {
 }
 
 // ponytail: read, change, write with no lock; one person's browser is the only writer
-function writeProjects(dataDir: string, projects: Project[]) {
-  mkdirSync(dataDir, { recursive: true });
-  const tmp = `${fileOf(dataDir)}.${process.pid}.tmp`;
-  writeFileSync(tmp, `${JSON.stringify(projects, null, 2)}\n`);
-  renameSync(tmp, fileOf(dataDir));
-}
+const writeProjects = (dataDir: string, projects: Project[]) => writeJsonFile(fileOf(dataDir), projects);
 
 /** `My API (v2)` -> `my-api-v2`. */
 export const slugify = (name: string) =>

@@ -2,9 +2,9 @@
  * One YAML file -> one validated RunSpec. See
  * docs/superpowers/specs/2026-10-18-yaml-run-config-design.md.
  */
-import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, isAbsolute, join, normalize, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, normalize, resolve, sep } from 'node:path';
 import { parse } from 'yaml';
 import type { $ZodIssue } from 'zod/v4/core';
 import { z } from 'zod';
@@ -73,6 +73,14 @@ export function toAbs(p: string, baseDir: string): string {
 
 export const isDir = (p: string) => existsSync(p) && statSync(p).isDirectory();
 export const isFile = (p: string) => existsSync(p) && statSync(p).isFile();
+
+/** Writes `value` as JSON to a temp file beside `file`, then renames it over, so a reader never sees half of it. */
+export function writeJsonFile(file: string, value: unknown) {
+  mkdirSync(dirname(file), { recursive: true });
+  const tmp = `${file}.${process.pid}.tmp`;
+  writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`);
+  renameSync(tmp, file);
+}
 
 /**
  * Matches an allow entry that lets the agent run any shell command: `Bash`, or a pattern of only `*`, `:` and spaces.
