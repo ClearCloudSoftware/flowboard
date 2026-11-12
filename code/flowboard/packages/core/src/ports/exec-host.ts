@@ -4,9 +4,9 @@
  * An AgentProvider builds an argv; the ExecHost decides where it executes: a
  * plain host child_process, a hardened container, or a microVM. This keeps
  * sandboxing orthogonal to the provider — any provider × any isolation tier,
- * for free (2×N, not N×M). The Workspace port hands the runner an ExecHost
- * (`workspace.execHost(task)`); the provider adapter spawns through it instead
- * of importing child_process directly.
+ * for free (2×N, not N×M). A flow's `sandbox` picks the runner's ExecHost;
+ * the provider adapter spawns through it instead of importing child_process
+ * directly.
  *
  * See docs/FlowBoard/Agent Providers/Providers And Sandboxing.md.
  */

@@ -32,6 +32,16 @@ export function worktreeWorkspace(repoPath: string): Workspace {
 }
 ```
 
+> [!warning] The shipped code differs
+> As built on `feature/workspace-impl` (2026-11-12), the adapter is `worktreeWorkspace(repo)` in `code/flowboard/packages/adapters/src/workspace/worktree.ts`. It follows [[Workspace Naming#Decision]]: `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`, cut from the repo's current `HEAD`. Where it departs from the sketch:
+>
+> - **Reuse.** `create` hands back a worktree that is already there, and checks out the task's branch again when only the branch is left. It prunes first, so a folder deleted by hand is made again.
+> - **Exclude.** `create` writes `.flowboard/` to the repo's `.git/info/exclude` before adding the worktree. Linked worktrees share that file, so one line covers all of them.
+> - **Branch.** `destroy` removes the folder (`git worktree remove`, which refuses uncommitted work unless `force`), then `git branch -d`. An unmerged branch is kept and reported, never deleted.
+> - **Ids.** A task id must match `^[A-Za-z0-9][A-Za-z0-9_-]*$`, so it is safe in a path and a branch name.
+>
+> `run-flow --workspace <id>` runs a flow inside the task's worktree, keeping the place of `--folder` within the repo. The lock is per worktree, so tasks in one repo run in parallel. `pnpm clean-workspace --folder <dir> [--force] <id>` removes a workspace, and refuses while a run holds its lock.
+
 ## The git commands
 
 | Call | Command | Source |

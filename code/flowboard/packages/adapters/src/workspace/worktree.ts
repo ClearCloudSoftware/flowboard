@@ -1,0 +1,79 @@
+import { spawnSync } from 'node:child_process';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import type { TaskRef, Workspace } from '@flowboard/core';
+
+/** A task id that is safe as a folder name and in a branch name. */
+export const TASK_ID = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+
+function git(cwd: string, ...args: string[]): { ok: boolean; out: string; err: string } {
+  const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  return { ok: !r.error && r.status === 0, out: (r.stdout ?? '').trim(), err: (r.stderr || r.error?.message || '').trim() };
+}
+
+/**
+ * Adds `.flowboard/` to the local exclude file of `folder`'s git repository, so `git add -A` leaves FlowBoard's
+ * folder alone. Linked worktrees share the repository's exclude file, so one line covers them all.
+ */
+export function excludeFlowboard(folder: string): void {
+  const git = spawnSync('git', ['rev-parse', '--git-path', 'info/exclude'], { cwd: folder, encoding: 'utf8' });
+  if (git.error || git.status !== 0) return;
+  const file = resolve(folder, git.stdout.trim());
+  let text = '';
+  try {
+    text = readFileSync(file, 'utf8');
+  } catch {
+    // no exclude file yet
+  }
+  if (text.split('\n').some((l) => l.trim() === '.flowboard/')) return;
+  try {
+    mkdirSync(dirname(file), { recursive: true });
+    appendFileSync(file, `${text && !text.endsWith('\n') ? '\n' : ''}.flowboard/\n`);
+  } catch {
+    // best effort: run-flow's uncommitted-changes check leaves .flowboard/ out anyway
+  }
+}
+
+/**
+ * One git worktree per task: `<repo>/.flowboard/worktrees/task-<id>` on branch `fb/task-<id>`, cut from the
+ * repo's current HEAD. `repo` is the repository's top folder. See docs/FlowBoard/Workspaces/Workspace Naming.md.
+ */
+export function worktreeWorkspace(repo: string): Workspace {
+  const at = (task: TaskRef) => {
+    if (!TASK_ID.test(task.id)) throw new Error(`task id ${JSON.stringify(task.id)}: use letters, digits, - and _, starting with a letter or digit`);
+    return { path: join(repo, '.flowboard', 'worktrees', `task-${task.id}`), branch: `fb/task-${task.id}` };
+  };
+  const hasBranch = (branch: string) => git(repo, 'rev-parse', '--verify', '--quiet', `refs/heads/${branch}`).ok;
+  return {
+    id: 'worktree',
+    async create(task) {
+      const { path, branch } = at(task);
+      excludeFlowboard(repo); // before the folder appears, so the repo's `git status` never lists it
+      if (existsSync(path)) {
+        // A plain folder inside the repo would answer for the repo itself: its top folder must be this one.
+        const top = git(path, 'rev-parse', '--show-toplevel');
+        if (!top.ok || realpathSync(top.out) !== realpathSync(path)) throw new Error(`${path} exists but is not a git worktree; move it away`);
+        const head = git(path, 'rev-parse', '--abbrev-ref', 'HEAD').out;
+        if (head !== branch) throw new Error(`${path} is on ${head || 'no branch'}, not ${branch}; switch it back`);
+        return { path, branch, reused: true };
+      }
+      git(repo, 'worktree', 'prune'); // a worktree folder deleted by hand stays registered until pruned
+      const reused = hasBranch(branch); // removed before, branch kept: pick the task's work up again
+      const add = git(repo, 'worktree', 'add', '--quiet', ...(reused ? [path, branch] : ['-b', branch, path]));
+      if (!add.ok) throw new Error(`git worktree add: ${add.err}`);
+      return { path, branch, reused };
+    },
+    async destroy(task, opts) {
+      const { path, branch } = at(task);
+      const folder = existsSync(path);
+      if (!folder && !hasBranch(branch)) throw new Error(`task ${task.id} has no workspace`);
+      if (folder) {
+        const rm = git(repo, 'worktree', 'remove', ...(opts?.force ? ['--force'] : []), path);
+        if (!rm.ok) throw new Error(`git worktree remove: ${rm.err}${opts?.force ? '' : '; commit the changes, or pass --force to throw them away'}`);
+      }
+      // `-d`, never `-D`: a branch with commits not merged into HEAD is the task's work, and stays.
+      if (hasBranch(branch) && !git(repo, 'branch', '-d', branch).ok) return { branchKept: branch };
+      return {};
+    },
+  };
+}
