@@ -5,7 +5,16 @@ module: Workspaces
 
 # Workspaces In The UI
 
-Workspaces has no mockup of its own, so there are no Screen or Controls notes. The workspace appears on other screens. This note lists where, and points to the notes that describe those screens.
+The sections below come from the sources, which gave workspaces no screen of their own. The workspace appears on other screens; each section points to the notes that describe them.
+
+> [!warning] The shipped code differs
+> As built on `feature/workspace-impl` (2026-11-12), workspaces have three screens of their own, each after a mockup in `docs/mockups/`:
+>
+> - **`/workspaces?folder=<repo>`** (`workspaces.html`): every task worktree in the repo, from `.flowboard/worktrees/` and the `fb/task-*` branches. Each one has a state: *running* (a run-flow holds its lock, or its last run is live), *dirty*, *unmerged*, *merged*, *branch-only* (folder gone) or *broken* (a plain folder in the way, or a switched branch, with the command that fixes it). The dirty, unmerged and broken ones sit under one ochre "needs you" band. **Clean up** asks before throwing uncommitted files away, and keeps an unmerged branch. **Clean up merged** removes every merged, clean one.
+> - **The New run sheet** (`new-run-workspace.html`): *Work in* the repo folder, or a task workspace named by id, suggested from the task text. A live preview says whether the workspace is new, picked up again, picked up with uncommitted files (Start waits for *run even with uncommitted changes*), checked out again from a kept branch, or refused (bad id, a run holding it, broken, or the repo folder's own lock).
+> - **`/workspaces/land?folder=&id=`** (`land-workspace.html`): **Review** the branch against the base, commit by commit, with numbered diffs; **Land** it by merge commit, squash, or rebase then fast-forward, after a dry run (`git merge-tree`, in memory) that names conflicting files and offers *update the branch from the base* or *send back to the flow*; then **Clean up**. Landing runs in the repo's own checkout and needs it clean and on the base branch. A failed merge or rebase is undone in full.
+>
+> The host-side code is `code/flowboard/packages/cli/src/workspace-git.ts`. Every action shows the git or CLI command that does the same thing. This answers [[Git Inside A Workspace]]'s open question of who merges: you do, from the Land page.
 
 ## Task detail
 

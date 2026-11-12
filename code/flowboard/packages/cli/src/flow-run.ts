@@ -20,6 +20,7 @@ import type { FlowConfig, Sandbox } from './flow-config.ts';
 import { artifactPath, execAi, execShell, processStart, shellEnv } from './flow-exec.ts';
 import type { ExecContext, StepRun } from './flow-exec.ts';
 import { dockerDefaultMemoryMb, PROJECT_FILE, projectLimits } from './project.ts';
+import { alive, readLock } from './lock.ts';
 import { openWorkspace } from './workspace.ts';
 import { defaultProvider, stamp } from './run.ts';
 import type { RunDeps } from './run.ts';
@@ -269,38 +270,6 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 /** `$0.12`, or `cost unknown` when the provider reported none. */
 const cost = (usd: number | null) => (usd === null ? 'cost unknown' : `$${usd.toFixed(2)}`);
-
-/** The pid of the live run-flow holding the lock at `path`; undefined when there is none. */
-export function heldBy(path: string): number | undefined {
-  const held = readLock(path);
-  return held && typeof held.pid === 'number' && alive(held.pid) ? held.pid : undefined;
-}
-
-/** False when `pid` names no process. */
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return (e as NodeJS.ErrnoException).code === 'EPERM'; // there, but not ours to signal
-  }
-}
-
-/** The lock's content; undefined when there is no lock, null when it cannot be read. */
-function readLock(path: string): { pid?: unknown; runDir?: unknown } | null | undefined {
-  let text: string;
-  try {
-    text = readFileSync(path, 'utf8');
-  } catch (e) {
-    return (e as NodeJS.ErrnoException).code === 'ENOENT' ? undefined : null;
-  }
-  try {
-    const v: unknown = JSON.parse(text);
-    return typeof v === 'object' && v !== null ? v : null;
-  } catch {
-    return null;
-  }
-}
 
 /** Writes `content` to `path` whole, through a temp file: linked, so only if `path` is free, or renamed over it. */
 function publish(path: string, content: object, replace: boolean): void {

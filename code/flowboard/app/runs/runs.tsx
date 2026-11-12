@@ -52,6 +52,9 @@ export function Runs() {
         <button type="button" className="act primary" onClick={() => setCreating(true)}>
           + New run
         </button>
+        <Link className="act" href="/workspaces">
+          Workspaces
+        </Link>
         <Link className="act" href="/flows">
           Flows
         </Link>
@@ -80,7 +83,15 @@ export function Runs() {
         </aside>
         <main className="pane rn-main">{picked && <RunView key={picked.name} name={picked.name} />}</main>
       </div>
-      {creating !== false && <NewRun flow={typeof creating === 'string' ? creating : undefined} onStarted={show} onClose={closeSheet} />}
+      {creating !== false && (
+        <NewRun
+          flow={typeof creating === 'string' && creating !== '1' ? creating : undefined}
+          workspace={params.get('workspace') ?? undefined}
+          folder={params.get('folder') ?? undefined}
+          onStarted={show}
+          onClose={closeSheet}
+        />
+      )}
     </div>
   );
 }
