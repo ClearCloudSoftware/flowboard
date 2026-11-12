@@ -79,6 +79,9 @@ Drawio: *"host-side push / fetch"* to the *"project remote"*, on a dashed edge t
 
 Three schemes: PRD/backlog `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>`; drawio `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`; task-detail mockup `~/.flowboard/ws/<task>` on `flowboard/<task>`. Only the first two live inside the project's repo. The main question is [[Workspaces Open Questions]] #6; also [[Task Detail Open Questions]] #20 and [[Execution Open Questions]] #3. When they are created (promote or start) is [[Workspaces Open Questions]] #1.
 
+> [!check] Decided 2026-11-12 (Alex)
+> Worktree at `<repo>/.flowboard/worktrees/task-<id>` on branch `fb/task-<id>`, the drawio scheme. See [[Workspace Naming#Decision]].
+
 ## Security
 
 ### 16. Per-project trust

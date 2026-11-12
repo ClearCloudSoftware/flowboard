@@ -26,6 +26,9 @@ No source lists Start's steps. **Proposal:** status `running`, one `pending` ins
 ### 3. Worktree path and branch
 PRD §11 and backlog 2.1: `.vibe-worktrees/task-<id>` on `vibe/task-<id>`. The drawio: `.flowboard/worktrees/task-<id>` on `fb/task-<id>`. The task-detail mockup: `~/.flowboard/ws/<task>` on `flowboard/<task>`. Same as [[Workspaces Open Questions]] #6. → [[Execution Storage]], [[Workspace Naming]]
 
+> [!check] Decided 2026-11-12 (Alex)
+> Worktree at `<repo>/.flowboard/worktrees/task-<id>` on branch `fb/task-<id>`, the drawio scheme. See [[Workspace Naming#Decision]].
+
 ## Advancement
 
 ### 4. Is `implement` a join?

@@ -81,6 +81,9 @@ D1 recommends *"Explicit Start button on card + sheet; promote stays cheap"* (ba
 
 PRD §11: `<repo_path>/.vibe-worktrees/task-<id>`, branch `vibe/task-<id>`. Drawio *Harness architecture*: `<repo>/.flowboard/worktrees/task-<id>`, branch `fb/task-<id>`. Task-detail mockup: `~/.flowboard/ws/<task>` on `flowboard/<task>`. The promote route is in `apps/web`; the drawio's *Workspace manager* (*"git worktree add"*) is in `apps/worker`. Same as [[Workspaces Open Questions]] #2 and #6, [[Execution Open Questions]] #3, [[Task Detail Open Questions]] #20. See [[Task Workspace]], [[Intake Runtime]].
 
+> [!check] Decided 2026-11-12 (Alex)
+> Layout settled: `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`. Which process makes the worktree is still open. See [[Workspace Naming#Decision]].
+
 ### 16. Demote versus *Send to backlog*
 
 Backlog 2.1: *"Demote (todo → backlog) keeps worktree; re‑promote reuses it."* Task-detail guide: *Send to backlog* *"Returns the task to the backlog, keeping its workspace and everything it produced"*, and can happen *"from anywhere"*; the mockup shows the button on a task in progress. Feature map §3: *"Send a task back to the backlog (keeping its workspace)"*. PRD §12 has no route for either. Is *Send to backlog* demote, and does a re-promote keep the pinned flow version? Same as [[Task Detail Open Questions]] #9, [[Workspaces Open Questions]] #9 and #10. See [[Task Actions]], [[Demote And Re-Promote]].

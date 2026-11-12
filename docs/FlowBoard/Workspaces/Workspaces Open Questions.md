@@ -29,8 +29,14 @@ The reference command names no start point, so it uses the repo's current `HEAD`
 ### 6. Three path and branch schemes
 PRD/backlog/`07`: `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>`. Drawio: `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`. Mockup: `~/.flowboard/ws/<slug>` on `flowboard/<slug>`. → [[Workspace Naming]], [[Task Detail Open Questions]] #20, [[Execution Open Questions]] #3, [[Monitor Open Questions]] #26, [[Projects Open Questions]] #17
 
+> [!check] Decided 2026-11-12 (Alex)
+> Worktree at `<repo>/.flowboard/worktrees/task-<id>` on branch `fb/task-<id>`, the drawio scheme. See [[Workspace Naming#Decision]].
+
 ### 7. Exclude line for the drawio path, and on every promote
 Backlog 2.1 excludes `.vibe-worktrees/`. The drawio path would need its own line. Appending on every promote repeats the line *(inferred)*. → [[Parent Repo Hygiene]]
+
+> [!check] Decided 2026-11-12 (Alex)
+> Worktrees go under `.flowboard/worktrees/`, so they need no line of their own: the `.flowboard/` line covers them. The shipped `excludeFromGit` (`code/flowboard/packages/cli/src/flow-run.ts`) appends that line only when it is missing, so calling it on every promote does not repeat it. See [[Workspace Naming#Decision]].
 
 ## Demote and reuse
 

@@ -131,6 +131,9 @@ The status bar always says *"sandbox **container**, egress **default-deny**"*: i
 
 Monitor: `.flowboard/<task-id>/brief.md` (row detail) and `.flowboard/artifacts/brief.md` (sample log). PRD §6: `<worktree>/.vibe/task-<id>/01-research_brief.md`. Drawio: `.vibe/task-<id>/*.md | *.json` in `<repo>/.flowboard/worktrees/task-<id>`. Task-detail mockup: `~/.flowboard/ws/auth-refactor`. Filenames versus type keys is [[Flow Design Open Questions]] #24. The two mockups agree with each other: task detail also writes `.flowboard/auth-refactor/brief.md`. Worktrees conflict too: PRD §11 `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>`; drawio `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`; task-detail mockup `~/.flowboard/ws/auth-refactor` on `flowboard/auth-refactor`. Same as [[Workspaces Open Questions]] #6, [[Task Detail Open Questions]] #20, [[Execution Open Questions]] #3 and [[Projects Open Questions]] #17; see [[Workspace Naming]].
 
+> [!check] Decided 2026-11-12 (Alex)
+> The worktree is settled: `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`. The artifact path inside it is still open. See [[Workspace Naming#Decision]].
+
 ### 27. Light or dark
 
 The monitor is light only. PRD §13 says *"Dark-first"*. Tracked as [[Flow Design Open Questions]] #34; also [[Settings And Plumbing Open Questions]] #7 and [[Human In The Loop Open Questions]] #34.

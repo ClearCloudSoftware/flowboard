@@ -110,6 +110,9 @@ The mockup sums one duration per step (the kept run). Do wasted runs count? Do i
 
 Also `07`'s disk adapter: scan expects `NN-<type>.<ext>` but `resolve` returns `${type}.md`. And the mockup's `changes.patch` matches no artifact type. Same as [[Workspaces Open Questions]] #6, [[Intake And Import Open Questions]] #15, [[Execution Open Questions]] #3 and [[Monitor Open Questions]] #26. See [[Task Workspace]], [[Workspace Naming]] and [[Task Artifacts]].
 
+> [!check] Decided 2026-11-12 (Alex)
+> Worktree and branch settled: `<repo>/.flowboard/worktrees/task-<id>` on `fb/task-<id>`. The artifacts layout is still open. See [[Workspace Naming#Decision]].
+
 ### 21. Who commits, and when?
 
 The mockup and guide say files are *"committed on its own branch"*. The drawio says *"committed alongside the code"*. The agent may not push or check out the base branch, and *"the host does all git work"*. No source names the commit step. Same as [[Workspaces Open Questions]] #20; see [[Git Inside A Workspace]].
