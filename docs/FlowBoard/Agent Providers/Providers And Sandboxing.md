@@ -79,7 +79,7 @@ No Codex adapter is built; see [[Codex Adapter]].
 
 Logical caps (`limits.maxTurns`, `maxBudgetUsd`) map to *"the sandbox's physical `--memory` / `--cpus` / `--pids-limit` / wall-clock backstops"* (`03` §6). Backlog 3.5: *"a limit/timeout hit marks the run failed with reason"*; PRD §7 classes a *"budget or turn cap hit"* as non-transient, so the task blocks. A provider without `budget_cap` makes the budget *"advisory"* (`agent-provider.ts`). Inference: without it nothing stops spend in dollars, since the physical limits cap memory, CPU, processes and wall-clock, not money.
 
-As built, no physical limit exists, and nothing classifies a cap hit: a runner could tell one only by its provider-specific text ([[#As built]]).
+As built in run-flow (2026-11-10), a sandboxed run gets the project's memory and CPU limits from `.flowboard.yaml` in the repo, and a Docker container is capped at 512 processes ([[Run Flow Reference#Project file]]). Nothing classifies a cap hit: a runner could tell one only by its provider-specific text ([[#As built]]).
 
 ## HITL across tiers
 

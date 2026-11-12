@@ -93,7 +93,24 @@ Any other mix of options prints these three lines, the first headed `usage:`, an
 | `defaults` | no | none | Any `run-agent` key except `folder`, applied to every agent step. A step's own key replaces the default whole: a step with `limits: { max_turns: 5 }` drops a default `budget_usd` |
 | `steps` | yes | | A mapping of step name to step; at least one |
 | `edges` | no | `[]` | The routes between steps, in the order written (see *Edges, loops and joins*) |
-| `sandbox` | no | none: steps run on the host | Where steps run: `runtime` (`docker`, the default, or `opensandbox`), `image` (required), `env` (Docker only), `egress` and `credentials` (OpenSandbox only). It is the flow's; a step has no `sandbox` key. See [[OpenSandbox Runtime]] |
+| `sandbox` | no | none: steps run on the host | Where steps run: `runtime` (`docker`, the default, or `opensandbox`), `image` (required), `env` (Docker only), `egress` and `credentials` (OpenSandbox only). It is the flow's; a step has no `sandbox` key. Memory and CPU limits are not here: they are the project's (see *Project file*). See [[OpenSandbox Runtime]] |
+
+## Project file
+
+A sandboxed run reads `.flowboard.yaml` in `--folder`, the repo it works in, as it starts; it is meant to be committed with the repo. What a step may use depends on the repo and the machine, not on the recipe, so a flow cannot set these (Alex, 2026-11-10).
+
+```yaml
+sandbox:
+  memory_mb: 4096   # every container (Docker) or the box (OpenSandbox); a whole number, 64 or more
+  cpus: 2           # 1.5 is a CPU and a half
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `sandbox.memory_mb` | Docker: a quarter of what `docker info` reports, or no limit when it reports nothing. OpenSandbox: the SDK's 2 GiB | `--memory` on each Docker container, agents' and checks' alike; the box's `memory` under OpenSandbox |
+| `sandbox.cpus` | Docker: no limit. OpenSandbox: the SDK's 1 | `--cpus`; the box's `cpu` |
+
+Any other key, or a wrong value, stops the run before it starts, with exit code 2: `<folder>/.flowboard.yaml: sandbox.memory_mb: Invalid input: expected number, received string`. A run without `sandbox:` does not read the file. The limits are pinned in `flow.json` (`config.sandbox.limits`), so `--resume` keeps them. The terminal says them after the run folder: `-- sandbox limits: 1983 MB of memory (a quarter of Docker's), any CPUs`, with ` (from .flowboard.yaml)` when the file set one. A step killed at its limit ends as `exit code 137: killed by SIGKILL, out of memory most likely (the sandbox's limit is <n> MB; see .flowboard.yaml)` (`cli/src/project.ts`). The limit is per container, so parallel steps at their limit can still fill Docker's memory.
 
 ## Step fields
 
@@ -250,7 +267,7 @@ Reject is offered only when the step has an `on_fail` edge.
 `run-flow` never touches `.gitignore`. At start it adds `.flowboard/` to the repository's local exclude file (`.git/info/exclude`, found with `git rev-parse --git-path info/exclude`), as the design does for `.flowboard/skills/` ([[Execution Storage]]), so `git add -A` leaves the artifacts and the lock alone.
 
 The terminal shows, in order:
-- at start, any `-- warning: …` lines (the flow file's warnings, a stale lock and what was stopped, a folder outside git), then `-- flow <name>: <n> steps in <folder>, a budget of $<ceiling>`, or `…, no budget ceiling`, `-- run folder <run folder>`, and `-- shell steps run without: …` when the flow has a shell step and there are secrets to remove; `--resume` prints instead any stale-lock warning, `-- stopped <k> runs the last run-flow left running` when there were some, and `-- resuming <run folder>`;
+- at start, any `-- warning: …` lines (the flow file's warnings, a stale lock and what was stopped, a folder outside git), then `-- flow <name>: <n> steps in <folder>, a budget of $<ceiling>`, or `…, no budget ceiling`, `-- run folder <run folder>`, `-- sandbox limits: …` for a sandboxed flow, and `-- shell steps run without: …` when the flow has a shell step and there are secrets to remove; `--resume` prints instead any stale-lock warning, `-- stopped <k> runs the last run-flow left running` when there were some, and `-- resuming <run folder>`;
 - as each run starts, `-- <step> attempt <n> (<adapter> <model>)` or `(shell)`, then `-- <step>: missing input <type>; it runs without it` for each input not written;
 - while an agent step runs, its event lines and its questions, each batch headed `-- <step> asks:`; a question it withdraws prints `-- question withdrawn: the agent stopped waiting`, or `-- question withdrawn before it was shown: the agent stopped waiting`;
 - as an agent run ends, `-- <n> tool calls failed` and `-- last message: …` when there is something to say, and, for an OpenCode model with no price, `-- <step>: no price for <model>: its cost shows as $0, and limits.budget_usd cannot stop it`; as a shell run ends, `-- <step>: last output: <line>`;

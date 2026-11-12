@@ -12,6 +12,7 @@ import { DEFAULT_MAX_ATTEMPTS, isRework, validateFlow } from '@flowboard/core';
 import type { FlowDef } from '@flowboard/core';
 import { CLOSING, configFromObject, isDir, isFile, issueLines, readYaml, RunSchema, toAbs } from './config.ts';
 import type { RunConfig } from './config.ts';
+import type { Limits } from './project.ts';
 
 export const OUTCOME_CLOSING =
   'Before you stop, report your verdict with the set_outcome tool: "pass" if the work meets the task, "fail" if it does not, with a one-line reason.';
@@ -23,10 +24,11 @@ export interface ShellStep { kind: 'shell'; command: string; timeoutMinutes: num
  * Where steps run. `docker`: a throwaway, non-root container from `image` per step; `env` names this machine's
  * variables it gets, such as the agents' auth. `opensandbox`: one OpenSandbox box per run holding the folder;
  * only `egress` hosts are reachable, and `credentials` are injected on the way out, never put in the box.
+ * `limits` are the project's (`.flowboard.yaml`), set as a run starts and pinned with it; a recipe has none.
  */
 export type Sandbox =
-  | { runtime: 'docker'; image: string; env: string[] }
-  | { runtime: 'opensandbox'; image: string; egress: string[]; credentials: string[] };
+  | { runtime: 'docker'; image: string; env: string[]; limits?: Limits }
+  | { runtime: 'opensandbox'; image: string; egress: string[]; credentials: string[]; limits?: Limits };
 /** `folder`: the run's; `budgetUsd`: the most the whole flow may spend, 0 for no ceiling. */
 export interface FlowConfig { yamlPath: string; name: string; folder: string; budgetUsd: number; flow: FlowDef; steps: Record<string, AiStep | ShellStep>; warnings: string[]; sandbox?: Sandbox }
 export type FlowLoadResult = { ok: true; config: FlowConfig } | { ok: false; errors: string[] };

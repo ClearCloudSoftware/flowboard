@@ -31,7 +31,7 @@ The flow-designer guide: *"Each field is a guardrail — the things that decide 
 
 `max_turns` and `max_budget_usd` are *logical* caps passed to the CLI (`--max-turns`, `--max-budget-usd`). As built, they are `RunSpec.limits`: Claude passes them as Agent SDK options, which become those flags; OpenCode turns `maxTurns` into `steps` on its agents, and its adapter aborts the session once the running cost reaches `maxBudgetUsd` ([[OpenCode Adapter]]). The sandbox adds *physical* ones: *"resource limits (`--memory`, `--cpus`, `--pids-limit`, wall-clock) that physically backstop the logical `max_turns`/`max_budget_usd` caps"* (PRD §11.1). Backlog Story 3.5: *"a limit/timeout hit marks the run failed with reason."*
 
-As built in run-flow (2026-11-10), the only physical backstops are a step's `timeout_minutes` (30 for a shell step, none for an agent) and, under `sandbox: { runtime: docker }`, `--pids-limit 512` on every container. Memory and CPU limits are not set.
+As built in run-flow (2026-11-10), the only physical backstops are a step's `timeout_minutes` (30 for a shell step, none for an agent) and, under `sandbox: { runtime: docker }`, `--pids-limit 512` on every container. Memory and CPUs are not a step's or a flow's: since 2026-11-10 they are the project's, in `.flowboard.yaml` in the repo, with a quarter of Docker's memory when it sets none ([[Run Flow Reference#Project file]]).
 
 Whether a provider enforces them depends on capability flags: `budget_cap` — *"honours maxBudgetUsd; else it is advisory"*; `allowed_tools` — *"tool allow/deny is enforced, not advisory"* (`agent-provider.ts`). No `allowed_tools` → *"tool policy becomes advisory / prompt-level"* (`01-ports.md`).
 

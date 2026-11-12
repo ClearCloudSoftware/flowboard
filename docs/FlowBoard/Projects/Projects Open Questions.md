@@ -85,6 +85,9 @@ Three schemes: PRD/backlog `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>
 
 Only backlog D8 says *"per untrusted repo"*. `08` makes gVisor/microVM *"opt-in for untrusted repos"* and allows *"an explicit trusted-repo opt-out"*; D7 says *"a trusted opt-out"*; PRD §11.1 reserves gVisor/microVM *"for untrusted repos"*. The sandbox profile is global in `settings` and per step (PRD §11.1, backlog Story 1.1); nothing is per project. **Proposal:** a nullable `projects.sandbox_profile` between the two. See [[Repository Trust And Sandboxing]]; where the opt-out lives is [[Sandboxing Open Questions]] #5.
 
+> [!check] Partly built, 2026-11-10
+> A project's sandbox limits are built, outside the database: run-flow reads `sandbox.memory_mb` and `sandbox.cpus` from `.flowboard.yaml`, committed in the repo, and applies them to every container of a sandboxed run (Alex: the limits are project-wide, not the flow's). The tier and the image are still the flow's `sandbox:` key, and there is no global settings level yet. See [[Run Flow Reference#Project file]].
+
 ### 18. Visibility against a single-user tool
 
 Feature map §1's idea needs identities that PRD §2 and §17 forbid. On one laptop the repo is readable regardless. See [[Project Visibility]].

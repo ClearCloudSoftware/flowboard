@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { ZERO_USAGE } from '@flowboard/core';
@@ -973,6 +973,32 @@ test('a docker sandbox gives sandbox.env to agents only: a check gets none of it
   } finally {
     delete process.env.FB_TEST_TOKEN;
   }
+});
+
+test("a project's .flowboard.yaml sets every box's memory and CPUs, and the run pins them", async () => {
+  const s = setup(BOXED(LINEAR));
+  writeFileSync(join(s.base, 'proj', '.flowboard.yaml'), 'sandbox: { memory_mb: 3072, cpus: 1.5 }\n');
+  const fb = fakeBox();
+  const opened: unknown[] = [];
+  const openBox: RunDeps['openBox'] = async (o) => (opened.push(o.limits), fb.deps.openBox!(o));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fb.deps, openBox }), 0, s.out.join('\n'));
+  assert.deepEqual(opened, [{ memoryMb: 3072, cpus: 1.5 }]);
+  assert.ok(s.out.includes('-- sandbox limits: 3072 MB of memory, 1.5 CPUs (from .flowboard.yaml)'), s.out.join('\n'));
+  assert.deepEqual(JSON.parse(readFileSync(join(s.runDir, 'flow.json'), 'utf8')).config.sandbox.limits, { memoryMb: 3072, cpus: 1.5 });
+});
+
+test('a .flowboard.yaml run-flow cannot read stops the run before it starts', async () => {
+  const s = setup(BOXED(LINEAR));
+  writeFileSync(join(s.base, 'proj', '.flowboard.yaml'), 'sandbox: { memory_mb: lots, swap: 1 }\n');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fakeBox().deps }), 2);
+  const file = join(realpathSync(join(s.base, 'proj')), '.flowboard.yaml');
+  assert.deepEqual(s.err, [`${file}: sandbox.memory_mb: Invalid input: expected number, received string`, `${file}: sandbox.swap: unknown key`]);
+});
+
+test('a docker sandbox puts the run\'s limits on every container', () => {
+  const box = sandboxFor({ runtime: 'docker', image: 'x', env: [], limits: { memoryMb: 2048 } }, '/art');
+  assert.deepEqual(box({}).profile?.limits, { memoryMb: 2048 });
+  assert.deepEqual(box({ online: true }).profile?.limits, { memoryMb: 2048 });
 });
 
 test('FLOWBOARD_RUNS_DIR names the folder run folders go in, as the runs page reads it', async () => {
