@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFi
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { RunSummary } from '../src/flow-logs.ts';
+import { projectSettings, setCheckCommand, setLimits } from '../src/project.ts';
 import { createProject, readProjects, removeProject, repoProblems, repoRoot, seedOnce, slugify, updateProject, viewProjects } from '../src/projects.ts';
 
 const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'fb-projects-'))); // macOS's temp folder is a link
@@ -165,4 +166,20 @@ test("a project whose default flow runs the check command, in a repo that sets n
   assert.deepEqual(viewProjects([p], [], lib)[0].problems, ["checked's lint, test run the project's check command, and none is set; set one, or a run will be refused"]);
   value(updateProject(data, lib, p.id, { checkCommand: 'make test' }));
   assert.deepEqual(viewProjects(readProjects(data), [], lib)[0].problems, []); // the new .flowboard.yaml is untracked: not a change
+});
+
+const asResult = (r: { ok: true } | { ok: false; errors: string[] }) => (r.ok ? { ok: true as const, value: true } : { ok: false as const, error: r.errors.join('\n') });
+
+test('limits go into the repo file next to the check command, and an empty one is removed', () => {
+  const r = repo();
+  value(asResult(setCheckCommand(r, 'node --test')));
+  value(asResult(setLimits(r, { memoryMb: 2048, cpus: 1.5 })));
+  assert.deepEqual(projectSettings(r), { ok: true, settings: { limits: { memoryMb: 2048, cpus: 1.5 }, checkCommand: 'node --test' } });
+  value(asResult(setLimits(r, { cpus: 2 })));
+  assert.match(readFileSync(join(r, '.flowboard.yaml'), 'utf8'), /cpus: 2/);
+  assert.doesNotMatch(readFileSync(join(r, '.flowboard.yaml'), 'utf8'), /memory_mb/);
+  value(asResult(setLimits(r, {})));
+  assert.doesNotMatch(readFileSync(join(r, '.flowboard.yaml'), 'utf8'), /sandbox/);
+  value(asResult(setCheckCommand(r, undefined)));
+  assert.equal(existsSync(join(r, '.flowboard.yaml')), false);
 });

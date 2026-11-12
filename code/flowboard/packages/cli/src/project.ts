@@ -5,7 +5,7 @@
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { parseDocument } from 'yaml';
+import { type Document, isMap, parseDocument } from 'yaml';
 import { z } from 'zod';
 import { isFile, issueLines, readYaml } from './config.ts';
 
@@ -42,23 +42,35 @@ export function projectLimits(folder: string): { ok: true; limits: Limits } | { 
 }
 
 /**
- * Sets or, with undefined, removes `check_command` in the folder's `.flowboard.yaml`, keeping its other keys and
- * comments; the file is made when there is none. A file that does not pass the check is left as it is.
+ * Edits the folder's `.flowboard.yaml`, keeping its other keys and comments; the file is made when there is none,
+ * and goes when the edit leaves nothing in it, not even a comment. A file that does not pass is left as it is.
  */
-export function setCheckCommand(folder: string, command: string | undefined): { ok: true } | { ok: false; errors: string[] } {
+function editProjectFile(folder: string, edit: (doc: Document) => void): { ok: true } | { ok: false; errors: string[] } {
   const now = projectSettings(folder);
   if (!now.ok) return now;
   const path = join(folder, PROJECT_FILE);
-  if (!command?.trim() && !isFile(path)) return { ok: true };
   const doc = parseDocument(isFile(path) ? readFileSync(path, 'utf8') : '');
-  if (command?.trim()) doc.set('check_command', command.trim());
-  else doc.delete('check_command');
-  // A file left with nothing in it, not even a comment, goes rather than sit in the repo as `{}`.
+  edit(doc);
   const text = String(doc);
-  if (text.trim() === '{}') unlinkSync(path);
-  else writeFileSync(path, text);
+  if (text.trim() !== '{}') writeFileSync(path, text);
+  else if (isFile(path)) unlinkSync(path);
   return { ok: true };
 }
+
+/** Sets or, with undefined, removes `check_command`. */
+export const setCheckCommand = (folder: string, command: string | undefined) =>
+  editProjectFile(folder, (doc) => (command?.trim() ? doc.set('check_command', command.trim()) : doc.delete('check_command')));
+
+/** Sets `sandbox.memory_mb` and `sandbox.cpus` to the limits given, removing those left out, and `sandbox:` once empty. */
+export const setLimits = (folder: string, limits: Limits) =>
+  editProjectFile(folder, (doc) => {
+    for (const [key, v] of [['memory_mb', limits.memoryMb], ['cpus', limits.cpus]] as const) {
+      if (v !== undefined) doc.setIn(['sandbox', key], v);
+      else if (doc.hasIn(['sandbox', key])) doc.deleteIn(['sandbox', key]);
+    }
+    const sb = doc.get('sandbox');
+    if (isMap(sb) && sb.items.length === 0) doc.delete('sandbox');
+  });
 
 /** Adds `.flowboard/` to the local exclude file of `folder`'s git repository, so `git add -A` leaves it alone. */
 export function excludeFromGit(folder: string): void {
