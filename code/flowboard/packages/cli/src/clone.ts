@@ -25,9 +25,9 @@ export function cloneTarget(parent: string, name: string, taken: Set<string> = n
   return folder;
 }
 
-/** The folders projects were cloned or kept in, newest first, once each, leaving out `exclude` (the default). */
-export function recentParents(projects: Pick<Project, 'repoPath' | 'createdAt'>[], exclude: string): string[] {
-  const newest = [...projects].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+/** The folders projects were cloned into, newest first, once each, leaving out `exclude` (the default). */
+export function recentParents(projects: Pick<Project, 'repoPath' | 'createdAt' | 'source'>[], exclude: string): string[] {
+  const newest = projects.filter((p) => p.source.kind === 'github').sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return [...new Set(newest.map((p) => dirname(p.repoPath)))].filter((d) => d !== expand(exclude));
 }
 

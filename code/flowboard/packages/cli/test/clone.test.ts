@@ -54,9 +54,9 @@ test('the target: the repo name in the parent, -2 when that holds something, an 
   assert.equal(cloneTarget(parent, 'web', new Set([join(parent, 'web-2')])), join(parent, 'web-3')); // a clone in flight has it
 });
 
-test('folders used before: the parents of projects’ repos, newest first, once each, without the default', () => {
-  const p = (repoPath: string, createdAt: string) => ({ repoPath, createdAt }) as Project;
-  const projects = [p('/a/code/x', '2026-11-01'), p('/b/work/y', '2026-11-03'), p('/a/code/z', '2026-11-02'), p('/h/FlowBoard/projects/q', '2026-11-04')];
+test('folders used before: the parents of cloned repos, newest first, once each, without the default', () => {
+  const p = (repoPath: string, createdAt: string, kind: 'github' | 'local' = 'github') => ({ repoPath, createdAt, source: kind === 'github' ? { kind, repo: 'o/n' } : { kind } }) as Project;
+  const projects = [p('/a/code/x', '2026-11-01'), p('/b/work/y', '2026-11-03'), p('/a/code/z', '2026-11-02'), p('/h/FlowBoard/projects/q', '2026-11-04'), p('/data/scratch', '2026-11-05', 'local')];
   assert.deepEqual(recentParents(projects, '/h/FlowBoard/projects'), ['/b/work', '/a/code']);
 });
 

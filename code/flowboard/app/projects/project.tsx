@@ -2,6 +2,7 @@
 /** One project: its settings, its runs, and the way to start one in its repo or to forget it. */
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Play, Trash2 } from 'lucide-react';
@@ -23,10 +24,13 @@ import { Label } from '@/components/ui/label';
 import { libraryQuery } from '../flows/api.ts';
 import { LIVE, runsQuery } from '../runs/api.ts';
 import type { RunStatus } from '../runs/api.ts';
-import { inProject, newRunHref, projectsQuery, removeProject, updateProject, usd } from './api.ts';
+import { PROJECT_TYPES, resolveSettings } from '../../packages/cli/src/settings.ts';
+import { appSettingsQuery, inProject, newRunHref, projectsQuery, removeProject, updateProject, usd } from './api.ts';
 import type { ProjectView } from './api.ts';
 import { FlowSelect } from './flow-select.tsx';
 import { Figures } from './list.tsx';
+import { type Draft, draftFrom, type PageId, problems, toLimits, toOverrides } from './settings-model.ts';
+import { lbl, SettingsPanel } from './settings-pages.tsx';
 import { Topbar } from './topbar.tsx';
 
 const DOT: Record<RunStatus, string> = { starting: 'bg-run', running: 'bg-run', waiting: 'bg-wait', paused: 'bg-wait', done: 'bg-[var(--done)]', failed: 'bg-fail' };
@@ -144,6 +148,53 @@ function Settings({ p }: { p: ProjectView }) {
   );
 }
 
+/** The same settings pages as the wizard: what this project overrides over its type and the app. */
+function ProjectSettings({ p }: { p: ProjectView }) {
+  const queryClient = useQueryClient();
+  const app = useQuery(appSettingsQuery);
+  const [draft, setDraft] = useState<Draft>(() => draftFrom(p.settings, p.limits));
+  const [page, setPage] = useState<PageId>('overview');
+  const save = useMutation({
+    mutationFn: () => {
+      const limits = toLimits(draft);
+      // The limits are a file in the repo: written only when they changed.
+      return updateProject(p.id, { overrides: toOverrides(draft), ...(JSON.stringify(limits) !== JSON.stringify(p.limits) && { limits }) });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
+  });
+  if (!app.data) return null;
+  const type = PROJECT_TYPES[p.type];
+  const ctx = { base: resolveSettings(app.data.app, p.type, {}), os: app.data.machine.os, typeName: type.name, flows: type.flows, repo: { name: p.name, branch: p.baseBranch } };
+  const dirty = JSON.stringify(toOverrides(draft)) !== JSON.stringify(p.overrides) || JSON.stringify(toLimits(draft)) !== JSON.stringify(p.limits);
+  const ok = problems(draft, ctx).ok;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className={lbl}>project settings</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <SettingsPanel draft={draft} onChange={setDraft} ctx={ctx} mode="project" page={page} onPage={setPage} />
+        {save.error && (
+          <pre role="alert" className="border-l-2 border-fail bg-[var(--fail-soft)] px-3 py-2 text-xs whitespace-pre-wrap text-fail">
+            {save.error.message}
+          </pre>
+        )}
+        <div className="flex items-center gap-3">
+          <Button size="sm" disabled={!dirty || !ok || save.isPending} onClick={() => save.mutate()}>
+            {save.isPending ? 'Saving…' : 'Save settings'}
+          </Button>
+          {dirty && (
+            <Button size="sm" variant="ghost" onClick={() => setDraft(draftFrom(p.settings, p.limits))}>
+              Discard
+            </Button>
+          )}
+          <span className="text-xs text-muted-foreground">{!ok ? 'fix the fields marked in red' : 'trust, money and this machine stay with FlowBoard; limits go into the repo’s .flowboard.yaml'}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function Remove({ p, live }: { p: ProjectView; live: number }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -233,6 +284,9 @@ export function ProjectPage() {
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
               <h1 className="font-sans text-lg font-semibold">{p.name}</h1>
               <span className="text-muted-foreground">
+                {PROJECT_TYPES[p.type].name}
+                {p.source.kind === 'github' && <> · github.com/{p.source.repo}</>}
+                <span className="px-[0.45em] text-input">·</span>
                 {p.defaultFlow ? `starts on ${p.defaultFlow}` : 'no default flow'}
                 <span className="px-[0.45em] text-input">·</span>
                 {usd(p.weekSpendUsd)} in the last 7 days
@@ -273,6 +327,7 @@ export function ProjectPage() {
                 )}
               </section>
             </div>
+            <ProjectSettings key={JSON.stringify([p.overrides, p.limits])} p={p} />
           </>
         )}
       </main>
