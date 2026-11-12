@@ -2,9 +2,9 @@
  * One YAML file -> one validated RunSpec. See
  * docs/superpowers/specs/2026-10-18-yaml-run-config-design.md.
  */
-import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, join, resolve } from 'node:path';
+import { basename, isAbsolute, join, normalize, resolve, sep } from 'node:path';
 import { parse } from 'yaml';
 import type { $ZodIssue } from 'zod/v4/core';
 import { z } from 'zod';
@@ -94,18 +94,63 @@ function checkSkill(path: string, earlier: { name: string }[]): string | undefin
   if (!isDir(path)) return `not a directory: ${path}`;
   const file = join(path, 'SKILL.md');
   if (!isFile(file)) return `no SKILL.md in ${path}`;
-  const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(readFileSync(file, 'utf8'))?.[1];
-  let name: unknown;
-  try {
-    name = front === undefined ? undefined : (parse(front) as { name?: unknown } | null)?.name;
-  } catch {
-    name = undefined;
-  }
+  const name = skillName(file);
   const folder = basename(path);
-  if (typeof name !== 'string' || !name) return 'SKILL.md has no name';
+  if (!name) return 'SKILL.md has no name';
   if (name !== folder) return `SKILL.md name "${name}" does not match folder "${folder}"`;
   if (earlier.some((s) => s.name === name)) return `duplicate skill name "${name}"`;
   return undefined;
+}
+
+/** The `name:` in a SKILL.md's front matter, or undefined. */
+function skillName(file: string): string | undefined {
+  const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(readFileSync(file, 'utf8'))?.[1];
+  try {
+    const name: unknown = front === undefined ? undefined : (parse(front) as { name?: unknown } | null)?.name;
+    return typeof name === 'string' && name ? name : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const strings = (v: unknown) => (typeof v === 'string' ? [v] : Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+// ponytail: a manifest path that leaves the plugin folder is dropped, not reported; Claude Code wants ./ paths inside it.
+const insideOf = (rel: string) => !isAbsolute(normalize(rel)) && normalize(rel) !== '..' && !normalize(rel).startsWith(`..${sep}`);
+
+/** A plugin folder as Claude Code reads it. */
+export interface Plugin {
+  /** What its skills are invoked under, `/<name>:<skill>`: plugin.json's `name`, else the folder's (a version, when installed). */
+  name: string;
+  /** Where its skills are, relative to the folder: `skills` plus plugin.json's `skills` paths, which add to it. */
+  skillRoots: string[];
+  /** Its skills by folder and by SKILL.md `name:`, and its commands, `commands/*.md` plus plugin.json's `commands`. */
+  skills: string[];
+  commands: string[];
+}
+
+export function readPlugin(dir: string): Plugin {
+  let manifest: Record<string, unknown> = {};
+  try {
+    const m: unknown = JSON.parse(readFileSync(join(dir, '.claude-plugin', 'plugin.json'), 'utf8'));
+    if (m && typeof m === 'object' && !Array.isArray(m)) manifest = m as Record<string, unknown>;
+  } catch {
+    // none, or a broken one Claude Code reports itself: the folder names the plugin
+  }
+  const name = typeof manifest.name === 'string' && manifest.name ? manifest.name : basename(dir);
+  const skillRoots = [...new Set(['skills', ...strings(manifest.skills).filter(insideOf).map(normalize)])];
+  // A root is one skill (it holds SKILL.md) or a folder of them, one level down.
+  const skillDirs = skillRoots.flatMap((root) => {
+    const abs = join(dir, root);
+    if (isFile(join(abs, 'SKILL.md'))) return [abs];
+    return isDir(abs) ? readdirSync(abs).map((d) => join(abs, d)).filter((d) => isFile(join(d, 'SKILL.md'))) : [];
+  });
+  const skills = skillDirs.flatMap((d) => [basename(d), skillName(join(d, 'SKILL.md')) ?? []].flat());
+  const commands = ['commands', ...strings(manifest.commands).filter(insideOf)].flatMap((c) => {
+    const abs = join(dir, c);
+    if (abs.endsWith('.md') && isFile(abs)) return [basename(abs, '.md')];
+    return isDir(abs) ? readdirSync(abs).filter((f) => f.endsWith('.md')).map((f) => basename(f, '.md')) : [];
+  });
+  return { name, skillRoots, skills, commands };
 }
 
 /** File, syntax and root-shape checks; error lines carry `yamlPath` as typed. `text`, when given, is read instead of the file. */
@@ -155,6 +200,7 @@ export function configFromObject(
   const folder = real(folderPath);
   const pluginDirs = (y.plugins ?? []).map((p) => toAbs(p, baseDir));
   pluginDirs.forEach((d, i) => isDir(d) || errors.push(`plugins.${i}: not a directory: ${d}`));
+  const plugins = pluginDirs.map((d) => (isDir(d) ? readPlugin(d) : undefined));
   const promptPath = toAbs(y.prompt, baseDir);
   let preamble: string | undefined;
   if (!isFile(promptPath)) errors.push(`prompt: not a file: ${promptPath}`);
@@ -183,6 +229,14 @@ export function configFromObject(
     // A skills: folder that failed its own check already has an error line.
     if (skills.some((s) => s.name === name)) invocation = `/${SKILLS_PLUGIN}:${name}`;
     else if (!(y.skills ?? []).some((p) => basename(toAbs(p, baseDir)) === name)) errors.push(`skill: no skill "${name}" in skills`);
+  } else if (y.skill !== undefined) {
+    // A plugin not in plugins: is the agent's own, and goes unchecked.
+    const [plugin, name] = y.skill.slice(1).split(':');
+    const p = plugins.find((x) => x?.name === plugin);
+    if (p && !p.skills.includes(name)) {
+      if (!p.commands.includes(name)) errors.push(`skill: plugin "${plugin}" has no skill or command "${name}"`);
+      else if (y.adapter === 'opencode') errors.push(`skill: "${name}" is a command of plugin "${plugin}", and OpenCode loads only skills (SKILL.md)`);
+    }
   }
   if (y.adapter === 'opencode' && !y.model.includes('/')) errors.push('model: opencode model must be "providerID/modelID"');
   (y.guards?.deny_commands ?? []).forEach((src, i) => {
@@ -218,7 +272,7 @@ export function configFromObject(
   if (y.effort) spec.effort = y.effort;
   if (y.system_prompt !== undefined) spec.systemPrompt = y.system_prompt;
   if (y.plugins) {
-    spec.capabilities = pluginDirs.map((p) => ({ id: basename(p), provider: y.adapter, mount: { kind: 'plugin_dir', path: real(p) } }));
+    spec.capabilities = pluginDirs.map((p, i) => ({ id: plugins[i]!.name, provider: y.adapter, mount: { kind: 'plugin_dir', path: real(p), skills: plugins[i]!.skillRoots } }));
   }
   if (y.permissions?.allow || y.permissions?.deny) {
     spec.toolPolicy = {

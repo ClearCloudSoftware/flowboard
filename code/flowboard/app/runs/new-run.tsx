@@ -1,8 +1,9 @@
 'use client';
 /** The New run sheet: a flow from the library, the folder it works in, the task, and an optional budget. */
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { libraryQuery } from '../flows/api.ts';
+import { flowQuery, libraryQuery } from '../flows/api.ts';
 import { startRun } from './api.ts';
 
 const FOLDER_KEY = 'flowboard.newRun.folder';
@@ -25,7 +26,10 @@ export function NewRun({ flow: initial = '', onStarted, onClose }: { flow?: stri
   const [allowDirty, setAllowDirty] = useState(false);
   useEffect(() => ref.current?.showModal(), []);
   const flows = library.data?.flows ?? [];
-  const picked = flows.find((f) => f.name === flow) ?? flows.find((f) => f.errors === 0);
+  const picked = flows.find((f) => f.name === flow) ?? flows.find((f) => f.errors === 0) ?? flows[0];
+  // A flow that fails the check can be picked, to see why; the list carries only the count, the file the lines.
+  const broken = !!picked && picked.errors > 0;
+  const checked = useQuery({ ...flowQuery(picked?.name ?? ''), enabled: broken });
   const start = useMutation({
     mutationFn: () =>
       startRun({ flow: picked!.name, folder: folder.trim(), task, ...(budget !== '' && { budgetUsd: Number(budget) }), ...(allowDirty && { allowDirty }) }),
@@ -59,7 +63,7 @@ export function NewRun({ flow: initial = '', onStarted, onClose }: { flow?: stri
           <span className="in-v">
             <select id="nr-flow" value={picked?.name ?? ''} onChange={(e) => setFlow(e.target.value)}>
               {flows.map((f) => (
-                <option key={f.name} value={f.name} disabled={f.errors > 0}>
+                <option key={f.name} value={f.name}>
                   {f.name} · {f.steps.length} steps{f.budgetUsd ? ` · $${f.budgetUsd} ceiling` : ''}
                   {f.errors > 0 ? ' · does not pass the check' : ''}
                 </option>
@@ -85,6 +89,13 @@ export function NewRun({ flow: initial = '', onStarted, onClose }: { flow?: stri
             <input type="checkbox" checked={allowDirty} onChange={(e) => setAllowDirty(e.target.checked)} /> run even with uncommitted changes in the folder
           </label>
         </div>
+        {broken && (
+          <div className="nr-err" role="alert">
+            {checked.data?.check.errors.join('\n') ?? `${picked.name} does not pass the check`}
+            {'\n'}
+            <Link href={`/flows?flow=${encodeURIComponent(picked.name)}`}>Fix in the designer</Link>
+          </div>
+        )}
         {start.error && <pre className="nr-err">{start.error.message}</pre>}
         <div className="pe-f">
           <span className="sp" />

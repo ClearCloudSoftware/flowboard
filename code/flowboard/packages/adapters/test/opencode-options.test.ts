@@ -42,6 +42,7 @@ test('isolates the server and injects the config', () => {
   assert.equal(env.XDG_CONFIG_HOME, '/tmp/fb-oc-cfg');
   assert.equal(env.OPENCODE_DISABLE_PROJECT_CONFIG, '1');
   assert.equal(env.OPENCODE_DISABLE_CLAUDE_CODE, '1');
+  assert.equal(env.OPENCODE_DISABLE_EXTERNAL_SKILLS, '1');
   assert.equal(env.OPENCODE_DISABLE_AUTOUPDATE, '1');
   assert.equal(env.OPENCODE_SERVER_PASSWORD, 'pw');
   assert.equal(env.XDG_DATA_HOME, '/home/x/.local/share'); // credentials and sessions untouched
@@ -53,6 +54,8 @@ test('maps tools, skills, turns and guards into config', () => {
   const { config } = buildLaunch(spec, base);
   assert.deepEqual(config.mcp, { vibe: { type: 'local', command: ['node', 'shim.js'], enabled: true, timeout: 2147483647 } });
   assert.deepEqual(config.skills, { paths: ['/plugins/fbecho/skills'] });
+  const listed = { ...spec, capabilities: [{ id: 'p', provider: 'opencode' as const, mount: { kind: 'plugin_dir' as const, path: '/p', skills: ['skills', '.claude/skills/deep'] } }] };
+  assert.deepEqual(buildLaunch(listed, base).config.skills, { paths: ['/p/skills', '/p/.claude/skills/deep'] });
   assert.deepEqual(config.agent, { build: { steps: 5 }, plan: { steps: 5 }, general: { steps: 5 }, explore: { steps: 5 } });
   assert.deepEqual(config.plugin, ['file:///abs/guard-plugin.ts']);
 });

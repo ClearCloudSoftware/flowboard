@@ -48,7 +48,8 @@ export function buildLaunch(
 ): { env: NodeJS.ProcessEnv; config: Config; permission: PermissionRule[]; prompt: OpencodePrompt } {
   const packs = spec.capabilities ?? [];
   const tools = spec.tools ?? [];
-  const skills = packs.flatMap((p) => (p.mount.kind === 'plugin_dir' ? [`${p.mount.path}/skills`] : []));
+  // OpenCode finds every SKILL.md below a path, except in hidden folders, which a plugin's own skill paths can name.
+  const skills = packs.flatMap(({ mount: m }) => (m.kind === 'plugin_dir' ? (m.skills ?? ['skills']).map((s) => `${m.path}/${s}`) : []));
 
   const permission = toPermissionRules(spec);
   // Native packs go first: the keys set below replace theirs, so no pack can drop the permission rules,
@@ -100,6 +101,8 @@ export function buildLaunch(
     XDG_CONFIG_HOME: base.configHome,
     OPENCODE_DISABLE_PROJECT_CONFIG: '1',
     OPENCODE_DISABLE_CLAUDE_CODE: '1',
+    // ~/.agents/skills would load beside the step's, and one of the same name could stand in for its skill.
+    OPENCODE_DISABLE_EXTERNAL_SKILLS: '1',
     OPENCODE_DISABLE_AUTOUPDATE: '1',
     OPENCODE_SERVER_PASSWORD: base.password,
     OPENCODE_CONFIG_CONTENT: JSON.stringify(config),

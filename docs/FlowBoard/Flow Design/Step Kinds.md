@@ -15,7 +15,7 @@ module: Flow Design
 
 The feature map's wording: *"A step can run a saved **skill** (a packaged instruction, like a slash-command) or a defined **agent** (a role with its own personality and instructions)."* and *"A step can also run a plain command, like your linter and test suite, with no AI involved."* (§2)
 
-As built in run-flow (2026-10-23), there is no `kind` key: a step with `shell:` is a shell step, and any other is an agent step. An agent step needs a `prompt`, a `skill` or a `system_prompt`, not an agent or a skill, so a prompt-only step is valid (`steps.a: an ai step needs prompt, skill or system_prompt` otherwise). Its agent is inline `system_prompt` text and its capabilities are paths (`skill: /plugin:name`, `plugins:` folders), with no library ids or pins (the run-flow plan; an `agent:` file key is on its Left out list).
+As built in run-flow (2026-10-23), there is no `kind` key: a step with `shell:` is a shell step, and any other is an agent step. An agent step needs a `prompt`, a `skill` or a `system_prompt`, not an agent or a skill, so a prompt-only step is valid (`steps.a: an ai step needs prompt, skill or system_prompt; set one on the step or in defaults` otherwise). Its agent is inline `system_prompt` text and its capabilities are paths (`skill: /plugin:name`, `plugins:` folders), with no library ids or pins (the run-flow plan; an `agent:` file key is on its Left out list).
 
 ## Skill and agent steps
 

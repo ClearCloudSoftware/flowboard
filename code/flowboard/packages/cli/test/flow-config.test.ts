@@ -51,7 +51,7 @@ const ERRORS: [string, string, string, boolean][] = [
   ['an opencode model without a provider', change('model: openrouter/deepseek/deepseek-v4.1-flash', 'model: deepseek'), 'steps.tests.model: opencode model must be "providerID/modelID"', true],
   ['a launch key on a shell step', change('{ shell: pnpm test,', '{ shell: pnpm test, model: sonnet,'), 'steps.check.model: not used by a shell step', true],
   ['write_roots on a shell step', change('{ shell: pnpm test,', '{ shell: pnpm test, write_roots: [src],'), 'steps.check.write_roots: not used by a shell step', true],
-  ['an ai step with nothing to do', withEdge(change('  review: {', '  x: {}\n  review: {'), '{ from: review, to: x, condition: on_pass }'), 'steps.x: an ai step needs prompt, skill or system_prompt', false],
+  ['an ai step with nothing to do', withEdge(change('  review: {', '  x: {}\n  review: {'), '{ from: review, to: x, condition: on_pass }'), 'steps.x: an ai step needs prompt, skill or system_prompt; set one on the step or in defaults', false],
   ['a write root outside the folder', change('write_roots: [tests]', 'write_roots: [../out]'), 'steps.tests.write_roots.0: must be a path inside the folder, relative to it', true],
   ['an absolute write root, which ties a recipe to one machine', change('write_roots: [tests]', 'write_roots: [/srv/app]'), 'steps.tests.write_roots.0: must be a path inside the folder, relative to it', true],
   ["yamlgraph's fan-out list", change('- { from: plan, to: implement }', '- { from: plan, to: [implement, tests] }'), 'edges.0.to: one step name; write one edge per pair of steps', true],
@@ -156,6 +156,19 @@ edges:
   const placeholder = loadFlow('flow.yaml', flowProject(DELIVERY, { 'task.md': 'Fix {{issue}}.', 'prompts/plan.md': 'Plan {{issue}}.' }), RUN_IN);
   assert.ok(placeholder.ok, JSON.stringify(placeholder));
   assert.deepEqual(placeholder.config.warnings, ['--task: {{…}} is not filled in; the agent reads it as written', 'steps.plan.prompt: {{…}} is not filled in; the agent reads it as written']);
+});
+
+test('a plugin skill is checked when its plugin is in plugins:, and warned about when it is not', () => {
+  const plan = (keys: string) => change('{ prompt: prompts/plan.md,', `{ prompt: prompts/plan.md, ${keys},`);
+  const listed = (extra: Record<string, string>) => loadFlow('flow.yaml', flowProject(plan('plugins: [tools], skill: /tools:plan'), { 'tools/.keep': '', ...extra }));
+  // Checked on the recipe alone, as the designer and the run sheet check it.
+  const missing = listed({});
+  assert.deepEqual(missing.ok ? [] : missing.errors, ['flow.yaml: steps.plan.skill: plugin "tools" has no skill or command "plan"']);
+  assert.ok(listed({ 'tools/skills/plan/SKILL.md': 'x' }).ok);
+  assert.ok(listed({ 'tools/commands/plan.md': 'x' }).ok);
+  const unlisted = loadFlow('flow.yaml', flowProject(plan('skill: /tools:plan')));
+  assert.ok(unlisted.ok, JSON.stringify(unlisted));
+  assert.deepEqual(unlisted.config.warnings, ['steps.plan.skill: plugin "tools" is not in plugins:, so nothing checks it; the agent must already have it']);
 });
 
 test('toMermaid draws steps, routes and rework loops', () => {
