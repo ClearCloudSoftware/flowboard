@@ -1,0 +1,686 @@
+<meta charset="utf-8">
+<title>FlowBoard New Run</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74;  --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --wait-ink:#FDF6EA; --wait-ink-2:#F8E8D0;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit;border-radius:0}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+svg{flex-shrink:0;vertical-align:middle}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sans{font-family:var(--sans)}
+.sp{flex:1}
+code{font-family:var(--mono)}
+
+/* ── console shell ───────────────────────────────────────────────────── */
+.app{height:100dvh;display:flex;flex-direction:column}
+.topbar{flex-shrink:0;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:9px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+.vchip{display:flex;align-items:center;gap:9px;min-width:0}
+.vchip .ident{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rvpill{font-size:11px;padding:1px 7px;border:1px solid var(--line-2);color:var(--ink-3);white-space:nowrap}
+.rvpill.live{color:var(--run);border-color:var(--run);background:var(--run-soft)}
+.rvpill.bad{color:var(--fail);border-color:var(--fail);background:var(--fail-soft)}
+.statusbar{flex-shrink:0;display:flex;align-items:center;flex-wrap:wrap;gap:4px 0;
+  padding:6px 16px;background:var(--surface-2);border-top:1px solid var(--line);
+  color:var(--ink-3);font-size:11px}
+.statusbar .sep{color:var(--line-2);padding:0 .6em}
+.statusbar kbd{font-family:var(--mono);font-size:10px;border:1px solid var(--line-2);padding:0 4px;margin-right:4px;color:var(--ink-2);background:var(--surface)}
+
+/* ── buttons ─────────────────────────────────────────────────────────── */
+.act{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);padding:3px 10px;font-size:12px;
+  transition:background var(--t),border-color var(--t),color var(--t);white-space:nowrap;text-decoration:none;color:var(--ink)}
+.act:hover{background:var(--surface-2);border-color:var(--ink-3)}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act.primary:hover{background:var(--run);color:#fff}
+.act:disabled{opacity:.4;cursor:default;pointer-events:none}
+.act kbd{font-family:var(--mono);font-size:10px;color:inherit;opacity:.7;border:1px solid currentColor;padding:0 3px}
+
+/* ── workspaces strip ────────────────────────────────────────────────── */
+.wsstrip{flex-shrink:0;display:flex;align-items:stretch;gap:0;overflow-x:auto;
+  background:var(--surface-3);border-bottom:1px solid var(--line-2)}
+.wsstrip-h{display:flex;align-items:center;gap:7px;padding:7px 16px;white-space:nowrap;border-right:1px solid var(--line-2);color:var(--ink-3)}
+.wschip{display:grid;grid-template-columns:15px auto;gap:0 7px;align-items:center;padding:6px 14px;
+  border-right:1px solid var(--line-2);white-space:nowrap;transition:background var(--t)}
+.wschip:hover{background:var(--surface-2)}
+.wschip b{font-weight:500}
+.wschip small{grid-column:2;font-size:11px;color:var(--ink-3)}
+.wschip.is-new{background:var(--surface);box-shadow:inset 0 -2px 0 var(--run)}
+
+/* ── runs list + run view ────────────────────────────────────────────── */
+.body{flex:1;min-height:0;display:grid;grid-template-columns:320px 1fr}
+.pane{min-width:0;min-height:0;overflow:auto;display:flex;flex-direction:column}
+.pane + .pane{border-left:1px solid var(--line-2)}
+.ph{flex-shrink:0;display:flex;align-items:center;gap:9px;padding:8px 12px;background:var(--surface-3);
+  border-bottom:1px solid var(--line-2);position:sticky;top:0;z-index:5}
+.rnrow{width:100%;display:grid;grid-template-columns:7px 1fr auto;gap:2px 9px;align-items:center;padding:9px 12px;
+  border-bottom:1px solid var(--line);transition:background var(--t)}
+.rnrow:hover{background:var(--surface-2)}
+.rnrow[aria-current="true"]{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--ink)}
+.rnrow b{font-weight:500}
+.rnrow .rnws{font-size:11px;color:var(--ink-2);display:inline-flex;align-items:center;gap:4px;justify-self:end;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rnrow small{grid-column:2 / 4;color:var(--ink-3);font-size:11px}
+.rnrow.is-fresh{animation:fresh 1.2s cubic-bezier(.4,0,.2,1)}
+@keyframes fresh{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.lgdot{width:7px;height:7px;background:var(--done)}
+.lgdot.live{background:var(--run)}
+.lgdot.bad{background:var(--fail)}
+
+.rv{flex:1;min-height:0;display:flex;flex-direction:column}
+.rvsum{flex-shrink:0;display:flex;flex-wrap:wrap;gap:8px 28px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.rvsum div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.rvsum b{font-weight:500;font-size:14px}
+.rvsum .where b{font-size:12px;font-weight:400;color:var(--ink-2);overflow-wrap:anywhere}
+.rvbar{flex-shrink:0;display:flex;gap:3px;padding:10px 16px;border-bottom:1px solid var(--line);overflow-x:auto}
+.rvgrp{display:flex;flex-direction:column;gap:3px;flex:1;min-width:110px}
+.rvc{position:relative;overflow:hidden;flex:1;padding:5px 8px;font-size:12px;font-weight:500;background:var(--pend);color:var(--ink-3)}
+.rvc small{display:block;font-weight:400;font-size:10px;opacity:.85}
+.rvc.done{background:var(--done);color:var(--ink)}
+.rvc.running{background:var(--run);color:#fff}
+.rvc.running::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+  transform:translateX(-100%);animation:sweep 1.9s cubic-bezier(.4,0,.2,1) infinite}
+.rvc.failed{background:var(--fail);color:#fff}
+@keyframes sweep{to{transform:translateX(100%)}}
+.rvlog{flex:1;min-height:0;overflow:auto;margin:0;padding:12px 16px 24px;background:var(--paper);
+  font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere}
+.rvlog .t{color:var(--ink-3);margin-right:12px;user-select:none}
+.rvlog .ws{color:var(--ink)}
+.rvlog .bad{color:var(--fail)}
+.rvlog .cur::after{content:"";display:inline-block;width:7px;height:12px;margin-left:6px;background:var(--run);vertical-align:-1px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ── the New run sheet ───────────────────────────────────────────────── */
+.sheet{width:min(780px,calc(100vw - 32px));max-height:calc(100dvh - 40px);margin:auto;padding:0;
+  border:1px solid var(--line-2);background:var(--surface);color:var(--ink);flex-direction:column}
+.sheet[open]{display:flex}
+.sheet::backdrop{background:#17171c33}
+.sheet form{display:flex;flex-direction:column;min-height:0;flex:1}
+.sh-h{flex-shrink:0;display:flex;align-items:center;gap:9px;padding:8px 14px;background:var(--surface-3);border-bottom:1px solid var(--line-2)}
+.sh-b{flex:1;min-height:0;overflow:auto;padding:14px;display:grid;grid-template-columns:80px 1fr;gap:10px 12px;align-items:start;font-size:12px}
+.sh-b > label,.sh-b > .flbl{color:var(--ink-3);font-size:11px;padding-top:5px}
+.fv{min-width:0;display:flex;flex-direction:column;gap:4px}
+.fv .hint{font-size:10px;color:var(--ink-3);letter-spacing:.04em}
+.sh-b select,.sh-b input[type=text],.sh-b input[type=number],.sh-b textarea{width:100%;padding:4px 7px;border:1px solid var(--line-2);background:var(--paper);font-size:12px}
+.sh-b textarea{resize:vertical;font-family:var(--sans);font-size:13px;line-height:1.5}
+.sh-b input:focus,.sh-b select:focus,.sh-b textarea:focus{outline:none;border-color:var(--ink-3);background:var(--surface)}
+.recent{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--ink-3)}
+.recent button{color:var(--ink-2);border-bottom:1px dotted var(--line-2)}
+.recent button:hover{color:var(--ink);border-bottom-color:var(--ink)}
+.chk{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2);cursor:pointer}
+.chk input{margin:0;accent-color:var(--ink)}
+
+/* workspace: two choices, then the id, then what will happen */
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line-2)}
+.seg button{display:grid;grid-template-columns:16px 1fr;gap:1px 8px;align-items:center;padding:7px 10px;background:var(--paper);transition:background var(--t)}
+.seg button + button{border-left:1px solid var(--line-2)}
+.seg button:hover{background:var(--surface-2)}
+.seg button[aria-checked="true"]{background:var(--surface);box-shadow:inset 0 -2px 0 var(--ink)}
+.seg button b{font-weight:500;font-size:12px}
+.seg button small{grid-column:2;font-size:10.5px;color:var(--ink-3);display:flex;align-items:center;gap:4px}
+.seg button small.busy{color:var(--fail)}
+.idwrap{position:relative;display:flex;align-items:stretch}
+.idwrap .pre{white-space:nowrap;display:flex;align-items:center;padding:0 7px;border:1px solid var(--line-2);border-right:0;background:var(--surface-2);color:var(--ink-3);font-size:12px}
+.idlist{position:absolute;left:0;right:0;top:100%;z-index:10;background:var(--surface);border:1px solid var(--ink-3);border-top:0;max-height:220px;overflow:auto}
+.idlist[hidden]{display:none}
+.idopt{display:grid;grid-template-columns:15px 1fr auto;gap:8px;align-items:center;width:100%;padding:5px 9px;font-size:12px;border-bottom:1px solid var(--line)}
+.idopt small{color:var(--ink-3);font-size:11px}
+.idopt[aria-selected="true"]{background:var(--surface-2);box-shadow:inset 2px 0 0 var(--ink)}
+.sugg{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:11px;color:var(--ink-3)}
+.sugg button{border:1px solid var(--line);padding:0 6px;color:var(--ink-2);background:var(--paper)}
+.sugg button:hover{border-color:var(--ink-3);color:var(--ink)}
+.sugg button.ex{border-style:dashed}
+
+.pv{border:1px solid var(--line);background:var(--paper);font-size:12px}
+.pv.wait{border-color:var(--wait-edge);background:var(--wait-wash)}
+.pv.fail{border-color:var(--fail-edge);background:#FBF1EF}
+.pv-h{display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.pv.wait .pv-h{background:var(--wait);color:var(--wait-ink);border-bottom-color:var(--wait)}
+.pv.wait .pv-h .lbl{color:var(--wait-ink-2)}
+.pv.fail .pv-h{background:var(--fail);color:#fff;border-bottom-color:var(--fail)}
+.pv.fail .pv-h .lbl{color:#F6DEDB}
+.pv-h .tag{font-weight:600;font-size:12px}
+.pv-g{display:grid;grid-template-columns:56px 1fr;gap:3px 10px;padding:8px 10px}
+.pv-g > span:nth-child(odd){color:var(--ink-3);font-size:11px}
+.pv-g > span:nth-child(even){overflow-wrap:anywhere}
+.pv-g .sub{color:var(--run);font-weight:500}
+.pv-note{padding:0 10px 8px;font-family:var(--sans);font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.pv-note code{font-size:11.5px;background:var(--surface-2);padding:0 3px}
+.pv-err{margin:0 10px 8px;padding:6px 8px;background:var(--surface);border-left:3px solid var(--fail);color:var(--fail);font-size:11.5px;overflow-wrap:anywhere}
+.pv.wait .pv-err{border-left-color:var(--wait);color:var(--wait)}
+.pv-files{margin:0 10px 8px;padding:0;list-style:none;font-size:11.5px;color:var(--ink-2)}
+.pv-files li::before{content:"M ";color:var(--wait);font-weight:600}
+.pv-act{display:flex;gap:8px;padding:0 10px 9px}
+.pv-echo{padding:5px 10px;border-top:1px dashed var(--line-2);color:var(--ink-3);font-size:11px;overflow-wrap:anywhere}
+
+.sh-err{margin:0 14px 10px;padding:8px 10px;border:1px solid var(--fail-edge);background:var(--fail-soft);color:var(--fail);white-space:pre-wrap;font-size:12px}
+.sh-err a{color:var(--fail)}
+.sh-cli{flex-shrink:0;display:flex;gap:8px;align-items:baseline;padding:7px 14px;border-top:1px solid var(--line);background:var(--surface-2);font-size:11px;color:var(--ink-2)}
+.sh-cli code{overflow-wrap:anywhere}
+.sh-cli em{font-style:normal;color:var(--ink-3)}
+.sh-f{flex-shrink:0;display:flex;gap:8px;align-items:center;padding:8px 14px;border-top:1px solid var(--line)}
+.sh-f .why{font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px;min-width:0}
+.sh-f .why.fail{color:var(--fail)}
+.sh-f .why.wait{color:var(--wait)}
+
+@media (max-width:860px){
+  .body{grid-template-columns:1fr;grid-template-rows:minmax(160px,38%) 1fr}
+  .pane + .pane{border-left:0;border-top:1px solid var(--line-2)}
+  .sh-b{grid-template-columns:1fr}
+  .sh-b > label,.sh-b > .flbl{padding-top:0}
+  .seg{grid-template-columns:1fr}
+  .seg button + button{border-left:0;border-top:1px solid var(--line-2)}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after,*::before{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">flowboard<em>/</em><span>runs</span></div>
+    <span class="vchip" id="vchip"></span>
+    <span class="sp"></span>
+    <button class="act primary" id="newBtn" type="button"></button>
+    <a class="act" href="#">Flows</a>
+    <a class="act" href="#">Docs</a>
+  </header>
+
+  <section class="wsstrip" id="strip" aria-label="Workspaces in billing-svc"></section>
+
+  <div class="body">
+    <aside class="pane">
+      <div class="ph"><span class="lbl">runs</span><span class="sp"></span><span class="lbl" id="runCount"></span></div>
+      <div id="runs"></div>
+    </aside>
+    <main class="pane" id="main"></main>
+  </div>
+
+  <footer class="statusbar" id="statusbar"></footer>
+</div>
+
+<dialog class="sheet" id="sheet" aria-label="New run">
+  <form id="form" method="dialog" autocomplete="off">
+    <div class="sh-h"><span class="lbl">new run</span><span class="sp"></span><span class="lbl" style="letter-spacing:.04em">run-flow --page, in the background</span></div>
+    <div class="sh-b">
+      <label for="f-flow">Flow</label>
+      <span class="fv"><select id="f-flow"></select><em class="hint" id="f-flow-d"></em></span>
+
+      <label for="f-folder">Folder</label>
+      <span class="fv">
+        <input type="text" id="f-folder" placeholder="~/code/my-repo" spellcheck="false">
+        <span class="recent" id="f-recent"></span>
+      </span>
+
+      <label for="f-task">Task</label>
+      <span class="fv"><textarea id="f-task" rows="3" placeholder="What the flow should do. It starts every agent step's prompt."></textarea></span>
+
+      <span class="flbl" id="f-ws-l">Workspace</span>
+      <span class="fv" id="f-ws">
+        <span class="seg" role="radiogroup" aria-labelledby="f-ws-l" id="f-seg"></span>
+        <span id="f-idrow">
+          <span class="idwrap">
+            <label class="pre" for="f-id">task id</label>
+            <input type="text" id="f-id" spellcheck="false" placeholder="e.g. stripe-webhook-idempotency" role="combobox" aria-controls="f-idlist" aria-expanded="false" aria-autocomplete="list">
+            <div class="idlist" id="f-idlist" role="listbox" hidden></div>
+          </span>
+          <span class="sugg" id="f-sugg" style="margin-top:5px"></span>
+        </span>
+        <div class="pv" id="f-pv" aria-live="polite"></div>
+      </span>
+
+      <label for="f-budget">Budget</label>
+      <span class="fv"><input type="number" id="f-budget" min="0" step="0.1"><em class="hint">dollars for the whole flow; 0 means no ceiling</em></span>
+
+      <span></span>
+      <label class="chk"><input type="checkbox" id="f-dirty"> run even with uncommitted changes in the folder</label>
+    </div>
+    <div id="f-err"></div>
+    <div class="sh-cli" id="f-cli"></div>
+    <div class="sh-f">
+      <span class="why" id="f-why"></span>
+      <span class="sp"></span>
+      <button type="button" class="act" id="f-cancel">Cancel</button>
+      <button type="button" class="act primary" id="f-start"></button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+/* ── icons: status marks from the house set; UI glyphs are Lucide, inline ── */
+const ICON = {
+  run : '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.1" fill="currentColor"/><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".3"/></svg>',
+  fail: '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 4.3l7.4 7.4M11.7 4.3l-7.4 7.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  done: '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.3l3.1 3.1 6.1-7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  idle: '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2.6"/></svg>',
+};
+const L = (body, s = 14) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const LU = {
+  branch : '<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+  folder : '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  lock   : '<rect width="18" height="11" x="3" y="11"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  plus   : '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  term   : '<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
+  alert  : '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  ban    : '<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
+  layers : '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+  play   : '<polygon points="6 3 20 12 6 21 6 3"/>',
+};
+
+/* ── the product's world ──────────────────────────────────────────────── */
+const REPO = '~/code/billing-svc', HEAD = '7c41e9a', BASE_BRANCH = 'main';
+const TASK_ID = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+const X = 20;                                            // ponytail: one clock, ×20, so a flow finishes while you watch
+const BASE = new Date(2026, 10, 12, 14, 6, 12).getTime(), LOAD = Date.now();
+const now = () => BASE + (Date.now() - LOAD) * X;
+
+const FLOWS = [
+  { name: 'standard-flow', cells: [['plan'], ['implement', 'tests'], ['check'], ['review']], budget: 0, errors: [], d: 'plan, then implement and tests side by side, check, review' },
+  { name: 'bugfix-quick',  cells: [['reproduce'], ['fix'], ['check']], budget: 2, errors: [], d: 'reproduce the bug as a failing test, fix it, run the check' },
+  { name: 'docs-refresh',  cells: [['scan'], ['refresh']], budget: 1, errors: [], d: 'find the docs the code has moved past and rewrite them' },
+  { name: 'migrate-schema', cells: [['plan'], ['migrate'], ['check']], budget: 0,
+    errors: ['flows/migrate-schema.yaml: steps.migrate.reads: plan.md is written by no step before it', 'flows/migrate-schema.yaml: steps.check: a shell step needs command, or the project\'s check_command'], d: '' },
+];
+const flowOf = (n) => FLOWS.find((f) => f.name === n);
+const nSteps = (f) => f.cells.flat().length;
+const SHELL = new Set(['check', 'scan']);
+const DUR  = { plan: 70, implement: 290, tests: 170, check: 45, review: 130, reproduce: 80, fix: 160, scan: 20, refresh: 600, migrate: 100 };
+const COST = { plan: .38, implement: 1.92, tests: .64, review: .51, reproduce: .29, fix: .87, refresh: .73, migrate: .5 };
+const kind = (s) => SHELL.has(s) ? 'shell' : 'claude-code sonnet';
+
+/* Workspaces as git sees them. `files` are uncommitted, repo-relative; `folder:false` = branch kept, folder removed. */
+const WS = {
+  'auth-refactor':              { folder: true,  ahead: 0, files: ['services/api/src/auth/session.ts', 'services/api/src/auth/refresh.ts'] },
+  'ledger-rounding':            { folder: true,  ahead: 0, files: ['services/api/src/ledger/round.ts', 'services/api/test/ledger/round.test.ts'] },
+  'invoice-pdf-retry':          { folder: true,  ahead: 3, files: [], last: 'Retry the PDF render once on a Chromium timeout' },
+  'stripe-webhook-idempotency': { folder: false, ahead: 1, files: [], last: 'Note where the webhook handler writes to the ledger' },
+};
+const RESULT_FILES = ['services/api/src/webhooks/stripe.ts', 'services/api/src/ledger/write.ts', 'services/api/src/db/processed-events.sql', 'services/api/test/webhooks/stripe.test.ts'];
+
+/* ── helpers ──────────────────────────────────────────────────────────── */
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const usd = (n) => '$' + n.toFixed(2);
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const p2 = (n) => String(n).padStart(2, '0');
+const stamp = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}-${p2(d.getMinutes())}-${p2(d.getSeconds())}`; };
+const unstamp = (s) => { const m = s.match(/^(\d+)-(\d+)-(\d+)T(\d+)-(\d+)-(\d+)/); return new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime(); };
+const shown = (name) => name.slice(0, 19).replace('T', ' ').replace(/-(\d\d)-(\d\d)$/, ':$1:$2');
+const span = (s) => { s = Math.max(0, Math.round(s)); return s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m` : s >= 60 ? `${Math.floor(s / 60)}m ${p2(s % 60)}s` : `${s}s`; };
+const wsPath = (id) => `${REPO}/.flowboard/worktrees/task-${id}`;
+const norm = (f) => f.trim().replace(/\/+$/, '');
+const subOf = (folder) => folder === REPO ? '' : folder.startsWith(REPO + '/') && !folder.startsWith(REPO + '/.flowboard/') ? folder.slice(REPO.length + 1) : null; // null = not in git
+/* which checkout a folder edits: a worktree, or the repo's own */
+const checkout = (f) => (f.match(/^(.*\/\.flowboard\/worktrees\/task-[^/]+)/) || [])[1] || (subOf(f) !== null ? REPO : f);
+const put = (el, html) => { if (el._h !== html) { el._h = html; el.innerHTML = html; } };
+
+/* ── the engine: a run is a script of the CLI's own lines, revealed by the clock ── */
+function script(flow, head, o = {}) {
+  const ev = head.map((line, i) => ({ at: i * .4, line }));
+  let at = 2;
+  for (const group of flow.cells) {
+    let end = at;
+    group.forEach((s, i) => {
+      ev.push({ at: at + i * .3, step: s, s: 'running', line: `-- ${s} attempt 1 (${kind(s)})` });
+      const fin = at + DUR[s], cost = SHELL.has(s) ? 0 : COST[s], bad = o.fail === s;
+      ev.push({ at: fin, step: s, s: bad ? 'failed' : 'done', cost, line: `-- ${s} attempt 1: ${bad ? 'fail' : 'pass'}, ${usd(cost)}` });
+      end = Math.max(end, fin);
+    });
+    at = end + 3;
+  }
+  ev.sort((a, b) => a.at - b.at);
+  const iStop = ev.findIndex((e) => e.step === o.stop && e.s === 'done');
+  const iFail = ev.findIndex((e) => e.s === 'failed');
+  const kept = ev.slice(0, iStop >= 0 ? iStop : iFail >= 0 ? iFail + 1 : ev.length);
+  if (iStop < 0) {
+    const ran = kept.filter((e) => e.s === 'done' || e.s === 'failed');
+    const how = iFail >= 0 ? 'failed' : 'done';
+    kept.push({ at: kept.at(-1).at + 2, end: how, line: `-- flow ${how}: ${plural(ran.length, 'run')}, ${usd(ran.reduce((n, e) => n + e.cost, 0))} spent, $0.00 wasted` });
+  }
+  return kept;
+}
+const ceilingOf = (b) => b ? `a budget of ${usd(b)}` : 'no budget ceiling';
+function headFor(flow, ws, folder, name, budget, reused) {
+  const h = [];
+  if (ws) h.push(`-- workspace ${wsPath(ws)} on branch fb/task-${ws}, ${reused ? 'picked up again' : 'new'}`);
+  if (!ws && subOf(folder) === null) h.push(`-- warning: ${folder} is not in a git repository; nothing can undo the flow's edits`);
+  h.push(`-- flow ${flow.name}: ${plural(nSteps(flow), 'step')} in ${folder}, ${ceilingOf(budget)}`, `-- run folder runs/${name}`);
+  return h;
+}
+function mkRun(name, ws, folder, pid, o, budget, reused) {
+  const flow = flowOf(name.slice(20));
+  const b = budget ?? flow.budget;
+  return { name, flow: flow.name, ws, folder, pid, t0: unstamp(name), ev: script(flow, headFor(flow, ws, folder, name, b, reused), o) };
+}
+const runs = [
+  mkRun('2026-11-12T13-58-40-docs-refresh', null, REPO, 48090, { stop: 'refresh' }),
+  mkRun('2026-11-12T13-43-02-standard-flow', 'auth-refactor', wsPath('auth-refactor'), 48211, { stop: 'review' }),
+  mkRun('2026-11-12T11-20-15-standard-flow', 'ledger-rounding', wsPath('ledger-rounding'), 47730, { fail: 'check' }),
+  mkRun('2026-11-11T16-05-48-standard-flow', 'invoice-pdf-retry', wsPath('invoice-pdf-retry'), 45112, {}),
+  mkRun('2026-11-10T10-12-31-bugfix-quick', 'stripe-webhook-idempotency', wsPath('stripe-webhook-idempotency'), 43398, {}),
+];
+let nextPid = 48377, picked = runs[1].name, freshWs = null;
+
+const lastAt = (r) => r.ev.at(-1).at;
+const ended = (r) => r.ev.find((e) => e.end);
+const el = (r) => { const s = (now() - r.t0) / 1000; return ended(r) ? Math.min(s, lastAt(r)) : s; };
+const seen = (r) => { const s = el(r); return r.ev.filter((e) => e.at <= s); };
+const status = (r) => (seen(r).find((e) => e.end) || {}).end || 'running';
+const live = (r) => status(r) === 'running';
+const stepState = (r, step) => { const e = seen(r).filter((x) => x.step === step).at(-1); return e ? e.s : 'pending'; };
+const current = (r) => [...new Set(seen(r).filter((e) => e.step).map((e) => e.step))].filter((s) => stepState(r, s) === 'running');
+const spent = (r) => seen(r).reduce((n, e) => n + (e.s === 'done' || e.s === 'failed' ? e.cost : 0), 0);
+const holderOf = (folder) => runs.find((r) => live(r) && r.folder === folder);
+const nearOf = (folder) => runs.find((r) => live(r) && r.folder !== folder && checkout(r.folder) === checkout(folder));
+
+/* ── the runs page behind the sheet ───────────────────────────────────── */
+const $ = (id) => document.getElementById(id);
+function tone(r) { const s = status(r); return s === 'failed' ? 'bad' : s === 'running' ? 'live' : ''; }
+
+function renderList() {
+  $('runCount').textContent = runs.length;
+  put($('runs'), runs.map((r) => {
+    const s = status(r), cur = current(r);
+    const where = r.ws ? `${L(LU.branch, 11)}${esc(r.ws)}` : `${L(LU.folder, 11)}repo folder`;
+    return `<button type="button" class="rnrow" data-run="${r.name}" aria-current="${r.name === picked}">
+      <i class="lgdot ${tone(r)}"></i><b>${r.flow}</b><span class="rnws">${where}</span>
+      <small>${shown(r.name)} · ${s}${cur.length ? ' · ' + cur.join(', ') : ''}${s === 'running' ? ' · <span data-clock="' + r.name + '"></span>' : ''}</small></button>`;
+  }).join(''));
+  document.querySelectorAll('[data-clock]').forEach((n) => { n.textContent = span(el(runs.find((x) => x.name === n.dataset.clock))); });
+}
+
+function renderMain() {
+  const r = runs.find((x) => x.name === picked);
+  const s = status(r), lv = s === 'running';
+  put($('vchip'), `<b>${r.flow}</b><span class="lbl ident">runs/${r.name}</span><span class="rvpill ${tone(r)}">${lv ? '&#9679; running' : s === 'failed' ? '&#10005; failed' : '&#10003; done'}</span>`);
+  const flow = flowOf(r.flow);
+  const cell = (st) => { const ss = stepState(r, st), e = seen(r).filter((x) => x.step === st);
+    const d = e.length ? span((e.length > 1 ? e[1].at : el(r)) - e[0].at) : '';
+    return `<div class="rvc ${ss}">${st}<small>${kind(st) === 'shell' ? 'shell' : 'sonnet'}${d ? ' · ' + d : ' · ' + ss}${e[1] ? ' · ' + usd(e[1].cost) : ''}</small></div>`; };
+  const lines = seen(r);
+  const html = `<div class="rv">
+    <section class="rvsum">
+      <div><span class="lbl">bill</span><b>${usd(spent(r))}</b></div>
+      <div><span class="lbl">${lv ? 'running for' : 'took'}</span><b>${span(el(r))}</b></div>
+      <div><span class="lbl">started</span><b>${shown(r.name).slice(11)}</b></div>
+      ${lv ? `<div><span class="lbl">pid</span><b>${r.pid}</b></div>` : ''}
+      <div class="where"><span class="lbl">${r.ws ? 'workspace' : 'folder'}</span><b>${esc(r.folder)}${r.ws ? ` <span style="color:var(--ink-3)">on</span> fb/task-${esc(r.ws)}` : ''}</b></div>
+    </section>
+    <nav class="rvbar" aria-label="Steps">${flow.cells.map((g) => `<div class="rvgrp">${g.map(cell).join('')}</div>`).join('')}</nav>
+    <pre class="rvlog" id="log">${lines.map((e, i) => `<span class="t">${new Date(r.t0 + e.at * 1000).toTimeString().slice(0, 8)}</span><span class="${/^-- workspace/.test(e.line) ? 'ws' : /: fail|^-- flow failed|^-- warning/.test(e.line) ? 'bad' : ''}${lv && i === lines.length - 1 ? ' cur' : ''}">${esc(e.line)}</span>`).join('\n')}</pre>
+  </div>`;
+  const log = $('log'), top = log ? log.scrollTop : 0;
+  const stick = !log || renderMain.was !== picked || log.scrollTop + log.clientHeight >= log.scrollHeight - 30;
+  renderMain.was = picked;
+  put($('main'), html);
+  $('log').scrollTop = stick ? 1e9 : top;
+}
+
+function wsInfo(id) {
+  const w = WS[id], r = runs.find((x) => x.ws === id), s = r && status(r);
+  if (r && s === 'running') return { mark: ICON.run, color: 'var(--run)', text: `running · ${current(r).join(', ') || 'starting'} · pid ${r.pid}`, s };
+  if (!w.folder) return { mark: ICON.idle, color: 'var(--ink-3)', text: `branch only · folder removed · ${plural(w.ahead, 'commit')} ahead`, s: 'branch' };
+  const dirty = w.files.length ? `${w.files.length} uncommitted` : 'clean';
+  const ahead = w.ahead ? `${w.ahead} ahead of ${BASE_BRANCH} · ` : '';
+  if (s === 'failed') { const f = r.ev.find((e) => e.s === 'failed'); return { mark: ICON.fail, color: 'var(--fail)', text: `${f.step} failed · ${ahead}${dirty}`, s }; }
+  return { mark: ICON.done, color: 'var(--done)', text: `done · ${ahead}${dirty}`, s };
+}
+function renderStrip() {
+  const ids = [...new Set([...runs.map((r) => r.ws).filter(Boolean), ...Object.keys(WS)])];
+  put($('strip'), `<span class="wsstrip-h">${L(LU.layers, 13)}<span class="lbl">workspaces in billing-svc</span></span>` + ids.map((id) => {
+    const i = wsInfo(id);
+    return `<button type="button" class="wschip${id === freshWs ? ' is-new' : ''}" data-ws="${id}" title="${esc(wsPath(id))} on fb/task-${esc(id)}"><span style="color:${i.color}">${i.mark}</span><b>${esc(id)}</b><small>${i.text}</small></button>`;
+  }).join(''));
+}
+function renderStatus() {
+  const working = runs.filter(live).length;
+  put($('statusbar'), `billing-svc<span class="sep">/</span>${BASE_BRANCH} @ ${HEAD}<span class="sep">·</span>${plural(working, 'run')} working<span class="sep">·</span>${plural(Object.keys(WS).length, 'workspace')}<span class="sep">·</span>${new Date(now()).toTimeString().slice(0, 8)}, clock ×${X}<span class="sp"></span><kbd>n</kbd>new run<span class="sep"></span><kbd>Esc</kbd>close<span class="sep"></span><kbd>&#8984;&#8629;</kbd>start`);
+}
+
+/* ── the sheet ────────────────────────────────────────────────────────── */
+let remembered = '';
+try { remembered = localStorage.getItem('flowboard.newRun.folder') || ''; } catch (e) { /* per-browser convenience */ }
+const f = {
+  flow: 'standard-flow', folder: remembered || REPO, mode: 'ws', id: 'stripe-webhook-idempotency', budget: '', dirty: false,
+  task: 'Make the Stripe webhook handler idempotent: dedupe on event.id before writing to the ledger.',
+};
+const STOP = new Set('make the a an to on of for in into before after and with from by is fix add so it its be when'.split(' '));
+const words = (t) => (t.toLowerCase().match(/[a-z0-9]+/g) || []).filter((w) => !STOP.has(w));
+function suggestions() {
+  const head = f.task.split(/[:.\n]/)[0];
+  const slug = words(head).slice(0, 4).join('-').slice(0, 40).replace(/-+$/, '');
+  const tw = words(f.task);
+  const near = Object.keys(WS).filter((id) => id.split('-').filter((w) => tw.some((t) => t.slice(0, 6) === w.slice(0, 6))).length >= 2);
+  return { slug: slug && !WS[slug] ? slug : '', near };
+}
+
+/* what the run would do, worked out with run-flow's own rules and order */
+function evaluate() {
+  const folder = norm(f.folder), sub = folder ? subOf(folder) : null;
+  const p = { tone: '', ok: true, rows: [], notes: [], files: [], acts: [] };
+  if (!folder) return { ...p, ok: false, tag: 'no folder yet', reason: 'pick the folder to run in', notes: ['The folder decides which repository the workspace is cut from.'] };
+  if (f.mode === 'repo') {
+    p.run = folder;
+    p.rows = [['folder', esc(folder)], ['branch', sub === null ? '<span style="color:var(--ink-3)">none, not a git repository</span>' : `${BASE_BRANCH}, as it is checked out; shared with anything else working here`], ['lock', `${esc(folder)}/.flowboard/lock`]];
+    const h = holderOf(folder), n = !h && nearOf(folder);
+    if (h) {
+      Object.assign(p, { tone: 'fail', ok: false, tag: 'refused · this folder is busy', reason: `${h.flow} (pid ${h.pid}) holds this folder's lock` });
+      p.err = `--folder: another run-flow (pid ${h.pid}) is working here on runs/${h.name}; if it is not, delete ${folder}/.flowboard/lock`;
+      const w = runs.find((r) => live(r) && r.ws);
+      p.notes.push(`One run at a time in a folder. A task workspace has a folder, a branch and a lock of its own${w ? ` — <code>${w.ws}</code> is running in one right now, next to <code>${h.flow}</code> here` : ''}.`);
+      p.acts.push(`<button type="button" class="act" data-act="ws">${L(LU.branch, 13)}Use a task workspace</button>`);
+    } else if (sub === null) {
+      Object.assign(p, { tone: 'wait', tag: 'starts · nothing can undo it' });
+      p.err = `-- warning: ${folder} is not in a git repository; nothing can undo the flow's edits`;
+    } else {
+      p.tag = 'starts here · one run at a time';
+      if (n) Object.assign(p, { tone: 'wait', tag: 'starts · shares a checkout' }), p.notes.push(`Not refused: the lock is per folder, and <code>${n.flow}</code> (pid ${n.pid}) is working in <code>${esc(n.folder)}</code>. Both would edit one checkout.`);
+      else p.notes.push('No other run holds this folder. A second run here waits for this one to finish.');
+    }
+    p.echo = '';
+    return p;
+  }
+  if (sub === null) return { ...p, tone: 'fail', ok: false, tag: 'refused · not a repository', reason: 'the folder is not in a git repository', err: `--workspace: ${folder} is not in a git repository`, notes: ['A task workspace is a git worktree, so the folder has to be inside a repository.'] };
+  if (!f.id) return { ...p, ok: false, tag: 'needs a task id', reason: 'give the task an id', notes: ['The id names the folder and the branch. Pick a suggestion, or an existing workspace to pick it up again.'] };
+  if (!TASK_ID.test(f.id)) return { ...p, tone: 'fail', ok: false, tag: 'refused · not a usable id', reason: 'the task id cannot name a folder and a branch', err: `--workspace: task id ${JSON.stringify(f.id)}: use letters, digits, - and _, starting with a letter or digit` };
+  const path = wsPath(f.id), w = WS[f.id];
+  p.run = path + (sub ? '/' + sub : '');
+  p.rows = [['folder', `${esc(path)}${sub ? `<span class="sub">/${esc(sub)}</span>` : ''}`], ['branch', `fb/task-${esc(f.id)}${w ? '' : ` <span style="color:var(--ink-3)">from ${BASE_BRANCH} @ ${HEAD}</span>`}`], ['lock', `${esc(p.run)}/.flowboard/lock`]];
+  if (sub) p.notes.push(`The folder is <code>${esc(sub)}</code> inside the repo, so the run works in the same subfolder of the worktree.`);
+  p.echo = `-- workspace ${path} on branch fb/task-${f.id}, ${w ? 'picked up again' : 'new'}`;
+  const h = holderOf(p.run);
+  if (h) {
+    Object.assign(p, { tone: 'fail', ok: false, tag: 'refused · running now', reason: `${f.id} is running (pid ${h.pid})` });
+    p.notes.unshift(`<code>${h.flow}</code> is running in this workspace, step ${current(h).join(', ') || 'starting'}, pid ${h.pid}. Wait for it, or use another id.`);
+    p.err = `--folder: another run-flow (pid ${h.pid}) is working here on runs/${h.name}; if it is not, delete ${p.run}/.flowboard/lock`;
+    return p;
+  }
+  if (!w) p.tag = 'new', p.notes.unshift(`A new worktree cut from <code>${BASE_BRANCH} @ ${HEAD}</code>, the repo's current HEAD. Nothing else is working in it.`);
+  else {
+    const files = w.files.filter((x) => !sub || x.startsWith(sub + '/'));
+    const lastLine = w.ahead ? `${plural(w.ahead, 'commit')} ahead of ${BASE_BRANCH}; last: <span class="sans">“${esc(w.last)}”</span>` : `no commits ahead of ${BASE_BRANCH}`;
+    p.tag = w.folder ? 'picked up again' : 'checked out again';
+    p.notes.unshift(w.folder ? `This workspace exists: ${lastLine}.` : `Its folder was removed but branch <code>fb/task-${esc(f.id)}</code> was kept, so it is checked out again: ${lastLine}.`);
+    if (files.length) {
+      p.files = files;
+      if (!f.dirty) {
+        Object.assign(p, { tone: 'wait', ok: false, tag: p.tag + ' · needs allow-dirty', reason: `${plural(files.length, 'uncommitted file')} in the workspace` });
+        p.err = `--folder: uncommitted changes in ${files.length} file(s); commit or stash them first, or pass --allow-dirty`;
+        p.acts.push(`<button type="button" class="act" data-act="dirty">Run on top of them</button>`);
+      } else p.notes.push(`Allow-dirty is on: the run starts on top of ${plural(files.length, 'uncommitted file')}, and an agent may overwrite them.`);
+    } else if (w.folder) p.notes.push('Clean: nothing uncommitted.');
+  }
+  const n = nearOf(p.run);
+  if (n) Object.assign(p, { tone: p.tone || 'wait' }), p.notes.push(`Not refused: the lock is per folder, and <code>${n.flow}</code> (pid ${n.pid}) is working in <code>${esc(n.folder)}</code>, the same worktree. Both would edit one checkout.`);
+  return p;
+}
+
+const fe = { flow: $('f-flow'), folder: $('f-folder'), task: $('f-task'), id: $('f-id'), budget: $('f-budget'), dirty: $('f-dirty') };
+fe.flow.innerHTML = FLOWS.map((x) => `<option value="${x.name}">${x.name} · ${plural(nSteps(x), 'step')}${x.budget ? ` · $${x.budget} ceiling` : ''}${x.errors.length ? ' · does not pass the check' : ''}</option>`).join('');
+const q = (s) => /^[\w~/.@:+-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
+
+function check() {
+  const flow = flowOf(f.flow), p = evaluate();
+  const budgetOk = f.budget === '' || Number(f.budget) >= 0;
+  const reason = flow.errors.length ? `${flow.name} does not pass the check`
+    : !f.task.trim() ? 'write the task' : !budgetOk ? 'the budget is 0 or more' : !p.ok ? p.reason : '';
+  return { flow, p, reason };
+}
+
+function renderSheet() {
+  const { flow, p, reason } = check();
+  $('f-flow-d').textContent = flow.d;
+  fe.budget.placeholder = flow.budget ? `${flow.budget} (the flow's)` : "the flow's: no ceiling";
+  const folder = norm(f.folder);
+  put($('f-recent'), `<span>recent</span>${[REPO, REPO + '/services/api', '~/notes/billing'].map((x) => `<button type="button" data-folder="${x}">${x}</button>`).join('')}`);
+  const h = folder && holderOf(folder);
+  put($('f-seg'), `
+    <button type="button" role="radio" aria-checked="${f.mode === 'repo'}" data-mode="repo">${L(LU.folder)}<b>Repo folder</b>
+      <small class="${h ? 'busy' : ''}">${h ? `${L(LU.lock, 11)}busy: ${h.flow}, pid ${h.pid}` : 'one run at a time'}</small></button>
+    <button type="button" role="radio" aria-checked="${f.mode === 'ws'}" data-mode="ws">${L(LU.branch)}<b>Task workspace</b>
+      <small>its own worktree, branch and lock</small></button>`);
+  $('f-idrow').hidden = f.mode !== 'ws';
+  const s = suggestions();
+  put($('f-sugg'), (s.slug || s.near.length) ? `<span>from the task</span>${s.slug ? `<button type="button" data-id="${s.slug}">${s.slug}</button>` : ''}${s.near.map((id) => `<button type="button" class="ex" data-id="${id}" title="an existing workspace">${id} · ${wsInfo(id).s === 'branch' ? 'branch only' : 'exists'}</button>`).join('')}` : '');
+  const icon = p.tone === 'fail' ? L(LU.ban, 13) : p.tone === 'wait' ? L(LU.alert, 13) : f.mode === 'ws' ? L(LU.branch, 13) : L(LU.folder, 13);
+  put($('f-pv'), `<div class="pv-h">${icon}<span class="lbl">${f.mode === 'ws' ? 'workspace' : 'repo folder'}</span><span class="tag">${esc(p.tag || '')}</span></div>
+    ${p.rows.length ? `<div class="pv-g">${p.rows.map(([k, v]) => `<span>${k}</span><span>${v}</span>`).join('')}</div>` : ''}
+    ${p.notes.map((n) => `<div class="pv-note">${n}</div>`).join('')}
+    ${p.files.length ? `<ul class="pv-files">${p.files.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${p.err ? `<div class="pv-err">${esc(p.err)}</div>` : ''}
+    ${p.acts.length ? `<div class="pv-act">${p.acts.join('')}</div>` : ''}
+    ${p.echo && p.ok ? `<div class="pv-echo">prints: ${esc(p.echo)}</div>` : ''}`);
+  $('f-pv').className = 'pv ' + p.tone;
+  put($('f-err'), flow.errors.length ? `<div class="sh-err" role="alert">${flow.errors.map(esc).join('\n')}\n<a href="#">Fix in the designer</a></div>` : '');
+  put($('f-cli'), `${L(LU.term, 12)}<code>pnpm run-flow --folder ${esc(q(folder || '<folder>'))} --task <em>&lt;task file&gt;</em>${f.mode === 'ws' ? ` --workspace ${esc(q(f.id || '<id>'))}` : ''}${f.budget !== '' ? ` --budget-usd ${esc(f.budget)}` : ''}${f.dirty ? ' --allow-dirty' : ''} --page flows/${flow.name}.yaml</code>`);
+  const why = $('f-why');
+  why.className = 'why ' + (reason ? (p.tone || (flow.errors.length ? 'fail' : '')) : '');
+  why.innerHTML = reason ? `${L(p.tone === 'wait' ? LU.alert : LU.ban, 13)}<span>Start is off: ${esc(reason)}</span>` : `<span>${f.mode === 'ws' ? `in task-${esc(f.id)}` : 'in the repo folder'}</span>`;
+  $('f-start').disabled = !!reason;
+  $('f-start').innerHTML = `${L(LU.play, 12)}Start run <kbd>&#8984;&#8629;</kbd>`;
+}
+
+function syncInputs() {
+  fe.flow.value = f.flow; fe.folder.value = f.folder; fe.task.value = f.task;
+  fe.id.value = f.id; fe.budget.value = f.budget; fe.dirty.checked = f.dirty;
+}
+
+/* autocomplete: existing workspaces first, then the one the task suggests */
+let opts = [], sel = -1;
+function openList() {
+  const v = f.id.toLowerCase(), s = suggestions();
+  opts = [...Object.keys(WS).filter((id) => id.includes(v)), ...(s.slug && s.slug.includes(v) ? [s.slug] : [])].filter((id) => id !== f.id);
+  const list = $('f-idlist');
+  if (!opts.length || document.activeElement !== fe.id) { list.hidden = true; fe.id.setAttribute('aria-expanded', 'false'); return; }
+  sel = Math.min(sel, opts.length - 1);
+  list.innerHTML = opts.map((id, i) => { const i2 = WS[id] ? wsInfo(id) : { mark: L(LU.plus, 13), color: 'var(--ink-3)', text: 'new, from the task' };
+    return `<button type="button" class="idopt" role="option" aria-selected="${i === sel}" data-id="${id}"><span style="color:${i2.color}">${i2.mark}</span><span>${id}</span><small>${i2.text}</small></button>`; }).join('');
+  list.hidden = false; fe.id.setAttribute('aria-expanded', 'true');
+}
+const closeList = () => { $('f-idlist').hidden = true; fe.id.setAttribute('aria-expanded', 'false'); sel = -1; };
+
+const sheet = $('sheet');
+function openSheet(id) {
+  if (id !== undefined) { f.mode = 'ws'; f.id = id; }
+  syncInputs(); renderSheet();
+  if (!sheet.open) sheet.showModal();
+}
+
+function start() {
+  const { flow, p, reason } = check();
+  if (reason) return;
+  const name = `${stamp(now())}-${flow.name}`;
+  const ws = f.mode === 'ws' ? f.id : null;
+  const budget = f.budget === '' ? undefined : Number(f.budget);
+  const reused = !!(ws && WS[ws]);
+  const r = { name, flow: flow.name, ws, folder: p.run, pid: nextPid++, t0: unstamp(name), ev: [] };
+  r.ev = script(flow, headFor(flow, ws, p.run, name, budget ?? flow.budget, reused), {});
+  if (ws) { WS[ws] = WS[ws] || { ahead: 0, files: [] }; WS[ws].folder = true; freshWs = ws; }
+  runs.unshift(r); picked = name;
+  try { localStorage.setItem('flowboard.newRun.folder', norm(f.folder)); } catch (e) { /* per-browser convenience */ }
+  sheet.close();
+  renderAll();
+  document.querySelector(`[data-run="${name}"]`).classList.add('is-fresh');
+}
+
+/* a finished run leaves its edits in the workspace, uncommitted — as the real agents do */
+function settle() {
+  for (const r of runs) if (r.ws && !r.settled && r.ev.length && status(r) === 'done' && r.t0 > BASE) {
+    r.settled = true; const w = WS[r.ws]; w.files = [...new Set([...w.files, ...RESULT_FILES])];
+  }
+}
+
+function renderAll() { settle(); renderList(); renderMain(); renderStrip(); renderStatus(); if (sheet.open) renderSheet(); }
+
+/* ── wiring ───────────────────────────────────────────────────────────── */
+$('newBtn').innerHTML = `${L(LU.plus, 13)}New run`;
+$('newBtn').onclick = () => openSheet();
+$('f-cancel').onclick = () => sheet.close();
+$('f-start').onclick = start;
+$('form').addEventListener('submit', (e) => e.preventDefault());
+fe.flow.onchange = () => { f.flow = fe.flow.value; renderSheet(); };
+fe.folder.oninput = () => { f.folder = fe.folder.value; renderSheet(); };
+fe.task.oninput = () => { f.task = fe.task.value; renderSheet(); };
+fe.budget.oninput = () => { f.budget = fe.budget.value; renderSheet(); };
+fe.dirty.onchange = () => { f.dirty = fe.dirty.checked; renderSheet(); };
+fe.id.oninput = () => { f.id = fe.id.value.trim(); sel = -1; renderSheet(); openList(); };
+fe.id.onfocus = openList;
+fe.id.onblur = () => setTimeout(closeList, 120);
+fe.id.addEventListener('keydown', (e) => {
+  const list = $('f-idlist');
+  if (list.hidden) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length; openList(); }
+  else if ((e.key === 'Enter' || e.key === 'Tab') && sel >= 0 && !e.metaKey && !e.ctrlKey) { e.preventDefault(); f.id = opts[sel]; fe.id.value = f.id; closeList(); renderSheet(); }
+  else if (e.key === 'Escape') { e.preventDefault(); closeList(); }
+});
+sheet.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-mode],[data-id],[data-act],[data-folder]');
+  if (!t) return;
+  if (t.dataset.mode) f.mode = t.dataset.mode;
+  if (t.dataset.id) { f.id = t.dataset.id; fe.id.value = f.id; closeList(); }
+  if (t.dataset.folder) { f.folder = t.dataset.folder; fe.folder.value = f.folder; }
+  if (t.dataset.act === 'ws') f.mode = 'ws';
+  if (t.dataset.act === 'dirty') { f.dirty = true; fe.dirty.checked = true; }
+  renderSheet();
+  if (t.dataset.mode === 'ws' || t.dataset.act === 'ws') fe.id.focus();
+});
+sheet.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); start(); } });
+document.addEventListener('keydown', (e) => {
+  if (sheet.open || e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (e.key === 'n') { e.preventDefault(); openSheet(); }
+});
+$('runs').addEventListener('click', (e) => { const b = e.target.closest('[data-run]'); if (b) { picked = b.dataset.run; renderAll(); } });
+$('strip').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-ws]'); if (!b) return;
+  const r = runs.find((x) => x.ws === b.dataset.ws && live(x));
+  if (r) { picked = r.name; renderAll(); } else openSheet(b.dataset.ws);
+});
+
+/* open mid-flight: auth-refactor in review, docs-refresh holding the repo folder, the sheet half filled */
+renderAll();
+openSheet();
+setInterval(renderAll, 500);
+</script>

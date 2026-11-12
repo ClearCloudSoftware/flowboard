@@ -117,6 +117,48 @@ browser, or run `python3 -m http.server` in this folder.
   wire it into runs on Claude or Codex.
   [Hosted copy](https://claude.ai/artifact/TSKBXrSguykDxA2d4Q8wwe) (private link).
 
+- **[`workspaces.html`](./workspaces.html)**: every task workspace in one
+  project's repo. A workspace is a git worktree at
+  `.flowboard/worktrees/task-<id>` on branch `fb/task-<id>`. Each row shows the
+  branch, commits ahead of and behind `main`, uncommitted files, the last run
+  and its size. Rows that need you (unmerged commits, work left by a failed run)
+  sit under one ochre band. Broken rows (a plain folder in the way, a switched
+  branch) show the exact fix. **Clean up** follows the rules
+  `pnpm clean-workspace` enforces: it refuses while a run holds the lock,
+  throws away uncommitted files only when you say so, and keeps an unmerged
+  branch rather than deleting it. The running task finishes about 20 seconds in,
+  and its Clean up becomes available. Every action shows its CLI line.
+  Keys: `j`/`k` move, `↵` open, `c` clean up, `r` run again, `y` copy path,
+  `Esc` close.
+
+- **[`new-run-workspace.html`](./new-run-workspace.html)**: the shipped New
+  run sheet with a **Workspace** field. A run can work in the repo folder, one
+  run at a time, or in a task workspace. The id suggests itself from the task
+  text and autocompletes existing ones. A live preview gives the path and
+  branch, and says whether the workspace is new, picked up again, picked up
+  with uncommitted files (needs allow-dirty), checked out again from a kept
+  branch, or refused. It refuses while a run holds the workspace, for a bad id,
+  or while the repo folder's lock is held. That last case is the point of the
+  feature: in the repo folder a second run is refused, while a task workspace
+  runs alongside. Start streams run-flow's real output lines into a new run row.
+  Keys: `n` new run, `Esc` close, `⌘↵` start, `↑`/`↓`/`↵` pick an id.
+
+- **[`land-workspace.html`](./land-workspace.html)**: a proposal for landing
+  a finished task, since who merges is still open in the docs. It has three
+  stages. **Review** shows the branch against `main` and the check result, and
+  warns that `main` has moved underneath the branch. Pick any commit, including
+  the two new ones on `main`, to see only the files it changed. Each diff shows
+  old and new line numbers and its `git show` command, and `[` and `]` step
+  through the commits.
+  **Land** offers merge, squash, or rebase then fast-forward. A dry run hits a
+  real conflict in `src/webhooks/stripe.ts`; you can update from `main` or send
+  the task back to the flow. **Clean up** lists what goes and what stays, and
+  shows the exact refusal for a leftover untracked file. The branch can be
+  deleted only because it has landed. *Clean up without landing* shows the
+  other ending, where the branch is kept. Every action shows its host command.
+  Keys: `1`–`3` stages, `[`/`]` previous or next commit, `e` expand all,
+  `d` dry run.
+
 ## Conventions
 
 Run `/mockup` and these are applied for you — the skill carries the tokens, a skeleton, the

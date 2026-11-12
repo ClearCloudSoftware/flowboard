@@ -1,0 +1,669 @@
+<meta charset="utf-8">
+<title>FlowBoard Workspaces</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74; --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --wait-ink:#FDF6EA; --wait-ink-2:#F8E8D0;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);
+  font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+input{font:inherit;color:inherit;border-radius:0}
+svg{flex:0 0 auto;display:block}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sans{font-family:var(--sans)}
+.sep{color:var(--line-2);padding:0 .45em}
+.sp{flex:1}
+.mute{color:var(--ink-3)}
+.app{height:100dvh;display:flex;flex-direction:column}
+
+/* ── topbar ───────────────────────────────────────────────────── */
+.topbar{flex-shrink:0;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+.back{display:inline-flex;align-items:center;gap:7px;color:var(--ink-2);transition:color var(--t)}
+.back:hover{color:var(--ink)}
+.crumb{color:var(--ink-2)}
+.here{font-weight:600;font-size:14px;letter-spacing:-.01em}
+.repo{display:flex;align-items:center;gap:8px;color:var(--ink-2);font-size:12px}
+
+/* ── buttons ──────────────────────────────────────────────────── */
+.act{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-2);padding:3px 11px;
+  font-size:12px;white-space:nowrap;background:var(--surface);
+  transition:background var(--t),border-color var(--t),color var(--t)}
+.act:hover:not(:disabled){background:var(--surface-2);border-color:var(--ink-3)}
+.act:disabled{opacity:.4;cursor:default}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act.primary:hover:not(:disabled){background:var(--run);color:#fff}
+.act.danger:hover:not(:disabled){border-color:var(--fail);color:var(--fail);background:var(--fail-soft)}
+.act.solid-fail{border-color:var(--fail);background:var(--fail);color:#fff;font-weight:500}
+.act kbd{font-family:var(--mono);font-size:10px;color:var(--ink-3);border:1px solid var(--line);padding:0 3px}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;
+  color:var(--ink-3);transition:color var(--t),background var(--t)}
+.icon-btn:hover{color:var(--ink);background:var(--surface-2)}
+
+/* ── seam: title + bulk action ────────────────────────────────── */
+.seam{flex-shrink:0;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:8px 18px;
+  background:var(--surface-3);border-top:2px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.seam-t{font-weight:600}
+.seam-n{color:var(--ink-3);font-size:12px}
+.hint{font-size:10.5px;color:var(--ink-3);overflow-wrap:anywhere}
+
+/* ── body: list + panel ───────────────────────────────────────── */
+.body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 408px}
+.list{min-height:0;overflow:auto}
+.panel{min-height:0;overflow:auto;background:var(--surface);border-left:1px solid var(--line-2)}
+
+/* ── rows ─────────────────────────────────────────────────────── */
+.wrow{display:grid;align-items:center;gap:12px;width:100%;
+  grid-template-columns:18px minmax(170px,1.25fr) minmax(160px,1.3fr) 62px 92px minmax(160px,1.2fr) 58px 24px;
+  padding:8px 18px;border-bottom:1px solid var(--line);transition:background var(--t),opacity var(--t);cursor:pointer}
+.wrow:hover{background:var(--surface)}
+.wrow.is-sel{background:var(--surface);box-shadow:inset 2px 0 0 var(--ink)}
+.wrow.is-gone{opacity:0}
+.whead{display:grid;gap:12px;align-items:end;
+  grid-template-columns:18px minmax(170px,1.25fr) minmax(160px,1.3fr) 62px 92px minmax(160px,1.2fr) 58px 24px;
+  padding:9px 18px 6px;border-bottom:1px solid var(--line-2)}
+.c2{display:flex;flex-direction:column;min-width:0}
+.c2 b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c2 span{font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.num{text-align:right;white-space:nowrap}
+.num i{font-style:normal;color:var(--ink-3)}
+.ic{display:inline-flex}
+.ic.run{color:var(--run)} .ic.wait{color:var(--wait)} .ic.fail{color:var(--fail)}
+.ic.done{color:var(--done)} .ic.quiet{color:var(--ink-3)}
+.t-run{color:var(--run)} .t-fail{color:var(--fail)} .t-wait{color:var(--wait)}
+.wrow.st-merged{color:var(--ink-3)}
+.wrow.st-merged .c2 b{color:var(--ink-2)}
+
+/* the one bold place: needs you */
+.hot{background:var(--wait-wash);border-bottom:1px solid var(--wait-edge)}
+.hot-h{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:var(--wait);color:var(--wait-ink);padding:6px 18px}
+.hot-h .lbl{color:var(--wait-ink);font-weight:600;font-size:11px}
+.hot-h .sans{color:var(--wait-ink-2);font-size:12.5px}
+.hot .wrow{border-bottom-color:var(--wait-edge);box-shadow:inset 3px 0 0 var(--wait)}
+.hot .wrow:hover{background:#FBF1E0}
+.hot .wrow.is-sel{background:var(--surface);box-shadow:inset 3px 0 0 var(--wait),inset 0 0 0 1px var(--wait-edge)}
+.hot .c2 b{font-size:14px;font-weight:600}
+.quiet-h{display:flex;align-items:center;gap:10px;padding:14px 18px 6px}
+
+/* mini progress bar, one cell per step */
+.wpb{display:flex;gap:2px;margin-top:3px}
+.wc{width:20px;height:5px;position:relative;overflow:hidden}
+.wc-done{background:var(--done)}
+.wc-running{background:var(--run)}
+.wc-running::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);
+  transform:translateX(-100%);animation:sweep 1.9s cubic-bezier(.4,0,.2,1) infinite}
+.wc-failed{background:var(--fail)}
+.wc-pending{background:var(--pend);box-shadow:inset 0 0 0 1px var(--line-2)}
+@keyframes sweep{to{transform:translateX(100%)}}
+
+/* ── panel ────────────────────────────────────────────────────── */
+.pn{padding:14px 18px 40px}
+.pn-h{display:flex;align-items:center;gap:9px}
+.pn-id{font-weight:600;font-size:15px;letter-spacing:-.01em;overflow-wrap:anywhere}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;font-size:11px;white-space:nowrap;
+  border:1px solid var(--line-2);background:var(--surface-2);color:var(--ink-3)}
+.pill.run{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.pill.wait{border-color:var(--wait);color:var(--wait);background:var(--wait-soft);font-weight:500}
+.pill.fail{border-color:var(--fail);color:var(--fail);background:var(--fail-soft);font-weight:500}
+.pn-sub{color:var(--ink-3);font-size:11.5px;margin-top:3px}
+.pn-why{font-family:var(--sans);font-size:13.5px;color:var(--ink-2);margin:11px 0 0;line-height:1.5}
+.pn-why code{font-family:var(--mono);font-size:12px;color:var(--ink)}
+.fix{margin-top:12px;border:1px solid var(--fail-edge);border-left:3px solid var(--fail);background:var(--fail-soft);
+  padding:8px 11px;font-size:12px}
+.fix .msg{color:var(--fail);overflow-wrap:anywhere}
+.fix .cmd{display:flex;align-items:center;gap:6px;margin-top:7px;color:var(--ink);overflow-wrap:anywhere}
+.live{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;padding:8px 11px;background:var(--run-soft);border-left:3px solid var(--run)}
+.live div{display:flex;flex-direction:column}
+.live b{font-weight:600;font-size:14px}
+.pn-acts{display:grid;gap:9px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.pa{display:flex;flex-direction:column;gap:3px}
+.pa .why{font-family:var(--sans);font-size:12px;color:var(--ink-3)}
+.sec{margin-top:18px;padding-top:12px;border-top:1px solid var(--line)}
+.sec .lbl{display:block;margin-bottom:6px}
+.kv{display:grid;grid-template-columns:86px minmax(0,1fr);gap:4px 10px;font-size:12px}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0;color:var(--ink-2);overflow-wrap:anywhere}
+.kv dd svg{display:inline-block;vertical-align:-2px;margin-right:4px}
+.kv dd .icon-btn{vertical-align:middle;width:20px;height:20px}
+.kv dd b{color:var(--ink);font-weight:500}
+.cm{display:grid;grid-template-columns:62px minmax(0,1fr);gap:2px 10px;font-size:12px;padding:3px 0}
+.cm span:first-child{color:var(--ink-3)}
+.fl{display:grid;grid-template-columns:24px minmax(0,1fr);gap:2px 8px;font-size:12px;padding:2px 0}
+.fl span:first-child{color:var(--fail);font-weight:600}
+.fl.art span:first-child{color:var(--ink-3);font-weight:400}
+.small{font-family:var(--sans);font-size:12px;color:var(--ink-3);margin:6px 0 0}
+.legend{display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px 10px;margin-top:12px;align-items:start}
+.legend b{font-weight:500}
+.legend p{margin:1px 0 0;font-family:var(--sans);font-size:12.5px;color:var(--ink-2)}
+
+/* ── command strip: the CLI equivalent of the last thing you did ─ */
+.cli{flex-shrink:0;background:var(--surface-2);border-top:1px solid var(--line-2);padding:7px 18px;
+  font-size:11.5px;max-height:132px;overflow:auto}
+.cli .ln{white-space:pre-wrap;overflow-wrap:anywhere}
+.cli .ln.cmd{color:var(--ink)}
+.cli .ln.cmd::before{content:"$ ";color:var(--ink-3)}
+.cli .ln.out{color:var(--ink-2)}
+.cli .ln.err{color:var(--fail)}
+.cli .ln.keep{color:var(--ink);font-weight:500}
+
+.statusbar{flex-shrink:0;display:flex;align-items:center;flex-wrap:wrap;gap:0;
+  padding:6px 18px;background:var(--surface-2);border-top:1px solid var(--line);color:var(--ink-3);font-size:11px}
+.statusbar b{color:var(--ink-2);font-weight:500}
+.kbd{border:1px solid var(--line-2);padding:0 4px;font-size:10px;color:var(--ink-2);background:var(--surface)}
+.flash{color:var(--run);font-weight:500}
+
+/* ── confirm dialog: the only thing that floats ───────────────── */
+dialog.dlg{border:1px solid var(--line-2);border-top:3px solid var(--fail);padding:0;width:min(520px,calc(100vw - 32px));
+  background:var(--surface);color:var(--ink);box-shadow:0 18px 50px rgba(23,23,28,.18)}
+dialog.dlg::backdrop{background:rgba(23,23,28,.28)}
+.dlg-b{padding:16px 18px}
+.dlg-b h2{font-family:var(--sans);font-size:17px;font-weight:600;margin:0 0 6px;letter-spacing:-.01em}
+.dlg-b p{font-family:var(--sans);font-size:13.5px;color:var(--ink-2);margin:0 0 10px}
+.dlg-files{border:1px solid var(--line);background:var(--surface-2);padding:6px 10px;margin-bottom:12px}
+.dlg-in{display:block;width:100%;margin-top:5px;padding:6px 9px;border:1px solid var(--line-2);background:var(--surface)}
+.dlg-in:focus{outline:2px solid var(--fail);outline-offset:-2px}
+.dlg-f{display:flex;gap:8px;justify-content:flex-end;align-items:center;padding:10px 18px;border-top:1px solid var(--line);background:var(--surface-2)}
+
+@media (max-width:1320px){
+  .wrow,.whead{grid-template-columns:18px minmax(150px,1.2fr) minmax(150px,1.3fr) 62px 56px minmax(140px,1.1fr) 24px}
+  .c-disk{display:none}
+}
+@media (max-width:1040px){
+  .body{display:block;overflow:auto}
+  .list,.panel{overflow:visible}
+  .panel{border-left:0;border-top:2px solid var(--line-2)}
+}
+@media (max-width:720px){
+  .wrow,.whead{grid-template-columns:18px minmax(0,1fr) 62px 24px}
+  .c-state,.c-dirty,.c-run,.c-disk{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after,*::before{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <button class="back"><span id="i-back"></span><span>Projects</span></button>
+    <span class="sep">/</span><span class="crumb">billing-svc</span>
+    <span class="sep">/</span><span class="here">Workspaces</span>
+    <span class="sp"></span>
+    <span class="repo"><span id="i-repo"></span>~/code/billing-svc<span class="sep">·</span>base <b>main</b> @ 8c41f0e</span>
+  </header>
+
+  <div class="seam">
+    <span class="seam-t">A git worktree per task</span>
+    <span class="seam-n">.flowboard/worktrees/task-&lt;id&gt; on fb/task-&lt;id&gt;, each with its own run lock</span>
+    <span class="sp"></span>
+    <span class="hint" id="bulkHint"></span>
+    <button class="act" id="bulk"></button>
+  </div>
+
+  <div class="body">
+    <div class="list" id="list"></div>
+    <aside class="panel" id="panel" aria-label="Workspace detail"></aside>
+  </div>
+
+  <div class="cli" id="cli" aria-live="polite"></div>
+  <footer class="statusbar" id="sb"></footer>
+</div>
+
+<dialog class="dlg" id="dlg"></dialog>
+
+<script>
+/* Lucide icons, inline. */
+const LU = {
+  back:'<path d="m15 18-6-6 6-6"/>',
+  activity:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  merge:'<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/>',
+  filediff:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M9 10h6"/><path d="M12 13V7"/><path d="M9 17h6"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  folderx:'<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="m9.5 10.5 5 5"/><path d="m14.5 10.5-5 5"/>',
+  branch:'<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  copy:'<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  play:'<polygon points="6 3 20 12 6 21 6 3"/>',
+  trash:'<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+  bookmark:'<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',
+  x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  repo:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
+  lock:'<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+};
+const ic = (n, s = 15, w = 1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LU[n]}</svg>`;
+document.getElementById('i-back').innerHTML = ic('back', 13, 2);
+document.getElementById('i-repo').innerHTML = ic('repo', 13);
+
+/* ── the world ───────────────────────────────────────────────── */
+const REPO = '~/code/billing-svc';
+const FLOW = 'standard-flow';
+const STEPS = ['plan', 'implement + tests', 'check', 'review'];
+const RUN_S = [3, 8, 5, 4];             // a fresh run: 20s end to end
+const T0 = Date.now();
+const S = 1000, M = 60 * S, H = 60 * M, D = 24 * H;
+const pathOf = w => `${REPO}/.flowboard/worktrees/task-${w.id}`;
+const br = w => `fb/task-${w.id}`;
+const c = (sha, msg) => ({ sha, msg });
+const done = (ago, cost, step = 4, status = 'done') => ({ flow: FLOW, status, step, at: T0 - ago, cost });
+
+let WS = [
+  { id: 'stripe-webhook-idempotency', folder: true, pid: 48213, behind: 0, disk: 214,
+    ahead: [c('a1c0e9f', 'webhooks: store processed Stripe event ids in webhook_events'),
+            c('7d2b41c', 'webhooks: skip an event already in webhook_events before dispatch'),
+            c('3e88f02', 'tests: a replayed invoice.paid is a no-op')],
+    dirty: [['M', 'src/webhooks/stripe.ts'], ['M', 'test/webhooks/stripe.test.ts']],
+    art: ['brief.md', 'plan.md', 'check.log'],
+    finishCommit: c('c94d7aa', 'review: claim the event id with ON CONFLICT DO NOTHING'),
+    run: { flow: FLOW, status: 'running', step: 2, cost: 1.18, rate: 0.012,
+           ends: [T0 - 5 * M, T0 - 41 * S, T0 + 9 * S, T0 + 20 * S] } },
+  { id: 'invoice-pdf-retry', folder: true, behind: 3, disk: 188, dirty: [],
+    ahead: [c('5b1e2a0', 'render: retry the PDF render with backoff on a 503 from gotenberg'),
+            c('9f0c3d1', 'jobs: cap render-invoice at 4 attempts'),
+            c('2aa7e64', 'invoices: mark pdf_status=failed after the last attempt'),
+            c('e41b9c8', 'tests: render retries, then gives up'),
+            c('07d3f5a', 'review: log the attempt number on the render span')],
+    art: ['brief.md', 'plan.md', 'check.log', 'review.md'], run: done(3 * H, 0.87) },
+  { id: 'rate-limit-429', folder: true, behind: 1, disk: 176, ahead: [],
+    dirty: [['M', 'src/stripe/client.ts'], ['M', 'src/stripe/retry.ts'], ['M', 'test/stripe/retry.test.ts'], ['??', 'src/stripe/backoff.ts']],
+    art: ['brief.md', 'plan.md', 'check.log'], failNote: 'check: 2 tests failing in test/stripe/retry.test.ts',
+    run: done(47 * M, 0.53, 2, 'failed') },
+  { id: 'csv-export-timezone', folder: false, how: 'hand', behind: 9, disk: 0, dirty: [], art: [],
+    ahead: [c('6c2f19e', "export: format timestamps in the account's timezone"),
+            c('b77a0d4', 'tests: rows on a DST boundary in the CSV export')],
+    run: done(4 * D, 0.71) },
+  { id: 'refund-partial-capture', folder: true, behind: 0, disk: 96, dirty: [], ahead: [], art: [],
+    broken: { kind: 'plain', why: 'exists but is not a git worktree; move it away',
+              fix: `mv ${REPO}/.flowboard/worktrees/task-refund-partial-capture ~/refund-partial-capture.bak` },
+    run: null },
+  { id: 'dunning-email-copy', folder: true, behind: 2, disk: 172, dirty: [], art: ['brief.md', 'plan.md', 'review.md'],
+    ahead: [c('41ce0aa', 'copy: plainer subject lines for the three dunning emails')],
+    broken: { kind: 'switched', on: 'alex/try-mjml', why: 'is on alex/try-mjml, not fb/task-dunning-email-copy; switch it back',
+              fix: `git -C ${REPO}/.flowboard/worktrees/task-dunning-email-copy switch fb/task-dunning-email-copy` },
+    run: done(1 * D, 0.38) },
+  { id: 'ledger-rounding', folder: true, behind: 2, disk: 179, dirty: [], ahead: [], art: ['brief.md', 'plan.md', 'check.log', 'review.md'],
+    run: done(5 * H, 0.61) },
+  { id: 'auth-refactor', folder: true, behind: 6, disk: 201, dirty: [], ahead: [], art: ['brief.md', 'plan.md', 'check.log', 'review.md'],
+    run: done(2 * D, 1.06) },
+];
+
+/* ── state is derived, never stored ──────────────────────────── */
+function state(w) {
+  if (w.broken) return 'broken';
+  if (w.pid) return 'running';
+  if (!w.folder) return 'branch';
+  if (w.dirty.length) return 'dirty';
+  if (w.ahead.length && !w.kept) return 'unmerged';
+  if (w.ahead.length) return 'kept';
+  return 'merged';
+}
+const META = {
+  running:  { label: 'running',          cls: 'run',   icon: 'activity' },
+  dirty:    { label: 'uncommitted work', cls: 'wait',  icon: 'filediff' },
+  unmerged: { label: 'not on main',      cls: 'wait',  icon: 'merge' },
+  broken:   { label: 'broken',           cls: 'fail',  icon: 'alert' },
+  branch:   { label: 'branch only',      cls: 'quiet', icon: 'folderx' },
+  kept:     { label: 'kept',             cls: 'quiet', icon: 'branch' },
+  merged:   { label: 'merged',           cls: 'done',  icon: 'check' },
+};
+const RANK = { running: 0, broken: 1, branch: 2, kept: 3, merged: 4 };
+const needsYou = w => ['dirty', 'unmerged'].includes(state(w));
+const n = (k, word) => `${k} ${word}${k === 1 ? '' : 's'}`;
+
+function detail(w) {
+  const s = state(w);
+  if (s === 'running') return `lock pid ${w.pid} · ${STEPS[w.run.step]}`;
+  if (s === 'dirty') return w.run && w.run.status === 'failed' ? `run failed at ${STEPS[w.run.step]} · left ${n(w.dirty.length, 'file')}` : `${n(w.dirty.length, 'file')} not committed`;
+  if (s === 'unmerged') return `${n(w.ahead.length, 'commit')} not on main · land or keep`;
+  if (s === 'broken') return w.broken.kind === 'plain' ? 'a plain folder is in the way' : `switched to ${w.broken.on}`;
+  if (s === 'branch') return w.how === 'hand' ? 'folder deleted by hand · next run re-creates it' : 'folder removed · branch kept';
+  if (s === 'kept') return `you kept it · ${n(w.ahead.length, 'commit')} not on main`;
+  return 'all on main · safe to clean';
+}
+
+/* ── clock + format ──────────────────────────────────────────── */
+const mmss = ms => { const t = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+const ago = ts => { const d = Date.now() - ts; return d < M ? 'just now' : d < H ? `${Math.floor(d / M)}m ago` : d < D ? `${Math.floor(d / H)}h ago` : `${Math.floor(d / D)}d ago`; };
+const money = x => `$${x.toFixed(2)}`;
+const mb = x => x ? `${x} MB` : '—';
+const stepAt = r => r.step === 0 ? r.ends[0] - RUN_S[0] * S : r.ends[r.step - 1];
+const cost = r => r.status === 'running' ? r.cost + r.rate * (Date.now() - r.billedFrom) / 1000 : r.cost;
+
+function pbar(r) {
+  if (!r) return '';
+  return '<span class="wpb">' + STEPS.map((name, i) => {
+    let s = 'pending';
+    if (r.status === 'done' || i < r.step) s = 'done';
+    else if (i === r.step) s = r.status === 'running' ? 'running' : r.status === 'failed' ? 'failed' : 'done';
+    return `<span class="wc wc-${s}" title="${name}"></span>`;
+  }).join('') + '</span>';
+}
+
+/* ── view state ──────────────────────────────────────────────── */
+let sel = 'stripe-webhook-idempotency', open = true, removedCount = 0, flashMsg = '', flashUntil = 0;
+let CLI = [['out', 'Each action here is a FlowBoard command you could have typed. The last one shows up in this strip.']];
+const byId = id => WS.find(w => w.id === id);
+const order = () => {
+  const hot = WS.filter(needsYou);
+  const rest = WS.filter(w => !needsYou(w)).sort((a, b) => RANK[state(a)] - RANK[state(b)]);
+  return { hot, rest, all: hot.concat(rest) };
+};
+const cleanable = w => state(w) === 'merged';
+
+/* ── render ──────────────────────────────────────────────────── */
+function rowHTML(w) {
+  const s = state(w), m = META[s], r = w.run;
+  const vs = w.broken && w.broken.kind === 'plain' ? '<span class="mute">—</span>'
+    : `<span title="commits ahead of / behind main">↑${w.ahead.length} <i>↓${w.behind}</i></span>`;
+  const dirty = !w.folder || (w.broken && w.broken.kind === 'plain') ? '<span class="mute">—</span>'
+    : w.dirty.length ? `<span class="${s === 'running' ? '' : 't-wait'}">${n(w.dirty.length, 'file')}</span>` : '<span class="mute">0</span>';
+  let last = '<span class="c2"><b class="mute">no run</b><span>never run here</span></span>';
+  if (r) {
+    const line2 = r.status === 'running'
+      ? `<span><span class="t-run" data-el="${w.id}">${STEPS[r.step]} ${mmss(Date.now() - stepAt(r))}</span> · <span data-cost="${w.id}">${money(cost(r))}</span></span>`
+      : `<span>${r.status === 'failed' ? `<span class="t-fail">failed at ${STEPS[r.step]}</span>` : 'finished'} · ${ago(r.at)} · ${money(r.cost)}</span>`;
+    last = `<span class="c2"><b>${r.flow}</b>${line2}${pbar(r)}</span>`;
+  }
+  return `<div class="wrow st-${s}${w.id === sel && open ? ' is-sel' : ''}${w.gone ? ' is-gone' : ''}" data-id="${w.id}" role="button" tabindex="-1" aria-selected="${w.id === sel}">
+    <span class="ic ${m.cls}">${ic(m.icon)}</span>
+    <span class="c2"><b>${w.id}</b><span>${br(w)}</span></span>
+    <span class="c2 c-state"><b class="${m.cls === 'fail' ? 't-fail' : m.cls === 'run' ? 't-run' : ''}">${m.label}</b><span>${detail(w)}</span></span>
+    <span class="num">${vs}</span>
+    <span class="num c-dirty">${dirty}</span>
+    <span class="c-run">${last}</span>
+    <span class="num c-disk mute">${mb(w.folder ? w.disk : 0)}</span>
+    <button class="icon-btn" data-copy="${w.id}" title="Copy ${pathOf(w)}" aria-label="Copy workspace path">${ic('copy', 13)}</button>
+  </div>`;
+}
+
+function renderList() {
+  const { hot, rest } = order();
+  let h = `<div class="whead lbl"><span></span><span>Task · branch</span><span class="c-state">State</span><span class="num">vs main</span><span class="num c-dirty">Uncommitted</span><span class="c-run">Last run</span><span class="num c-disk">Disk</span><span></span></div>`;
+  if (hot.length) h += `<section class="hot" aria-label="Needs you">
+      <div class="hot-h"><span class="lbl">Needs you · ${hot.length}</span><span class="sans">finished work that isn't on main yet: land it, keep it, or throw it away</span></div>
+      ${hot.map(rowHTML).join('')}</section>`;
+  if (rest.length) h += `<div class="quiet-h"><span class="lbl">Everything else · ${rest.length}</span></div>${rest.map(rowHTML).join('')}`;
+  if (!WS.length) h += `<p class="small" style="padding:18px">No workspaces in billing-svc. The next <code>run-flow --workspace</code> makes one.</p>`;
+  document.getElementById('list').innerHTML = h;
+}
+
+const cmdRun = w => `pnpm run-flow --folder ${REPO} --task tasks/${w.id}.md --workspace ${w.id} ${FLOW}.yaml`;
+const cmdClean = (w, force) => `pnpm clean-workspace --folder ${REPO}${force ? ' --force' : ''} ${w.id}`;
+
+function why(w) {
+  const s = state(w), b = `<code>${br(w)}</code>`;
+  return {
+    running: `A run-flow holds this workspace's lock at <code>.flowboard/lock</code>, so nothing can clean it up until the run finishes or you stop it. Other tasks in billing-svc run alongside it; each workspace has its own lock.`,
+    dirty: `The last run failed at ${STEPS[w.run.step]} and left work that isn't committed. Commit what's worth keeping inside the workspace, or throw it away on purpose. A new run won't start on top of it.`,
+    unmerged: `The flow finished. Its ${n(w.ahead.length, 'commit')} are on ${b} but not on main. Land them from your repo, or keep the branch. Cleaning up removes the folder and never this branch.`,
+    broken: w.broken && w.broken.kind === 'plain'
+      ? `Something that isn't a git worktree sits where this task's workspace goes. FlowBoard won't run in it or clean it up until you move it away.`
+      : `Someone switched this worktree to another branch. FlowBoard won't run in it or clean it up until it's back on ${b}.`,
+    branch: w.how === 'hand'
+      ? `The folder was deleted by hand. The branch and its ${n(w.ahead.length, 'commit')} are still in the repo, so the next run re-creates the folder from it and picks the work up again.`
+      : `The folder is gone. The branch was kept because it has commits that aren't on main. Delete it yourself once you're sure: <code>git branch -D ${br(w)}</code>.`,
+    kept: `You chose to keep this branch, so it's out of Needs you. Clean up removes the folder and the branch stays.`,
+    merged: `Everything on ${b} is already on main and nothing is uncommitted. Clean up removes the folder and the branch. Only the artifacts in <code>.flowboard/</code> go with it.`,
+  }[s];
+}
+
+function renderPanel() {
+  const el = document.getElementById('panel');
+  const w = open && byId(sel);
+  if (!w) {
+    el.innerHTML = `<div class="pn"><span class="lbl">What the states mean</span><div class="legend">` +
+      ['running', 'dirty', 'unmerged', 'broken', 'branch', 'kept', 'merged'].map(s => `<span class="ic ${META[s].cls}">${ic(META[s].icon)}</span><div><b>${META[s].label}</b><p>${{
+        running: 'A run holds the lock. Clean up is refused until it ends.',
+        dirty: 'A run left files that aren’t committed. Cleaning up needs you to throw them away on purpose.',
+        unmerged: 'Finished, with commits main doesn’t have. Land them or keep the branch.',
+        broken: 'Something else is in the way. The fix is spelled out; FlowBoard won’t touch it.',
+        branch: 'No folder, only the branch. The next run re-creates the folder.',
+        kept: 'You decided to keep the branch for now.',
+        merged: 'All on main, nothing uncommitted. Safe to clean up.',
+      }[s]}</p></div>`).join('') +
+      `</div><p class="small" style="margin-top:16px">Nothing is ever cleaned up for you. Press <span class="kbd">↵</span> to open a workspace.</p></div>`;
+    return;
+  }
+  const s = state(w), m = META[s], r = w.run;
+  const running = s === 'running', broken = s === 'broken';
+  let h = `<div class="pn">
+    <div class="pn-h"><span class="ic ${m.cls}">${ic(m.icon, 17)}</span><span class="pn-id">${w.id}</span><span class="pill ${m.cls === 'quiet' || m.cls === 'done' ? '' : m.cls}">${m.label}</span><span class="sp"></span>
+      <button class="icon-btn" data-close aria-label="Close">${ic('x', 15)}</button></div>
+    <div class="pn-sub">${br(w)} · cut from main</div>
+    <p class="pn-why">${why(w)}</p>`;
+  if (broken) h += `<div class="fix"><div class="msg">${pathOf(w)} ${w.broken.why}</div>
+      <div class="cmd"><span class="mute">fix:</span><span>${w.broken.fix}</span><button class="icon-btn" data-copytext="${w.broken.fix}" aria-label="Copy the fix">${ic('copy', 13)}</button></div></div>`;
+  if (running) h += `<div class="live">
+      <div><span class="lbl">Step</span><b class="t-run">${STEPS[r.step]}</b></div>
+      <div><span class="lbl">In step</span><b data-el2="${w.id}">${mmss(Date.now() - stepAt(r))}</b></div>
+      <div><span class="lbl">Cost so far</span><b data-cost="${w.id}">${money(cost(r))}</b></div>
+      <div><span class="lbl">Lock</span><b>pid ${w.pid}</b></div></div>`;
+  if (s === 'dirty' && w.failNote) h += `<p class="small"><span class="t-fail">${w.failNote}</span></p>`;
+
+  const runWhy = running ? `already running (pid ${w.pid})` : broken ? 'refused until the workspace is fixed' : s === 'dirty' ? 'refused: commit the changes first, or the run would build on them' : !w.folder ? 'the folder is re-created from the branch' : 'picks the workspace up again';
+  const cleanWhy = running ? 'refused while a run holds the lock' : broken ? 'fix the workspace first' : s === 'dirty' ? `asks first: throws away ${n(w.dirty.length, 'file')}` : w.ahead.length ? 'removes the folder; the branch is kept' : 'removes the folder and the branch';
+  h += `<div class="pn-acts">
+    <div class="pa"><button class="act" data-act="copy"><kbd>y</kbd>${ic('copy', 13)}Open workspace (copy path)</button><span class="hint">cd ${pathOf(w)}</span></div>
+    <div class="pa"><button class="act primary" data-act="run" ${running ? 'disabled' : ''}><kbd>r</kbd>${ic('play', 13)}Run again</button><span class="hint">${cmdRun(w)}</span><span class="why">${runWhy}</span></div>
+    <div class="pa"><button class="act danger" data-act="clean" ${broken ? 'disabled' : ''}><kbd>c</kbd>${ic('trash', 13)}Clean up</button><span class="hint">${cmdClean(w, s === 'dirty')}</span><span class="why">${cleanWhy}</span></div>
+    ${s === 'unmerged' ? `<div class="pa"><button class="act" data-act="keep">${ic('bookmark', 13)}Keep the branch for now</button><span class="why">moves it out of Needs you; nothing changes on disk</span></div>` : ''}
+  </div>`;
+
+  h += `<div class="sec"><span class="lbl">Where</span><dl class="kv">
+    <dt>path</dt><dd><span>${w.folder ? pathOf(w) : `<s class="mute">${pathOf(w)}</s>`}</span></dd>
+    <dt>branch</dt><dd><b>${broken && w.broken.kind === 'switched' ? `<span class="t-fail">${w.broken.on}</span>` : br(w)}</b></dd>
+    <dt>lock</dt><dd>${running ? `${ic('lock', 12)}<b>pid ${w.pid}</b> in .flowboard/lock` : 'free'}</dd>
+    <dt>vs main</dt><dd>${broken && w.broken.kind === 'plain' ? '—' : `${w.ahead.length} ahead, ${w.behind} behind`}</dd>
+    <dt>disk</dt><dd>${mb(w.folder ? w.disk : 0)}</dd>
+    <dt>last run</dt><dd>${r ? `${r.flow} · ${r.status === 'running' ? `${STEPS[r.step]} now` : r.status === 'failed' ? `failed at ${STEPS[r.step]}, ${ago(r.at)}` : `finished ${ago(r.at)}`} · <span data-cost="${w.id}">${money(cost(r))}</span>` : 'never run here'}</dd>
+    ${s === 'unmerged' || s === 'kept' ? `<dt>land it</dt><dd><span>git merge ${br(w)}</span><button class="icon-btn" data-copytext="git merge ${br(w)}" aria-label="Copy">${ic('copy', 13)}</button></dd>` : ''}
+  </dl></div>`;
+
+  h += `<div class="sec"><span class="lbl">Commits not on main · ${w.ahead.length}</span>` +
+    (w.ahead.length ? w.ahead.map(x => `<div class="cm"><span>${x.sha}</span><span>${x.msg}</span></div>`).join('') : `<p class="small">None. Everything on ${br(w)} is on main.</p>`) +
+    (w.behind ? `<p class="small">main has moved ${n(w.behind, 'commit')} past where this branch was cut.</p>` : '') + `</div>`;
+
+  if (w.folder && !(broken && w.broken.kind === 'plain')) h += `<div class="sec"><span class="lbl">Uncommitted · ${w.dirty.length}</span>` +
+    (w.dirty.length ? w.dirty.map(([st, f]) => `<div class="fl"><span>${st}</span><span>${f}</span></div>`).join('') +
+      (running ? '<p class="small">The agent is still working; these are its edits in flight.</p>' : '')
+      : '<p class="small">Clean working tree.</p>') + `</div>`;
+
+  if (w.folder && w.art.length) h += `<div class="sec"><span class="lbl">Artifacts in .flowboard/ · ${w.art.length}</span>` +
+    w.art.map(f => `<div class="fl art"><span>—</span><span>${f}</span></div>`).join('') +
+    `<p class="small">These go when the folder goes. Run logs in <code>runs/</code> stay.</p></div>`;
+
+  el.innerHTML = h + '</div>';
+}
+
+function renderChrome() {
+  const m = WS.filter(cleanable);
+  const b = document.getElementById('bulk');
+  b.innerHTML = `${ic('trash', 13)}Clean up merged (${m.length})`;
+  b.disabled = !m.length;
+  document.getElementById('bulkHint').textContent = m.length ? `only clean, merged, idle workspaces: ${m.map(w => w.id).join(', ')}` : 'no merged workspaces to clean up';
+
+  document.getElementById('cli').innerHTML = CLI.map(([k, t]) => `<div class="ln ${k}">${t}</div>`).join('');
+
+  const cnt = s => WS.filter(w => state(w) === s).length;
+  const hot = WS.filter(needsYou).length;
+  const disk = WS.reduce((a, w) => a + (w.folder ? w.disk : 0), 0);
+  const flash = Date.now() < flashUntil ? `<span class="flash">${flashMsg}</span><span class="sep">·</span>` : '';
+  document.getElementById('sb').innerHTML = flash +
+    `<b>${n(WS.length, 'workspace')}</b><span class="sep">·</span>${cnt('running')} running<span class="sep">·</span>${hot} need you<span class="sep">·</span>${cnt('broken')} broken<span class="sep">·</span>${(disk / 1024).toFixed(2)} GB on disk` +
+    (removedCount ? `<span class="sep">·</span>${removedCount} cleaned up this session` : '') +
+    `<span class="sep">·</span>cleanup is only ever by hand<span class="sp"></span>` +
+    `<span class="kbd">j</span>/<span class="kbd">k</span>&nbsp;move<span class="sep">·</span><span class="kbd">↵</span>&nbsp;open<span class="sep">·</span><span class="kbd">c</span>&nbsp;clean up<span class="sep">·</span><span class="kbd">r</span>&nbsp;run<span class="sep">·</span><span class="kbd">y</span>&nbsp;copy path<span class="sep">·</span><span class="kbd">esc</span>&nbsp;close`;
+}
+
+function render() {
+  const sc = document.getElementById('panel').scrollTop;
+  renderList(); renderPanel(); renderChrome();
+  document.getElementById('panel').scrollTop = sc;
+}
+
+/* ── actions: the CLI's rules, run against the model ─────────── */
+function say(lines) { CLI = lines; }
+function flash(msg) { flashMsg = msg; flashUntil = Date.now() + 2500; }
+
+function startRun(w) {
+  w.run = { flow: FLOW, status: 'running', step: 0, cost: 0, rate: 0.02 + Math.random() * 0.03, billedFrom: Date.now(),
+            ends: RUN_S.reduce((a, s) => (a.push((a.length ? a[a.length - 1] : Date.now()) + s * S), a), []) };
+  w.pid = 48000 + Math.floor(Math.random() * 1900);
+}
+
+function runAgain(w) {
+  const s = state(w), cmd = cmdRun(w);
+  if (s === 'running') return say([['cmd', cmd], ['err', `${FLOW}.yaml: --folder: another run-flow (pid ${w.pid}) is working here; if it is not, delete ${pathOf(w)}/.flowboard/lock`]]);
+  if (s === 'broken') return say([['cmd', cmd], ['err', `${FLOW}.yaml: --workspace: ${pathOf(w)} ${w.broken.why}`]]);
+  // ponytail: every row here has a folder or a branch, so it is always "picked up again", never ", new"
+  const out = [['cmd', cmd], ['out', `-- workspace ${pathOf(w)} on branch ${br(w)}, picked up again`]];
+  const tracked = w.dirty.filter(([st]) => st !== '??').length; // run-flow ignores untracked files
+  if (tracked) { out.push(['err', `${FLOW}.yaml: --folder: uncommitted changes in ${tracked} file(s); commit or stash them first, or pass --allow-dirty`]); return say(out); }
+  if (!w.folder) { w.folder = true; w.how = null; w.disk = 160 + Math.floor(Math.random() * 50); w.art = []; }
+  w.kept = false;
+  startRun(w);
+  out.push(['out', `-- run started: plan → implement + tests → check → review (lock pid ${w.pid})`]);
+  say(out);
+}
+
+function cleanUp(w, force) {
+  const s = state(w), cmd = cmdClean(w, force);
+  if (s === 'running') return say([['cmd', cmd], ['err', `clean-workspace: a run-flow (pid ${w.pid}) is working in ${pathOf(w)}; let it finish or stop it first`]]);
+  if (s === 'broken') { flash('fix the workspace first'); return; }
+  if (w.dirty.length && !force) {           // what the CLI says without --force; the page then asks
+    say([['cmd', cmd], ['err', `clean-workspace: git worktree remove: fatal: '${pathOf(w)}' contains modified or untracked files, use --force to delete it; commit the changes, or pass --force to throw them away`]]);
+    return confirmThrowAway(w);
+  }
+  const out = [['cmd', cmd], ['out', `-- removed the workspace of task ${w.id}`]];
+  w.folder = false; w.dirty = []; w.art = []; w.disk = 0;
+  if (w.ahead.length) {                       // git branch -d refuses an unmerged branch: it stays
+    w.how = 'cleaned'; w.kept = false;
+    out.push(['keep', `-- kept branch ${br(w)}: it has commits not merged into HEAD; delete it with git branch -D ${br(w)}`]);
+  } else drop(w);
+  return out;
+}
+function drop(w) {
+  w.gone = true; removedCount++;
+  setTimeout(() => {
+    const { all } = order(); const i = all.indexOf(w);
+    WS = WS.filter(x => x !== w);
+    if (sel === w.id) { const nx = order().all; sel = nx.length ? nx[Math.min(i, nx.length - 1)].id : null; }
+    render();
+  }, 170);
+}
+function doClean(w, force) { const out = cleanUp(w, force); if (out) say(out); render(); }
+
+function bulkClean() {
+  const ids = WS.filter(cleanable);
+  if (!ids.length) return;
+  const out = [['cmd', `for id in ${ids.map(w => w.id).join(' ')}; do pnpm clean-workspace --folder ${REPO} $id; done`]];
+  ids.forEach(w => out.push(...cleanUp(w, false).slice(1)));
+  say(out); render();
+}
+
+function copy(text, what) {
+  try { navigator.clipboard.writeText(text); } catch (e) { /* file:// may refuse; the path is on screen anyway */ }
+  flash(`copied ${what}`); renderChrome();
+}
+
+/* ── confirm: uncommitted work is thrown away only on purpose ─ */
+const dlg = document.getElementById('dlg');
+function confirmThrowAway(w) {
+  const k = w.dirty.length;
+  dlg.innerHTML = `<div class="dlg-b">
+      <h2>Throw away ${n(k, 'file')} in ${w.id}?</h2>
+      <p>These aren't committed anywhere. Removing the workspace deletes them, along with the artifacts in its <code>.flowboard/</code>${w.art.length ? ` (${w.art.join(', ')})` : ''}. Run logs in <code>runs/</code> stay.${w.ahead.length ? ` The branch has commits not on main, so it is kept.` : ` The branch has nothing main doesn't, so it goes too.`}</p>
+      <div class="dlg-files">${w.dirty.map(([st, f]) => `<div class="fl"><span>${st}</span><span>${f}</span></div>`).join('')}</div>
+      <label class="lbl" for="dlgIn">Type ${w.id} to confirm</label>
+      <input class="dlg-in" id="dlgIn" autocomplete="off" spellcheck="false" placeholder="${w.id}">
+      <p class="hint" style="margin:8px 0 0">${cmdClean(w, true)}</p>
+    </div>
+    <div class="dlg-f"><button class="act" data-dlg="cancel">Cancel</button><button class="act solid-fail" data-dlg="go" disabled>${ic('trash', 13)}Throw away ${n(k, 'file')}</button></div>`;
+  const inp = dlg.querySelector('#dlgIn'), go = dlg.querySelector('[data-dlg="go"]');
+  inp.oninput = () => { go.disabled = inp.value.trim() !== w.id; };
+  inp.onkeydown = e => { if (e.key === 'Enter' && !go.disabled) go.click(); };
+  go.onclick = () => { dlg.close(); doClean(w, true); };
+  dlg.querySelector('[data-dlg="cancel"]').onclick = () => dlg.close();
+  dlg.showModal(); inp.focus();
+}
+
+/* ── events ──────────────────────────────────────────────────── */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-copy],[data-copytext],[data-close],[data-act],.wrow,#bulk');
+  if (!t) return;
+  if (t.dataset.copy) { e.stopPropagation(); return copy(pathOf(byId(t.dataset.copy)), 'path'); }
+  if (t.dataset.copytext) return copy(t.dataset.copytext, 'command');
+  if (t.hasAttribute('data-close')) { open = false; return render(); }
+  if (t.id === 'bulk') return bulkClean();
+  const w = byId(sel);
+  if (t.dataset.act === 'copy') return copy(pathOf(w), 'path');
+  if (t.dataset.act === 'run') { runAgain(w); return render(); }
+  if (t.dataset.act === 'clean') return doClean(w, false);
+  if (t.dataset.act === 'keep') { w.kept = true; say([['out', `-- kept ${br(w)} for now; nothing changed on disk`]]); return render(); }
+  if (t.classList.contains('wrow')) { sel = t.dataset.id; open = true; render(); }
+});
+
+document.addEventListener('keydown', e => {
+  if (dlg.open || e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey || e.altKey) return;
+  const all = order().all.filter(w => !w.gone);
+  let i = all.findIndex(w => w.id === sel);
+  const w = byId(sel);
+  if (e.key === 'j' || e.key === 'k') {
+    i = Math.max(0, Math.min(all.length - 1, i + (e.key === 'j' ? 1 : -1)));
+    if (all[i]) sel = all[i].id;
+    render();
+    const row = document.querySelector(`.wrow[data-id="${sel}"]`); if (row) row.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter' && w) { open = true; render(); }
+  else if (e.key === 'Escape') { open = false; render(); }
+  else if (e.key === 'c' && w) doClean(w, false);
+  else if (e.key === 'r' && w && state(w) !== 'running') { runAgain(w); render(); }
+  else if (e.key === 'y' && w) copy(pathOf(w), 'path');
+  else return;
+  e.preventDefault();
+});
+
+/* ── the engine: steps advance, a finished run releases its lock ─ */
+WS.forEach(w => { if (w.run && w.run.status === 'running') w.run.billedFrom = T0; });
+function tick() {
+  const now = Date.now();
+  let changed = false;
+  for (const w of WS) {
+    const r = w.run;
+    if (!r || r.status !== 'running') continue;
+    while (r.step < STEPS.length && now >= r.ends[r.step]) { r.step++; changed = true; }
+    if (r.step >= STEPS.length) {               // finished: the agent commits, the lock is released
+      r.cost = cost(r); r.status = 'done'; r.step = STEPS.length; r.at = now;
+      w.ahead.push(w.finishCommit || c(Math.random().toString(16).slice(2, 9), 'review: address the check findings'));
+      w.finishCommit = null; w.dirty = []; w.pid = null; w.kept = false;
+      if (!w.art.includes('review.md')) w.art = ['brief.md', 'plan.md', 'check.log', 'review.md'];
+      flash(`${w.id} finished · lock released`);
+      CLI.push(['out', `-- ${w.id}: ${FLOW} finished in its workspace, ${money(r.cost)}; lock released`]);
+      continue;
+    }
+    const el = mmss(now - stepAt(r)), co = money(cost(r));
+    document.querySelectorAll(`[data-el="${w.id}"]`).forEach(x => x.textContent = `${STEPS[r.step]} ${el}`);
+    document.querySelectorAll(`[data-el2="${w.id}"]`).forEach(x => x.textContent = el);
+    document.querySelectorAll(`[data-cost="${w.id}"]`).forEach(x => x.textContent = co);
+  }
+  if (changed) render();
+  else if (flashUntil && now > flashUntil) { flashUntil = 0; renderChrome(); }
+}
+render();
+setInterval(tick, 250);
+</script>

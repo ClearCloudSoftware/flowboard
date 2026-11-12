@@ -1,0 +1,885 @@
+<meta charset="utf-8">
+<title>FlowBoard Land Task</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74; --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --wait-ink:#FDF6EA; --wait-ink-2:#F8E8D0;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);
+  font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+textarea{font:inherit;color:inherit;border-radius:0}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+svg{flex:0 0 auto}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sans{font-family:var(--sans)}
+.sep{color:var(--line-2);padding:0 .45em}
+.sp{flex:1}
+.mut{color:var(--ink-3)}
+.app{height:100dvh;display:flex;flex-direction:column}
+
+/* ── topbar ───────────────────────────────────────────────────── */
+.topbar{flex-shrink:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+.back{display:inline-flex;align-items:center;gap:7px;color:var(--ink-2);text-decoration:none;transition:color var(--t)}
+.back:hover{color:var(--ink)}
+.tid{font-weight:600;font-size:14px;letter-spacing:-.01em}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:1px 8px;font-size:11px;
+  border:1px solid var(--line-2);background:var(--surface-2);white-space:nowrap;color:var(--ink-2)}
+.pill.wait{border-color:var(--wait);color:var(--wait);background:var(--wait-soft);font-weight:500}
+.pill.run{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.repo{display:inline-flex;align-items:center;gap:7px;color:var(--ink-2);font-size:12px}
+
+.scroll{flex:1;min-height:0;overflow:auto}
+.wrap{max-width:1000px;margin:0 auto;padding:0 18px}
+
+/* ── header ───────────────────────────────────────────────────── */
+.hdr{padding:18px 0 14px}
+.hdr h1{font-family:var(--sans);font-size:23px;line-height:1.25;margin:4px 0 6px;
+  font-weight:600;letter-spacing:-.015em;max-width:44ch}
+.hdr p{font-family:var(--sans);font-size:14px;color:var(--ink-2);margin:0;max-width:72ch}
+.hnums{display:flex;gap:26px;flex-wrap:wrap;margin-top:14px}
+.hnum{display:flex;flex-direction:column;gap:1px}
+.hnum b{font-size:15px;font-weight:600}
+.hnum b.w{color:var(--fail)}
+
+/* ── stepper ──────────────────────────────────────────────────── */
+.stepper{position:sticky;top:0;z-index:10;background:var(--surface-3);
+  border-top:2px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.stepper .wrap{display:flex;gap:4px;padding-top:10px;padding-bottom:9px}
+.stg{flex:1 1 0;min-width:0;text-align:left}
+.stg:disabled{cursor:default}
+.stg-bar{display:block;height:10px;position:relative;overflow:hidden}
+.stg-done{background:var(--done)}
+.stg-hold{background:repeating-linear-gradient(45deg,var(--wait) 0 1.5px,transparent 1.5px 5px);
+  box-shadow:inset 0 0 0 1px var(--wait)}
+.stg-busy{background:var(--run)}
+.stg-busy::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);
+  transform:translateX(-100%);animation:sweep 1.9s cubic-bezier(.4,0,.2,1) infinite}
+.stg-todo{background:var(--pend)}
+.stg-skip{background:repeating-linear-gradient(90deg,var(--line-2) 0 1px,transparent 1px 6px)}
+.stg-l{display:flex;align-items:baseline;gap:8px;margin-top:6px;font-size:11.5px;color:var(--ink-3)}
+.stg-l b{font-weight:500;font-size:12.5px;color:var(--ink-2)}
+.stg[aria-current="step"] .stg-l b{color:var(--ink);font-weight:600}
+.stg:not(:disabled):hover .stg-l b{text-decoration:underline}
+@keyframes sweep{to{transform:translateX(100%)}}
+
+/* ── sections ─────────────────────────────────────────────────── */
+.body{padding:8px 0 70px}
+.sec{padding:18px 0 4px}
+.sec-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.sec-h h2{font-size:13px;font-weight:600;margin:0}
+.prose{font-family:var(--sans);font-size:13.5px;color:var(--ink-2);max-width:70ch;margin:0 0 10px}
+.prose b{color:var(--ink);font-weight:600}
+.cmd{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink-3);margin-top:6px;
+  overflow-wrap:anywhere}
+.cmd svg{color:var(--line-2)}
+.cmd code{font-family:var(--mono);color:var(--ink-2)}
+.cmp{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px}
+.ref{border:1px solid var(--line-2);background:var(--surface);padding:0 6px;font-weight:500}
+
+/* commit rows */
+.cm{display:grid;grid-template-columns:18px 70px 1fr auto 76px;gap:10px;align-items:center;width:100%;
+  padding:7px 4px;border-bottom:1px solid var(--line);font-size:12.5px;text-align:left;transition:background var(--t)}
+.cm:first-child{border-top:1px solid var(--line)}
+button.cm:hover{background:var(--surface)}
+.cm.on{background:var(--surface);box-shadow:inset 2px 0 0 var(--ink)}
+.cm .ic{color:var(--done);display:inline-flex}
+.cm.on .ic{color:var(--ink)}
+.cm .sha{color:var(--ink-3)}
+.cm.on .sha{color:var(--ink);font-weight:500}
+.cm .msg{font-family:var(--sans);font-size:13px;min-width:0}
+.cm .who{color:var(--ink-3);font-size:11.5px;white-space:nowrap}
+.cm .st{font-size:11.5px;text-align:right;white-space:nowrap;color:var(--ink-3)}
+.st .pa{color:var(--run)} .st .pd{color:var(--fail)}
+.scope .st{font-size:11.5px}
+.scope .ic{display:inline-flex;color:var(--ink)}
+
+/* which changes the Files list shows */
+#files{scroll-margin-top:72px}
+.scope{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;margin-bottom:10px;
+  background:var(--surface);border:1px solid var(--line-2);font-size:12.5px}
+.scope .sha{font-weight:600}
+.scope .m{font-family:var(--sans);font-size:13px;min-width:0}
+.scope .nav{display:flex;gap:4px}
+.scope .nav button{border:1px solid var(--line-2);padding:1px 7px;font-size:11.5px;color:var(--ink-2);background:var(--paper)}
+.scope .nav button:hover{background:var(--surface-2)}
+.scope .nav button:disabled{opacity:.4;cursor:default}
+.linky{color:var(--ink-2);text-decoration:underline;font-size:12px}
+
+/* a file's diff, with old and new line numbers */
+.diff{margin:0 4px 12px 28px;background:var(--surface-2);border:1px solid var(--line);font-size:12px;line-height:1.65;overflow-x:auto}
+.dl{display:grid;grid-template-columns:40px 40px 16px max-content;min-width:100%}
+.dl .ln{color:var(--ink-3);text-align:right;padding-right:8px;border-right:1px solid var(--line);user-select:none;font-variant-numeric:tabular-nums}
+.dl .sg{text-align:center;user-select:none}
+.dl .tx{white-space:pre;padding-right:12px}
+.dl.a{background:var(--run-soft)} .dl.a .sg,.dl.a .tx{color:var(--run)}
+.dl.d{background:var(--fail-soft)} .dl.d .sg,.dl.d .tx{color:var(--fail)}
+.dl.h{background:var(--surface-3);color:var(--ink-3)} .dl.h .tx{padding-left:2px}
+.dl.gap .tx{color:var(--ink-3);font-style:italic}
+.diff .cmd{margin:0;border:0;border-top:1px solid var(--line);background:var(--surface)}
+
+/* the main-moved note: quiet, ink edge, not a signal colour */
+.moved{border:1px solid var(--line-2);border-left:3px solid var(--ink-2);background:var(--surface);
+  padding:10px 13px;margin:14px 0 4px}
+.moved-h{display:flex;gap:8px;align-items:center;font-family:var(--sans);font-size:13.5px;margin-bottom:8px}
+.moved-h b{font-weight:600}
+.tag{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--ink-2);
+  padding:0 5px;color:var(--ink-2);white-space:nowrap;font-weight:500}
+
+/* file rows with hunks */
+.fr{border-bottom:1px solid var(--line)}
+.fr:first-child{border-top:1px solid var(--line)}
+.fr-h{display:grid;grid-template-columns:14px 1fr auto 52px 52px;gap:10px;align-items:center;
+  width:100%;padding:7px 4px;font-size:12.5px;transition:background var(--t)}
+.fr-h:hover{background:var(--surface)}
+.fr.open .fr-h{background:var(--surface);box-shadow:inset 2px 0 0 var(--ink)}
+.fr-h .chev{color:var(--ink-3);display:inline-flex;transition:transform var(--t)}
+.fr.open .chev{transform:rotate(90deg)}
+.fr-h .p{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
+.fr-h .p b{color:var(--ink);font-weight:500}
+.fr-h .plus{color:var(--run);text-align:right}
+.fr-h .minus{color:var(--fail);text-align:right}
+.hunk{margin:0 4px 12px 28px;background:var(--surface-2);border:1px solid var(--line);
+  padding:8px 10px;font-size:12px;line-height:1.65;overflow-x:auto;white-space:pre}
+.hunk .a{color:var(--run)} .hunk .d{color:var(--fail)} .hunk .c{color:var(--ink-3)}
+.hunk .x{color:var(--fail);font-weight:600}
+
+/* terminal-ish output */
+.out{background:var(--surface-2);border:1px solid var(--line);padding:8px 10px;
+  font-size:12px;line-height:1.7;overflow-x:auto;white-space:pre}
+.out .g{color:var(--ink-3)} .out .ok{color:var(--run)} .out .bad{color:var(--fail)}
+.att{border-left:3px solid var(--fail);background:var(--fail-soft);padding:6px 12px;font-size:12px;margin-top:8px}
+.att b{color:var(--fail);font-weight:500}
+
+/* a running job: one line per command, a ticking fill on the live one */
+.job{border:1px solid var(--line);background:var(--surface);margin-top:10px}
+.jl{display:grid;grid-template-columns:16px 1fr 56px;gap:10px;align-items:center;
+  padding:6px 10px;border-bottom:1px solid var(--line);font-size:12px}
+.jl:last-child{border-bottom:0}
+.jl .ic{display:inline-flex;color:var(--done)}
+.jl.live .ic{color:var(--run)}
+.jl.todo{color:var(--ink-3)}
+.jl.todo .ic{color:var(--line-2)}
+.jl .t{text-align:right;color:var(--ink-3)}
+.jl.live .t{color:var(--run)}
+.jl .o{grid-column:2/4;color:var(--ink-3);font-size:11.5px;white-space:pre-wrap}
+.jl .o .ok{color:var(--run)}
+.track{grid-column:2/4;height:3px;background:var(--pend);overflow:hidden}
+.fill{height:3px;background:var(--run);transform-origin:left;transition:transform 100ms linear}
+
+/* strategy choice */
+.opt{display:grid;grid-template-columns:18px 1fr;gap:10px;width:100%;padding:10px 4px;
+  border-bottom:1px solid var(--line);transition:background var(--t)}
+.opt:first-child{border-top:1px solid var(--line)}
+.opt:hover{background:var(--surface)}
+.opt[aria-checked="true"]{background:var(--surface);box-shadow:inset 2px 0 0 var(--ink)}
+.radio{width:13px;height:13px;border:1px solid var(--ink-3);margin-top:3px;display:flex;align-items:center;justify-content:center}
+.opt[aria-checked="true"] .radio::after{content:"";width:7px;height:7px;background:var(--ink)}
+.opt-n{font-weight:500}
+.opt-d{font-family:var(--sans);font-size:12.5px;color:var(--ink-2);margin-top:2px;max-width:72ch}
+.opt-d b{font-weight:600;color:var(--ink)}
+.cmsg{width:100%;min-height:270px;padding:10px 12px;border:1px solid var(--line-2);background:var(--surface);
+  font-family:var(--sans);font-size:13.5px;line-height:1.5;resize:vertical}
+.cmsg:focus{outline:2px solid var(--run);outline-offset:-2px}
+.cmsg:disabled{color:var(--ink-3);background:var(--surface-2)}
+.pre{display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+.pre span{display:inline-flex;gap:6px;align-items:center}
+.pre svg{color:var(--done)}
+
+/* buttons */
+.act{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-2);padding:4px 11px;
+  font-size:12px;white-space:nowrap;background:var(--surface);
+  transition:background var(--t),border-color var(--t),color var(--t)}
+.act:hover:not(:disabled){background:var(--surface-2);border-color:var(--ink-3)}
+.act:disabled{opacity:.4;cursor:default}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act.primary:hover:not(:disabled){background:var(--run);color:#fff}
+.act.decide{border-color:var(--wait);background:var(--wait);color:var(--wait-ink);font-weight:500}
+.act.decide:hover:not(:disabled){background:#8A4C00;border-color:#8A4C00}
+.act.danger{border-color:var(--fail);color:var(--fail);background:var(--surface);font-weight:500}
+.act.danger:hover:not(:disabled){background:var(--fail);color:#fff}
+.act kbd{font-family:var(--mono);font-size:10px;border:1px solid currentColor;padding:0 3px;opacity:.6}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* the one decision per stage: solid ochre bar over a real field */
+.ask{background:var(--wait-wash);border:1px solid var(--wait-edge);margin:22px 0 6px}
+.ask-h{display:flex;align-items:center;gap:9px;background:var(--wait);color:var(--wait-ink);padding:7px 13px}
+.ask-h .lbl{color:var(--wait-ink);font-weight:600;font-size:11px}
+.ask-h span{font-family:var(--sans);font-size:14px;font-weight:500}
+.ask-b{padding:12px 13px 13px;display:grid;gap:11px}
+.ask-b .prose{color:var(--ink);margin:0}
+.choice{background:var(--surface);border:1px solid var(--wait-edge);padding:10px 12px;display:grid;gap:6px}
+.choice .prose{font-size:12.5px;color:var(--ink-2)}
+
+/* broken: the conflict */
+.conf{border:1px solid var(--fail-edge);border-left:3px solid var(--fail);background:var(--surface);padding:10px 12px}
+.conf-h{display:flex;gap:8px;align-items:center;color:var(--fail);font-weight:500;margin-bottom:6px}
+
+/* clean-up ledger */
+.ledger{display:grid;grid-template-columns:1fr 1fr;gap:0 26px}
+.lg-r{display:grid;grid-template-columns:16px 1fr;gap:9px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.lg-r .ic{display:inline-flex;color:var(--ink-3);margin-top:2px}
+.lg-r .ic.gone{color:var(--fail)}
+.lg-r .n{overflow-wrap:anywhere}
+.lg-r .n b{font-weight:500}
+.lg-r .w{font-family:var(--sans);font-size:12px;color:var(--ink-2);margin-top:2px}
+.lg-r .w.kept{color:var(--ink)}
+.arts{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.arts span{border:1px solid var(--line-2);padding:0 6px;font-size:11.5px;background:var(--surface)}
+.lose{border-left:3px solid var(--ink-2);background:var(--surface);border-top:1px solid var(--line);
+  border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 12px;
+  font-family:var(--sans);font-size:12.5px;color:var(--ink-2);margin-top:10px;max-width:74ch}
+.lose b{color:var(--ink);font-weight:600}
+.refuse{font-size:11.5px;color:var(--fail);background:var(--fail-soft);border:1px solid var(--fail-edge);
+  padding:7px 10px;white-space:pre-wrap;overflow-wrap:anywhere}
+.done-note{display:flex;gap:9px;align-items:flex-start;border:1px solid var(--line-2);background:var(--surface);
+  padding:11px 13px;margin-top:18px;font-family:var(--sans);font-size:13.5px}
+.done-note svg{color:var(--done);margin-top:2px}
+.done-note b{font-weight:600}
+
+.statusbar{flex-shrink:0;display:flex;align-items:center;flex-wrap:wrap;gap:0;
+  padding:6px 18px;background:var(--surface-2);border-top:1px solid var(--line);
+  color:var(--ink-3);font-size:11px}
+.statusbar b{color:var(--ink-2);font-weight:500}
+.kbd{border:1px solid var(--line-2);padding:0 4px;font-size:10px;color:var(--ink-2);background:var(--surface)}
+.reset{color:var(--ink-2);text-decoration:underline;font-size:11px}
+
+@media (max-width:760px){
+  .ledger{grid-template-columns:1fr}
+  .cm{grid-template-columns:18px 64px 1fr}
+  .cm .who,.cm .st{display:none}
+  .diff{margin-left:0}
+  .fr-h{grid-template-columns:14px 1fr 44px 44px}
+  .fr-h .tagc{display:none}
+  .hnums{gap:16px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after,*::before{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <a class="back" href="./task-detail.html" id="back"></a>
+    <span class="sep">/</span>
+    <span class="tid">stripe-webhook-idempotency</span>
+    <span class="sep">/</span>
+    <span>land</span>
+    <span id="pill"></span>
+    <span class="sp"></span>
+    <span class="repo" id="repo"></span>
+  </header>
+
+  <div class="scroll" id="scroll">
+    <div class="wrap">
+      <div class="hdr">
+        <span class="lbl">Land a task</span>
+        <h1>Make Stripe webhook handling idempotent</h1>
+        <p>Stripe retries a webhook it didn't hear back from in time, and every retry wrote another
+        ledger entry. Record each event id once and skip deliveries already seen.</p>
+        <div class="hnums" id="hnums"></div>
+      </div>
+    </div>
+    <nav class="stepper" aria-label="Stages"><div class="wrap" id="stepper"></div></nav>
+    <div class="wrap"><div class="body" id="body"></div></div>
+  </div>
+
+  <footer class="statusbar" id="sb"></footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* Lucide icons, inline. */
+const L = (d, s = 14) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const I = {
+  back:   L('<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>', 13),
+  branch: L('<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>'),
+  merge:  L('<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/>'),
+  commit: L('<circle cx="12" cy="12" r="3"/><line x1="3" x2="9" y1="12" y2="12"/><line x1="15" x2="21" y1="12" y2="12"/>'),
+  check:  L('<path d="M20 6 9 17l-5-5"/>'),
+  x:      L('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'),
+  alert:  L('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>'),
+  chev:   L('<path d="m9 18 6-6-6-6"/>', 12),
+  term:   L('<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>', 12),
+  trash:  L('<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>'),
+  folder: L('<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>'),
+  file:   L('<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>'),
+  play:   L('<polygon points="6 3 20 12 6 21 6 3"/>', 12),
+  sync:   L('<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'),
+  sendback: L('<polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/>'),
+  archive: L('<rect width="20" height="5" x="2" y="3"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>'),
+  dot:    L('<circle cx="12" cy="12" r="4" fill="currentColor"/><circle cx="12" cy="12" r="9" opacity=".3"/>'),
+  idle:   L('<circle cx="12" cy="12" r="8" stroke-dasharray="3 3.4"/>'),
+};
+
+/* ══ the world ═════════════════════════════════════════════════════════ */
+const REPO = '~/code/billing-svc', ID = 'stripe-webhook-idempotency', BR = 'fb/task-' + ID;
+const WT = `${REPO}/.flowboard/worktrees/task-${ID}`;
+const WT_ABS = `/Users/alex/code/billing-svc/.flowboard/worktrees/task-${ID}`;
+const RUNDIR = 'runs/2026-11-12T10-14-02-standard-flow/';
+const CUT = 'a41c9e0';
+
+const COMMITS = [
+  ['c81e2fa', 'Add processed_events table (migration 0042)', 'implement', '10:31'],
+  ['4be09d3', 'Skip Stripe events already recorded before writing the ledger', 'implement', '10:38'],
+  ['90d5f1b', 'Test replayed and concurrent webhook deliveries', 'implement', '10:44'],
+  ['e17a6c4', 'Write the ledger entry and the event id in one transaction', 'implement · attempt 2', '10:52'],
+];
+const MAIN_NEW = [
+  ['d3a7710', 'Count received webhooks per provider', 'Priya Natarajan', 'yesterday', 'src/webhooks/stripe.ts, src/metrics/index.ts'],
+  ['5c02e19', 'Bump stripe to 17.4.0', 'dependabot', '08:02', 'package.json, pnpm-lock.yaml'],
+];
+/* Diffs, as git prints them: '@@' opens a hunk and sets the line numbers; '+', '-' and ' ' are lines;
+   '…+N' hides N more added lines, '…±N' N more changed ones. +/− counts are counted from these, so they add up. */
+const F = (path, lines, onMain) => {
+  const n = (k) => lines.filter((l) => l[0] === k).length +
+    lines.reduce((s, l) => { const g = /^…([+±])(\d+)$/.exec(l); return s + (g && (g[1] === '±' || g[1] === k) ? +g[2] : 0); }, 0);
+  return { path, lines, onMain: !!onMain, a: n('+'), d: n('-') };
+};
+const STRIPE = 'src/webhooks/stripe.ts', WRITE = 'src/ledger/write.ts', SEEN = 'src/ledger/processed-events.ts',
+      MIG = 'migrations/0042_processed_events.sql', TEST = 'tests/webhooks/stripe.idempotency.test.ts';
+const L_SEEN = ['@@ -0,0 +1,19 @@',
+  "+import { eq } from 'drizzle-orm';",
+  "+import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';",
+  "+import { db } from '../db';",
+  '+',
+  "+export const processedEvents = pgTable('processed_events', {",
+  "+  eventId: text('event_id').primaryKey(),",
+  "+  receivedAt: timestamp('received_at').notNull().defaultNow(),",
+  '+});',
+  '+',
+  '+/** True when this Stripe event id has already been written to the ledger. */',
+  '…+9'];
+const L_MIG = ['@@ -0,0 +1,4 @@',
+  '+CREATE TABLE processed_events (',
+  '+  event_id    text PRIMARY KEY,',
+  '+  received_at timestamptz NOT NULL DEFAULT now()',
+  '+);'];
+const L_TEST = ['@@ -0,0 +1,88 @@',
+  "+import { deliver, fixture, ledgerRows } from '../helpers/webhooks';",
+  '+',
+  "+test('a replayed invoice.paid writes one ledger entry', async () => {",
+  "+  await deliver(fixture('invoice.paid'));",
+  "+  await deliver(fixture('invoice.paid'));",
+  '+  expect(await ledgerRows()).toHaveLength(1);',
+  '+});',
+  '+',
+  "+test('two concurrent deliveries of one event write once', async () => {",
+  "+  const evt = fixture('invoice.paid');",
+  '+  await Promise.all([deliver(evt), deliver(evt)]);',
+  '…+77'];
+const L_WRITE = ['@@ -4,3 +4,8 @@',
+  '-export async function write(entry: LedgerEntry) {',
+  '-  await db.insert(ledger).values(entry);',
+  '+export async function writeOnce(eventId: string, entry: LedgerEntry) {',
+  '+  await db.transaction(async (tx) => {',
+  '+    const fresh = await tx.insert(processedEvents).values({ eventId })',
+  '+      .onConflictDoNothing().returning();',
+  '+    if (fresh.length === 0) return;   // another delivery won the race',
+  '+    await tx.insert(ledger).values(entry);',
+  '+  });',
+  ' }'];
+const L_IMPORT = ['@@ -3,2 +3,3 @@',
+  " import { ledger } from '../ledger';",
+  "+import { seenEvent } from '../ledger/processed-events';",
+  " import { log } from '../log';"];
+
+/** main...branch: everything landing would bring in. */
+const ALL = [
+  F(STRIPE, [...L_IMPORT,
+    '@@ -18,4 +19,8 @@ export async function handleStripeWebhook(req: Request) {',
+    '   const event = stripe.webhooks.constructEvent(body, sig, secret);',
+    '+  if (await seenEvent(event.id)) {',
+    "+    log.info({ eventId: event.id }, 'stripe: duplicate delivery, skipped');",
+    '+    return ok();',
+    '+  }',
+    '   switch (event.type) {',
+    "     case 'invoice.paid':",
+    '-      await ledger.write(toEntry(event));',
+    '+      await ledger.writeOnce(event.id, toEntry(event));'], true),
+  F(WRITE, L_WRITE),
+  F(SEEN, L_SEEN),
+  F(MIG, L_MIG),
+  F(TEST, L_TEST),
+];
+
+/** Each commit's own diff: the branch's four, and the two main gained since the branch was cut. */
+const DIFFS = {
+  c81e2fa: [F(MIG, L_MIG), F(SEEN, L_SEEN)],
+  '4be09d3': [F(STRIPE, [...L_IMPORT,
+    '@@ -18,2 +19,6 @@ export async function handleStripeWebhook(req: Request) {',
+    '   const event = stripe.webhooks.constructEvent(body, sig, secret);',
+    '+  if (await seenEvent(event.id)) {',
+    "+    log.info({ eventId: event.id }, 'stripe: duplicate delivery, skipped');",
+    '+    return ok();',
+    '+  }',
+    '   switch (event.type) {'], true)],
+  '90d5f1b': [F(TEST, L_TEST)],
+  e17a6c4: [F(WRITE, L_WRITE), F(STRIPE, [
+    '@@ -25,2 +25,2 @@ export async function handleStripeWebhook(req: Request) {',
+    "     case 'invoice.paid':",
+    '-      await ledger.write(toEntry(event));',
+    '+      await ledger.writeOnce(event.id, toEntry(event));'], true)],
+  d3a7710: [F(STRIPE, [
+    '@@ -4,1 +4,2 @@',
+    " import { log } from '../log';",
+    "+import { metrics } from '../metrics';",
+    '@@ -18,2 +19,3 @@ export async function handleStripeWebhook(req: Request) {',
+    '   const event = stripe.webhooks.constructEvent(body, sig, secret);',
+    "+  metrics.increment('webhook.received', { provider: 'stripe' });",
+    '   switch (event.type) {'], true),
+    F('src/metrics/index.ts', ['@@ -12,1 +12,4 @@',
+      " export const metrics = createRegistry('billing');",
+      '+',
+      '+/** Webhooks received, before any de-duplication. */',
+      "+metrics.counter('webhook.received', ['provider']);"])],
+  '5c02e19': [F('package.json', ['@@ -21,1 +21,1 @@',
+      '-    "stripe": "17.3.1",',
+      '+    "stripe": "17.4.0",']),
+    F('pnpm-lock.yaml', ['@@ -2210,2 +2210,2 @@',
+      "-  stripe@17.3.1:",
+      "+  stripe@17.4.0:",
+      '…±13'])],
+};
+const CONFLICT = [
+  ['', '   const event = stripe.webhooks.constructEvent(body, sig, secret);'],
+  ['x','<<<<<<< main (d3a7710)'],
+  ['', "   metrics.increment('webhook.received', { provider: 'stripe' });"],
+  ['x','======='],
+  ['', '   if (await seenEvent(event.id)) {'],
+  ['', "     log.info({ eventId: event.id }, 'stripe: duplicate delivery, skipped');"],
+  ['', '     return ok();'],
+  ['', '   }'],
+  ['x','>>>>>>> ' + BR],
+];
+const STRATS = {
+  merge:  { n:'Merge commit', d:'One new commit on main joins the branch in. The 4 commits keep their history. Clean up can delete the branch afterwards: git sees it as merged.',
+            cmd:`git -C ${REPO} merge --no-ff -F <message> ${BR}` },
+  squash: { n:'Squash', d:'The whole branch becomes one commit on main. <b>git can’t tell the branch was merged</b>, so clean up keeps it and tells you to delete it by hand.',
+            cmd:`git -C ${REPO} merge --squash ${BR} && git -C ${REPO} commit -F <message>` },
+  ff:     { n:'Rebase, then fast-forward', d:'The 4 commits are replayed on top of main in the workspace, then main moves forward to them. No commit of its own, so the message below is not used. Clean up can delete the branch.',
+            cmd:`git -C ${WT} rebase main && git -C ${REPO} merge --ff-only ${BR}` },
+};
+const MSG = `Make Stripe webhook handling idempotent
+
+Stripe retries a webhook it didn't hear back from in time, and every retry wrote another ledger entry. Each event id is now recorded in processed_events in the same transaction as the ledger write, and a delivery already seen is skipped.
+
+- migrations/0042_processed_events.sql: new table, primary key on event_id
+- ledger.writeOnce replaces ledger.write for invoice.paid
+- tests for a replayed and for two concurrent deliveries
+
+Review passed with one note: processed_events grows forever; Stripe retries for 3 days, so a TTL job can follow.
+
+FlowBoard-Task: ${ID}
+FlowBoard-Flow: standard-flow`;
+const ARTS = [['brief.md','3.2 kB'], ['plan.md','8.9 kB'], ['review.md','5.1 kB'], ['check-attempt-1.txt','1.4 kB']];
+
+/* ══ state ════════════════════════════════════════════════════════════ */
+let S;
+function fresh(){
+  S = { stage:1, reached:1, reviewed:false, unlanded:false, strategy:'merge', msg:MSG, open:{}, view:'all',
+        dry:'idle',          // idle | running | conflict | fixing | clean
+        fix:null,            // 'update' | 'sendback'
+        landed:false, mainHead:'5c02e19', newHead:null, cleaned:null,  // null | 'removed' | 'kept'
+        spent:1.84, wasted:0.31, job:null, jobOut:[] };
+}
+fresh();
+const money = n => '$' + n.toFixed(2);
+const branchMerged = () => S.landed && S.strategy !== 'squash';
+const ahead = () => COMMITS.length + (S.fix === 'sendback' && S.dry === 'clean' ? 1 : 0);
+
+/* ══ jobs: the smallest real engine — a list of commands, each with a duration ══
+   Ticks every 100ms; only the job box re-renders while it runs.            */
+let timer = null;
+function play(lines, after){
+  clearTimeout(timer);
+  S.job = { lines, i:0, t:0, cost:0 };
+  render();
+  const tick = () => {
+    const j = S.job; if (!j) return;
+    j.t += 100;
+    const ln = j.lines[j.i];
+    if (ln.usd) S.spent = +(S.spent + ln.usd * 100 / ln.ms).toFixed(4);
+    if (j.t >= ln.ms){ j.i++; j.t = 0;
+      if (j.i >= j.lines.length){ S.jobOut = j.lines; S.job = null; after(); render(); return; } }
+    drawJob(); drawNums();
+    timer = setTimeout(tick, 100);
+  };
+  timer = setTimeout(tick, 100);
+}
+function jobHTML(lines, i, t){
+  return `<div class="job">` + lines.map((l, k) => {
+    const st = i == null || k < i ? 'done' : k === i ? 'live' : 'todo';
+    const time = st === 'done' ? (l.ms/1000).toFixed(1) + 's' : st === 'live' ? (t/1000).toFixed(1) + 's' : '';
+    return `<div class="jl ${st}"><span class="ic">${st === 'done' ? I.check : st === 'live' ? I.dot : I.idle}</span>
+      <span>${esc(l.cmd)}</span><span class="t">${time}</span>
+      ${st === 'live' ? `<span class="track"><span class="fill" style="display:block;transform:scaleX(${Math.min(1, t / l.ms)})"></span></span>` : ''}
+      ${st === 'done' && l.out ? `<span class="o">${l.out}</span>` : ''}</div>`;
+  }).join('') + `</div>`;
+}
+function drawJob(){ const el = $('#job'); if (el && S.job) el.innerHTML = jobHTML(S.job.lines, S.job.i, S.job.t); }
+
+/* ══ actions ══════════════════════════════════════════════════════════ */
+const go = n => { if (n <= S.reached && !(n === 2 && S.unlanded)) { S.stage = n; render(); $('#scroll').scrollTop = 0; } };
+function looksRight(){ S.reviewed = true; S.reached = Math.max(S.reached, 2); go(2); }
+function skipLanding(){ S.unlanded = true; S.reached = 3; S.stage = 3; render(); $('#scroll').scrollTop = 0; }
+function dryRun(){
+  if (S.job || S.landed) return;
+  const fixed = S.dry === 'clean' || S.fix;
+  S.dry = 'running';
+  play([
+    { cmd:`git -C ${REPO} status --porcelain`, ms:600, out:`on main ${S.mainHead} · nothing uncommitted` },
+    { cmd:`git merge-tree --write-tree --name-only main ${BR}`, ms:1400,
+      out: fixed ? '<span class="ok">clean — 5 files, no conflicts</span>' : 'CONFLICT (content): Merge conflict in src/webhooks/stripe.ts' },
+  ], () => { S.dry = fixed ? 'clean' : 'conflict'; });
+}
+function updateFromMain(){
+  S.dry = 'fixing'; S.fix = 'update';
+  play([
+    { cmd:`git -C ${WT} rebase main`, ms:900, out:'stopped at 4be09d3: conflict in src/webhooks/stripe.ts' },
+    { cmd:'resolve src/webhooks/stripe.ts: keep both, main’s line first', ms:500 },
+    { cmd:`git -C ${WT} rebase --continue`, ms:700, out:'4 commits now on top of 5c02e19' },
+    { cmd:'check · pnpm test  (in the workspace)', ms:5200, out:'<span class="ok">✓ 134 passed  (14.6s)</span>  — 2 more than before: main’s metric tests' },
+    { cmd:`git merge-tree --write-tree --name-only main ${BR}`, ms:900, out:'<span class="ok">clean — 5 files, no conflicts</span>' },
+  ], () => { S.dry = 'clean'; });
+}
+function sendBack(){
+  S.dry = 'fixing'; S.fix = 'sendback';
+  play([
+    { cmd:`git -C ${WT} merge main   (host; conflict left in the file)`, ms:800, out:'1 conflicted file handed to implement' },
+    { cmd:`run-flow --workspace ${ID} --from implement   · claude-sonnet`, ms:6400, usd:0.19, out:'resolved src/webhooks/stripe.ts, committed as 3f0b8a2' },
+    { cmd:'check · pnpm test', ms:3600, out:'<span class="ok">✓ 134 passed  (14.9s)</span>' },
+    { cmd:'review · claude-sonnet', ms:3000, usd:0.08, out:'<span class="ok">passed</span> — the duplicate path now also counts as received; intended' },
+    { cmd:`git merge-tree --write-tree --name-only main ${BR}`, ms:900, out:'<span class="ok">clean — 5 files, no conflicts</span>' },
+  ], () => { S.dry = 'clean'; S.spent = +S.spent.toFixed(2); });
+}
+function land(){
+  const st = STRATS[S.strategy];
+  play([{ cmd: st.cmd.replace('<message>', '.flowboard/land-message.txt'), ms:1300,
+          out: S.strategy === 'ff' ? 'Fast-forward 5c02e19..e2c91d4' : `main 5c02e19 → 7f20c4e` }],
+    () => { S.landed = true; S.newHead = S.strategy === 'ff' ? 'e2c91d4' : '7f20c4e'; S.reached = 3; });
+}
+function cleanUp(force){
+  play([
+    { cmd:`pnpm clean-workspace --folder ${REPO}${force ? ' --force' : ''} ${ID}`, ms:1500,
+      out: `-- removed the workspace of task ${ID}` +
+           (branchMerged() ? '' : `\n-- kept branch ${BR}: it has commits not merged into HEAD; delete it with git branch -D ${BR}`) },
+  ], () => { S.cleaned = branchMerged() ? 'removed' : 'kept'; });
+}
+function keep(){ S.cleaned = 'workspace-kept'; render(); }
+
+/* ══ drawing ══════════════════════════════════════════════════════════ */
+const cmd = c => `<div class="cmd">${I.term}<code>${esc(c)}</code></div>`;
+
+function drawNums(){
+  $('#hnums').innerHTML = [
+    ['flow', 'standard-flow'], ['review', 'passed'],
+    ['spent', money(S.spent)], ['wasted', money(S.wasted), 'w'],
+    ['branch', S.landed ? (branchMerged() ? 'merged' : 'squashed, not merged') : `${ahead()} ahead · ${S.fix && S.dry === 'clean' ? 0 : 2} behind`],
+  ].map(([k, v, c = '']) => `<div class="hnum"><span class="lbl">${k}</span><b class="${c}">${v}</b></div>`).join('');
+}
+
+function stageState(n){
+  if (n === 2 && S.unlanded) return ['stg-skip', 'skipped'];
+  if (n === 1) return S.reviewed || S.unlanded ? ['stg-done', 'read'] : ['stg-hold', 'wants you'];
+  if (n === 2) return S.landed ? ['stg-done', 'landed in main'] : S.job || S.dry === 'fixing' ? ['stg-busy', 'working'] :
+                      S.reached >= 2 ? ['stg-hold', S.dry === 'conflict' ? 'conflict' : 'wants you'] : ['stg-todo', ''];
+  return S.cleaned ? ['stg-done', S.cleaned === 'workspace-kept' ? 'kept' : 'done'] : S.reached >= 3 ? ['stg-hold', 'wants you'] : ['stg-todo', ''];
+}
+function drawChrome(){
+  $('#back').innerHTML = I.back + '<span>Task</span>';
+  $('#repo').innerHTML = `${I.folder}<span>${REPO}</span><span class="sep">/</span>${I.branch}<span>main ${S.landed ? S.newHead : S.mainHead}</span>`;
+  const p = S.cleaned ? ['', S.cleaned === 'workspace-kept' ? 'workspace kept' : 'cleaned up'] :
+            S.job ? ['run', 'working'] : ['wait', ['', 'review the branch', 'land it', 'clean up'][S.stage]];
+  $('#pill').innerHTML = `<span class="pill ${p[0]}">${p[1]}</span>`;
+  $('#stepper').innerHTML = ['Review', 'Land', 'Clean up'].map((name, k) => {
+    const n = k + 1, [cls, note] = stageState(n);
+    const off = n > S.reached || (n === 2 && S.unlanded);
+    return `<button class="stg" ${off ? 'disabled' : ''} ${S.stage === n ? 'aria-current="step"' : ''} onclick="go(${n})">
+      <span class="stg-bar ${cls}"></span><span class="stg-l"><b>${n} ${name}</b><span>${note}</span></span></button>`;
+  }).join('');
+  $('#sb').innerHTML = `<b>billing-svc</b><span class="sep">·</span>${S.cleaned === 'removed' ? 'no workspace' : `workspace ${S.cleaned === 'kept' ? 'removed, branch kept' : 'present'}`}` +
+    `<span class="sep">·</span>agents never touch git here — every command below runs on your machine<span class="sp"></span>` +
+    `<span class="kbd">1</span>&nbsp;<span class="kbd">2</span>&nbsp;<span class="kbd">3</span>&nbsp;stages<span class="sep">·</span><span class="kbd">[</span>&nbsp;<span class="kbd">]</span>&nbsp;commits<span class="sep">·</span><span class="kbd">e</span>&nbsp;expand<span class="sep">·</span><span class="kbd">d</span>&nbsp;dry run<span class="sep">·</span><button class="reset" onclick="fresh();render()">start over</button>`;
+}
+
+/* ── what changed: all of it, or one commit at a time ── */
+const ORDER = ['all', ...COMMITS.map((c) => c[0])];   // [ and ] step through these
+const commitOf = (sha) => { const b = COMMITS.find((c) => c[0] === sha); if (b) return { sha, m:b[1], who:b[2], at:b[3], main:false };
+  const m = MAIN_NEW.find((c) => c[0] === sha); return { sha, m:m[1], who:m[2], at:m[3], main:true }; };
+const filesIn = (v) => (v === 'all' ? ALL : DIFFS[v]);
+const tally = (fs) => [fs.reduce((s, f) => s + f.a, 0), fs.reduce((s, f) => s + f.d, 0)];
+const stat = ([a, d]) => `<span class="pa">+${a}</span> <span class="pd">−${d}</span>`;
+function view(v){
+  S.view = v;
+  if (v !== 'all') for (const f of DIFFS[v]) S.open[`${v}|${f.path}`] = true;   // a commit is small: open it
+  render();
+  document.getElementById('files')?.scrollIntoView({ block:'start' });
+}
+const pick = (sha) => view(S.view === sha ? 'all' : sha);
+const step = (by) => { const k = ORDER.indexOf(S.view); view(ORDER[Math.max(0, Math.min(ORDER.length - 1, (k < 0 ? 0 : k) + by))]); };
+function expandAll(){ const fs = filesIn(S.view), all = fs.every((f) => S.open[`${S.view}|${f.path}`]);
+  for (const f of fs) S.open[`${S.view}|${f.path}`] = !all; render(); }
+
+function diffHTML(lines){
+  let o = 0, n = 0;
+  const row = (c, a, b, sg, t) => `<div class="dl ${c}"><span class="ln">${a}</span><span class="ln">${b}</span><span class="sg">${sg}</span><span class="tx">${esc(t)}</span></div>`;
+  return lines.map((l) => {
+    if (l.startsWith('@@')) { const m = /@@ -(\d+)(?:,\d+)? \+(\d+)/.exec(l); o = +m[1]; n = +m[2]; return row('h', '', '', '', l); }
+    const g = /^…([+±])(\d+)$/.exec(l);
+    if (g) return row('gap', '', '', '', `… ${g[2]} more ${g[1] === '+' ? 'added' : 'changed'} lines`);
+    if (l[0] === '+') return row('a', '', n++, '+', l.slice(1));
+    if (l[0] === '-') return row('d', o++, '', '−', l.slice(1));
+    return row('', o++, n++, '', l.slice(1));
+  }).join('');
+}
+
+function commitRow([sha, m, who, at], extra = ''){
+  return `<button class="cm ${S.view === sha ? 'on' : ''}" onclick="pick('${sha}')" aria-pressed="${S.view === sha}">
+    <span class="ic">${I.commit}</span><span class="sha">${sha}</span><span class="msg">${esc(m)}${extra}</span>
+    <span class="who">${who} · ${at}</span><span class="st">${stat(tally(DIFFS[sha]))}</span></button>`;
+}
+
+function stage1(){
+  const v = S.view, fs = filesIn(v), c = v === 'all' ? null : commitOf(v);
+  const files = fs.map((f) => {
+    const key = `${v}|${f.path}`, open = !!S.open[key], cut = f.path.lastIndexOf('/') + 1;
+    const show = v === 'all' ? `git -C ${REPO} diff main...${BR} -- ${f.path}` : `git -C ${REPO} show ${v} -- ${f.path}`;
+    return `
+    <div class="fr ${open ? 'open' : ''}">
+      <button class="fr-h" onclick="S.open['${key}']=!S.open['${key}'];render()" aria-expanded="${open}">
+        <span class="chev">${I.chev}</span><span class="p">${f.path.slice(0, cut)}<b>${f.path.slice(cut)}</b></span>
+        <span class="tagc">${f.onMain && !(c && c.main) ? '<span class="tag">also changed on main</span>' : ''}</span>
+        <span class="plus">+${f.a}</span><span class="minus" ${f.d ? '' : 'style="color:var(--ink-3)"'}>−${f.d}</span></button>
+      ${open ? `<div class="diff">${diffHTML(f.lines)}${cmd(show)}</div>` : ''}
+    </div>`; }).join('');
+  const k = ORDER.indexOf(v);
+  const nav = `<span class="nav"><button onclick="step(-1)" ${k <= 0 ? 'disabled' : ''} aria-label="Previous commit">‹ [</button><button onclick="step(1)" ${k === ORDER.length - 1 ? 'disabled' : ''} aria-label="Next commit">] ›</button></span>`;
+  const scope = c
+    ? `<div class="scope"><span class="ic">${I.commit}</span><span class="sha">${c.sha}</span><span class="m">${esc(c.m)}</span>
+        <span class="mut">${c.who} · ${c.at}</span>${c.main ? '<span class="tag">on main, not in this branch</span>' : ''}
+        <span class="sp"></span><span class="mut">${fs.length} file${fs.length === 1 ? '' : 's'}</span><span class="st">${stat(tally(fs))}</span>
+        ${c.main ? '' : nav}<button class="linky" onclick="view('all')">all changes</button></div>`
+    : `<div class="scope"><span>All changes</span><span class="mut">main...${BR} · ${COMMITS.length} commits</span>
+        <span class="sp"></span><span class="mut">${fs.length} files</span><span class="st">${stat(tally(fs))}</span>${nav}</div>`;
+  const allOpen = fs.every((f) => S.open[`${v}|${f.path}`]);
+  return `
+  <section class="sec">
+    <div class="sec-h"><h2>The branch</h2><span class="mut">what landing would bring into main</span></div>
+    <div class="cmp">${I.branch}<span class="ref">${BR}</span><span class="mut">is ${COMMITS.length} commits ahead of</span><span class="ref">main</span>
+      <span class="mut">· cut from ${CUT} at 10:14 today</span></div>
+    ${cmd(`git -C ${REPO} log --oneline main..${BR}`)}
+    <div style="margin-top:10px">${COMMITS.map((c) => commitRow(c)).join('')}</div>
+    <p class="mut" style="font-size:12px;margin:6px 0 0">Pick a commit to see only what it changed.</p>
+
+    <div class="moved">
+      <div class="moved-h">${I.alert}<span><b>main moved 2 commits since this branch was cut.</b> One of them also changes
+        <code style="font-family:var(--mono);font-size:12.5px">src/webhooks/stripe.ts</code>, so landing may conflict. The dry run in the next stage tells you for sure.</span></div>
+      ${MAIN_NEW.map((c) => commitRow(c)).join('')}
+      ${cmd(`git -C ${REPO} log --oneline ${BR}..main`)}
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h" id="files"><h2>Files</h2><span class="mut">${c ? `changed in ${c.sha}` : 'changed on the branch'}</span>
+      <span class="sp"></span><button class="linky" onclick="expandAll()">${allOpen ? 'collapse all' : 'expand all'}</button>
+      <a href="./task-detail.html" class="mut" style="font-size:12px">Plan vs built →</a></div>
+    ${scope}
+    <div>${files}</div>
+    ${cmd(c ? `git -C ${REPO} show --stat ${c.sha}` : `git -C ${REPO} diff --stat main...${BR}`)}
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><h2>Check</h2><span class="mut">the project's check command, run by the flow in the workspace</span></div>
+    <div class="out"><span class="g">$ pnpm test</span>
+<span class="g">  tests/webhooks/stripe.idempotency.test.ts (6)</span>
+<span class="g">  tests/ledger/write.test.ts (11)</span>
+<span class="ok">✓ 132 passed  (14.2s)</span>  <span class="g">attempt 2 · 10:53</span></div>
+    <div class="att"><b>attempt 1 failed</b> · two concurrent deliveries wrote twice · <b>${money(0.31)} wasted</b> — it also left <code>scratch.log</code> in the workspace</div>
+    ${cmd(`cd ${WT} && pnpm test`)}
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><h2>Review</h2><span class="mut">review step · claude-sonnet · passed</span></div>
+    <p class="prose">“The event id and the ledger row are written in one transaction, so two concurrent deliveries can’t both win. <b>One note:</b> processed_events grows forever; Stripe retries for 3 days, so a TTL job can follow in a separate task.”</p>
+  </section>
+
+  ${S.reviewed ? '' : `
+  <div class="ask">
+    <div class="ask-h">${I.alert}<span class="lbl">wants you</span><span>Does this branch do what the task asked?</span></div>
+    <div class="ask-b">
+      <p class="prose sans">Read the commits and the diff above. Landing is a host action you trigger — the flow can’t merge, push, or touch main on its own.</p>
+      <div class="acts">
+        <button class="act decide" onclick="looksRight()">${I.merge}Looks right — go to Land</button>
+        <button class="act" onclick="skipLanding()">${I.trash}Clean up without landing</button>
+      </div>
+    </div>
+  </div>`}`;
+}
+
+function stage2(){
+  const st = STRATS[S.strategy];
+  const opts = Object.entries(STRATS).map(([k, o]) => `
+    <button class="opt" role="radio" aria-checked="${S.strategy === k}" ${S.landed || S.job ? 'disabled' : ''} onclick="S.strategy='${k}';render()">
+      <span class="radio"></span><span><span class="opt-n">${o.n}</span><div class="opt-d">${o.d}</div>${cmd(o.cmd)}</span></button>`).join('');
+
+  let decision = '';
+  if (S.dry === 'conflict' && !S.job) decision = `
+  <div class="ask">
+    <div class="ask-h">${I.alert}<span class="lbl">wants you</span><span>The dry run hit a conflict. How should it be resolved?</span></div>
+    <div class="ask-b">
+      <div class="conf"><div class="conf-h">${I.x}CONFLICT in src/webhooks/stripe.ts</div>
+        <div class="hunk" style="margin:0">${CONFLICT.map(([c, t]) => `<span class="${c}">${esc(t)}</span>`).join('\n')}</div>
+        <p class="prose" style="margin:8px 0 0;font-size:12.5px">Both sides add a line straight after the event is parsed. Main’s commit <b>d3a7710</b> counts every received webhook; this branch skips duplicates. Keeping both, main’s first, counts a duplicate as received — which is what main’s metric means.</p></div>
+      <div class="choice">
+        <div class="acts"><button class="act decide" onclick="updateFromMain()">${I.sync}Update the branch from main and re-run check</button><span class="mut">$0.00 · ~25s · host only</span></div>
+        <p class="prose sans">Rebases the 4 commits onto main, keeps both lines as shown, then the flow’s check step runs again in the workspace.</p>
+        ${cmd(`git -C ${WT} rebase main  → resolve → rebase --continue  →  pnpm test`)}
+      </div>
+      <div class="choice">
+        <div class="acts"><button class="act" onclick="sendBack()">${I.sendback}Send back to the flow</button><span class="mut">~$0.27 · ~4 min · implement, check, review</span></div>
+        <p class="prose sans">The host merges main into the branch and leaves the conflict in the file; implement resolves it in the same workspace, then check and review run again.</p>
+        ${cmd(`pnpm run-flow --folder ${REPO} --workspace ${ID} --from implement standard-flow.yaml   # --from is proposed`)}
+      </div>
+    </div>
+  </div>`;
+  if (S.dry === 'clean' && !S.landed && !S.job) decision = `
+  <div class="ask">
+    <div class="ask-h">${I.merge}<span class="lbl">wants you</span><span>Land into main?</span></div>
+    <div class="ask-b">
+      <p class="prose sans">The dry run is clean and check passed${S.fix ? ' after the update' : ''}. <b>${st.n}</b> will move main on this machine. Nothing is pushed; <code>git push</code> stays yours.</p>
+      <div class="acts"><button class="act decide" onclick="land()">${I.merge}Land ${ahead()} commits into main</button>
+        <button class="act" onclick="skipLanding()">${I.trash}Clean up without landing</button></div>
+      ${cmd(st.cmd)}
+    </div>
+  </div>`;
+
+  const res = S.job ? '' : S.landed ? `
+    ${jobHTML(S.jobOut)}
+    <div class="done-note">${I.check}<span><b>Landed.</b> main ${S.mainHead} → ${S.newHead}. ${branchMerged()
+      ? `The branch is now merged into main, so clean up can delete it.`
+      : `Squashed: git still sees the branch as unmerged, so clean up will keep it.`} Nothing was pushed.
+      <div class="acts" style="margin-top:10px"><button class="act primary" onclick="go(3)">Go to Clean up</button></div></span></div>` :
+    S.dry === 'idle' ? '' : jobHTML(S.jobOut);
+
+  return `
+  <section class="sec">
+    <div class="sec-h"><h2>Before landing</h2></div>
+    <div class="pre"><span>${I.check}${REPO} is on main, nothing uncommitted</span><span>${I.check}no run-flow holds the workspace</span></div>
+  </section>
+  <section class="sec">
+    <div class="sec-h"><h2>How to land</h2></div>
+    <div role="radiogroup" aria-label="Merge strategy">${opts}</div>
+  </section>
+  <section class="sec">
+    <div class="sec-h"><h2>Commit message</h2><span class="mut">from the task and the review summary · edit freely</span></div>
+    <textarea class="cmsg" id="msg" ${S.strategy === 'ff' || S.landed ? 'disabled' : ''} oninput="S.msg=this.value">${esc(S.msg)}</textarea>
+  </section>
+  <section class="sec">
+    <div class="sec-h"><h2>Dry run</h2><span class="mut">merges in memory; touches neither main nor the workspace</span></div>
+    <div class="acts"><button class="act primary" onclick="dryRun()" ${S.job || S.landed || S.dry === 'conflict' ? 'disabled' : ''}>${I.play}<kbd>d</kbd>${S.dry === 'idle' ? 'Dry run' : 'Dry run again'}</button></div>
+    ${cmd(`git merge-tree --write-tree --name-only main ${BR}`)}
+    <div id="job">${S.job ? jobHTML(S.job.lines, S.job.i, S.job.t) : ''}</div>
+    ${res}
+  </section>
+  ${decision}`;
+}
+
+function stage3(){
+  const merged = branchMerged();
+  const out = S.cleaned && S.cleaned !== 'workspace-kept';
+  const branchRow = merged
+    ? `<div class="lg-r"><span class="ic gone">${I.branch}</span><span class="n"><b>${BR}</b>
+        <div class="w">Deleted with <code>git branch -d</code>: it is merged into main.</div></span></div>`
+    : '';
+  const keptRow = merged ? '' :
+      `<div class="lg-r"><span class="ic">${I.branch}</span><span class="n"><b>${BR}</b>
+        <div class="w kept">Kept. ${S.landed ? 'A squash isn’t a merge to git' : `${COMMITS.length} commits not merged into main`}, so <code>git branch -d</code> refuses — FlowBoard never uses <code>-D</code>. The work survives here; <code>run-flow --workspace ${ID}</code> picks it up again.</div></span></div>`;
+
+  let decision = '';
+  if (!S.cleaned && !S.job) decision = `
+  <div class="ask">
+    <div class="ask-h">${I.alert}<span class="lbl">wants you</span><span>1 untracked file is in the way</span></div>
+    <div class="ask-b">
+      <div class="out"><span class="g">$ git -C ${WT} status --porcelain</span>
+?? scratch.log      <span class="g">2.1 kB · written by check attempt 1 at 10:47</span></div>
+      <p class="prose sans">A plain clean up would refuse with:</p>
+      <div class="refuse">clean-workspace: git worktree remove: fatal: '${WT_ABS}' contains modified or untracked files, use --force to delete it; commit the changes, or pass --force to throw them away</div>
+      <div class="acts">
+        <button class="act danger" onclick="cleanUp(true)">${I.trash}Throw away 1 file and clean up</button>
+        <button class="act" onclick="keep()">${I.archive}Keep workspace</button>
+      </div>
+      ${cmd(`pnpm clean-workspace --folder ${REPO} --force ${ID}`)}
+    </div>
+  </div>`;
+
+  const result = S.cleaned === 'workspace-kept'
+    ? `<div class="done-note">${I.archive}<span><b>Workspace kept.</b> It stays at <code>${WT}</code> on <code>${BR}</code> until you clean it up. Nothing changed on disk.</span></div>`
+    : out ? `${jobHTML(S.jobOut)}<div class="done-note">${I.check}<span><b>${merged ? 'Cleaned up.' : 'Workspace removed, branch kept.'}</b> ${merged
+        ? `The folder and the branch are gone; the work lives in main at ${S.newHead}.`
+        : `The folder is gone. The work is on <code>${BR}</code> only — delete it with <code>git branch -D ${BR}</code>, or pick it up again with <code>run-flow --workspace ${ID}</code>.`}</span></div>`
+    : `<div id="job">${S.job ? jobHTML(S.job.lines, S.job.i, S.job.t) : ''}</div>`;
+
+  return `
+  ${S.unlanded ? `<section class="sec"><p class="prose" style="color:var(--ink)"><b>Cleaning up without landing.</b> main won’t get this work. The branch keeps it, because clean up only ever deletes a merged branch.</p></section>` : ''}
+  <section class="sec">
+    <div class="sec-h"><h2>Before cleaning up</h2></div>
+    <div class="pre"><span>${I.check}no run-flow is working in the workspace</span><span>${I.check}task finished · review passed</span></div>
+  </section>
+  <section class="sec">
+    <div class="ledger">
+      <div>
+        <div class="sec-h"><h2>Goes</h2></div>
+        <div class="lg-r"><span class="ic gone">${I.folder}</span><span class="n"><b>${WT}</b>
+          <div class="w">The workspace folder, via <code>git worktree remove</code>.</div></span></div>
+        ${branchRow}
+        <div class="lg-r"><span class="ic gone">${I.file}</span><span class="n"><b>.flowboard/ inside the workspace</b>
+          <div class="arts">${ARTS.map(([n, s]) => `<span>${n} <span class="mut">${s}</span></span>`).join('')}</div></span></div>
+        <div class="lg-r"><span class="ic gone">${I.file}</span><span class="n"><b>scratch.log</b><div class="w">Only with “Throw away” — untracked, never committed.</div></span></div>
+      </div>
+      <div>
+        <div class="sec-h"><h2>Stays</h2></div>
+        <div class="lg-r"><span class="ic">${I.file}</span><span class="n"><b>${RUNDIR}</b><div class="w">Run logs and state for all 4 steps, and the cost record.</div></span></div>
+        ${S.landed ? `<div class="lg-r"><span class="ic">${I.commit}</span><span class="n"><b>main ${S.newHead}</b><div class="w">${S.strategy === 'merge' ? 'The merge commit and the 4 commits it brings in.' : S.strategy === 'squash' ? 'The squash commit.' : 'The 4 rebased commits.'}</div></span></div>` : ''}
+        ${keptRow}
+        <div class="lg-r"><span class="ic">${I.folder}</span><span class="n"><b>${REPO}</b><div class="w">Your checkout. Untouched.</div></span></div>
+      </div>
+    </div>
+    <div class="lose"><b>The artifacts go with the folder.</b> FlowBoard puts <code>.flowboard/</code> in git’s exclude file, so brief.md, plan.md and review.md were never committed. After clean up, Plan vs built on the task page has nothing to show. Copy them out first if you want them; the run logs in runs/ stay either way.</div>
+  </section>
+  ${decision}
+  <section class="sec">${result}</section>`;
+}
+
+function render(){
+  drawChrome(); drawNums();
+  $('#body').innerHTML = [, stage1, stage2, stage3][S.stage]();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.target.closest('textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if ('123'.includes(e.key)) go(+e.key);
+  else if (S.stage === 1 && (e.key === '[' || e.key === ']')) step(e.key === '[' ? -1 : 1);
+  else if (S.stage === 1 && e.key === 'e') expandAll();
+  else if (e.key === 'd' && S.stage === 2 && S.dry !== 'conflict') dryRun();
+});
+render();
+</script>
