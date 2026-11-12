@@ -1,22 +1,33 @@
 import { z } from 'zod';
 import { listRuns } from '../../../../packages/cli/src/flow-logs.ts';
 import { owns, readProjects, removeProject, updateProject } from '../../../../packages/cli/src/projects.ts';
+import type { Overrides } from '../../../../packages/cli/src/settings.ts';
 import { body, dataDir, flowsDir, refused, runsDir } from '../../flows/local.ts';
 
 type Params = { params: Promise<{ id: string }> };
 /** A run with a host still at it (the runs page's LIVE); a paused run can be resumed under any project. */
 const LIVE = new Set(['starting', 'running', 'waiting']);
 
-const Edit = z.object({ name: z.string().optional(), defaultFlow: z.string().nullable().optional(), checkCommand: z.string().nullable().optional(), baseBranch: z.string().nullable().optional() });
+const Edit = z.object({
+  name: z.string().optional(),
+  defaultFlow: z.string().nullable().optional(),
+  checkCommand: z.string().nullable().optional(),
+  baseBranch: z.string().nullable().optional(),
+  overrides: z.record(z.string(), z.unknown()).optional(),
+  limits: z.object({ memoryMb: z.number().optional(), cpus: z.number().optional() }).optional(),
+});
 
-/** `{ name?, defaultFlow?, checkCommand?, baseBranch? }`; a null check command removes it from the repo's `.flowboard.yaml`. */
+/**
+ * `{ name?, defaultFlow?, checkCommand?, baseBranch?, overrides?, limits? }`; a null check command removes it from the
+ * repo's `.flowboard.yaml`, `overrides` replaces the project's whole set, `limits` the repo's.
+ */
 export async function PATCH(request: Request, { params }: Params) {
   const { id } = await params;
   const no = refused(request);
   if (no) return no;
   const input = Edit.safeParse(await body(request));
-  if (!input.success) return Response.json({ error: 'send { name?, defaultFlow?, checkCommand?, baseBranch? }' }, { status: 400 });
-  const r = updateProject(dataDir(), flowsDir(), id, input.data);
+  if (!input.success) return Response.json({ error: 'send { name?, defaultFlow?, checkCommand?, baseBranch?, overrides?, limits? }' }, { status: 400 });
+  const r = updateProject(dataDir(), flowsDir(), id, { ...input.data, overrides: input.data.overrides as Overrides | undefined });
   return r.ok ? Response.json(r.value) : Response.json({ error: r.error }, { status: r.status });
 }
 

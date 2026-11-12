@@ -38,7 +38,7 @@ export function NewProject({ onClose }: { onClose: () => void }) {
         name: value.name,
         repoPath: value.repoPath.trim(),
         ...(value.slug && { slug: value.slug }),
-        flowType: value.flowType || null,
+        type: 'software',
         ...(value.checkCommand.trim() && { checkCommand: value.checkCommand }),
       }),
   });

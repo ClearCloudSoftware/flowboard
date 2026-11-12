@@ -11,15 +11,32 @@ import { homedir } from 'node:os';
 import { isAbsolute, join, sep } from 'node:path';
 import { parse } from 'yaml';
 import { isDir, isFile, writeJsonFile } from './config.ts';
-import { createFlow, FLOW_NAME } from './flow-files.ts';
+import { FLOW_NAME } from './flow-files.ts';
 import type { RunStatus, RunSummary } from './flow-logs.ts';
-import { excludeFromGit, PROJECT_FILE, projectSettings, setCheckCommand } from './project.ts';
+import { excludeFromGit, type Limits, PROJECT_FILE, projectSettings, setCheckCommand, setLimits } from './project.ts';
+import { type AppSettings, type Overrides, OverridesSchema, PROJECT_TYPES, type ProjectTypeId, type Resolved, resolveSettings } from './settings.ts';
+
+/** Where the repo came from: cloned from GitHub as `owner/name`, or a folder already on this machine. */
+export type Source = { kind: 'github'; repo: string } | { kind: 'local' };
 
 /**
- * `repoPath`: the repo's top folder, real path; `defaultFlow`: a flow in the library, or null to pick one each run;
- * `baseBranch`: the branch work starts from and lands on, the one checked out at registration (null: HEAD was detached).
+ * `repoPath`: the repo's top folder, real path; `defaultFlow`: the flow new runs start on, the type's first in the
+ * library at registration, or null to pick one each run; `baseBranch`: the branch work starts from and lands on, the
+ * one checked out at registration (null: HEAD was detached); `type`: decides its flows and the defaults its settings
+ * start from; `overrides`: the settings it sets over those (`settings.ts`).
  */
-export interface Project { id: string; name: string; slug: string; repoPath: string; defaultFlow: string | null; baseBranch: string | null; createdAt: string }
+export interface Project {
+  id: string;
+  name: string;
+  slug: string;
+  repoPath: string;
+  defaultFlow: string | null;
+  baseBranch: string | null;
+  createdAt: string;
+  type: ProjectTypeId;
+  source: Source;
+  overrides: Overrides;
+}
 export type Result<T> = { ok: true; value: T } | { ok: false; status: 400 | 404 | 409; error: string };
 
 export const SLUG = /^[a-z0-9][a-z0-9-]*$/;
@@ -28,7 +45,9 @@ const fail = (status: 400 | 404 | 409, error: string) => ({ ok: false as const, 
 
 export function readProjects(dataDir: string): Project[] {
   const file = fileOf(dataDir);
-  return isFile(file) ? (JSON.parse(readFileSync(file, 'utf8')) as Project[]) : [];
+  const projects = isFile(file) ? (JSON.parse(readFileSync(file, 'utf8')) as Partial<Project>[]) : [];
+  // A record from before types, sources and overrides: a local software project with nothing overridden.
+  return projects.map((p) => ({ ...p, type: p.type ?? 'software', source: p.source ?? { kind: 'local' }, overrides: p.overrides ?? {} }) as Project);
 }
 
 // ponytail: read, change, write with no lock; one person's browser is the only writer
@@ -55,10 +74,20 @@ const flowCheck = (flowsDir: string, flow: string | null | undefined) =>
   flow && (!FLOW_NAME.test(flow) || !isFile(join(flowsDir, `${flow}.yaml`))) ? `no flow "${flow}" in the library` : undefined;
 
 /**
- * `defaultFlow` adopts a library flow as it is. `flowType` instead starts the project's own flow, named after its
- * slug, as a copy of that flow, or empty when null (the New project dialog's "Empty").
+ * `owner`: the repo's owner, for the slug when the name's is taken; `limits` and `checkCommand` go into the repo's
+ * `.flowboard.yaml`, the rest onto the record.
  */
-export interface NewProject { name: string; repoPath: string; slug?: string; defaultFlow?: string | null; flowType?: string | null; checkCommand?: string }
+export interface NewProject {
+  name: string;
+  repoPath: string;
+  type: ProjectTypeId;
+  source?: Source;
+  slug?: string;
+  owner?: string;
+  overrides?: Overrides;
+  limits?: Limits;
+  checkCommand?: string;
+}
 
 const gitOut = (cwd: string, ...args: string[]) => {
   const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -67,56 +96,77 @@ const gitOut = (cwd: string, ...args: string[]) => {
 /** The branch checked out, even in a repo with no commits yet; undefined when HEAD is detached. */
 const currentBranch = (repo: string) => gitOut(repo, 'symbolic-ref', '--short', '-q', 'HEAD');
 
-/** The project's own flow: `<slug>.yaml`, numbered past a name in use, a copy of `from` or an empty recipe. */
-function startFlow(flowsDir: string, slug: string, from: string | null): string {
-  const text = from === null ? undefined : `# ${slug}'s own flow, started from ${from}.\n${readFileSync(join(flowsDir, `${from}.yaml`), 'utf8')}`;
-  for (let n = 1; ; n++) {
-    const name = n === 1 ? slug : `${slug}-${n}`;
-    if (createFlow(flowsDir, name, text)) return name;
-  }
+/** The slug from the name; when another project has it, from owner-name; numbered past ones in use. */
+export function projectSlug(projects: Pick<Project, 'slug'>[], name: string, owner?: string): string {
+  const taken = (slug: string) => projects.some((p) => p.slug === slug);
+  const base = taken(slugify(name)) && owner ? slugify(`${owner}-${name}`) : slugify(name);
+  let slug = base;
+  for (let n = 2; taken(slug); n++) slug = `${base}-${n}`;
+  return slug;
 }
 
+/** The first issue's message, as a 400. */
+const overridesError = (ov: unknown) => {
+  const r = OverridesSchema.safeParse(ov);
+  return r.success ? undefined : fail(400, r.error.issues[0].message);
+};
+const hasLimits = (l: Limits | undefined): l is Limits => !!l && (l.memoryMb !== undefined || l.cpus !== undefined);
+
 /**
- * Registers a repo. 400 for a folder that is not a git repo or a flow not in the library; 409 when the repo or the
- * slug already has a project. A slug left out comes from the name, numbered past ones in use. A check command
- * given is written to the repo's `.flowboard.yaml`.
+ * Registers a repo. 400 for a folder that is not a git repo, a type not offered yet or overrides that do not pass;
+ * 409 when the repo or the slug given already has a project. A slug left out comes from `projectSlug`. Limits and a
+ * check command given are written to the repo's `.flowboard.yaml`.
  */
 export function createProject(dataDir: string, flowsDir: string, input: NewProject, now = new Date()): Result<Project> {
   const name = input.name.trim();
   if (!name) return fail(400, 'name the project');
+  const type = PROJECT_TYPES[input.type];
+  if (!type) return fail(400, `no project type "${input.type}"`);
+  if (type.soon) return fail(400, `${type.name} projects are coming soon`);
+  const badOverrides = overridesError(input.overrides ?? {});
+  if (badOverrides) return badOverrides;
   const root = repoRoot(input.repoPath);
   if (!root.ok) return root;
   const projects = readProjects(dataDir);
   const twin = projects.find((p) => p.repoPath === root.value);
   if (twin) return fail(409, `${root.value} is already the project ${twin.name}`);
-  const badFlow = flowCheck(flowsDir, input.defaultFlow) ?? flowCheck(flowsDir, input.flowType);
-  if (badFlow) return fail(400, badFlow);
-  if (input.defaultFlow && input.flowType !== undefined) return fail(400, 'send defaultFlow or flowType, not both');
   let slug = input.slug?.trim();
   if (slug) {
     if (!SLUG.test(slug)) return fail(400, 'a slug may only use lowercase letters, digits and -');
     if (projects.some((p) => p.slug === slug)) return fail(409, `the slug ${slug} is taken`);
-  } else {
-    const base = slugify(name);
-    slug = base;
-    for (let n = 2; projects.some((p) => p.slug === slug); n++) slug = `${base}-${n}`;
-  }
+  } else slug = projectSlug(projects, name, input.owner);
   if (input.checkCommand?.trim()) {
     const set = setCheckCommand(root.value, input.checkCommand);
     if (!set.ok) return fail(400, set.errors.join('\n'));
   }
-  const defaultFlow = input.flowType !== undefined ? startFlow(flowsDir, slug, input.flowType) : input.defaultFlow || null;
+  if (hasLimits(input.limits)) {
+    const set = setLimits(root.value, input.limits);
+    if (!set.ok) return fail(400, set.errors.join('\n'));
+  }
+  const defaultFlow = type.flows.find((f) => isFile(join(flowsDir, `${f}.yaml`))) ?? null;
   excludeFromGit(root.value); // .flowboard/, where FlowBoard keeps its own files in the repo, stays out of commits
-  const project: Project = { id: randomUUID(), name, slug, repoPath: root.value, defaultFlow, baseBranch: currentBranch(root.value) ?? null, createdAt: now.toISOString() };
+  const project: Project = {
+    id: randomUUID(),
+    name,
+    slug,
+    repoPath: root.value,
+    defaultFlow,
+    baseBranch: currentBranch(root.value) ?? null,
+    createdAt: now.toISOString(),
+    type: type.id,
+    source: input.source ?? { kind: 'local' },
+    overrides: input.overrides ?? {},
+  };
   writeProjects(dataDir, [...projects, project]);
   return { ok: true, value: project };
 }
 
-export interface ProjectEdit { name?: string; defaultFlow?: string | null; checkCommand?: string | null; baseBranch?: string | null }
+/** `overrides` replaces the project's whole set; `limits` replaces the repo's (an empty one removes them). */
+export interface ProjectEdit { name?: string; defaultFlow?: string | null; checkCommand?: string | null; baseBranch?: string | null; overrides?: Overrides; limits?: Limits }
 
 /**
- * Renames, moves the default flow, sets the check command (null or empty removes it) or the base branch (a branch
- * of the repo, or the one checked out before its first commit). The slug and repo stay.
+ * Renames, moves the default flow, sets the check command (null or empty removes it), the base branch (a branch of
+ * the repo, or the one checked out before its first commit), the overrides or the limits. The slug and repo stay.
  */
 export function updateProject(dataDir: string, flowsDir: string, id: string, edit: ProjectEdit): Result<Project> {
   const projects = readProjects(dataDir);
@@ -125,6 +175,8 @@ export function updateProject(dataDir: string, flowsDir: string, id: string, edi
   if (edit.name !== undefined && !edit.name.trim()) return fail(400, 'name the project');
   const badFlow = flowCheck(flowsDir, edit.defaultFlow);
   if (badFlow) return fail(400, badFlow);
+  const badOverrides = edit.overrides !== undefined ? overridesError(edit.overrides) : undefined;
+  if (badOverrides) return badOverrides;
   const branch = edit.baseBranch?.trim();
   if (branch && gitOut(projects[at].repoPath, 'rev-parse', '--verify', '-q', `refs/heads/${branch}`) === undefined && branch !== currentBranch(projects[at].repoPath)) {
     return fail(400, `${projects[at].repoPath} has no branch ${branch}`);
@@ -133,11 +185,16 @@ export function updateProject(dataDir: string, flowsDir: string, id: string, edi
     const set = setCheckCommand(projects[at].repoPath, edit.checkCommand ?? undefined);
     if (!set.ok) return fail(400, set.errors.join('\n'));
   }
+  if (edit.limits !== undefined) {
+    const set = setLimits(projects[at].repoPath, edit.limits);
+    if (!set.ok) return fail(400, set.errors.join('\n'));
+  }
   const p = {
     ...projects[at],
     ...(edit.name !== undefined && { name: edit.name.trim() }),
     ...(edit.defaultFlow !== undefined && { defaultFlow: edit.defaultFlow || null }),
     ...(edit.baseBranch !== undefined && { baseBranch: branch || null }),
+    ...(edit.overrides !== undefined && { overrides: edit.overrides }),
   };
   projects[at] = p;
   writeProjects(dataDir, projects);
@@ -175,12 +232,16 @@ export function seedOnce(dataDir: string, flowsDir: string) {
   };
   for (const [f, text] of Object.entries(files)) writeFileSync(join(repo, f), text);
   if (git(repo, 'init', '-q', '-b', 'main').status !== 0 || git(repo, 'add', '.').status !== 0 || git(repo, 'commit', '-q', '-m', 'Scratch repo for FlowBoard').status !== 0) return;
-  createProject(dataDir, flowsDir, { name: 'Scratch', repoPath: repo, defaultFlow: isFile(join(flowsDir, 'delivery.yaml')) ? 'delivery' : null });
+  createProject(dataDir, flowsDir, { name: 'Scratch', repoPath: repo, type: 'software' });
 }
 
 /** A project as the projects page shows it: its runs counted by status and what they cost in the last seven days. */
 export interface ProjectView extends Project {
   checkCommand: string | null;
+  /** The repo's sandbox limits; none when its `.flowboard.yaml` sets none or does not pass. */
+  limits: Limits;
+  /** Every setting's value for this project, and where it came from. */
+  settings: Resolved;
   /** What needs a look: the repo is gone, its `.flowboard.yaml` does not pass, or its checkout is not where work starts. */
   problems: string[];
   runs: Partial<Record<RunStatus, number>>;
@@ -223,7 +284,7 @@ function projectCheckSteps(flowsDir: string, flow: string): string[] {
 }
 
 // ponytail: "this week" is the last seven days, and a run's whole cost counts on the day it started (Projects OQ 11)
-export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: string, now = Date.now()): ProjectView[] {
+export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: string, app: AppSettings, now = Date.now()): ProjectView[] {
   return projects.map((p) => {
     const mine = runs.filter((r) => owns(p, r.folder));
     const counts: ProjectView['runs'] = {};
@@ -240,6 +301,8 @@ export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: 
       ...p,
       baseBranch: p.baseBranch ?? null, // a record from before base branches has none
       checkCommand,
+      limits: settings.ok ? settings.settings.limits : {},
+      settings: resolveSettings(app, p.type, p.overrides),
       problems: [...(settings.ok ? [] : settings.errors), ...problems, ...(isDir(p.repoPath) ? repoProblems(p) : [])],
       runs: counts,
       weekSpendUsd,

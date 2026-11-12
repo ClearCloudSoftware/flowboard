@@ -61,9 +61,18 @@ function editProjectFile(folder: string, edit: (doc: Document) => void): { ok: t
 export const setCheckCommand = (folder: string, command: string | undefined) =>
   editProjectFile(folder, (doc) => (command?.trim() ? doc.set('check_command', command.trim()) : doc.delete('check_command')));
 
+const MEMORY = 'a whole number of MB, 64 or more';
+const CPUS = 'more than 0; 1.5 is a CPU and a half';
+const LimitsSchema = z.strictObject({
+  memoryMb: z.number({ error: MEMORY }).int({ error: MEMORY }).min(64, { error: MEMORY }).optional(),
+  cpus: z.number({ error: CPUS }).positive({ error: CPUS }).optional(),
+});
+
 /** Sets `sandbox.memory_mb` and `sandbox.cpus` to the limits given, removing those left out, and `sandbox:` once empty. */
-export const setLimits = (folder: string, limits: Limits) =>
-  editProjectFile(folder, (doc) => {
+export function setLimits(folder: string, limits: Limits): { ok: true } | { ok: false; errors: string[] } {
+  const r = LimitsSchema.safeParse(limits);
+  if (!r.success) return { ok: false, errors: [r.error.issues[0].message] };
+  return editProjectFile(folder, (doc) => {
     for (const [key, v] of [['memory_mb', limits.memoryMb], ['cpus', limits.cpus]] as const) {
       if (v !== undefined) doc.setIn(['sandbox', key], v);
       else if (doc.hasIn(['sandbox', key])) doc.deleteIn(['sandbox', key]);
@@ -71,6 +80,7 @@ export const setLimits = (folder: string, limits: Limits) =>
     const sb = doc.get('sandbox');
     if (isMap(sb) && sb.items.length === 0) doc.delete('sandbox');
   });
+}
 
 /** Adds `.flowboard/` to the local exclude file of `folder`'s git repository, so `git add -A` leaves it alone. */
 export function excludeFromGit(folder: string): void {
