@@ -126,7 +126,7 @@ browser, or run `python3 -m http.server` in this folder.
   kept out of commits, the check command found from the repo's manifest.
   Repos that are already a project can't be picked, and a taken default folder
   gets a `-2`.
-  - **[`new-project-wizard.html`](./new-project-wizard.html)**: **chosen.** A
+  - **[`new-project-wizard.html`](./new-project-wizard.html)**: **chosen, built** (phases 1–2, 2026-11-12: the wizard on `gh` with a real clone, and the settings stored with where each comes from; see [Projects Index](../FlowBoard/Projects/Projects%20Index.md)). A
     dialog over the projects list with a clickable step rail: Type → Source →
     Repository → **Settings** → Clone. What the repo fixes is shown, not asked:
     the name and `/p/` address come from the repo, the base branch follows

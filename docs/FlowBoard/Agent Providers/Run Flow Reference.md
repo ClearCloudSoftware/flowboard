@@ -97,7 +97,7 @@ Any other mix of options prints these three lines, the first headed `usage:`, an
 
 ## Project file
 
-A sandboxed run reads `.flowboard.yaml` in `--folder`, the repo it works in, as it starts; it is meant to be committed with the repo. What a step may use depends on the repo and the machine, not on the recipe, so a flow cannot set these (Alex, 2026-11-10).
+A sandboxed run reads `.flowboard.yaml` in `--folder`, the repo it works in, as it starts; it is meant to be committed with the repo. What a step may use depends on the repo and the machine, not on the recipe, so a flow cannot set these (Alex, 2026-11-10). The project page and the new project wizard write `check_command` and the `sandbox` limits here, keeping the file's other keys and comments. Trust, network access and budget are never read from this file: they are FlowBoard's, on the project record, so a repo cannot grant itself any of them; a file that names them fails the check below.
 
 ```yaml
 check_command: pnpm lint && pnpm test   # what a step with an empty shell: runs

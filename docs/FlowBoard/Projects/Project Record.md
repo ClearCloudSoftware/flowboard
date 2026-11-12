@@ -19,6 +19,9 @@ CREATE TABLE projects (
 );
 ```
 
+> [!check] As built, 2026-11-12
+> The record is a row in `projects.json`, not SQL: `id`, `name`, `slug`, `repoPath`, `defaultFlow`, `baseBranch`, `createdAt`, plus `type` (`software`; `research`, `writing` and `data` are *coming soon*), `source` (`{ kind: 'github', repo: 'owner/name' }` or `{ kind: 'local' }`) and `overrides`, the settings the project sets over its type and the app (`trust`, `budget`, `escalation`, `memory`, `knowledge`, `draft`; a key present is overridden). The check command and the sandbox limits are the repo's `.flowboard.yaml`, not the record. A record from before these keys reads as a local Software project with nothing overridden (`packages/cli/src/projects.ts`, `settings.ts`). The tables below are the PRD's design.
+
 ## Field by field
 
 | Field | Required | Meaning | Where it is used | Note |
