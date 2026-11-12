@@ -95,6 +95,11 @@ test('a child killed by SIGKILL is a setup failure too: the shell, or a containe
   const s = stepSetup({ sandbox: () => hostExecHost });
   assert.deepEqual(await execShell('exit 137', s.folder, RUN, [], s.ctx).ended, killed);
   assert.deepEqual(await check('exit 139').run.ended, { costUsd: 0, outcome: 'fail' }, 'a crash is the check failing');
+  const capped = stepSetup({ sandbox: () => ({ ...hostExecHost, profile: { tier: 'container', egressAllow: [], limits: { memoryMb: 512 } } }) });
+  assert.deepEqual(await execShell('exit 137', capped.folder, RUN, [], capped.ctx).ended, {
+    costUsd: 0,
+    error: "exit code 137: killed by SIGKILL, out of memory most likely (the sandbox's limit is 512 MB; see .flowboard.yaml)",
+  });
 });
 
 test("exit 125 is the sandbox failing to start the check; on the host it is the check's own fail", async () => {

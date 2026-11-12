@@ -37,7 +37,7 @@ As built (2026-10-18), a runner could not tell these apart from the result. Both
 
 The drawio *Hardening* card says *"wall-clock kill"*.
 
-A shell step's non-zero exit is an outcome, not a failure (PRD §7), so an out-of-memory kill of a check would loop as `fail` ([[Execution Open Questions]] #41).
+A shell step's non-zero exit is an outcome, not a failure (PRD §7), so an out-of-memory kill of a check would loop as `fail` ([[Execution Open Questions]] #41). Since 2026-11-10, run-flow reads exit 137 as a setup failure that waits at a *run failed* gate, naming the sandbox's memory limit.
 
 ## Why it matters without a budget
 
@@ -46,6 +46,9 @@ The flow-designer guide on the **Budget** field: *"No ceiling means a looping ag
 ## Defaults
 
 None given. PRD §13: the settings sandbox section holds *"the resource limits"*; no values. See [[Sandbox Defaults]].
+
+> [!check] Built in run-flow, 2026-11-10
+> Memory and CPUs are the project's, not the flow's: a recipe runs in many repos and on many machines, and what a step needs depends on those (Alex, 2026-11-10). run-flow reads `sandbox.memory_mb` and `sandbox.cpus` from `.flowboard.yaml` in the run's folder, applies them to every Docker container (agents' and checks' alike) or to the OpenSandbox box, and pins them for `--resume`. Without a memory value, a Docker container gets a quarter of Docker's memory; OpenSandbox keeps the SDK's 1 CPU and 2 GiB. No global settings level and no per-step override yet, and no mapping from `max_turns` or `max_budget_usd` (Claude's calls, open to Alex's review). See [[Run Flow Reference#Project file]].
 
 ## Related
 

@@ -32,6 +32,8 @@ export interface RunDeps {
   /** runtime: opensandbox; default: the adapters' own. */
   openBox?: typeof openBox;
   connectBox?: typeof connectBox;
+  /** runtime: docker without a project memory limit; default: a quarter of what `docker info` reports. */
+  dockerMemoryMb?: () => number | undefined;
 }
 
 export const WITHDRAWN = '-- question withdrawn: the agent stopped waiting';

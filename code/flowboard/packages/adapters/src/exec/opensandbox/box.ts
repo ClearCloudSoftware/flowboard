@@ -9,7 +9,7 @@ import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSy
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Sandbox } from '@alibaba-group/opensandbox';
+import { DEFAULT_RESOURCE_LIMITS, Sandbox } from '@alibaba-group/opensandbox';
 import type { ExecHost } from '@flowboard/core';
 import { relayExecHost } from './relay-host.ts';
 
@@ -20,6 +20,8 @@ export interface BoxOptions {
   /** Names of this machine's env variables to inject on the way out; the box gets a fake of each. */
   credentials: string[];
   timeoutSeconds: number;
+  /** The box's memory (MB) and CPUs; what is not given is the SDK's default (1 CPU, 2 GiB). */
+  limits?: { memoryMb?: number; cpus?: number };
 }
 
 export interface Box {
@@ -227,6 +229,11 @@ export async function openBox(o: BoxOptions): Promise<Box> {
     connectionConfig: connectionConfig(),
     image: o.image,
     timeoutSeconds: o.timeoutSeconds,
+    resource: {
+      ...DEFAULT_RESOURCE_LIMITS,
+      ...(o.limits?.memoryMb !== undefined && { memory: `${o.limits.memoryMb}Mi` }),
+      ...(o.limits?.cpus !== undefined && { cpu: String(o.limits.cpus) }),
+    },
     env: { HOME: '/tmp', ...Object.fromEntries(known.map((c) => [c, KNOWN[c]!.fake])) },
     networkPolicy: { defaultAction: 'deny', egress: o.egress.map((target) => ({ action: 'allow' as const, target })) },
     credentialProxy: { enabled: true },

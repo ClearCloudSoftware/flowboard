@@ -88,14 +88,16 @@ function runLog(ctx: ExecContext, run: RunCommand) {
 }
 
 /** A shell that could not run its command, or that died by a signal: the setup failed, not the work. */
-function setupFailure(code: number | null, sig: NodeJS.Signals | null, sandboxed = false): string | undefined {
+function setupFailure(code: number | null, sig: NodeJS.Signals | null, exec?: ExecHost): string | undefined {
+  const sandboxed = !!exec;
   if (sig) return `killed by ${sig}`;
   // docker run's own failure (no image, no daemon): the container never ran. On the host 125 is the check's own.
   if (code === 125 && sandboxed) return 'exit code 125: the sandbox could not start the command';
   // 128 + SIGKILL: something in the check was killed from outside (the OOM killer, a sandbox limit). A container
   // and a shell that ran it in a child both hand on a signal as this code, not as a signal (Open Questions #41).
   // ponytail: only SIGKILL; 139 (SIGSEGV) and the like are the code under test crashing, which is its fail
-  if (code === 137) return 'exit code 137: killed by SIGKILL, out of memory most likely';
+  const mb = exec?.profile?.limits?.memoryMb;
+  if (code === 137) return `exit code 137: killed by SIGKILL, out of memory most likely${mb ? ` (the sandbox's limit is ${mb} MB; see .flowboard.yaml)` : ''}`;
   if (code === 126) return 'exit code 126: the command cannot run';
   if (code === 127) return 'exit code 127: command not found';
   return undefined;
@@ -180,7 +182,7 @@ export function execShell(command: string, folder: string, run: RunCommand, prod
     }
     const last = tail.split('\n').findLast((l) => l.trim());
     if (last) ctx.show(`-- ${run.step}: last output: ${last.trim().slice(0, 300)}`);
-    const error = stopReason ?? unsaved ?? setupFailure(code, sig, !!exec);
+    const error = stopReason ?? unsaved ?? setupFailure(code, sig, exec);
     if (error) return finish({ costUsd: 0, error }, code);
     const end: RunEnd = { costUsd: 0, outcome: code === 0 ? 'pass' : 'fail' };
     if (code !== 0 && tail.trim()) end.fingerprint = fingerprint(tail);

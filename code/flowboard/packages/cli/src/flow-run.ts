@@ -19,6 +19,7 @@ import { inside, loadFlow, toMermaid } from './flow-config.ts';
 import type { FlowConfig, Sandbox } from './flow-config.ts';
 import { artifactPath, execAi, execShell, processStart, shellEnv } from './flow-exec.ts';
 import type { ExecContext, StepRun } from './flow-exec.ts';
+import { dockerDefaultMemoryMb, PROJECT_FILE, projectLimits } from './project.ts';
 import { defaultProvider, stamp } from './run.ts';
 import type { RunDeps } from './run.ts';
 
@@ -123,6 +124,28 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
     print(`-- flow ok: ${plural(config.flow.steps.length, 'step')}, starting at ${entries(config.flow)[0]}`);
     return 0;
   }
+  let limitsLine: string | undefined;
+  if (config.sandbox) {
+    const project = projectLimits(config.folder);
+    if (!project.ok) {
+      project.errors.forEach((l) => printErr(l));
+      return 2;
+    }
+    const limits = project.limits;
+    const fromFile = Object.keys(limits).length > 0;
+    const docker = config.sandbox.runtime === 'docker';
+    const guessed = docker && limits.memoryMb === undefined;
+    if (guessed) {
+      const mb = (deps.dockerMemoryMb ?? dockerDefaultMemoryMb)();
+      if (mb !== undefined) limits.memoryMb = mb;
+    }
+    config.sandbox.limits = limits;
+    const parts = [
+      limits.memoryMb !== undefined ? `${limits.memoryMb} MB of memory${guessed ? " (a quarter of Docker's)" : ''}` : docker ? 'no memory limit (Docker did not say its size)' : "OpenSandbox's default memory",
+      limits.cpus !== undefined ? plural(limits.cpus, 'CPU') : docker ? 'any CPUs' : "OpenSandbox's default CPUs",
+    ];
+    limitsLine = `-- sandbox limits: ${parts.join(', ')}${fromFile ? ` (from ${PROJECT_FILE})` : ''}`;
+  }
 
   // The lock first: a second host is told another run-flow is here, not that the first one's edits are uncommitted.
   const flowboardDir = join(config.folder, '.flowboard');
@@ -195,6 +218,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
     const ceiling = config.budgetUsd ? `a budget of $${config.budgetUsd.toFixed(2)}` : 'no budget ceiling';
     print(`-- flow ${config.name}: ${plural(config.flow.steps.length, 'step')} in ${config.folder}, ${ceiling}`);
     print(`-- run folder ${shown}`);
+    if (limitsLine) print(limitsLine);
     const removed = shellEnv(process.env).removed;
     if (removed.length && Object.values(config.steps).some((s) => s.kind === 'shell')) print(`-- shell steps run without: ${removed.join(', ')}`);
 
@@ -202,7 +226,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
     if (config.sandbox?.runtime === 'opensandbox') {
       const sb = config.sandbox;
       try {
-        box = await (deps.openBox ?? openBox)({ image: sb.image, folder: config.folder, egress: sb.egress, credentials: sb.credentials, timeoutSeconds: BOX_SECONDS });
+        box = await (deps.openBox ?? openBox)({ image: sb.image, folder: config.folder, egress: sb.egress, credentials: sb.credentials, timeoutSeconds: BOX_SECONDS, ...(sb.limits && { limits: sb.limits }) });
       } catch (e) {
         printErr(`${yaml}: sandbox: cannot open an OpenSandbox box: ${(e as Error).message}`);
         return 2;
@@ -551,6 +575,7 @@ export const sandboxFor = (sb: Extract<Sandbox, { runtime: 'docker' }>, artifact
       tier: 'container',
       image: sb.image,
       egressAllow: online ? ['*'] : [],
+      ...(sb.limits && { limits: sb.limits }),
       mounts: [{ source: artifactsDir, target: artifactsDir }, ...mounts.map((m) => ({ source: m, target: m, readOnly: true }))],
       // sandbox.env is for the agents; a check gets none of it, only what run-flow sets (FLOWBOARD_*)
       env: online ? Object.fromEntries(sb.env.flatMap((k) => (process.env[k] === undefined ? [] : [[k, process.env[k]!]]))) : {},
