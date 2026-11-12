@@ -156,7 +156,7 @@ const PAGES: Record<Exclude<PageId, 'overview'>, (p: PageProps) => ReactNode> = 
           <b className="font-sans text-sm font-semibold">Package registries</b>
           <span className="border border-border px-1.5 text-[11px] text-muted-foreground">after cloning</span>
         </div>
-        <div className="text-[var(--ink-2)]">proposed by the analysis agent from the repo&apos;s lockfiles; you confirm them</div>
+        <div className="text-[var(--ink-2)]">proposed by the analysis agent from the repo&apos;s lockfiles; you confirm them. The agent is not built yet.</div>
         <p className={desc}>Never the git remote: FlowBoard does every fetch and push itself, outside the sandbox.</p>
       </section>
     </Sets>

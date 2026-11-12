@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { projectsQuery, usd } from './api.ts';
 import type { ProjectView } from './api.ts';
-import { NewProject } from './new-project.tsx';
 import { Topbar } from './topbar.tsx';
+import { Wizard } from './wizard/wizard.tsx';
 
 /** The run statuses a card counts, in a run's order; `starting` is counted as running. */
 const FIGURES = [
@@ -100,7 +100,7 @@ export function Projects() {
         {projects.data?.length === 0 && (
           <div className="flex flex-col items-start gap-3 border border-dashed border-input px-5 py-8">
             <p className="font-sans text-[15px]">No projects yet.</p>
-            <p className="text-muted-foreground">Point FlowBoard at a folder that holds a git repository. That is the code a flow&rsquo;s agents read and change.</p>
+            <p className="text-muted-foreground">Clone a repository from GitHub. That is the code a flow&rsquo;s agents read and change.</p>
             {add}
           </div>
         )}
@@ -110,7 +110,7 @@ export function Projects() {
           ))}
         </div>
       </main>
-      {creating && <NewProject onClose={() => setCreating(false)} />}
+      {creating && <Wizard onClose={() => setCreating(false)} />}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { isAbsolute, join, sep } from 'node:path';
 import { parse } from 'yaml';
 import { isDir, isFile, writeJsonFile } from './config.ts';
 import { FLOW_NAME } from './flow-files.ts';
+import { projectSlug } from './slug.ts';
 import type { RunStatus, RunSummary } from './flow-logs.ts';
 import { excludeFromGit, type Limits, PROJECT_FILE, projectSettings, setCheckCommand, setLimits } from './project.ts';
 import { type AppSettings, type Overrides, OverridesSchema, PROJECT_TYPES, type ProjectTypeId, type Resolved, resolveSettings } from './settings.ts';
@@ -40,6 +41,7 @@ export interface Project {
 export type Result<T> = { ok: true; value: T } | { ok: false; status: 400 | 404 | 409; error: string };
 
 export const SLUG = /^[a-z0-9][a-z0-9-]*$/;
+export { projectSlug, slugify } from './slug.ts';
 const fileOf = (dataDir: string) => join(dataDir, 'projects.json');
 const fail = (status: 400 | 404 | 409, error: string) => ({ ok: false as const, status, error });
 
@@ -52,10 +54,6 @@ export function readProjects(dataDir: string): Project[] {
 
 // ponytail: read, change, write with no lock; one person's browser is the only writer
 const writeProjects = (dataDir: string, projects: Project[]) => writeJsonFile(fileOf(dataDir), projects);
-
-/** `My API (v2)` -> `my-api-v2`. */
-export const slugify = (name: string) =>
-  name.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '') || 'project';
 
 /** The git repo holding `path` (absolute, or from `~/`): its top folder, as a real path. */
 export function repoRoot(path: string): Result<string> {
@@ -95,15 +93,6 @@ const gitOut = (cwd: string, ...args: string[]) => {
 };
 /** The branch checked out, even in a repo with no commits yet; undefined when HEAD is detached. */
 const currentBranch = (repo: string) => gitOut(repo, 'symbolic-ref', '--short', '-q', 'HEAD');
-
-/** The slug from the name; when another project has it, from owner-name; numbered past ones in use. */
-export function projectSlug(projects: Pick<Project, 'slug'>[], name: string, owner?: string): string {
-  const taken = (slug: string) => projects.some((p) => p.slug === slug);
-  const base = taken(slugify(name)) && owner ? slugify(`${owner}-${name}`) : slugify(name);
-  let slug = base;
-  for (let n = 2; taken(slug); n++) slug = `${base}-${n}`;
-  return slug;
-}
 
 /** The first issue's message, as a 400. */
 const overridesError = (ov: unknown) => {
