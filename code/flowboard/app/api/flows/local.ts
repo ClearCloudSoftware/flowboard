@@ -15,12 +15,20 @@ const LOCAL = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 /**
  * These routes read and write files on this machine, so they answer only requests addressed to it by name: a page
- * elsewhere that points its own name at 127.0.0.1 (DNS rebinding) is refused, and so is the network address.
+ * elsewhere that points its own name at 127.0.0.1 (DNS rebinding) is refused, and so is the network address. A write
+ * must also come from FlowBoard's own pages: a browser sends a site's plain-text POST to localhost without asking
+ * first, so one with another `Origin`, or that the browser marks as from another site, is refused (CSRF). Tools such
+ * as curl send neither header.
  */
 export function refused(request: Request): Response | undefined {
-  const host = (request.headers.get('host') ?? '').replace(/:\d+$/, '');
-  if (LOCAL.has(host)) return undefined;
-  return Response.json({ error: 'the flows API answers only on localhost' }, { status: 403 });
+  const h = request.headers;
+  const host = h.get('host') ?? '';
+  if (!LOCAL.has(host.replace(/:\d+$/, ''))) return Response.json({ error: 'the flows API answers only on localhost' }, { status: 403 });
+  if (request.method === 'GET' || request.method === 'HEAD') return undefined;
+  const site = h.get('sec-fetch-site');
+  const origin = h.get('origin');
+  const foreign = (site !== null && site !== 'same-origin' && site !== 'none') || (origin !== null && origin !== `http://${host}` && origin !== `https://${host}`);
+  return foreign ? Response.json({ error: 'only FlowBoard’s own pages may change things here' }, { status: 403 }) : undefined;
 }
 
 export const badName = (name: string) =>

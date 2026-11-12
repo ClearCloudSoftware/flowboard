@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { readAppSettings, updateAppSettings } from './app-settings.ts';
 import { isDir, toAbs } from './config.ts';
-import { type Limits, limitsError } from './project.ts';
+import { type Limits, limitsError, projectLimits } from './project.ts';
 import { createProject, type Project, readProjects, type Result } from './projects.ts';
 import { FOLDER, FOLDER_RE, type Overrides, OverridesSchema, PROJECT_TYPES, type ProjectTypeId, trustText } from './settings.ts';
 
@@ -43,8 +43,11 @@ export const cloneJob = (id: string) => jobs.get(id);
 const inFlight = () => [...jobs.values()].filter((j) => j.phase === 'cloning' || j.phase === 'setting up');
 const fail = (status: 400 | 409, error: string) => ({ ok: false as const, status, error });
 
-/** Checks everything a clone needs before it starts, then starts it; the job is returned at once and fills as git goes. */
-export function startClone(dataDir: string, flowsDir: string, input: CloneInput, gh = 'gh'): Result<CloneJob> {
+/**
+ * Checks everything a clone needs before it starts, then starts it; the job is returned at once and fills as git goes.
+ * `quietMs`: how long git may say nothing before the clone is stopped and failed (a stalled network, a prompt).
+ */
+export function startClone(dataDir: string, flowsDir: string, input: CloneInput, gh = 'gh', quietMs = 5 * 60_000): Result<CloneJob> {
   if (!REPO.test(input.repo)) return fail(400, `not a GitHub repository: ${input.repo}`);
   const type = PROJECT_TYPES[input.type];
   if (!type) return fail(400, `no project type "${input.type}"`);
@@ -63,9 +66,27 @@ export function startClone(dataDir: string, flowsDir: string, input: CloneInput,
   const job: CloneJob = { id: randomUUID(), repo: input.repo, folder, phase: 'cloning', pct: 0, lines: [`$ gh repo clone ${input.repo} ${folder}`] };
   jobs.set(job.id, job);
 
-  const child = spawn(gh, ['repo', 'clone', input.repo, folder, '--', '--progress'], { env: { ...process.env, GH_PROMPT_DISABLED: '1', GIT_TERMINAL_PROMPT: '0' } });
+  // Its own process group, so stopping it stops the git that gh runs too. No prompts: ssh asks on the terminal otherwise.
+  const child = spawn(gh, ['repo', 'clone', input.repo, folder, '--', '--progress'], {
+    detached: true,
+    env: { ...process.env, GH_PROMPT_DISABLED: '1', GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes' },
+  });
+  let quiet: NodeJS.Timeout | undefined;
+  const hush = () => {
+    clearTimeout(quiet);
+    quiet = setTimeout(() => {
+      Object.assign(job, { phase: 'failed', error: `git went quiet for ${quietMs >= 60_000 ? `${quietMs / 60_000} min` : `${quietMs / 1000} s`}, so the clone was stopped; check the network and the GitHub CLI’s login, then try again` });
+      try {
+        process.kill(-child.pid!, 'SIGKILL');
+      } catch {
+        // already gone
+      }
+    }, quietMs);
+  };
+  hush();
   let rest = '';
   const take = (chunk: Buffer) => {
+    hush();
     const parts = (rest + chunk.toString()).split(/\r|\n/);
     rest = parts.pop() ?? '';
     for (const line of parts.map((l) => l.trimEnd()).filter(Boolean)) {
@@ -81,9 +102,13 @@ export function startClone(dataDir: string, flowsDir: string, input: CloneInput,
   };
   child.stdout.on('data', take);
   child.stderr.on('data', take);
-  child.on('error', (e) => Object.assign(job, { phase: 'failed', error: e.message }));
+  child.on('error', (e) => {
+    clearTimeout(quiet);
+    Object.assign(job, { phase: 'failed', error: e.message });
+  });
   child.on('close', (code) => {
     if (rest.trim()) take(Buffer.from('\n'));
+    clearTimeout(quiet); // after the last output, which starts the clock again
     if (job.phase === 'failed') return;
     if (code !== 0) return Object.assign(job, { phase: 'failed', error: job.lines.at(-1) ?? `gh exited ${code}` });
     job.phase = 'setting up';
@@ -99,7 +124,7 @@ export function startClone(dataDir: string, flowsDir: string, input: CloneInput,
       '-- added .flowboard/ to .git/info/exclude',
       `-- project ${p.name} registered at /p/${p.slug}: ${type.name}, ${trustText(p.overrides.trust ?? type.defaults.trust ?? readAppSettings(dataDir).trust)}`,
       own.length ? `-- overrides: ${own.join(', ')}` : '-- every setting inherited',
-      ...(limits ? [`-- wrote .flowboard.yaml: sandbox limits ${limits}`] : []),
+      ...(!limits ? [] : projectLimits(folder).ok ? [`-- wrote .flowboard.yaml: sandbox limits ${limits}`] : ['-- .flowboard.yaml in the repo does not pass, so the limits were not written; the project page says why']),
     );
     Object.assign(job, { phase: 'done', project: p });
   });

@@ -6,7 +6,7 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FOLDER, FOLDER_RE, type ProjectType } from '../../../packages/cli/src/settings.ts';
-import { type AppView, cloneJobQuery, startClone, targetQuery } from '../api.ts';
+import { type AppView, cloneJobQuery, cloneLost, startClone, targetQuery } from '../api.ts';
 import { type Ctx, type Draft, fromLabel, limitsText, type PageId, problems, SETTING_PAGES, summary, toLimits, toOverrides } from '../settings-model.ts';
 import { Warn } from '../settings-pages.tsx';
 import { Frame, type WizardState } from './wizard.tsx';
@@ -79,7 +79,7 @@ export function Finish({ st, set, draft, ctx, type, slug, parent, app, connected
   // ── the clone, once started ──
   if (st.job) {
     const j = job.data;
-    const lost = job.isError;
+    const lost = cloneLost(job.error);
     const done = j?.phase === 'done' ? j.project : undefined;
     const failed = lost ? 'FlowBoard restarted during the clone, so it stopped; the folder may hold a partial clone.' : j?.phase === 'failed' ? j.error : undefined;
     const body = (

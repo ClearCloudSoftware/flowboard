@@ -4,7 +4,7 @@ import type { GhRepo, GhStatus } from '../../packages/cli/src/github.ts';
 import type { CloneInput, CloneJob } from '../../packages/cli/src/clone.ts';
 import type { NewProject, Project, ProjectEdit, ProjectView } from '../../packages/cli/src/projects.ts';
 import type { AppSettings } from '../../packages/cli/src/settings.ts';
-import { call } from '../flows/api.ts';
+import { ApiError, call } from '../flows/api.ts';
 
 export type { AppSettings, CloneJob, GhRepo, GhStatus, Project, ProjectView };
 
@@ -39,11 +39,13 @@ export const switchAccount = (login: string) => call<{ ok: true }>('/api/github/
 export const targetQuery = (parent: string, name: string) =>
   queryOptions({ queryKey: ['clone-target', parent, name], queryFn: () => call<{ folder: string }>(`/api/projects/clone?parent=${encodeURIComponent(parent)}&name=${encodeURIComponent(name)}`) });
 export const startClone = (input: CloneInput) => call<CloneJob>('/api/projects/clone', { method: 'POST', body: JSON.stringify(input) });
-/** A clone as it goes, polled until it is done or failed. */
+/** The server no longer knows the clone: it restarted. Any other error is passing, and polling goes on. */
+export const cloneLost = (e: Error | null) => e instanceof ApiError && e.status === 404;
+/** A clone as it goes, polled until it is done or failed, or the server has forgotten it. */
 export const cloneJobQuery = (id: string) =>
   queryOptions({
     queryKey: ['clone', id],
     queryFn: () => call<CloneJob>(`/api/projects/clone/${id}`),
-    refetchInterval: (q) => (q.state.data && ['done', 'failed'].includes(q.state.data.phase)) || q.state.error ? false : 500,
+    refetchInterval: (q) => ((q.state.data && ['done', 'failed'].includes(q.state.data.phase)) || cloneLost(q.state.error) ? false : 500),
     retry: false,
   });

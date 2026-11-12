@@ -63,3 +63,12 @@ test('switch: gh auth switch to the account given', () => {
   const gh = fakeGh({ 'auth switch --hostname github.com --user alex-work': 'echo "✓ Switched active account" >&2' });
   assert.deepEqual(ghSwitch('alex-work', gh), { ok: true });
 });
+
+test('status: what is not about the login is not reported as one', () => {
+  const old = fakeGh({ 'auth status --json hosts': "echo 'unknown flag: --json' >&2; echo 'Usage:  gh auth status [flags]' >&2; exit 1" });
+  assert.deepEqual(ghStatus(old), { state: 'error', message: 'this GitHub CLI is too old for FlowBoard; update it (brew upgrade gh, or your package manager), then check again' });
+  const offline = fakeGh({ 'auth status --json hosts': statusOf(host('alex', true, 'timeout', 'dial tcp: lookup api.github.com: no such host')) });
+  assert.deepEqual(ghStatus(offline), { state: 'error', message: 'dial tcp: lookup api.github.com: no such host' });
+  const slow = fakeGh({ 'auth status --json hosts': 'sleep 5' });
+  assert.equal(ghStatus(slow, 200).state, 'error');
+});

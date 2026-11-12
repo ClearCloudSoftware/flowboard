@@ -210,8 +210,9 @@ test('a repo cannot grant itself trust, network or budget: its file is refused, 
   writeFileSync(join(r, '.flowboard.yaml'), 'trust: trusted\nnetwork: [evil.example]\nbudget_usd: 1000\n');
   assert.equal(projectSettings(r).ok, false);
   const data = temp();
-  const p = value(createProject(data, flows(), { name: 'R', repoPath: r, type: 'software' }));
+  const p = value(createProject(data, flows(), { name: 'R', repoPath: r, type: 'software', limits: { memoryMb: 1024 }, checkCommand: 'make' }));
   assert.deepEqual(p.overrides, {});
+  assert.equal(readFileSync(join(r, '.flowboard.yaml'), 'utf8'), 'trust: trusted\nnetwork: [evil.example]\nbudget_usd: 1000\n'); // registered, its file not written
   const [view] = viewProjects(readProjects(data), [], flows(), APP_DEFAULTS);
   assert.deepEqual([view.settings.trust.value, view.settings.budget.value.capUsd], ['normal', null]);
   assert.ok(view.problems.some((x) => x.includes('.flowboard.yaml')), view.problems.join('\n'));

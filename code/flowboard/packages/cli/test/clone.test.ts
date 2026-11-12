@@ -103,3 +103,39 @@ test('a failed clone says why and registers nothing', async () => {
   assert.deepEqual([done.phase, done.error], ['failed', 'GraphQL: Could not resolve to a Repository with the name flowboard/gone.']);
   assert.deepEqual(readProjects(data), []);
 });
+
+test('a repo whose .flowboard.yaml does not pass is still registered; the limits are not written, and the log says so', async () => {
+  const work = temp();
+  git(work, 'init', '-q', '-b', 'main');
+  writeFileSync(join(work, '.flowboard.yaml'), 'trust: trusted\n');
+  git(work, 'add', '.');
+  git(work, 'commit', '-q', '-m', 'init');
+  const bare = join(temp(), 'x.git');
+  git(work, 'clone', '-q', '--bare', work, bare);
+  const data = temp();
+  const done = await finished(value(startClone(data, flows(), input(temp(), { repo: 'evil/x', limits: { memoryMb: 1024 } }), ghCloning('evil/x', bare))));
+  assert.equal(done.phase, 'done', done.error);
+  assert.ok(done.lines.includes('-- .flowboard.yaml in the repo does not pass, so the limits were not written; the project page says why'), done.lines.join('\n'));
+  assert.equal(readProjects(data).length, 1);
+});
+
+test('a clone that goes quiet is stopped and fails, so the repo can be tried again', async () => {
+  const data = temp();
+  // not `sleep 30`: opensandbox-relay.test.ts pkills that, and the files run side by side
+  const gh = fakeGh({ 'repo clone flowboard/stuck *': "echo 'Cloning into stuck...' >&2; sleep 25" });
+  const started = Date.now();
+  const done = await finished(value(startClone(data, flows(), input(temp(), { repo: 'flowboard/stuck' }), gh, 300)));
+  assert.equal(done.phase, 'failed');
+  assert.equal(done.error, 'git went quiet for 0.3 s, so the clone was stopped; check the network and the GitHub CLI’s login, then try again');
+  assert.ok(Date.now() - started < 5000);
+  assert.equal(startClone(data, flows(), input(temp(), { repo: 'flowboard/stuck' }), gh, 300).ok, true); // no longer "being cloned"
+});
+
+test('a clone that finished stays done after the quiet time has passed', async () => {
+  const gh = fakeGh({ 'repo clone flowboard/api *': `git clone -q '${remote()}' "$4"; printf 'last words, no newline' >&2` });
+  // long enough for a silent `git clone -q` on a busy machine; the last words then start a clock that must not fire
+  const done = await finished(value(startClone(temp(), flows(), input(temp()), gh, 2000)));
+  assert.equal(done.phase, 'done', done.error);
+  await new Promise((r) => setTimeout(r, 2300));
+  assert.equal(cloneJob(done.id)!.phase, 'done', cloneJob(done.id)!.error);
+});

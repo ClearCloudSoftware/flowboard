@@ -104,7 +104,7 @@ const hasLimits = (l: Limits | undefined): l is Limits => !!l && (l.memoryMb !==
 /**
  * Registers a repo. 400 for a folder that is not a git repo, a type not offered yet or overrides that do not pass;
  * 409 when the repo or the slug given already has a project. A slug left out comes from `projectSlug`. Limits and a
- * check command given are written to the repo's `.flowboard.yaml`.
+ * check command given are written to the repo's `.flowboard.yaml`, unless that file does not pass.
  */
 export function createProject(dataDir: string, flowsDir: string, input: NewProject, now = new Date()): Result<Project> {
   const name = input.name.trim();
@@ -124,11 +124,13 @@ export function createProject(dataDir: string, flowsDir: string, input: NewProje
     if (!SLUG.test(slug)) return fail(400, 'a slug may only use lowercase letters, digits and -');
     if (projects.some((p) => p.slug === slug)) return fail(409, `the slug ${slug} is taken`);
   } else slug = projectSlug(projects, name, input.owner);
-  if (input.checkCommand?.trim()) {
+  // A repo whose .flowboard.yaml does not pass is registered without writing to it; its page says what is wrong.
+  const fileOk = projectSettings(root.value).ok;
+  if (fileOk && input.checkCommand?.trim()) {
     const set = setCheckCommand(root.value, input.checkCommand);
     if (!set.ok) return fail(400, set.errors.join('\n'));
   }
-  if (hasLimits(input.limits)) {
+  if (fileOk && hasLimits(input.limits)) {
     const set = setLimits(root.value, input.limits);
     if (!set.ok) return fail(400, set.errors.join('\n'));
   }

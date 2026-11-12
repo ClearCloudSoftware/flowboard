@@ -9,7 +9,9 @@ export type GhStatus =
   | { state: 'connected'; login: string; accounts: string[] }
   | { state: 'missing' }
   | { state: 'signed-out' }
-  | { state: 'rejected'; login: string; message: string };
+  | { state: 'rejected'; login: string; message: string }
+  /** gh is there but can't say: too old, offline, or not answering. */
+  | { state: 'error'; message: string };
 
 /** `defaultBranch`: null for a repo with no commits. `sizeKb`: GitHub's disk usage. */
 export interface GhRepo { owner: string; name: string; description: string; language: string | null; pushedAt: string; private: boolean; defaultBranch: string | null; sizeKb: number }
@@ -21,23 +23,30 @@ export const GH_REQUEST_ACCESS_URL = 'https://github.com/settings/connections/ap
 export const loginOk = (name: string) => /^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(name);
 const badLogin = (name: string) => `not a GitHub account name: ${name}`;
 
-const run = (gh: string, args: string[]) => spawnSync(gh, args, { encoding: 'utf8', timeout: 30_000, env: { ...process.env, GH_PROMPT_DISABLED: '1', NO_COLOR: '1' } });
+const run = (gh: string, args: string[], timeout = 30_000) => spawnSync(gh, args, { encoding: 'utf8', timeout, env: { ...process.env, GH_PROMPT_DISABLED: '1', NO_COLOR: '1' } });
 /** What went wrong, in gh's words: the last line it wrote that says anything. */
 const why = (r: ReturnType<typeof run>) => (r.error ? r.error.message : (r.stderr || r.stdout).trim().split('\n').filter(Boolean).at(-1) ?? `gh exited ${r.status}`);
 
+/** GitHub turning the token down, as opposed to not being reached. */
+const AUTH = /\b401\b|bad credentials|token|unauthori[sz]ed/i;
+
 /** Who `gh` is logged in as on github.com, and every account it holds there. */
-export function ghStatus(gh = 'gh'): GhStatus {
-  const r = run(gh, ['auth', 'status', '--json', 'hosts']);
-  if (r.error) return { state: 'missing' };
+export function ghStatus(gh = 'gh', timeoutMs = 30_000): GhStatus {
+  const r = run(gh, ['auth', 'status', '--json', 'hosts'], timeoutMs);
+  if (r.error) return (r.error as NodeJS.ErrnoException).code === 'ENOENT' ? { state: 'missing' } : { state: 'error', message: `the GitHub CLI did not answer: ${r.error.message}` };
   let hosts: { login: string; active: boolean; state: string; error?: string }[] = [];
   try {
     hosts = (JSON.parse(r.stdout) as { hosts: Record<string, typeof hosts> }).hosts['github.com'] ?? [];
   } catch {
-    return { state: 'signed-out' }; // a gh too old for --json, or one saying nothing useful
+    if (/unknown flag/.test(r.stderr)) return { state: 'error', message: 'this GitHub CLI is too old for FlowBoard; update it (brew upgrade gh, or your package manager), then check again' };
+    return { state: 'error', message: why(r) };
   }
   const active = hosts.find((h) => h.active);
   if (!active) return { state: 'signed-out' };
-  if (active.state !== 'success') return { state: 'rejected', login: active.login, message: active.error ?? 'GitHub refused the token' };
+  if (active.state !== 'success') {
+    const message = active.error ?? 'GitHub refused the token';
+    return AUTH.test(message) || !active.error ? { state: 'rejected', login: active.login, message } : { state: 'error', message };
+  }
   return { state: 'connected', login: active.login, accounts: hosts.map((h) => h.login) };
 }
 

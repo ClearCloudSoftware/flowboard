@@ -18,6 +18,12 @@ export function GhFix({ status }: { status: GhStatus }) {
         The GitHub CLI is not logged in. Run <Cmd>gh auth login</Cmd> in a terminal, then check again.
       </>
     );
+  if (status.state === 'error')
+    return (
+      <>
+        The GitHub CLI can&apos;t say who is logged in: {status.message}. Once that is fixed, check again.
+      </>
+    );
   if (status.state === 'rejected')
     return (
       <>
