@@ -26,7 +26,10 @@ const remote = () => {
 };
 /** gh repo clone <repo> <folder> -- --progress: git's progress first, then a real clone of `bare`. */
 const ghCloning = (repo: string, bare: string) =>
-  fakeGh({ [`repo clone ${repo} *`]: `printf 'Receiving objects:  50%% (1/2)\\rReceiving objects: 100%% (2/2), done.\\n' >&2; git clone -q '${bare}' "$4"` });
+  fakeGh({
+    [`repo clone ${repo} *`]:
+      `printf 'remote: Counting objects:  50%% (1/2)\\rremote: Counting objects: 100%% (2/2), done.\\nReceiving objects:  50%% (1/2)\\rremote: Total 2 (delta 0)\\nReceiving objects: 100%% (2/2), done.\\n' >&2; git clone -q '${bare}' "$4"`,
+  });
 const flows = () => {
   const dir = temp();
   writeFileSync(join(dir, 'delivery.yaml'), 'budget_usd: 0\nsteps: { a: { shell: "true" } }\n');
@@ -72,7 +75,8 @@ test('a clone registers the project when git is done, with its overrides, and ca
   assert.equal(readAppSettings(data).projectsFolder, parent);
   assert.equal(readProjects(data).length, 1);
   assert.ok(done.lines.includes('Receiving objects: 100% (2/2), done.'), done.lines.join('\n')); // progress replaces itself
-  assert.ok(!done.lines.some((l) => l.includes(' 50%')), done.lines.join('\n'));
+  assert.ok(!done.lines.some((l) => l.includes(' 50%')), done.lines.join('\n')); // even with git's remote: lines between
+  assert.ok(done.lines.includes('remote: Total 2 (delta 0)') && done.lines.includes('remote: Counting objects: 100% (2/2), done.'), done.lines.join('\n'));
   assert.ok(done.lines.includes('-- project api registered at /p/api: Software, Normal: container'), done.lines.join('\n'));
   assert.ok(done.lines.includes('-- wrote .flowboard.yaml: sandbox limits 2048 MB'), done.lines.join('\n'));
 });

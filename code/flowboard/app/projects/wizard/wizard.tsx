@@ -6,7 +6,7 @@
  */
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Check, CircleAlert, Code, Database, Folder, GitBranch, PenLine } from 'lucide-react';
-import { type KeyboardEvent, type ReactNode, useEffect, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { PROJECT_TYPES, type ProjectTypeId, resolveSettings } from '../../../packages/cli/src/settings.ts';
@@ -53,7 +53,9 @@ export function Wizard({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
   const [st, setSt] = useState<WizardState>(() => kept ?? FRESH);
   const set = (patch: Partial<WizardState>) => setSt((s) => ({ ...s, ...patch }));
+  const latest = useRef(st);
   useEffect(() => {
+    latest.current = st;
     kept = st.job ? st : undefined; // only a clone that was started is worth coming back to
   }, [st]);
   const gh = useQuery(githubQuery);
@@ -249,6 +251,11 @@ export function Wizard({ onClose }: { onClose: () => void }) {
         app={app.data}
         connected={connected}
         onGo={go}
+        // Kept here as well as in state: the dialog may have closed before the clone's start came back.
+        onStarted={(job) => {
+          kept = { ...latest.current, job };
+          set({ job });
+        }}
         onOpen={() => {
           // Closed first: Next keeps the list page alive, hidden, so a dialog still open there would cover the new page.
           kept = undefined;

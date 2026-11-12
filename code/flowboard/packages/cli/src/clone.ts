@@ -69,9 +69,11 @@ export function startClone(dataDir: string, flowsDir: string, input: CloneInput,
     const parts = (rest + chunk.toString()).split(/\r|\n/);
     rest = parts.pop() ?? '';
     for (const line of parts.map((l) => l.trimEnd()).filter(Boolean)) {
-      // git rewrites one line per phase as it moves ("Receiving objects:  50%"); keep only its latest
-      const phase = /^([A-Za-z ]+):/.exec(line)?.[1];
-      if (phase && job.lines.at(-1)?.startsWith(`${phase}:`)) job.lines[job.lines.length - 1] = line;
+      // git rewrites a line per phase as it moves ("Receiving objects:  50%"), with `remote:` lines between them;
+      // keep only each phase's latest
+      const phase = /^(.*?:)\s+\d+%/.exec(line)?.[1];
+      const at = phase ? job.lines.findLastIndex((l) => l.startsWith(phase) && /^.*?:\s+\d+%/.test(l)) : -1;
+      if (at >= 0) job.lines[at] = line;
       else job.lines.push(line);
       const pct = /^Receiving objects:\s+(\d+)%/.exec(line);
       if (pct) job.pct = Number(pct[1]);

@@ -23,6 +23,7 @@ interface Props {
   app: AppView;
   connected: boolean;
   onGo: (step: number, sub?: number) => void;
+  onStarted: (job: string) => void;
   onOpen: () => void;
   onAgain: () => void;
   primary: (label: ReactNode, ok?: boolean, onClick?: () => void) => ReactNode;
@@ -32,7 +33,7 @@ interface Props {
 const small = 'text-[11px] text-muted-foreground';
 const link = 'text-[11px] text-muted-foreground underline underline-offset-[3px] hover:text-foreground';
 
-export function Finish({ st, set, draft, ctx, type, slug, parent, app, connected, onGo, onOpen, onAgain, primary, backBtn }: Props) {
+export function Finish({ st, set, draft, ctx, type, slug, parent, app, connected, onGo, onStarted, onOpen, onAgain, primary, backBtn }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const repo = st.repo!;
@@ -41,7 +42,7 @@ export function Finish({ st, set, draft, ctx, type, slug, parent, app, connected
   const target = useQuery({ ...targetQuery(parent, repo.name), enabled: !destProblem && !!parent && !st.job });
   const start = useMutation({
     mutationFn: () => startClone({ repo: full, type: type.id, parent, makeDefault: st.dest === 'custom' && st.makeDefault, overrides: toOverrides(draft), limits: toLimits(draft) }),
-    onSuccess: (job) => set({ job: job.id }),
+    onSuccess: (job) => onStarted(job.id),
   });
   const job = useQuery({ ...cloneJobQuery(st.job ?? ''), enabled: !!st.job });
   const phase = job.data?.phase;
@@ -152,7 +153,7 @@ export function Finish({ st, set, draft, ctx, type, slug, parent, app, connected
   const body = (
     <>
       <div className="mb-3.5 border border-border">
-        {row('repository', `github.com/${full} · ${Math.max(1, Math.round(repo.sizeKb / 1024))} MB`, 2)}
+        {row('repository', `github.com/${full} · ${repo.sizeKb < 1024 ? `${repo.sizeKb} KB` : `${Math.round(repo.sizeKb / 1024)} MB`}`, 2)}
         {row('project', `${repo.name} · /p/${slug}`, undefined, 'from the repo')}
         {row('base branch', repo.defaultBranch, undefined, 'follows GitHub')}
         {row('flows', type.flows.join(', '), 0, `${type.name} type`)}
