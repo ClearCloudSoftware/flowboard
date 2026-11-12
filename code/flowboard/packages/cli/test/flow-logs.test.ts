@@ -10,13 +10,13 @@ test('runs are listed newest first, and each step log is read line by line, a ha
   const runs = mkdtempSync(join(tmpdir(), 'fb-runs-'));
   for (const [name, status] of [['2026-10-27T10-00-00-delivery', 'done'], ['2026-10-27T11-00-00-delivery', undefined]] as const) {
     mkdirSync(join(runs, name));
-    writeFileSync(join(runs, name, 'flow.json'), JSON.stringify({ version: 1, config: { name: 'delivery' } }));
-    if (status) writeFileSync(join(runs, name, 'state.json'), JSON.stringify({ status }));
+    writeFileSync(join(runs, name, 'flow.json'), JSON.stringify({ version: 1, config: { name: 'delivery', folder: '/repo' } }));
+    if (status) writeFileSync(join(runs, name, 'state.json'), JSON.stringify({ status, runs: [{ costUsd: 0.25 }, { costUsd: null }, { costUsd: 0.5 }] }));
   }
   mkdirSync(join(runs, 'not-a-run'));
   assert.deepEqual(listRuns(runs), [
-    { name: '2026-10-27T11-00-00-delivery', flow: 'delivery', status: 'paused' }, // no state, no host: it never got going
-    { name: '2026-10-27T10-00-00-delivery', flow: 'delivery', status: 'done' },
+    { name: '2026-10-27T11-00-00-delivery', flow: 'delivery', status: 'paused', folder: '/repo', spentUsd: 0 }, // no state, no host: it never got going
+    { name: '2026-10-27T10-00-00-delivery', flow: 'delivery', status: 'done', folder: '/repo', spentUsd: 0.75 }, // a run with no reported cost adds nothing
   ]);
 
   const dir = join(runs, '2026-10-27T10-00-00-delivery');

@@ -5,13 +5,14 @@
  * relative to its file.
  */
 import { readFileSync, realpathSync } from 'node:fs';
-import { basename, dirname, extname, isAbsolute, relative, sep } from 'node:path';
+import { basename, dirname, extname, isAbsolute, join, relative, sep } from 'node:path';
 import { isMap, isScalar, parseDocument } from 'yaml';
 import { z } from 'zod';
 import { DEFAULT_MAX_ATTEMPTS, isRework, validateFlow } from '@flowboard/core';
 import type { FlowDef } from '@flowboard/core';
 import { CLOSING, configFromObject, isDir, isFile, issueLines, readPlugin, readYaml, RunSchema, toAbs } from './config.ts';
 import type { RunConfig } from './config.ts';
+import { PROJECT_FILE, projectSettings } from './project.ts';
 import type { Limits } from './project.ts';
 
 export const OUTCOME_CLOSING =
@@ -19,7 +20,8 @@ export const OUTCOME_CLOSING =
 
 /** `verdict`: its routes or its approval gate use the outcome, so it is offered set_outcome. */
 export interface AiStep { kind: 'ai'; run: RunConfig; timeoutMinutes?: number; verdict: boolean }
-export interface ShellStep { kind: 'shell'; command: string; timeoutMinutes: number }
+/** `fromProject`: the step's `shell:` is empty, so it runs the project's `check_command` (`.flowboard.yaml`). */
+export interface ShellStep { kind: 'shell'; command: string; timeoutMinutes: number; fromProject?: true }
 /**
  * Where steps run. `docker`: a throwaway, non-root container from `image` per step; `env` names this machine's
  * variables it gets, such as the agents' auth. `opensandbox`: one OpenSandbox box per run holding the folder;
@@ -52,7 +54,7 @@ const StepSchema = Launch.extend({
   produces: z.array(z.string()).optional(),
   gate: z.literal('approval').optional(),
   max_attempts: z.number().int().min(1).optional(),
-  shell: z.string().min(1).optional(),
+  shell: z.string().min(1).nullable().optional(), // null: the project's check_command
   write_roots: z.array(z.string().min(1)).optional(),
   timeout_minutes: z.number().positive().optional(),
 });
@@ -183,7 +185,18 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
       // write_roots guard an agent's file tools; on a check it would only look like a sandbox.
       if (st.write_roots) err(4, `${at}.write_roots: not used by a shell step`);
       if ((st.produces ?? []).length > 1) err(5, `${at}.produces: a shell step writes one artifact`);
-      steps[name] = { kind: 'shell', command: st.shell, timeoutMinutes: st.timeout_minutes ?? SHELL_TIMEOUT_MINUTES };
+      const timeoutMinutes = st.timeout_minutes ?? SHELL_TIMEOUT_MINUTES;
+      if (st.shell !== null) steps[name] = { kind: 'shell', command: st.shell, timeoutMinutes };
+      else if (!run || !filesOk) {
+        steps[name] = { kind: 'shell', command: '', timeoutMinutes, fromProject: true }; // a recipe alone has no project
+        if (!run) warnings.push(`${at}.shell: empty, so it runs the check_command in ${PROJECT_FILE} of the folder it runs in; a run where none is set is refused`);
+      }
+      else {
+        const project = projectSettings(folder);
+        if (!project.ok) project.errors.forEach((l) => err(4, `${at}.shell: ${l}`));
+        else if (!project.settings.checkCommand) err(4, `${at}.shell: empty, so it runs the project's check_command, and ${join(folder, PROJECT_FILE)} sets none`);
+        else steps[name] = { kind: 'shell', command: project.settings.checkCommand, timeoutMinutes, fromProject: true };
+      }
       continue;
     }
 

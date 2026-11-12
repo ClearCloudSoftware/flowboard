@@ -8,6 +8,9 @@ export const flowsDir = () => (process.env.FLOWBOARD_FLOWS_DIR ? resolve(process
 /** `FLOWBOARD_RUNS_DIR`, else `runs/` in the app's folder, where `pnpm run-flow` run there puts its run folders. */
 export const runsDir = () => (process.env.FLOWBOARD_RUNS_DIR ? resolve(process.env.FLOWBOARD_RUNS_DIR) : join(process.cwd(), 'runs'));
 
+/** `FLOWBOARD_DATA_DIR`, else `data/` in the app's folder: the project list, and the seeded scratch repo. */
+export const dataDir = () => (process.env.FLOWBOARD_DATA_DIR ? resolve(process.env.FLOWBOARD_DATA_DIR) : join(process.cwd(), 'data'));
+
 const LOCAL = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 /**

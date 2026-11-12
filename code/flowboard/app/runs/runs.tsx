@@ -25,7 +25,7 @@ export function Runs() {
   const router = useRouter();
   const picked = runs.data?.find((r) => r.name === params.get('run')) ?? runs.data?.[0];
   const run = useQuery({ ...runQuery(picked?.name ?? '', true), enabled: !!picked });
-  // `?new=<flow>` (the designer's Run button) opens the New run sheet on that flow.
+  // `?new=<flow>` (the designer's Run button, a project's New run) opens the New run sheet on that flow; `&folder=` fills the folder.
   const [creating, setCreating] = useState<string | boolean>(() => params.get('new') ?? false);
   const show = (name: string) => router.replace(`/runs?run=${encodeURIComponent(name)}`);
   const closeSheet = () => {
@@ -52,6 +52,9 @@ export function Runs() {
         <button type="button" className="act primary" onClick={() => setCreating(true)}>
           + New run
         </button>
+        <Link className="act" href="/">
+          Projects
+        </Link>
         <Link className="act" href="/flows">
           Flows
         </Link>
@@ -80,7 +83,7 @@ export function Runs() {
         </aside>
         <main className="pane rn-main">{picked && <RunView key={picked.name} name={picked.name} />}</main>
       </div>
-      {creating !== false && <NewRun flow={typeof creating === 'string' ? creating : undefined} onStarted={show} onClose={closeSheet} />}
+      {creating !== false && <NewRun flow={typeof creating === 'string' ? creating : undefined} folder={params.get('folder') ?? undefined} onStarted={show} onClose={closeSheet} />}
     </div>
   );
 }

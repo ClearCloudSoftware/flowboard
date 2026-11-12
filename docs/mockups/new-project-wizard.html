@@ -1,0 +1,913 @@
+<meta charset="utf-8">
+<title>New Project Wizard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74;  --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);font-size:13px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+button:disabled{cursor:default}
+input[type=text],input:not([type]){border:1px solid var(--line-2);padding:6px 9px;background:var(--surface);border-radius:0;width:100%}
+input[aria-invalid="true"]{border-color:var(--fail)}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sans{font-family:var(--sans)}
+.sp{flex:1}
+.act{border:1px solid var(--line-2);padding:4px 12px;font-size:12px;white-space:nowrap;
+  transition:background var(--t),border-color var(--t),color var(--t)}
+.act:hover:not(:disabled){background:var(--surface-2);border-color:var(--ink-3)}
+.act:disabled{opacity:.4}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act.primary:hover:not(:disabled){background:var(--run);color:#fff}
+.act kbd{font-family:var(--mono);font-size:10px;color:inherit;opacity:.7;border:1px solid currentColor;padding:0 3px;margin-left:6px}
+.link{color:var(--ink-3);text-decoration:underline;text-underline-offset:3px;font-size:11px}
+.link:hover{color:var(--ink)}
+.soon{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);border:1px dashed var(--line-2);padding:0 5px;white-space:nowrap}
+
+/* the projects list behind the dialog */
+.app{min-height:100dvh;display:flex;flex-direction:column}
+.topbar{flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-weight:600;white-space:nowrap}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+.behind{flex:1;padding:24px 18px}
+.bhead{max-width:1100px;margin:0 auto;font-family:var(--sans);font-size:18px;font-weight:600}
+.bgrid{max-width:1100px;margin:16px auto 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:14px}
+.bcard{background:var(--surface);border:1px solid var(--line);padding:14px 16px;min-height:120px;display:grid;align-content:start;gap:4px;transition:border-color var(--t)}
+.bcard b{font-family:var(--sans);font-size:15px}
+.bcard small{color:var(--ink-3);font-size:12px}
+.bcard.new{border-color:var(--run);box-shadow:inset 3px 0 0 var(--run)}
+
+/* the dialog */
+.veil{position:fixed;inset:0;background:#17171C38;display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px;overflow:auto}
+.veil[hidden]{display:none}
+.wz{width:min(900px,100%);background:var(--surface);border:1px solid var(--line-2);display:grid;grid-template-columns:210px minmax(0,1fr);min-height:580px}
+.wz-rail{background:var(--surface-2);border-right:1px solid var(--line);padding:18px 0;display:flex;flex-direction:column}
+.wz-rail h1{font-family:var(--sans);font-size:15px;font-weight:600;margin:0 18px 16px}
+.wz-step{display:grid;grid-template-columns:22px 1fr;gap:2px 8px;width:100%;padding:8px 18px;border-left:3px solid transparent;color:var(--ink-3)}
+.wz-step .n{grid-row:span 2;width:20px;height:20px;border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;font-size:11px;background:var(--surface)}
+.wz-step small{font-size:11px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wz-step.done{color:var(--ink-2)}
+.wz-step.done .n{background:var(--done);border-color:var(--done);color:#fff}
+.wz-step.bad .n{background:var(--wait);border-color:var(--wait);color:#fff}
+.wz-step.on{color:var(--ink);border-left-color:var(--run);background:var(--surface)}
+.wz-step.on .n{border-color:var(--run);color:var(--run);background:var(--surface)}
+.wz-step:not(:disabled):hover{color:var(--ink)}
+.wz-rail .foot{margin-top:auto;padding:0 18px;font-size:11px;color:var(--ink-3)}
+.wz-main{display:flex;flex-direction:column;min-width:0}
+.wz-head{padding:18px 22px 6px}
+.wz-head h2{font-family:var(--sans);font-size:17px;font-weight:600;margin:2px 0 4px}
+.wz-head p{font-family:var(--sans);color:var(--ink-2);margin:0;max-width:64ch}
+.wz-body{flex:1;padding:12px 22px 18px;min-height:0}
+.wz-foot{flex-shrink:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 22px;border-top:1px solid var(--line);background:var(--surface)}
+.wz-foot .hint{font-size:11px;color:var(--ink-3)}
+
+/* step 1: type tiles */
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tile{border:1px solid var(--line-2);padding:14px;display:grid;grid-template-columns:28px 1fr auto;gap:4px 10px;align-items:start;transition:border-color var(--t),background var(--t)}
+.tile svg{grid-row:span 2;color:var(--ink-2)}
+.tile b{font-family:var(--sans);font-size:14px;font-weight:600}
+.tile p{grid-column:2 / 4;margin:0;font-family:var(--sans);font-size:12px;color:var(--ink-2)}
+.tile:not(:disabled):hover{border-color:var(--ink-3)}
+.tile[aria-pressed="true"]{border-color:var(--run);box-shadow:inset 0 0 0 1px var(--run);background:var(--run-soft)}
+.tile[aria-pressed="true"] svg{color:var(--run)}
+.tile:disabled{border-style:dashed}
+.tile:disabled b,.tile:disabled p,.tile:disabled svg{color:var(--ink-3)}
+
+/* step 2: sources */
+.srcs{border:1px solid var(--line)}
+.src{display:grid;grid-template-columns:28px 1fr auto;gap:2px 10px;align-items:center;width:100%;padding:11px 14px;border-bottom:1px solid var(--line)}
+.src:last-child{border-bottom:0}
+.src small{grid-column:2;font-family:var(--sans);font-size:12px;color:var(--ink-2)}
+.src svg{grid-row:span 2}
+.src[aria-pressed="true"]{background:var(--run-soft);box-shadow:inset 3px 0 0 var(--run)}
+.src:disabled{color:var(--ink-3)}
+.src:disabled small{color:var(--ink-3)}
+
+/* step 3: connect + repos */
+.connect{border:1px solid var(--line-2);padding:18px;display:grid;gap:10px;max-width:520px}
+.connect ul{margin:0;padding-left:18px;font-family:var(--sans);color:var(--ink-2)}
+.who{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.who .ok{color:var(--run)}
+.owners{display:flex;flex-wrap:wrap;border:1px solid var(--line-2)}
+.owner{padding:3px 10px;font-size:12px;border-right:1px solid var(--line-2)}
+.owner:last-child{border-right:0}
+.owner[aria-pressed="true"]{background:var(--ink);color:#fff}
+.mockctl{position:fixed;left:12px;bottom:12px;z-index:10;display:flex;gap:10px;align-items:center;padding:6px 10px;background:var(--ink);color:var(--surface);font-size:11px}
+.mockctl .lbl{color:var(--done)}
+.mockctl button{text-decoration:underline;text-underline-offset:3px}
+.connect.expired{border-color:var(--wait-edge);border-left:3px solid var(--wait)}
+.owner small{margin-left:6px;font-size:10px;color:var(--wait)}
+.owner.locked{color:var(--ink-3)}
+.owner.locked[aria-pressed="true"]{color:#fff}
+.owner.locked[aria-pressed="true"] small{color:var(--wait-edge)}
+.orgs{margin:0 0 8px;font-size:12px;color:var(--ink-3);font-family:var(--sans)}
+.search{margin-bottom:8px}
+.repos{border:1px solid var(--line);max-height:300px;overflow:auto}
+.repo{display:grid;grid-template-columns:minmax(0,1fr) 92px 84px;gap:2px 12px;align-items:center;width:100%;padding:8px 12px;border-bottom:1px solid var(--line)}
+.repo:last-child{border-bottom:0}
+.repo .nm b{font-weight:600}
+.repo .nm small{display:block;font-family:var(--sans);font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.repo .meta{font-size:11px;color:var(--ink-3);text-align:right}
+.repo:not(:disabled):hover{background:var(--surface-2)}
+.repo[aria-pressed="true"]{background:var(--run-soft);box-shadow:inset 3px 0 0 var(--run)}
+.repo:disabled{color:var(--ink-3)}
+.repo.taken .nm small{color:var(--wait)}
+.priv{font-size:10px;border:1px solid var(--line-2);padding:0 4px;color:var(--ink-3);margin-left:6px;vertical-align:1px}
+.empty{padding:22px;color:var(--ink-3);text-align:center}
+
+/* step 4: settings, a page per setting, listed under the step in the rail */
+.wz-subs{display:grid;padding:2px 0 6px}
+.wz-sub{display:grid;grid-template-columns:7px minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;padding:4px 14px 4px 44px;white-space:nowrap;font-size:12px;color:var(--ink-3);border-left:3px solid transparent}
+.wz-sub > span{overflow:hidden;text-overflow:ellipsis}
+.wz-sub i{width:7px;height:7px;border:1px solid var(--line-2);background:var(--surface)}
+.wz-sub.own i{background:var(--run);border-color:var(--run)}
+.wz-sub.bad i{background:var(--fail);border-color:var(--fail)}
+.wz-sub.caution i{background:var(--wait);border-color:var(--wait)}
+.wz-sub small{font-size:10px;color:var(--ink-3);max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wz-sub.own small{color:var(--run)}
+.wz-sub:not(:disabled):hover{color:var(--ink)}
+.wz-sub.on{color:var(--ink);background:var(--surface);border-left-color:var(--run);font-weight:500}
+.ovr{display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:12px;align-items:baseline;width:100%;padding:9px 14px;border-bottom:1px solid var(--line);transition:background var(--t)}
+.ovr:last-child{border-bottom:0}
+.ovr:hover{background:var(--surface-2)}
+.ovr b{font-family:var(--sans);font-weight:600}
+.ovr > span:nth-child(2){color:var(--ink-2);font-size:12px;overflow-wrap:anywhere}
+.ovr.bad b{color:var(--fail)}
+.ovr.caution b{color:var(--wait)}
+/* each setting, inherited until overridden */
+.facts{display:flex;flex-wrap:wrap;gap:4px 18px;padding:9px 12px;background:var(--surface-2);border:1px solid var(--line);font-size:12px;color:var(--ink-3);margin-bottom:12px}
+.facts b{font-weight:500;color:var(--ink)}
+.facts b.pend{color:var(--wait)}
+.sets{border:1px solid var(--line)}
+.set{display:grid;gap:7px;padding:11px 14px;border-bottom:1px solid var(--line)}
+.set:last-child{border-bottom:0}
+.set.on{box-shadow:inset 3px 0 0 var(--run);background:var(--surface)}
+.set.lim{background:var(--surface-2);padding-left:28px}
+.set-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.set-h b{font-family:var(--sans);font-size:14px;font-weight:600}
+.from{font-size:11px;color:var(--ink-3);border:1px solid var(--line);padding:0 6px}
+.set.on .from{color:var(--run);border-color:var(--run)}
+.ovr .from.own{color:var(--run);border-color:var(--run)}
+.sw{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2);cursor:pointer}
+.sw input{accent-color:var(--run);margin:0}
+.inh{color:var(--ink-2)}
+.set p.d{margin:0;font-family:var(--sans);font-size:12px;color:var(--ink-3)}
+.set em.err{font-style:normal;font-size:11px;color:var(--fail)}
+.seg2{display:flex;flex-wrap:wrap;border:1px solid var(--line-2);width:fit-content;background:var(--surface)}
+.seg2 button{padding:4px 10px;font-size:12px;border-right:1px solid var(--line-2)}
+.seg2 button:last-child{border-right:0}
+.seg2 button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.srow{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.nf{display:grid;gap:3px;font-size:11px;color:var(--ink-3)}
+.nf input{width:150px;color:var(--ink);font-size:13px}
+.ka{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)}
+.ka:first-of-type{border-top:0;padding-top:0}
+.ka > div:first-child{display:grid;gap:2px;min-width:0;flex:1}
+.ka small{font-family:var(--sans);font-size:12px;color:var(--ink-3)}
+.props{border:1px solid var(--line-2);margin-bottom:10px;display:grid}
+.props > .lbl{padding:8px 12px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.prop{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 12px;border-bottom:1px solid var(--line)}
+.prop:last-child{border-bottom:0}
+.prop > div{display:grid;gap:2px;min-width:0}
+.prop code{font-size:12px;overflow-wrap:anywhere}
+.prop small{font-family:var(--sans);font-size:12px;color:var(--ink-3)}
+.pb{display:flex;gap:6px}
+/* step 5: review + clone */
+.review{border:1px solid var(--line);margin-bottom:14px}
+.rv{display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:7px 12px;border-bottom:1px solid var(--line);font-size:12px}
+.rv:last-child{border-bottom:0}
+.rv > span:first-child{color:var(--ink-3)}
+.rv b{font-weight:500;overflow-wrap:anywhere}
+.rv.caution b{color:var(--wait)}
+.dest{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.opt{display:grid;grid-template-columns:18px 1fr;gap:2px 8px;align-items:start;border:1px solid var(--line);padding:10px 12px;cursor:pointer}
+.opt input[type=radio]{margin:3px 0 0;accent-color:var(--run)}
+.opt small{grid-column:2;font-family:var(--sans);color:var(--ink-2);font-size:12px;overflow-wrap:anywhere}
+.opt:has(input:checked){border-color:var(--run);background:var(--run-soft)}
+.custom{margin-bottom:6px}
+.opt small.whence{color:var(--ink-3);font-size:11px}
+.pick{display:grid;gap:7px;margin-bottom:10px;padding:10px 12px;border:1px solid var(--line);background:var(--surface-2)}
+.recent{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.rc{border:1px solid var(--line-2);padding:1px 8px;font-size:12px;background:var(--surface)}
+.rc:hover{border-color:var(--ink-3)}
+.rc[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.warn{border-left:3px solid var(--wait);background:var(--wait-soft);color:var(--wait);padding:6px 10px;font-size:12px;margin:0 0 8px}
+.log{background:var(--surface-2);border:1px solid var(--line);padding:10px 12px;font-size:12px;height:200px;overflow:auto;white-space:pre-wrap;color:var(--ink-2)}
+.log .fb{color:var(--ink)}
+.log .cmd{color:var(--ink-3)}
+.bar{height:4px;background:var(--pend);margin:8px 0 2px;position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--run);transition:width var(--t)}
+.done-box{border:1px solid var(--line-2);border-left:3px solid var(--run);padding:12px 14px;display:grid;gap:6px;margin-bottom:10px}
+.done-box > b{font-family:var(--sans);font-size:15px}
+
+@media (max-width:760px){
+  .wz{grid-template-columns:1fr}
+  .wz-rail{flex-direction:row;overflow:auto;padding:8px 0;border-right:0;border-bottom:1px solid var(--line)}
+  .wz-rail h1,.wz-rail .foot,.wz-step small,.wz-sub small{display:none}
+  .wz-subs{display:flex}
+  .wz-sub{padding:8px 10px;border-left:0;width:auto;white-space:nowrap}
+  .ovr{grid-template-columns:1fr auto}
+  .ovr > span:nth-child(2){grid-column:1 / -1;grid-row:2}
+  .wz-step{border-left:0;border-bottom:3px solid transparent;width:auto}
+  .wz-step.on{border-bottom-color:var(--run)}
+  .tiles,.dest{grid-template-columns:1fr}
+  .nf input{width:120px}
+  .repo{grid-template-columns:1fr 70px}
+  .repo .meta:last-child{display:none}
+  .rv{grid-template-columns:90px minmax(0,1fr) auto}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after,*::before{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">flowboard<em>/</em><span>projects</span></div>
+    <span class="sp"></span>
+    <button class="act primary" data-new>+ New project</button>
+    <button class="act">Flows</button><button class="act">Runs</button><button class="act">Docs</button>
+  </header>
+  <main class="behind" id="behind"></main>
+</div>
+
+<div class="mockctl" id="mockctl" role="group" aria-label="Mockup controls"></div>
+<div class="veil" id="veil">
+  <div class="wz" role="dialog" aria-modal="true" aria-labelledby="wz-title">
+    <nav class="wz-rail" aria-label="Steps">
+      <h1 id="wz-title">New project</h1>
+      <div id="rail"></div>
+      <div class="foot">Click any step you have reached to change it. Nothing is cloned until the last step. <kbd>↵</kbd> continues, <kbd>Esc</kbd> closes.</div>
+    </nav>
+    <section class="wz-main">
+      <div class="wz-head" id="head"></div>
+      <div class="wz-body" id="body"></div>
+      <div class="wz-foot" id="foot"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const ICON = {
+  code: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>',
+  book: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h14v16H6.5A2.5 2.5 0 0 0 4 21.5"/><path d="M8 7h8"/></svg>',
+  pen: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  data: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>',
+  branch: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="8" r="2.5"/><path d="M6 8.5v7M18 10.5c0 4-6 3-11 6"/></svg>',
+  folder: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>',
+  check: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.3l3.1 3.1 6.1-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  bang: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="12" r="1.1" fill="currentColor"/></svg>',
+  chev: '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
+/* What FlowBoard can make and where code can come from. Only the first of each is wired up. */
+const TYPES = [
+  { id: 'software', name: 'Software', icon: ICON.code, text: 'A codebase agents read, change and test. Flows run steps against a clone of the repo.' , flows: ['delivery', 'review-loop'] },
+  { id: 'research', name: 'Research', icon: ICON.book, text: 'Questions answered from sources, with citations kept as artifacts.', soon: true },
+  { id: 'writing', name: 'Writing', icon: ICON.pen, text: 'Docs and long-form text drafted, reviewed and edited by steps.', soon: true },
+  { id: 'data', name: 'Data', icon: ICON.data, text: 'Notebooks and pipelines, checked by running them.', soon: true },
+];
+const SOURCES = [
+  { id: 'github', name: 'GitHub', text: 'github.com, personal accounts and organizations' },
+  { id: 'gitlab', name: 'GitLab', text: 'gitlab.com and self-managed', soon: true },
+  { id: 'bitbucket', name: 'Bitbucket', text: 'Bitbucket Cloud', soon: true },
+  { id: 'azure', name: 'Azure Repos', text: 'Azure DevOps', soon: true },
+  { id: 'local', name: 'A folder on this machine', text: 'a git repository you already cloned', soon: true },
+];
+/* The flows a project type comes with; a project gets its type's flows, nothing to pick. `check`: has a shell step
+   with an empty `shell:`, so it runs the project's check command. */
+const FLOWS = { delivery: { steps: 5, check: true }, 'review-loop': { steps: 2, check: false } };
+/*
+ * Repos the connected GitHub account can read, with what FlowBoard reads from GitHub before cloning: the top-level
+ * files, package.json's scripts, the Makefile's targets and the commands CI runs. Nothing about the check command is
+ * written per repo; detect() works it out from these. `taken`: already a project. `exists`: the default folder is in use.
+ */
+const REPOS = [
+  { owner: 'flowboard', name: 'api', text: 'REST handlers and the board projection', lang: 'TypeScript', pushed: '2 h ago', branch: 'main', branches: ['main', 'develop', 'release/2.4'], mb: 48, objects: 18342, priv: true,
+    files: ['package.json', 'pnpm-lock.yaml', 'tsconfig.json', '.github/workflows/ci.yml'], scripts: ['build', 'lint', 'typecheck', 'test'], ci: ['pnpm lint', 'pnpm test'] },
+  { owner: 'flowboard', name: 'runner', text: 'Runs one flow step in its sandbox', lang: 'TypeScript', pushed: 'yesterday', branch: 'main', branches: ['main', 'docker-limits'], mb: 31, objects: 9021, priv: true,
+    files: ['package.json', 'pnpm-lock.yaml', 'Dockerfile'], scripts: ['lint', 'test'] },
+  { owner: 'flowboard', name: 'core', text: 'Engine, flow graph, guards', lang: 'TypeScript', pushed: '5 h ago', branch: 'main', branches: ['main'], mb: 12, objects: 4410, priv: true, taken: 'Core', files: [] },
+  { owner: 'flowboard', name: 'web', text: 'The Next.js app: board, inbox, designer', lang: 'TypeScript', pushed: '3 d ago', branch: 'main', branches: ['main', 'projects-page'], mb: 112, objects: 40211, priv: true,
+    files: ['package.json', 'package-lock.json', 'next.config.ts'], scripts: ['dev', 'build', 'lint', 'test'] },
+  { owner: 'flowboard', name: 'providers', text: 'Claude Code and OpenCode adapters', lang: 'TypeScript', pushed: '6 d ago', branch: 'main', branches: ['main'], mb: 9, objects: 3120, priv: false,
+    files: ['package.json', 'bun.lockb'], scripts: ['test'] },
+  { owner: 'flowboard', name: 'docs', text: 'The FlowBoard vault', lang: 'Markdown', pushed: '1 h ago', branch: 'main', branches: ['main'], mb: 21, objects: 6600, priv: false,
+    files: ['README.md', '.github/workflows/ci.yml'], ci: ['npx markdownlint-cli2 "**/*.md"'] },
+  { owner: 'alex', name: 'billing-svc', text: 'Invoices, dunning and the Stripe webhook', lang: 'Go', pushed: '4 d ago', branch: 'trunk', branches: ['trunk', 'stripe-v2'], mb: 27, objects: 7702, priv: true,
+    files: ['go.mod', 'go.sum', 'Makefile'], make: ['build', 'lint', 'test'] },
+  { owner: 'alex', name: 'ledger-rs', text: 'Double-entry ledger, the Rust rewrite', lang: 'Rust', pushed: '12 d ago', branch: 'main', branches: ['main'], mb: 14, objects: 2210, priv: true,
+    files: ['Cargo.toml', 'Cargo.lock'] },
+  { owner: 'alex', name: 'dotfiles', text: 'zsh, tmux, nvim', lang: 'Shell', pushed: '2 mo ago', branch: 'main', branches: ['main'], mb: 1, objects: 380, priv: false, files: ['install.sh', 'zshrc'] },
+  { owner: 'clearcloud-labs', name: 'ingest-pipeline', text: 'Nightly import of partner feeds', lang: 'Python', pushed: '9 d ago', branch: 'develop', branches: ['develop', 'main'], mb: 64, objects: 12890, priv: true,
+    files: ['pyproject.toml', 'uv.lock', 'ruff.toml', '.github/workflows/ci.yml'], ci: ['uv run ruff check', 'uv run pytest -q'] },
+  { owner: 'clearcloud-labs', name: 'partner-sdk', text: 'Python client for the partner API', lang: 'Python', pushed: '3 w ago', branch: 'main', branches: ['main', 'v2'], mb: 6, objects: 1450, priv: false,
+    files: ['pyproject.toml', 'poetry.lock'] },
+  { owner: 'clearcloud-labs', name: 'ops-runbooks', text: 'On-call runbooks', lang: 'Markdown', pushed: '1 mo ago', branch: 'main', branches: ['main'], mb: 3, objects: 900, priv: true, files: ['README.md'] },
+  { owner: 'partner-co', name: 'feed-schemas', text: 'JSON schemas for the partner feeds', lang: 'Python', pushed: '2 d ago', branch: 'main', branches: ['main'], mb: 4, objects: 820, priv: true, files: ['pyproject.toml', 'uv.lock'] },
+  { owner: 'partner-co', name: 'portal', text: 'The partner self-service portal', lang: 'TypeScript', pushed: '6 h ago', branch: 'main', branches: ['main', 'staging'], mb: 58, objects: 15020, priv: true, files: ['package.json', 'pnpm-lock.yaml'], scripts: ['lint', 'test'] },
+  { owner: 'alex-work', name: 'notes-api', text: 'Meeting notes service', lang: 'Go', pushed: '1 w ago', branch: 'main', branches: ['main'], mb: 8, objects: 1300, priv: true, files: ['go.mod', 'go.sum'] },
+];
+/*
+ * The analysis agent runs once the clone is on disk: it reads the repo's files and proposes the stack, the check
+ * command and the package registries the sandbox must reach. This mock works its findings out from the same files.
+ */
+const REGISTRIES = { Node: ['registry.npmjs.org'], Python: ['pypi.org', 'files.pythonhosted.org'], Go: ['proxy.golang.org', 'sum.golang.org'], Rust: ['crates.io', 'static.crates.io'] };
+function analyse(r) {
+  const has = (f) => r.files.includes(f);
+  const stacks = [];
+  const checks = [];
+  const add = (cmd, why) => checks.some((x) => x.cmd === cmd) || checks.push({ cmd, why });
+  if (r.ci) add(r.ci.join(' && '), 'what .github/workflows/ci.yml runs');
+  if (has('package.json')) {
+    const pm = has('pnpm-lock.yaml') ? 'pnpm' : has('yarn.lock') ? 'yarn' : has('bun.lockb') ? 'bun' : 'npm';
+    stacks.push({ name: 'Node', tool: pm });
+    const run = (sc) => (pm === 'npm' ? (sc === 'test' ? 'npm test' : `npm run ${sc}`) : `${pm} ${sc}`);
+    const scripts = ['lint', 'typecheck', 'test'].filter((sc) => r.scripts?.includes(sc));
+    if (scripts.includes('test')) add(scripts.map(run).join(' && '), `the ${scripts.join(', ')} scripts in package.json`);
+  }
+  if (has('pyproject.toml')) {
+    const pm = has('uv.lock') ? 'uv' : has('poetry.lock') ? 'poetry' : 'python';
+    stacks.push({ name: 'Python', tool: pm });
+    add(pm === 'python' ? 'python -m pytest' : `${pm} run pytest`, `pytest, through ${pm}`);
+  }
+  if (has('go.mod')) stacks.push({ name: 'Go', tool: 'go' }), add('go vet ./... && go test ./...', 'vet, then the tests');
+  if (has('Cargo.toml')) stacks.push({ name: 'Rust', tool: 'cargo' }), add('cargo test', 'the tests');
+  if (r.make?.includes('test')) add('make test', 'the test target in the Makefile');
+  return { read: r.files, stacks, check: checks[0] ?? null, hosts: stacks.flatMap((k) => REGISTRIES[k.name] ?? []) };
+}
+
+/* The GitHub accounts this mock can sign in as, and the owners each one sees. */
+const ACCOUNTS = { alex: ['alex', 'flowboard', 'clearcloud-labs', 'partner-co'], 'alex-work': ['alex-work', 'clearcloud-labs'] };
+/*
+ * Organizations that restrict third-party apps hide their repositories until an owner approves FlowBoard.
+ * `none`: never asked; `requested`: waiting for an owner; `checking`: asking GitHub again; `granted`: approved.
+ */
+const ORG_ACCESS = { 'partner-co': 'none' };
+const owners = () => ACCOUNTS[st.account];
+const locked = (o) => ORG_ACCESS[o] && ORG_ACCESS[o] !== 'granted';
+/*
+ * Where clones go. Your own projects folder is an app setting; until you set one, FlowBoard's default is used.
+ * OCCUPIED: folders that already exist and hold something, so a clone there gets a -2. RECENT: folders you cloned into before.
+ */
+const FB_PROJECTS = '~/FlowBoard/projects';
+const OCCUPIED = new Set(['~/FlowBoard/projects/web', '~/code/web']);
+const RECENT = ['~/code', '~/work/clearcloud', '~/Desktop/tries'];
+const STEPS = ['Type', 'Source', 'Repository', 'Settings', 'Clone'];
+const slugify = (s) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+const projects = [
+  { name: 'Scratch', slug: 'scratch', flow: 'software', where: 'FlowBoard’s scratch repo' },
+  { name: 'Core', slug: 'core', flow: 'software', where: 'flowboard/core' },
+];
+
+/* The app's own settings (the Settings page), and what a project type sets over them. A project overrides either. */
+const APP = { projectsFolder: '~/code', trust: 'normal', cap: null, alertAt: 80, onLimit: 'pause', channel: '#flowboard', nudge: 5, memory: false, draft: false, memoryAdapter: 'local' };
+/*
+ * Knowledge assets: maps of the repo that agents query instead of reading every file, rebuilt from the code and
+ * stamped with the commit they were built from. Serena needs no AI calls, so it is free; graphify asks the AI
+ * service to describe the code, so every rebuild costs money and counts against the budget.
+ */
+const KNOWLEDGE = {
+  serena: { name: 'Serena', what: 'a symbol index: agents find definitions and references and edit by symbol', cost: 'local, no AI calls, free', via: 'an MCP server every agent step can call' },
+  graphify: { name: 'graphify', what: 'a graph of the modules, calls and concepts, with a written summary of each part', cost: 'uses the AI service', via: 'graphify-out/, readable by every step' },
+};
+const REBUILD = { push: 'when the base branch moves', daily: 'once a day', manual: 'only when I ask' };
+const TYPE_DEFAULTS = { software: { trust: 'normal', knowledge: { serena: true, graphify: true, rebuild: 'push' } } };
+/* What graphify charges to map a repo this size, from the mock's size; the real figure is metered. */
+const graphifyCost = (r) => Math.max(0.05, r.mb * 0.008).toFixed(2);
+const TRUST = {
+  trusted: { label: 'Trusted', tier: 'on this machine', text: 'No sandbox. Steps may not run unattended outside one, so each asks before it uses a tool.' },
+  normal: { label: 'Normal', tier: 'container', text: 'A throwaway container per step. Only the repo’s folder is writable; only allowed hosts are reachable.' },
+  untrusted: { label: 'Untrusted', tier: 'gVisor', text: 'A container under gVisor, a stronger wall for code nobody has reviewed. Needs a Linux host.' },
+};
+const ON_LIMIT = { pause: 'pause new runs', ask: 'ask me first' };
+
+/* Opens mid-flight on Settings for a Python repo, with a project budget already set over the app's (which has none). */
+const st = {
+  account: 'alex', switching: false, orgHelp: false,
+  step: 3, reached: 3, type: 'software', source: 'github', gh: 'connected', owner: 'clearcloud-labs', q: '', repo: 'clearcloud-labs/ingest-pipeline',
+  sub: 3, adv: false, dest: 'default', custom: '~/work/clearcloud', makeDefault: false, clone: null, accepted: {},
+  ov: { trust: false, budget: true, escalation: false, memory: false, knowledge: false, draft: false },
+  v: { trust: 'normal', cap: '150', alertAt: '80', onLimit: 'pause', channel: '#flowboard', nudge: '5', memory: false, knowledge: { serena: true, graphify: true, rebuild: 'push' }, draft: false, memMb: '', cpus: '' },
+};
+const repo = () => REPOS.find((r) => `${r.owner}/${r.name}` === st.repo);
+const type = () => TYPES.find((t) => t.id === st.type);
+const typeFlows = () => type()?.flows ?? [];
+/* The project is the repo: its name is the repo's, its address the name's, or owner-name when another project has it. */
+const pname = () => repo().name;
+const slug = () => (projects.some((p) => p.slug === slugify(pname())) ? slugify(`${repo().owner}-${pname()}`) : slugify(pname()));
+const defaultParent = () => APP.projectsFolder ?? FB_PROJECTS;
+const parentDir = () => (st.dest === 'default' ? defaultParent() : st.custom.trim().replace(/\/+$/, ''));
+/* The clone's folder: the repo's name inside the chosen parent, numbered when that folder is taken. */
+const folderIn = (parent) => `${parent}/${repo().name}${OCCUPIED.has(`${parent}/${repo().name}`) ? '-2' : ''}`;
+const folder = () => folderIn(parentDir());
+
+/* Where each setting's value comes from when the project does not override it. */
+const inherited = {
+  trust: () => (TYPE_DEFAULTS[st.type]?.trust ? { from: `${type().name} type`, text: trustText(TYPE_DEFAULTS[st.type].trust) } : { from: 'app settings', text: trustText(APP.trust) }),
+  budget: () => ({ from: 'app settings', text: APP.cap ? `$${APP.cap} a month` : 'no cap: only each flow’s own budget' }),
+  escalation: () => ({ from: 'app settings', text: `${APP.channel}, after ${APP.nudge} min` }),
+  memory: () => ({ from: 'app settings', text: APP.memory ? 'remembers facts about this codebase' : 'off: runs start without project memories' }),
+  knowledge: () => ({ from: `${type().name} type`, text: knowledgeText(TYPE_DEFAULTS[st.type]?.knowledge ?? { serena: false, graphify: false, rebuild: 'manual' }) }),
+  draft: () => ({ from: 'app settings', text: APP.draft ? 'on' : 'off: steps use their own models' }),
+};
+const trustText = (t) => `${TRUST[t].label}: ${TRUST[t].tier}`;
+const eff = (k) => (st.ov[k] ? st.v[k] : k === 'trust' || k === 'knowledge' ? TYPE_DEFAULTS[st.type]?.[k] ?? APP[k] : APP[k]);
+const knowledgeText = (kn) => {
+  const on = Object.keys(KNOWLEDGE).filter((id) => kn[id]).map((id) => KNOWLEDGE[id].name);
+  return on.length ? `${on.join(' and ')}, rebuilt ${REBUILD[kn.rebuild]}` : 'none';
+};
+const limitsText = () => [st.v.memMb && `${st.v.memMb} MB`, st.v.cpus && `${st.v.cpus} CPUs`].filter(Boolean).join(' · ');
+const summary = {
+  trust: () => trustText(eff('trust')) + (limitsText() ? ` · ${limitsText()}` : ''),
+  budget: () => (st.ov.budget ? `$${st.v.cap} a month · alert at ${st.v.alertAt}% · then ${ON_LIMIT[st.v.onLimit]}` : inherited.budget().text),
+  escalation: () => (st.ov.escalation ? `${st.v.channel}, after ${st.v.nudge} min` : inherited.escalation().text),
+  memory: () => (eff('memory') ? 'on: remembers facts about this codebase' : 'off'),
+  knowledge: () => knowledgeText(eff('knowledge')),
+  draft: () => (eff('draft') ? 'on: every step on the cheapest model' : 'off'),
+};
+
+/*
+ * Settings is a step with a page per setting, listed under it in the rail. A new setting is a new entry here.
+ * `key`: what its override switch sets; `errs`: the fields whose errors belong to it.
+ */
+const SUBS = [
+  { id: 'overview', title: 'Overview', intro: 'What the repository decides, and every setting at a glance. Pick one to change it.' },
+  { id: 'sandbox', title: 'Sandbox', key: 'trust', errs: ['memMb', 'cpus'], intro: 'How far you trust this repo decides how its steps are boxed in.' },
+  { id: 'network', title: 'Network', intro: 'What the sandbox may reach. Nothing else gets out.' },
+  { id: 'budget', title: 'Budget', key: 'budget', errs: ['cap', 'alertAt'], intro: 'A ceiling on what the whole project spends, over every flow and run.' },
+  { id: 'escalation', title: 'Escalation', key: 'escalation', errs: ['channel', 'nudge'], intro: 'Where and how soon a question nobody answered in FlowBoard is posted to chat.' },
+  { id: 'memory', title: 'Memory', key: 'memory', intro: 'Whether runs remember facts about this codebase between them.' },
+  { id: 'knowledge', title: 'Knowledge', key: 'knowledge', intro: 'Maps of the code that agents query instead of reading every file. FlowBoard rebuilds them from the repo; nobody edits them by hand.' },
+  { id: 'draft', title: 'Draft mode', key: 'draft', intro: 'Every step on the cheapest model, while you are trying flows out on this project.' },
+];
+const subAt = (id) => SUBS.findIndex((x) => x.id === id);
+const subBad = (x) => (x.errs ?? []).some((k) => problems().e[k]);
+const subWarn = (x) => problems().warns.some((w) => w.warn && w.sub === x.id);
+/* The few words the rail shows beside each setting. */
+/* Only an override says anything; an empty mark already means inherited. */
+const subNote = (x) =>
+  !x.key || !st.ov[x.key] ? ''
+  : { trust: () => TRUST[st.v.trust].tier, budget: () => `$${st.v.cap || '?'}/mo`, escalation: () => st.v.channel, knowledge: () => `${Object.keys(KNOWLEDGE).filter((id) => st.v.knowledge[id]).length} on`, memory: () => (st.v.memory ? 'on' : 'off'), draft: () => (st.v.draft ? 'on' : 'off') }[x.key]();
+
+/* Every rule the Settings step checks: errors block Continue, warnings only say what will happen. */
+function problems() {
+  const v = st.v;
+  const e = {};
+  if (st.ov.budget) {
+    if (!(+v.cap > 0)) e.cap = 'a dollar amount above 0';
+    else if (!(Number.isInteger(+v.alertAt) && +v.alertAt >= 1 && +v.alertAt <= 100)) e.alertAt = 'alert at 1 to 100 percent';
+  }
+  if (st.ov.escalation) {
+    if (!/^#[a-z0-9][a-z0-9_-]*$/.test(v.channel)) e.channel = 'a Slack channel, like #billing-alerts';
+    else if (!(Number.isInteger(+v.nudge) && +v.nudge >= 1 && +v.nudge <= 120)) e.nudge = '1 to 120 minutes';
+  }
+  if (v.memMb !== '' && !(Number.isInteger(+v.memMb) && +v.memMb >= 64)) e.memMb = 'a whole number of MB, 64 or more';
+  else if (v.cpus !== '' && !(+v.cpus > 0)) e.cpus = 'more than 0; 1.5 is a CPU and a half';
+  const warns = [];
+  if (eff('trust') === 'trusted') warns.push({ sub: 'sandbox', text: `With no sandbox, ${typeFlows().join(' and ')} stop at every tool use for you to allow it; nothing runs unattended.` });
+  if (eff('trust') === 'untrusted') warns.push({ sub: 'sandbox', text: 'gVisor runs on Linux only; on this Mac, FlowBoard uses a container until you run it on a Linux host.' });
+  if (st.ov.memory && st.v.memory && APP.memoryAdapter === 'none') warns.push({ sub: 'memory', text: 'Memory is off in the app settings, so this does nothing until it is on.' });
+  const kn = eff('knowledge');
+  if (st.repo && kn?.graphify) {
+    const cap = st.ov.budget ? +st.v.cap : APP.cap;
+    const when = { push: `on every move of ${repo().branch}`, daily: 'once a day', manual: 'each time you ask' }[kn.rebuild];
+    warns.push({
+      sub: 'knowledge',
+      warn: true,
+      text: `graphify sends ${repo().name}'s code to the AI service to describe it: about $${graphifyCost(repo())} a rebuild, ${when}, ${cap > 0 ? `counted against the $${cap} budget` : 'and the project has no budget cap to stop it'}. Turn it off, or rebuild less often, if the code must not leave this machine or the cost is too high.`,
+    });
+  }
+  if (kn && !kn.serena && !kn.graphify && st.ov.knowledge) warns.push({ sub: 'knowledge', text: 'With no maps, agents find their way by reading files, which costs more tokens on a large repo.' });
+  return { e, warns, ok: Object.keys(e).length === 0 };
+}
+const destProblem = () => (st.dest === 'custom' && !/^(~\/|\/)\S/.test(st.custom.trim()) ? 'a folder path: absolute, or starting with ~/' : '');
+const canLeave = (i) => [!!st.type, !!st.source, !!st.repo && st.gh === 'connected', problems().ok, st.gh === 'connected'][i];
+/* GitHub stopped accepting the token: everything chosen is kept, but nothing can be cloned until you reconnect. */
+const expired = () => st.gh === 'expired' || (st.gh === 'waiting' && st.reconnecting);
+
+function behind() {
+  $('behind').innerHTML = `<div class="bhead">Projects <span class="lbl">${projects.length}</span></div>
+    <div class="bgrid">${projects.map((p) => `<div class="bcard ${p.new ? 'new' : ''}"><b>${esc(p.name)}</b><span class="lbl" style="text-transform:none;letter-spacing:.02em">/p/${p.slug} · ${p.flow}${p.cap ? ` · $${p.cap}/mo cap` : ''}</span><small>${esc(p.where)}</small>${p.new ? '<small style="color:var(--run)">just created</small>' : ''}</div>`).join('')}</div>`;
+}
+
+function rail() {
+  const overrides = Object.keys(st.ov).filter((k) => st.ov[k]).length;
+  const sub = [type()?.name, SOURCES.find((s) => s.id === st.source)?.name, st.repo, st.repo && (overrides ? `${overrides} override${overrides === 1 ? '' : 's'}` : 'all inherited'), st.repo && folder()];
+  const p = problems();
+  $('rail').innerHTML = STEPS.map((s, i) => {
+    const bad = (i === 3 && st.reached >= 3 && !p.ok) || (i === 2 && st.gh === 'expired');
+    const cls = i === st.step ? 'on' : bad ? 'bad' : i < st.reached ? 'done' : '';
+    const mark = i === st.step ? i + 1 : bad ? ICON.bang : i < st.reached ? ICON.check : i + 1;
+    const step = `<button class="wz-step ${cls}" data-go="${i}" ${i <= st.reached && !st.clone ? '' : 'disabled'} ${i === st.step ? 'aria-current="step"' : ''}>
+      <span class="n">${mark}</span><span>${s}</span><small>${i <= st.reached ? esc(sub[i] ?? '') : ''}</small></button>`;
+    if (i !== 3 || st.reached < 3) return step;
+    return `${step}<div class="wz-subs" role="group" aria-label="Settings">${SUBS.map((x, j) => {
+      const here = st.step === 3 && st.sub === j;
+      const state = subBad(x) ? 'bad' : subWarn(x) ? 'caution' : x.key && st.ov[x.key] ? 'own' : '';
+      return `<button class="wz-sub ${state} ${here ? 'on' : ''}" data-sub="${j}" ${st.clone ? 'disabled' : ''} ${here ? 'aria-current="page"' : ''}><i aria-hidden="true"></i><span>${x.title}</span><small>${esc(subNote(x))}</small></button>`;
+    }).join('')}</div>`;
+  }).join('');
+}
+
+const back = () => `<button class="act" data-back ${st.step === 0 ? 'disabled' : ''}>Back</button>`;
+const next = (label = 'Continue') => `<button class="act primary" data-next ${canLeave(st.step) ? '' : 'disabled'}>${label}<kbd>↵</kbd></button>`;
+const VIEWS = [
+  {
+    head: () => `<span class="lbl">step 1 of 5</span><h2>What kind of project is it?</h2><p>The type decides which flows the project runs and the defaults its settings start from.</p>`,
+    body: () => `<div class="tiles">${TYPES.map((t) => `<button class="tile" data-type="${t.id}" aria-pressed="${st.type === t.id}" ${t.soon ? 'disabled' : ''}>
+      ${t.icon}<b>${t.name}</b>${t.soon ? '<span class="soon">coming soon</span>' : '<span></span>'}<p>${t.text}</p>${t.flows ? `<span class="tf">flows: ${t.flows.join(', ')} · sandboxed in a container</span>` : ''}</button>`).join('')}</div>`,
+    foot: () => `${back()}<span class="sp"></span>${next()}`,
+  },
+  {
+    head: () => `<span class="lbl">step 2 of 5</span><h2>Where does the code live?</h2><p>FlowBoard clones the repository onto this machine. Agents work on that clone; FlowBoard does every fetch and push itself.</p>`,
+    body: () => `<div class="srcs">${SOURCES.map((s) => `<button class="src" data-src="${s.id}" aria-pressed="${st.source === s.id}" ${s.soon ? 'disabled' : ''}>
+      ${s.id === 'local' ? ICON.folder : ICON.branch}<b>${s.name}</b>${s.soon ? '<span class="soon">coming soon</span>' : st.gh === 'connected' ? `<span class="lbl" style="color:var(--run)">connected as ${st.account}</span>` : st.gh === 'expired' ? '<span class="lbl" style="color:var(--wait)">reconnect needed</span>' : '<span></span>'}<small>${s.text}</small></button>`).join('')}</div>`,
+    foot: () => `${back()}<span class="sp"></span>${next()}`,
+  },
+  {
+    head: () => `<span class="lbl">step 3 of 5</span><h2>${st.gh === 'connected' ? 'Pick the repository' : expired() ? 'Reconnect GitHub' : st.switching ? 'Sign in as another account' : 'Connect your GitHub account'}</h2>`,
+    body: () => (st.gh === 'connected' ? repoPicker() : expired() ? expiredBox() : connectBox()),
+    foot: () => `${back()}<span class="hint">${st.repo ? `${st.repo} · default branch ${repo().branch}` : 'no repository picked'}</span><span class="sp"></span>${next()}`,
+  },
+  {
+    head: () => `<span class="lbl">step 4 of 5 · settings · ${st.sub + 1} of ${SUBS.length}</span><h2>${SUBS[st.sub].title}</h2><p>${SUBS[st.sub].intro}</p>`,
+    body: () => SUB_VIEWS[SUBS[st.sub].id](),
+    foot: () => {
+      const last = st.sub === SUBS.length - 1;
+      const blocked = last ? !problems().ok : subBad(SUBS[st.sub]);
+      const hint = subBad(SUBS[st.sub]) ? 'fix the fields marked in red' : last && !problems().ok ? `fix ${SUBS.filter(subBad).map((x) => x.title).join(', ')} first` : 'every page can be changed later on the project page';
+      return `${back()}<span class="hint">${hint}</span><span class="sp"></span><button class="act primary" data-next ${blocked ? 'disabled' : ''}>${last ? 'Review' : `Next: ${SUBS[st.sub + 1].title}`}<kbd>↵</kbd></button>`;
+    },
+  },
+  {
+    head: () => `<span class="lbl">step 5 of 5</span><h2>${st.clone?.done ? `${esc(pname())} is a project` : st.clone ? `Cloning ${st.repo}` : 'Review and clone'}</h2>`,
+    body: () => (st.clone ? cloneView() : reviewView()),
+    foot: () =>
+      st.clone?.done
+        ? `<button class="act" data-again>Create another</button><span class="sp"></span><button class="act primary" data-finish>Open ${esc(pname())}<kbd>↵</kbd></button>`
+        : st.clone
+          ? `<span class="hint">closing this dialog does not stop it</span><span class="sp"></span><button class="act" disabled>${st.clone.phase === 'analysing' ? 'Analysing…' : 'Cloning…'}</button>`
+          : `${back()}${st.gh !== 'connected' ? '<span class="hint" style="color:var(--wait)">GitHub needs reconnecting before the clone</span><button class="link" data-go="2">reconnect</button>' : ''}<span class="sp"></span><button class="act primary" data-clone ${destProblem() || !problems().ok || st.gh !== 'connected' ? 'disabled' : ''}>Clone and create project<kbd>↵</kbd></button>`,
+  },
+];
+
+function connectBox() {
+  const waiting = st.gh === 'waiting';
+  return `<div class="connect">
+    ${st.switching
+      ? `<p class="sans" style="margin:0">FlowBoard forgot the token for <b>${st.account}</b>. GitHub signs you in as whoever is signed in on github.com, so sign out there first, or use a private window, then connect as the account you want.</p>`
+      : `<p class="sans" style="margin:0">FlowBoard asks GitHub for read access to your repositories and permission to push branches it makes. The token stays in this machine's keychain; agents never see it.</p>
+    <ul><li>clone and fetch the repositories you pick</li><li>push <code>fb/task-*</code> branches when you say so</li><li>nothing else: no admin, no org settings</li></ul>`}
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="act primary" data-connect ${waiting ? 'disabled' : ''}>${waiting ? 'Waiting for github.com…' : 'Connect GitHub'}</button>
+      <span class="lbl" style="text-transform:none;letter-spacing:.02em">${waiting ? 'finish in the browser tab that opened' : 'opens github.com in a new tab'}</span>
+    </div>
+    <p class="lbl" style="text-transform:none;letter-spacing:.02em;margin:0">saved in app settings → Connections; every project uses it</p></div>`;
+}
+
+function expiredBox() {
+  const waiting = st.gh === 'waiting';
+  return `<div class="connect expired">
+    <p class="sans" style="margin:0">GitHub no longer accepts FlowBoard's token for <b>${st.account}</b>: it expired, or it was revoked under github.com → Settings → Applications. Reconnect to carry on.</p>
+    <p class="sans" style="margin:0;color:var(--ink-3)">Nothing is lost: ${st.repo ? `<b>${st.repo}</b> and your settings stay as you left them` : 'what you picked so far stays'}. Your other projects can't fetch or push until you reconnect.</p>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="act primary" data-connect ${waiting ? 'disabled' : ''}>${waiting ? 'Waiting for github.com…' : `Reconnect as ${st.account}`}</button>
+      <button class="link" data-disconnect ${waiting ? 'disabled' : ''}>use another account</button>
+    </div></div>`;
+}
+
+/* An organization that has not let FlowBoard in: why its repositories are hidden, and how to get them. */
+function orgPanel(o) {
+  const a = ORG_ACCESS[o];
+  return `<div class="connect">
+    ${a === 'none'
+      ? `<p class="sans" style="margin:0"><b>${o}</b> has not let FlowBoard in, so GitHub hides its repositories. An owner of ${o} approves it under the organization's Settings → Third-party access.</p>
+         <div><button class="act primary" data-request="${o}">Request access</button> <span class="lbl" style="text-transform:none;letter-spacing:.02em">GitHub asks ${o}'s owners; you need nothing else</span></div>`
+      : `<p class="sans" style="margin:0">Access requested from <b>${o}</b>. An owner has to approve it on GitHub; until then its repositories stay hidden.</p>
+         <div><button class="act" data-recheck="${o}" ${a === 'checking' ? 'disabled' : ''}>${a === 'checking' ? 'Asking GitHub…' : 'Check again'}</button> <span class="lbl" style="text-transform:none;letter-spacing:.02em">or pick a repository from another owner meanwhile</span></div>`}
+  </div>`;
+}
+
+function repoPicker() {
+  const q = st.q.trim().toLowerCase();
+  const list = REPOS.filter((r) => r.owner === st.owner && (!q || `${r.name} ${r.text}`.toLowerCase().includes(q)));
+  const head = `<div class="who"><span class="ok">${ICON.check}</span><span>connected as <b>${st.account}</b></span><button class="link" data-disconnect>use another account</button><span class="sp"></span>
+      <div class="owners" role="group" aria-label="Owner">${owners().map((o) => `<button class="owner ${locked(o) ? 'locked' : ''}" data-owner="${o}" aria-pressed="${st.owner === o}">${o}${locked(o) ? '<small>no access</small>' : ''}</button>`).join('')}</div></div>
+    <p class="orgs"><button class="link" data-orghelp aria-expanded="${st.orgHelp}">Don't see an organization?</button>${st.orgHelp ? ` An organization shows here when your account is a member of it. If it is listed with <i>no access</i>, it restricts apps like FlowBoard: request access from it. If it isn't listed at all, ask to be added to it on GitHub, then <button class="link" data-reload>reload the list</button>.` : ''}</p>`;
+  if (locked(st.owner)) return head + orgPanel(st.owner);
+  return `${head}
+    <input class="search" id="q" value="${esc(st.q)}" placeholder="Filter ${st.owner}'s repositories…" aria-label="Filter repositories" autocomplete="off">
+    <div class="repos" role="listbox" aria-label="Repositories">${
+      list.length
+        ? list.map((r) => {
+            const id = `${r.owner}/${r.name}`;
+            return `<button class="repo ${r.taken ? 'taken' : ''}" role="option" data-repo="${id}" aria-pressed="${st.repo === id}" aria-selected="${st.repo === id}" ${r.taken ? 'disabled' : ''}>
+              <span class="nm"><b>${r.name}</b>${r.priv ? '<span class="priv">private</span>' : ''}<small>${r.taken ? `already the project ${r.taken}` : r.text}</small></span>
+              <span class="meta">${r.lang}</span><span class="meta">${r.pushed}</span></button>`;
+          }).join('')
+        : `<div class="empty">No repository in ${st.owner} matches “${esc(st.q)}”.</div>`
+    }</div>`;
+}
+
+/* One setting: what it inherits and from where, an Override switch, and its controls once overridden. */
+function setting(k, title, controls, note = '') {
+  const on = st.ov[k];
+  return `<section class="set ${on ? 'on' : ''}">
+    <div class="set-h"><b>${title}</b><span class="from">${on ? 'this project' : inherited[k]().from}</span><span class="sp"></span>
+      <label class="sw"><input type="checkbox" data-ov="${k}" ${on ? 'checked' : ''}>override</label></div>
+    ${on ? controls() : `<div class="inh">${inherited[k]().text}</div>`}
+    ${note ? `<p class="d">${note}</p>` : ''}</section>`;
+}
+const seg = (key, options) => `<div class="seg2" role="radiogroup">${Object.entries(options).map(([val, label]) => `<button role="radio" data-set="${key}" data-val="${val}" aria-pressed="${String(st.v[key]) === val}" aria-checked="${String(st.v[key]) === val}">${label}</button>`).join('')}</div>`;
+const num = (key, label, attrs = '') => `<label class="nf">${label}<input id="v-${key}" value="${esc(st.v[key])}" ${problems().e[key] ? 'aria-invalid="true"' : ''} ${attrs}></label>`;
+const err = (...keys) => keys.map((k) => problems().e[k]).filter(Boolean).map((m) => `<em class="err">${m}</em>`).join('');
+
+const warnsFor = (id) => problems().warns.filter((w) => w.sub === id).map((w) => `<p class="warn">${w.text}</p>`).join('');
+const SUB_VIEWS = {
+  overview: () => {
+    const r = repo();
+    return `<div class="facts" aria-label="Fixed by the repository">
+        <span>name <b>${esc(pname())}</b></span><span>address <b>/p/${slug()}</b></span>
+        <span>base branch <b>${r.branch}</b>, follows GitHub</span><span>flows <b>${typeFlows().join(', ')}</b></span>
+        <span>check command <b class="pend">proposed after cloning</b></span></div>
+      <div class="sets">${SUBS.slice(1).map((x) => {
+        const own = x.key && st.ov[x.key];
+        const value = x.id === 'network' ? 'the AI service; registries after cloning' : summary[x.key]();
+        return `<button class="ovr ${subBad(x) ? 'bad' : subWarn(x) ? 'caution' : ''}" data-sub="${subAt(x.id)}"><b>${x.title}</b><span>${esc(value)}</span><span class="from ${own ? 'own' : ''}">${x.id === 'network' ? 'after cloning' : own ? 'this project' : inherited[x.key]().from}</span></button>`;
+      }).join('')}</div>`;
+  },
+  sandbox: () => `<div class="sets">${setting('trust', 'Isolation', () => `${seg('trust', Object.fromEntries(Object.entries(TRUST).map(([t, x]) => [t, `${x.label} · ${x.tier}`])))}<p class="d">${TRUST[st.v.trust].text}</p>`)}
+      <section class="set"><div class="set-h"><b>Resource limits</b><span class="from">${limitsText() ? 'this repo' : 'Docker’s defaults'}</span></div>
+        <div class="srow">${num('memMb', 'memory, MB', 'placeholder="a quarter of Docker’s" inputmode="numeric"')}${num('cpus', 'CPUs', 'placeholder="any" inputmode="decimal"')}</div>${err('memMb', 'cpus')}
+        <p class="d">Per container, for every sandboxed step. Kept in the repo's .flowboard.yaml, so they travel with the code.</p></section></div>${warnsFor('sandbox')}`,
+  network: () => `<div class="sets"><section class="set"><div class="set-h"><b>Always</b></div><div class="inh">the AI service the agents use</div></section>
+      <section class="set"><div class="set-h"><b>Package registries</b><span class="from">after cloning</span></div>
+        <div class="inh">proposed by the analysis agent from the repo's lockfiles; you confirm them</div>
+        <p class="d">Never the git remote: FlowBoard does every fetch and push itself, outside the sandbox.</p></section></div>`,
+  budget: () => `<div class="sets">${setting('budget', 'Monthly cap', () => `<div class="srow">${num('cap', '$ per month', 'inputmode="decimal"')}${num('alertAt', 'alert at, %', 'inputmode="numeric"')}<span class="nf">when it is spent${seg('onLimit', ON_LIMIT)}</span></div>${err('cap', 'alertAt')}`,
+      'Everything the project’s runs cost counts, the analysis agent’s included. Each flow’s own budget still applies inside it.')}</div>`,
+  escalation: () => `<div class="sets">${setting('escalation', 'Chat', () => `<div class="srow">${num('channel', 'Slack channel', 'spellcheck="false"')}${num('nudge', 'after, minutes', 'inputmode="numeric"')}</div>${err('channel', 'nudge')}`)}</div>`,
+  memory: () => `<div class="sets">${setting('memory', 'Project memory', () => seg('memory', { false: 'Off', true: 'On' }), 'Memory’s project scope. The memory store itself is an app setting: local.')}</div>${warnsFor('memory')}`,
+  knowledge: () => {
+    const r = repo();
+    const kn = st.v.knowledge;
+    const tog = (id) => `<div class="seg2" role="radiogroup">${[['true', 'On'], ['false', 'Off']].map(([v, l]) => `<button role="radio" data-kn="${id}" data-val="${v}" aria-pressed="${String(kn[id]) === v}" aria-checked="${String(kn[id]) === v}">${l}</button>`).join('')}</div>`;
+    const asset = (id) => `<div class="ka"><div><b>${KNOWLEDGE[id].name}</b><small>${KNOWLEDGE[id].what}</small>
+        <small>${id === 'graphify' ? `${KNOWLEDGE[id].cost}: about $${graphifyCost(r)} a rebuild for ${r.name}` : KNOWLEDGE[id].cost} · ${KNOWLEDGE[id].via}</small></div>${tog(id)}</div>`;
+    return `<div class="sets">${setting('knowledge', 'Knowledge assets', () => `${Object.keys(KNOWLEDGE).map(asset).join('')}
+        <div class="ka"><div><b>Rebuild</b><small>a map built from an older commit is marked stale, so agents know not to trust it</small></div>
+        <div class="seg2" role="radiogroup">${Object.entries(REBUILD).map(([v, l]) => `<button role="radio" data-kn="rebuild" data-val="${v}" aria-pressed="${kn.rebuild === v}" aria-checked="${kn.rebuild === v}">${v === 'push' ? `on ${r.branch} moving` : l}</button>`).join('')}</div></div>`,
+      'Kept in .flowboard/knowledge/ in the clone, out of commits, and built first right after cloning. Serena never leaves this machine; graphify does, to the AI service.')}</div>${warnsFor('knowledge')}`;
+  },
+  draft: () => `<div class="sets">${setting('draft', 'Draft mode', () => seg('draft', { false: 'Off', true: 'On' }))}</div>`,
+};
+
+function reviewView() {
+  const r = repo();
+  const row = (k, v, go, from, warn) => `<div class="rv ${warn ? 'caution' : ''}"><span>${k}</span><b>${v}${from ? ` <small class="lbl" style="text-transform:none;letter-spacing:.02em">${from}</small>` : ''}</b>${go === undefined ? '<span></span>' : typeof go === 'string' ? `<button class="link" data-sub="${subAt(go)}">edit</button>` : `<button class="link" data-go="${go}">edit</button>`}</div>`;
+  const src = (k) => (st.ov[k] ? 'override' : inherited[k]().from);
+  return `<div class="review">
+      ${row('repository', `github.com/${st.repo} · ${r.mb} MB`, 2)}
+      ${row('project', `${esc(pname())} · /p/${slug()}`, undefined, 'from the repo')}
+      ${row('base branch', r.branch, undefined, 'follows GitHub')}
+      ${row('flows', typeFlows().join(', '), 0, `${type().name} type`)}
+      ${row('sandbox', summary.trust(), 'sandbox', src('trust'))}
+      ${row('network', 'the AI service; registries after analysis', undefined, '')}
+      ${row('budget', summary.budget(), 'budget', src('budget'))}
+      ${row('escalation', summary.escalation(), 'escalation', src('escalation'))}
+      ${row('memory', summary.memory(), 'memory', src('memory'))}
+      ${row('knowledge', summary.knowledge(), 'knowledge', src('knowledge'), subWarn(SUBS[subAt('knowledge')]))}
+      ${row('draft mode', summary.draft(), 'draft', src('draft'))}
+      ${row('check command', 'proposed by the analysis agent after cloning', undefined, '')}
+    </div>
+    <div class="lbl" style="margin-bottom:6px">clone into</div>
+    <div class="dest">
+      <label class="opt"><input type="radio" name="dest" value="default" ${st.dest === 'default' ? 'checked' : ''}>
+        <b>${APP.projectsFolder ? 'Your projects folder' : 'FlowBoard’s projects folder'}</b><small>${esc(folderIn(defaultParent()))}</small>
+        <small class="whence">${APP.projectsFolder ? 'set in app settings → Projects folder' : 'the default until you pick your own, in app settings or below'}</small></label>
+      <label class="opt"><input type="radio" name="dest" value="custom" ${st.dest === 'custom' ? 'checked' : ''}>
+        <b>Somewhere else</b><small>a folder for this project only; ${r.name} is made inside it</small></label>
+    </div>
+    ${st.dest === 'custom' ? `<div class="pick">
+        <input class="custom" id="custom" value="${esc(st.custom)}" spellcheck="false" aria-label="Folder to clone into" placeholder="~/code" ${destProblem() ? 'aria-invalid="true"' : ''}>
+        <div class="recent"><span class="lbl">used before</span>${RECENT.filter((d) => d !== defaultParent()).map((d) => `<button class="rc" data-recent="${d}" aria-pressed="${parentDir() === d}">${d}</button>`).join('')}</div>
+        <label class="sw"><input type="checkbox" data-mkdef ${st.makeDefault ? 'checked' : ''} ${destProblem() ? 'disabled' : ''}>make it my projects folder for new projects too</label>
+      </div>` : ''}
+    ${!destProblem() && folder() !== `${parentDir()}/${r.name}` ? `<p class="warn">${esc(parentDir())}/${r.name} already exists and holds something, so this clone goes to ${r.name}-2.</p>` : ''}
+    ${destProblem() ? `<p class="warn">${destProblem()}</p>` : `<p class="lbl" style="text-transform:none;letter-spacing:.02em;margin:0">→ ${esc(folder())}</p>`}`;
+}
+
+/* The agent's proposals, each accepted here or left for the project page. */
+function proposals() {
+  const a = analyse(repo());
+  const item = (k, title, value, why) => {
+    const s = st.accepted[k];
+    return `<div class="prop"><div><b>${title}</b><code>${esc(value)}</code><small>${why}</small></div>
+      ${s ? `<span class="lbl" style="color:${s === 'yes' ? 'var(--run)' : 'var(--ink-3)'}">${s === 'yes' ? 'accepted' : 'on the project page'}</span>`
+        : `<span class="pb"><button class="act" data-later="${k}">Later</button><button class="act primary" data-accept="${k}">Accept</button></span>`}</div>`;
+  };
+  return `<div class="props"><div class="lbl">the analysis agent proposes · $0.04</div>
+    ${a.check ? item('check', 'Check command', a.check.cmd, a.check.why) : '<div class="prop"><div><b>Check command</b><small>nothing to go on: no build files or CI it recognises. Set one on the project page.</small></div></div>'}
+    ${a.hosts.length ? item('hosts', 'Network access', a.hosts.join(', '), `the ${a.stacks.map((k) => `${k.name} (${k.tool})`).join(' and ')} registries; the sandbox reaches nothing else but the AI service`) : ''}</div>`;
+}
+
+function cloneView() {
+  const c = st.clone;
+  return `${c.done
+      ? `<div class="done-box"><b>${esc(pname())} is ready at /p/${slug()}</b>
+        <span>${esc(folder())} on <b>${repo().branch}</b> · ${type().name}: ${typeFlows().join(', ')} · ${summary.trust()}</span>
+        <span>knowledge: ${esc(summary.knowledge())}</span>
+        ${limitsText() ? '<span style="color:var(--wait)">.flowboard.yaml is new in the repo: commit it so the limits travel with the code</span>' : ''}</div>${proposals()}`
+      : `<div class="bar" aria-hidden="true"><i style="width:${Math.round(c.pct)}%"></i></div><div class="lbl" style="margin-bottom:6px">${c.phase} · ${Math.round(c.pct)}%</div>`}
+    <div class="log" id="log" aria-live="polite">${c.lines.join('\n')}</div>`;
+}
+
+/* The clone engine: git's own phases at a believable pace, FlowBoard saving the settings, then the analysis agent. */
+function startClone() {
+  const r = repo();
+  const a = analyse(r);
+  st.clone = { pct: 0, phase: 'receiving objects', done: false, lines: [`<span class="cmd">$ git clone --branch ${r.branch} https://github.com/${st.repo}.git ${folder()}</span>`, `Cloning into '${folder()}'...`, `remote: Enumerating objects: ${r.objects}, done.`] };
+  st.accepted = {};
+  const c = st.clone;
+  render();
+  const tick = () => {
+    if (st.clone !== c) return;
+    c.pct = Math.min(100, c.pct + 4 + Math.random() * 7);
+    const line = `Receiving objects: ${String(Math.round(c.pct)).padStart(3)}% (${Math.round((r.objects * c.pct) / 100)}/${r.objects}), ${((r.mb * c.pct) / 100).toFixed(2)} MiB | 14.20 MiB/s`;
+    if (c.lines.at(-1).startsWith('Receiving')) c.lines[c.lines.length - 1] = line;
+    else c.lines.push(line);
+    render();
+    if (c.pct < 100) return setTimeout(tick, 120);
+    c.lines[c.lines.length - 1] += ', done.';
+    const own = Object.keys(st.ov).filter((k) => st.ov[k]).map((k) => `${k} ${summary[k]()}`);
+    const after = [
+      `Resolving deltas: 100% (${Math.round(r.objects * 0.52)}/${Math.round(r.objects * 0.52)}), done.`,
+      ...(st.dest === 'custom' && st.makeDefault ? [`<span class="fb">-- your projects folder is now ${esc(parentDir())} (app settings); new projects clone there</span>`] : []),
+      `<span class="fb">-- added .flowboard/ to .git/info/exclude</span>`,
+      `<span class="fb">-- project ${esc(pname())} registered at /p/${slug()}: ${type().name}, ${summary.trust()}</span>`,
+      own.length ? `<span class="fb">-- overrides: ${own.join('; ')}</span>` : `<span class="fb">-- every setting inherited</span>`,
+      ...(limitsText() ? [`<span class="fb">-- wrote .flowboard.yaml: sandbox limits ${limitsText()}</span>`] : []),
+      `<span class="fb">-- analysis agent started: reading ${a.read.join(', ') || 'the tree'}</span>`,
+      `<span class="fb">-- analysis: ${a.stacks.map((k) => `${k.name} · ${k.tool}`).join(', ') || 'no build system recognised'}</span>`,
+      `<span class="fb">-- analysis done in 21 s, $0.04; ${(a.check ? 1 : 0) + (a.hosts.length ? 1 : 0)} proposal${(a.check ? 1 : 0) + (a.hosts.length ? 1 : 0) === 1 ? '' : 's'}</span>`,
+      ...(eff('knowledge').serena ? [`<span class="fb">-- knowledge: Serena indexed ${Math.round(r.objects * 0.38).toLocaleString('en')} symbols in 9 s, at ${r.branch} 4f1c2a9</span>`] : []),
+      ...(eff('knowledge').graphify ? [`<span class="fb">-- knowledge: graphify mapped ${Math.round(r.objects * 0.09).toLocaleString('en')} nodes in 1 min 12 s, $${graphifyCost(r)}, at ${r.branch} 4f1c2a9</span>`] : []),
+    ];
+    const agent = after.findIndex((l) => l.includes('analysis agent started'));
+    let i = 0;
+    const more = () => {
+      if (st.clone !== c) return;
+      if (i === agent) c.phase = 'analysing';
+      if (i < after.length) return c.lines.push(after[i++]), render(), setTimeout(more, i > agent ? 700 : 340);
+      c.done = true;
+      if (st.dest === 'custom' && st.makeDefault) APP.projectsFolder = parentDir();
+      render();
+    };
+    c.phase = 'setting up';
+    more();
+  };
+  setTimeout(tick, 300);
+}
+
+function render() {
+  behind();
+  $('mockctl').innerHTML = `<span class="lbl">mockup</span>${st.gh === 'connected' ? '<button data-revoke>make GitHub reject the token</button>' : `<span>GitHub: ${st.gh === 'expired' ? 'token rejected' : st.gh}</span>`}
+    <button data-pf>${APP.projectsFolder ? `projects folder set: ${APP.projectsFolder}` : 'no projects folder set'}</button>`;
+  if ($('veil').hidden) return;
+  rail();
+  const v = VIEWS[st.step];
+  const focus = document.activeElement?.id;
+  const caret = document.activeElement?.selectionStart;
+  $('head').innerHTML = v.head();
+  $('body').innerHTML = v.body();
+  $('foot').innerHTML = v.foot();
+  const log = $('log');
+  if (log) log.scrollTop = log.scrollHeight;
+  if (focus && $(focus) && $(focus).matches('input:not([type=checkbox])')) {
+    $(focus).focus();
+    if (caret != null) $(focus).setSelectionRange(caret, caret);
+  }
+}
+
+/* Into Settings: the page asked for, else the first going forward and the last coming back from Review. */
+function go(step, sub) {
+  if (step === 3) st.sub = sub ?? (st.step === 3 ? st.sub : st.step > 3 ? SUBS.length - 1 : 0);
+  st.step = step;
+  st.reached = Math.max(st.reached, step);
+  render();
+}
+function pickRepo(id) {
+  if (st.repo === id) return;
+  st.repo = id;
+  st.reached = Math.min(st.reached, 3); // a different repo is a different project, so its settings are looked at again
+}
+function reset() {
+  Object.assign(st, { step: 0, reached: 0, type: null, source: null, repo: null, q: '', clone: null, adv: false, dest: 'default', makeDefault: false, accepted: {} });
+  Object.keys(st.ov).forEach((k) => (st.ov[k] = false));
+  Object.assign(st.v, { memMb: '', cpus: '' });
+}
+/* Turning an override on starts it from the inherited value, so nothing changes until you change it. */
+function toggle(k, on) {
+  st.ov[k] = on;
+  if (!on) return;
+  if (k === 'trust') st.v.trust = TYPE_DEFAULTS[st.type]?.trust ?? APP.trust;
+  if (k === 'budget') Object.assign(st.v, { cap: APP.cap ? String(APP.cap) : '', alertAt: String(APP.alertAt), onLimit: APP.onLimit });
+  if (k === 'escalation') Object.assign(st.v, { channel: APP.channel, nudge: String(APP.nudge) });
+  if (k === 'memory') st.v.memory = APP.memory;
+  if (k === 'knowledge') st.v.knowledge = { ...(TYPE_DEFAULTS[st.type]?.knowledge ?? { serena: false, graphify: false, rebuild: 'manual' }) };
+  if (k === 'draft') st.v.draft = APP.draft;
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('button, input[type=radio], input[type=checkbox]');
+  if (!b || b.disabled) return;
+  const d = b.dataset;
+  if (d.go !== undefined) return go(Number(d.go));
+  if (d.sub !== undefined) return go(3, Number(d.sub));
+  if (d.next !== undefined) return st.step === 3 && st.sub < SUBS.length - 1 ? (st.sub++, render()) : go(st.step + 1);
+  if (d.back !== undefined) return st.step === 3 && st.sub > 0 ? (st.sub--, render()) : go(st.step - 1);
+  if (d.type) st.type = d.type;
+  else if (d.src) st.source = d.src;
+  else if (d.owner) (st.owner = d.owner), (st.q = '');
+  else if (d.repo) pickRepo(d.repo);
+  else if (d.ov) toggle(d.ov, b.checked);
+  else if (d.kn) st.v.knowledge[d.kn] = d.val === 'true' ? true : d.val === 'false' ? false : d.val;
+  else if (d.set) st.v[d.set] = d.val === 'true' ? true : d.val === 'false' ? false : d.val;
+  else if (d.accept) st.accepted[d.accept] = 'yes';
+  else if (d.later) st.accepted[d.later] = 'later';
+  else if (d.connect !== undefined) {
+    st.reconnecting = st.gh === 'expired';
+    st.gh = 'waiting';
+    setTimeout(() => {
+      // Signing in again after "use another account" lands on the other account; a reconnect keeps the same one.
+      if (st.switching) Object.assign(st, { account: Object.keys(ACCOUNTS).find((a) => a !== st.account), switching: false });
+      if (!owners().includes(st.owner)) st.owner = owners()[0];
+      Object.assign(st, { gh: 'connected', reconnecting: false });
+      render();
+    }, 1600);
+  } else if (d.disconnect !== undefined) Object.assign(st, { gh: 'idle', switching: true, repo: null, reached: 2, step: 2 });
+  else if (d.revoke !== undefined) st.gh = 'expired';
+  else if (d.recent) st.custom = d.recent;
+  else if (d.mkdef !== undefined) st.makeDefault = b.checked;
+  else if (d.pf !== undefined) APP.projectsFolder = APP.projectsFolder ? null : '~/code';
+  else if (d.request) ORG_ACCESS[d.request] = 'requested';
+  else if (d.recheck) {
+    ORG_ACCESS[d.recheck] = 'checking';
+    setTimeout(() => ((ORG_ACCESS[d.recheck] = 'granted'), render()), 1200); // the mock's owner approves it
+  } else if (d.orghelp !== undefined) st.orgHelp = !st.orgHelp;
+  else if (d.reload !== undefined) st.orgHelp = false;
+  else if (b.name === 'dest') st.dest = b.value;
+  else if (d.clone !== undefined) return startClone();
+  else if (d.again !== undefined) reset();
+  else if (d.finish !== undefined) {
+    projects.forEach((p) => delete p.new);
+    projects.push({ name: pname(), slug: slug(), flow: st.type, where: `${st.repo} → ${folder()}`, cap: st.ov.budget ? st.v.cap : null, new: true });
+    repo().taken = pname();
+    $('veil').hidden = true;
+    reset();
+  } else if (d.new !== undefined) {
+    if (!st.clone || st.clone.done) reset();
+    $('veil').hidden = false;
+  } else return;
+  render();
+  if (b.name === 'dest' && b.value === 'custom') $('custom')?.focus();
+  if (d.ov && b.checked) document.querySelector('.set.on input:not([type=checkbox])')?.focus();
+});
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (t.id === 'q') st.q = t.value;
+  else if (t.id === 'custom') st.custom = t.value;
+  else if (t.id?.startsWith('v-')) st.v[t.id.slice(2)] = t.id === 'v-channel' ? t.value.toLowerCase() : t.value;
+  else return;
+  render();
+});
+document.addEventListener('keydown', (e) => {
+  if ($('veil').hidden) return;
+  if (e.key === 'Escape') return ($('veil').hidden = true), render();
+  if (e.key !== 'Enter' || e.target.matches('button, input[type=checkbox]')) return;
+  const primary = $('foot').querySelector('.act.primary:not(:disabled)');
+  if (primary) e.preventDefault(), primary.click();
+});
+render();
+</script>

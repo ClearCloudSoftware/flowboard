@@ -42,3 +42,6 @@ next-env.d.ts
 
 # run-agent logs (prompts, answers, raw events)
 /runs/
+
+# the project list and the seeded scratch repo (FLOWBOARD_DATA_DIR)
+/data/

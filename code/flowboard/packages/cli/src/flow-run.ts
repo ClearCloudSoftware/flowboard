@@ -19,7 +19,7 @@ import { inside, loadFlow, toMermaid } from './flow-config.ts';
 import type { FlowConfig, Sandbox } from './flow-config.ts';
 import { artifactPath, execAi, execShell, processStart, shellEnv } from './flow-exec.ts';
 import type { ExecContext, StepRun } from './flow-exec.ts';
-import { dockerDefaultMemoryMb, PROJECT_FILE, projectLimits } from './project.ts';
+import { dockerDefaultMemoryMb, excludeFromGit, PROJECT_FILE, projectLimits } from './project.ts';
 import { defaultProvider, stamp } from './run.ts';
 import type { RunDeps } from './run.ts';
 
@@ -249,26 +249,6 @@ function claim(dir: string): boolean {
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'EEXIST') return false;
     throw e;
-  }
-}
-
-/** Adds `.flowboard/` to the local exclude file of `folder`'s git repository, so `git add -A` leaves it alone. */
-function excludeFromGit(folder: string): void {
-  const git = spawnSync('git', ['rev-parse', '--git-path', 'info/exclude'], { cwd: folder, encoding: 'utf8' });
-  if (git.error || git.status !== 0) return;
-  const file = resolve(folder, git.stdout.trim());
-  let text = '';
-  try {
-    text = readFileSync(file, 'utf8');
-  } catch {
-    // no exclude file yet
-  }
-  if (text.split('\n').some((l) => l.trim() === '.flowboard/')) return;
-  try {
-    mkdirSync(dirname(file), { recursive: true });
-    appendFileSync(file, `${text && !text.endsWith('\n') ? '\n' : ''}.flowboard/\n`);
-  } catch {
-    // best effort: the uncommitted-changes check leaves .flowboard/ out anyway
   }
 }
 

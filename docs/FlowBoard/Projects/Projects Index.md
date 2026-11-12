@@ -10,6 +10,16 @@ A **project** is FlowBoard's handle on one codebase: a name, a URL slug, the abs
 > [!important] The one idea to get right first
 > A project is a **thin record that scopes everything else**. The PRD gives it five working columns (`name`, `slug`, `repo_path`, `default_flow_id`, `check_command`) and no behaviour of its own. Its weight comes from what points at it: four tables carry `project_id … ON DELETE CASCADE`, and the repo it names is where worktrees and the capability store live. See [[Project Record]] and [[What Belongs To A Project]].
 
+> [!check] Built, 2026-11-12
+> Projects are built without a database, in the app's file-based style: `projects.json` in FlowBoard's data folder (`FLOWBOARD_DATA_DIR`, else `code/flowboard/data/`) holds `id`, `name`, `slug`, `repoPath`, `defaultFlow`, `baseBranch` and `createdAt` (`packages/cli/src/projects.ts`).
+> - **Check command:** not on the record but `check_command` in the repo's `.flowboard.yaml`, beside the sandbox limits; an empty `shell:` runs it ([[Run Flow Reference#Project file]]). OQ #6: the designer's check warns about an empty `shell:`, a project whose default flow has one and whose repo sets no check command shows a warning, and a run there is refused.
+> - **Flow v1 (Story 1.3):** the New project dialog's flow type starts the project's own flow, `<slug>.yaml` in the shared library, as a copy of that flow; *Empty* starts one with no steps. The project page can then adopt any library flow as the default.
+> - **Registration** resolves the repo's top folder (400 if not a git repo; 409 for a repo or slug already used), adds `.flowboard/` to `.git/info/exclude`, and records the checked-out branch as `baseBranch` (OQ #14). Cards and the page warn about no commits, a detached HEAD, another branch checked out, and uncommitted changes.
+> - **Cards** count **runs** by status (there are no tasks yet) and their spend over the last seven days (OQ #11).
+> - **Pages:** `/` (cards, New project), `/p/<slug>` (settings, the repo's runs, New run, Remove). **API:** `GET`/`POST /api/projects`, `PATCH`/`DELETE /api/projects/:id`. Remove is refused while a run in the repo is going and only forgets the record: runs, files and spend history stay (OQ #9's archive-not-erase).
+> - **Seed:** the first `GET` makes *Scratch*, a committed scratch repo with `check_command: node --test`, once.
+> - **Not here:** where worktrees go (OQ #17) is Workspaces' question, and no code makes worktrees yet. Copying seed plugins and agents at registration waits for the Capability Library's store and seed plugins, none of which exist in code yet. Visibility stays an idea: PRD §2 forbids users and auth.
+
 This is a platform component. There is no projects mockup, so this set is architecture reference built from the PRD, the backlog, the architecture notes, the drawio and the places other mockups show a project or repo. Expect [[Projects Open Questions|open questions]].
 
 ## Start here

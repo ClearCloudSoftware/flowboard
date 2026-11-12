@@ -1,0 +1,353 @@
+<meta charset="utf-8">
+<title>New Project Workspace</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74;  --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014;
+  --fail:#B0231B;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);font-size:13px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+button:disabled{cursor:default}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sans{font-family:var(--sans)}
+.sp{flex:1}
+.act{border:1px solid var(--line-2);padding:4px 12px;font-size:12px;white-space:nowrap;transition:background var(--t),border-color var(--t),color var(--t)}
+.act:hover:not(:disabled){background:var(--surface-2);border-color:var(--ink-3)}
+.act:disabled{opacity:.4}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act.primary:hover:not(:disabled){background:var(--run);color:#fff}
+.act.big{width:100%;text-align:center;padding:8px 12px;font-size:13px}
+.link{color:var(--ink-3);text-decoration:underline;text-underline-offset:3px;font-size:11px}
+.link:hover{color:var(--ink)}
+
+.app{height:100dvh;display:flex;flex-direction:column}
+.topbar{flex-shrink:0;display:flex;align-items:center;gap:16px;padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-weight:600;white-space:nowrap}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+
+/* the two first answers, as segmented strips: coming-soon segments are there, struck through the middle */
+.setup{flex-shrink:0;display:flex;gap:10px 28px;flex-wrap:wrap;align-items:center;padding:9px 18px;background:var(--surface-3);border-bottom:2px solid var(--line-2)}
+.seg{display:flex;align-items:center;gap:10px;min-width:0}
+.segs{display:flex;flex-wrap:wrap;border:1px solid var(--line-2);background:var(--surface)}
+.sg{padding:3px 10px;font-size:12px;border-right:1px solid var(--line-2);white-space:nowrap}
+.sg:last-child{border-right:0}
+.sg[aria-pressed="true"]{background:var(--ink);color:#fff}
+.sg:disabled{color:var(--ink-3);background:repeating-linear-gradient(135deg,transparent 0 5px,var(--surface-2) 5px 6px)}
+.sg:disabled::after{content:"soon";font-size:9px;letter-spacing:.08em;text-transform:uppercase;margin-left:6px;color:var(--ink-3)}
+
+.work{flex:1;min-height:0;display:grid;grid-template-columns:200px minmax(0,1fr) 340px}
+.pane{min-height:0;overflow:auto}
+.ph{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+
+/* owners */
+.owners{border-right:1px solid var(--line)}
+.ow{display:flex;justify-content:space-between;width:100%;padding:8px 14px;border-bottom:1px solid var(--line);color:var(--ink-2)}
+.ow[aria-current="true"]{background:var(--surface);color:var(--ink);box-shadow:inset 3px 0 0 var(--ink);font-weight:500}
+.ow small{color:var(--ink-3)}
+.whoami{padding:12px 14px;font-size:12px;color:var(--ink-3);display:grid;gap:6px}
+.whoami b{color:var(--ink)}
+
+/* repo table */
+.repos{background:var(--surface)}
+.search{flex:1;border:1px solid var(--line-2);padding:4px 8px;background:var(--surface);border-radius:0}
+.thead{display:grid;grid-template-columns:minmax(0,1fr) 96px 72px 86px 62px;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line-2);position:sticky;top:41px;background:var(--surface);z-index:1}
+.tr{display:grid;grid-template-columns:minmax(0,1fr) 96px 72px 86px 62px;gap:12px;align-items:center;padding:8px 14px;width:100%;border-bottom:1px solid var(--line);transition:background var(--t)}
+.tr .nm b{font-weight:600}
+.tr .nm small{display:block;font-family:var(--sans);font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr .c{font-size:12px;color:var(--ink-2)}
+.tr .r{text-align:right}
+.tr:not(:disabled):hover{background:var(--surface-2)}
+.tr[aria-selected="true"]{background:var(--run-soft);box-shadow:inset 3px 0 0 var(--run)}
+.tr:disabled{color:var(--ink-3)}
+.tr.taken .nm small{color:var(--wait)}
+.priv{font-size:10px;border:1px solid var(--line-2);padding:0 4px;color:var(--ink-3);margin-left:6px;vertical-align:1px}
+.connect{max-width:440px;margin:40px auto;padding:20px;border:1px solid var(--line-2);display:grid;gap:10px}
+.connect p{font-family:var(--sans);color:var(--ink-2);margin:0}
+
+/* the clone plan */
+.plan{border-left:2px solid var(--line-2);background:var(--paper);display:flex;flex-direction:column}
+.plan-b{padding:14px 16px;display:grid;gap:14px}
+.plan h2{font-family:var(--sans);font-size:17px;font-weight:600;margin:0;word-break:break-all}
+.plan h2 small{display:block;font-family:var(--mono);font-weight:400;font-size:12px;color:var(--ink-3)}
+.dests{display:flex;border:1px solid var(--line-2)}
+.dests button{flex:1;text-align:center;padding:4px;font-size:12px;border-right:1px solid var(--line-2)}
+.dests button:last-child{border-right:0}
+.dests button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.path{width:100%;border:1px solid var(--line-2);padding:6px 8px;background:var(--surface);border-radius:0}
+.hint{font-size:11px;color:var(--ink-3);margin-top:4px}
+.hint.warn{color:var(--wait)}
+.items{list-style:none;margin:0;padding:0;border:1px solid var(--line);background:var(--surface)}
+.items li{display:grid;grid-template-columns:18px 1fr;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);font-size:12px}
+.items li:last-child{border-bottom:0}
+.items li small{display:block;color:var(--ink-3);word-break:break-all}
+.items .m{color:var(--done)}
+.items li.running .m{color:var(--run)}
+.items li.done .m{color:var(--ink-2)}
+.items li.done{color:var(--ink-2)}
+.items li.running{background:var(--run-soft)}
+.bar{height:3px;background:var(--pend);margin-top:5px;position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--run)}
+.ready{border:1px solid var(--line-2);border-left:3px solid var(--run);padding:10px 12px;display:grid;gap:8px;background:var(--surface)}
+.ready b{font-family:var(--sans);font-size:15px}
+.statusbar{flex-shrink:0;display:flex;gap:18px;padding:5px 18px;background:var(--surface-2);border-top:1px solid var(--line);color:var(--ink-3);font-size:11px;flex-wrap:wrap}
+.statusbar kbd{font-family:var(--mono);border:1px solid var(--line-2);padding:0 4px;margin-right:4px;color:var(--ink-2)}
+
+@media (max-width:1000px){
+  .work{grid-template-columns:minmax(0,1fr) 300px}
+  .owners{display:none}
+  .thead,.tr{grid-template-columns:minmax(0,1fr) 80px 70px}
+  .thead span:nth-child(n+4),.tr span:nth-child(n+4){display:none}
+}
+@media (max-width:700px){
+  .app{height:auto;min-height:100dvh}
+  .work{grid-template-columns:1fr}
+  .plan{border-left:0;border-top:2px solid var(--line-2)}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after,*::before{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">flowboard<em>/</em><span>projects</span><em>/</em><span>new</span></div>
+    <span class="sp"></span>
+    <button class="act">Cancel</button>
+  </header>
+  <div class="setup" id="setup"></div>
+  <div class="work">
+    <aside class="pane owners" id="owners" aria-label="Accounts"></aside>
+    <section class="pane repos" id="repos" aria-label="Repositories"></section>
+    <aside class="pane plan" id="plan" aria-label="Clone plan"></aside>
+  </div>
+  <footer class="statusbar"><span><kbd>j</kbd><kbd>k</kbd>move</span><span><kbd>/</kbd>filter</span><span><kbd>↵</kbd>clone the picked repository</span><span class="sp"></span><span>agents work on the clone; FlowBoard does every fetch and push</span></footer>
+</div>
+
+<script>
+const ICON = {
+  code: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>',
+  book: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h14v16H6.5A2.5 2.5 0 0 0 4 21.5"/><path d="M8 7h8"/></svg>',
+  pen:  '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  data: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>',
+  branch: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="8" r="2.5"/><path d="M6 8.5v7M18 10.5c0 4-6 3-11 6"/></svg>',
+  folder: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>',
+  check: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.3l3.1 3.1 6.1-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+
+/* What FlowBoard can make and where code can come from. Only the first of each is wired up. */
+const TYPES = [
+  { id: 'software', name: 'Software', icon: ICON.code, text: 'A codebase agents read, change and test. Flows run steps against a clone of the repo.' },
+  { id: 'research', name: 'Research', icon: ICON.book, text: 'Questions answered from sources, with citations kept as artifacts.', soon: true },
+  { id: 'writing', name: 'Writing', icon: ICON.pen, text: 'Docs and long-form text drafted, reviewed and edited by steps.', soon: true },
+  { id: 'data', name: 'Data', icon: ICON.data, text: 'Notebooks and pipelines, checked by running them.', soon: true },
+];
+const SOURCES = [
+  { id: 'github', name: 'GitHub', text: 'github.com, personal accounts and organizations' },
+  { id: 'gitlab', name: 'GitLab', text: 'gitlab.com and self-managed', soon: true },
+  { id: 'bitbucket', name: 'Bitbucket', text: 'Bitbucket Cloud', soon: true },
+  { id: 'azure', name: 'Azure Repos', text: 'Azure DevOps', soon: true },
+  { id: 'local', name: 'A folder on this machine', text: 'a git repository you already cloned', soon: true },
+];
+/* Repos the connected GitHub account can read. `taken`: already a FlowBoard project. `exists`: the default folder is in use. */
+const REPOS = [
+  { owner: 'flowboard', name: 'api', text: 'REST handlers and the board projection', lang: 'TypeScript', pushed: '2 h ago', branch: 'main', mb: 48, objects: 18342, priv: true, check: 'pnpm lint && pnpm test', from: 'package.json + pnpm-lock.yaml' },
+  { owner: 'flowboard', name: 'runner', text: 'Runs one flow step in its sandbox', lang: 'TypeScript', pushed: 'yesterday', branch: 'main', mb: 31, objects: 9021, priv: true, check: 'pnpm test', from: 'package.json + pnpm-lock.yaml' },
+  { owner: 'flowboard', name: 'core', text: 'Engine, flow graph, guards', lang: 'TypeScript', pushed: '5 h ago', branch: 'main', mb: 12, objects: 4410, priv: true, taken: 'Core' },
+  { owner: 'flowboard', name: 'web', text: 'The Next.js app: board, inbox, designer', lang: 'TypeScript', pushed: '3 d ago', branch: 'main', mb: 112, objects: 40211, priv: true, exists: true, check: 'pnpm lint && pnpm test', from: 'package.json + pnpm-lock.yaml' },
+  { owner: 'flowboard', name: 'providers', text: 'Claude Code and OpenCode adapters', lang: 'TypeScript', pushed: '6 d ago', branch: 'main', mb: 9, objects: 3120, priv: false, check: 'pnpm test', from: 'package.json + pnpm-lock.yaml' },
+  { owner: 'flowboard', name: 'docs', text: 'The FlowBoard vault', lang: 'Markdown', pushed: '1 h ago', branch: 'main', mb: 21, objects: 6600, priv: false, check: null },
+  { owner: 'alex', name: 'billing-svc', text: 'Invoices, dunning and the Stripe webhook', lang: 'Go', pushed: '4 d ago', branch: 'trunk', mb: 27, objects: 7702, priv: true, check: 'go vet ./... && go test ./...', from: 'go.mod' },
+  { owner: 'alex', name: 'dotfiles', text: 'zsh, tmux, nvim', lang: 'Shell', pushed: '2 mo ago', branch: 'main', mb: 1, objects: 380, priv: false, check: null },
+  { owner: 'clearcloud-labs', name: 'ingest-pipeline', text: 'Nightly import of partner feeds', lang: 'Python', pushed: '9 d ago', branch: 'develop', mb: 64, objects: 12890, priv: true, check: 'uv run pytest', from: 'pyproject.toml + uv.lock' },
+  { owner: 'clearcloud-labs', name: 'ops-runbooks', text: 'On-call runbooks', lang: 'Markdown', pushed: '1 mo ago', branch: 'main', mb: 3, objects: 900, priv: true, check: null },
+];
+const OWNERS = ['alex', 'flowboard', 'clearcloud-labs'];
+const HOME = '~/FlowBoard/projects';
+
+
+/* Opens mid-flight: Software and GitHub set, connected, flowboard/web picked, whose default folder is taken. */
+const st = { type: 'software', source: 'github', gh: 'connected', owner: 'flowboard', q: '', repo: 'flowboard/web', dest: 'default', custom: '~/code', clone: null };
+const $ = (id) => document.getElementById(id);
+const repo = () => REPOS.find((r) => `${r.owner}/${r.name}` === st.repo);
+const folder = () => (st.dest === 'default' ? `${HOME}/${repo().name}${repo().exists ? '-2' : ''}` : `${st.custom.replace(/\/+$/, '')}/${repo().name}`);
+const destOk = () => st.dest === 'default' || /^(~\/|\/)\S*$/.test(st.custom.trim());
+const visible = () => {
+  const q = st.q.trim().toLowerCase();
+  return REPOS.filter((r) => r.owner === st.owner && (!q || `${r.name} ${r.text} ${r.lang}`.toLowerCase().includes(q)));
+};
+
+function setup() {
+  $('setup').innerHTML = `<div class="seg"><span class="lbl">type</span><div class="segs">${TYPES.map((t) => `<button class="sg" aria-pressed="${st.type === t.id}" ${t.soon ? 'disabled' : ''}>${t.name}</button>`).join('')}</div></div>
+    <div class="seg"><span class="lbl">source</span><div class="segs">${SOURCES.map((s) => `<button class="sg" aria-pressed="${st.source === s.id}" ${s.soon ? 'disabled' : ''}>${s.id === 'local' ? 'Local folder' : s.name}</button>`).join('')}</div></div>`;
+}
+
+function owners() {
+  if (st.gh !== 'connected') return ($('owners').innerHTML = `<div class="ph"><span class="lbl">accounts</span></div><div class="whoami">not connected</div>`);
+  $('owners').innerHTML = `<div class="ph"><span class="lbl">accounts</span></div>
+    ${OWNERS.map((o) => `<button class="ow" data-owner="${o}" aria-current="${st.owner === o}"><span>${o}</span><small>${REPOS.filter((r) => r.owner === o).length}</small></button>`).join('')}
+    <div class="whoami"><span>signed in to GitHub as <b>alex</b></span><button class="link" data-disconnect>use another account</button><span>an org missing here has not granted FlowBoard access</span></div>`;
+}
+
+function repos() {
+  if (st.gh !== 'connected') {
+    const w = st.gh === 'waiting';
+    $('repos').innerHTML = `<div class="connect"><b class="sans" style="font-size:15px">Connect GitHub to see your repositories</b>
+      <p>FlowBoard reads the repositories you can see and pushes the <code>fb/task-*</code> branches it makes when you ask. The token stays in this machine's keychain; agents never get it.</p>
+      <div><button class="act primary" data-connect ${w ? 'disabled' : ''}>${w ? 'Waiting for github.com…' : 'Connect GitHub'}</button></div></div>`;
+    return;
+  }
+  const list = visible();
+  $('repos').innerHTML = `<div class="ph"><span class="lbl">${st.owner}</span><input class="search" id="q" value="${st.q}" placeholder="filter name, description, language" aria-label="Filter repositories" autocomplete="off"></div>
+    <div class="thead lbl"><span>repository</span><span>language</span><span>branch</span><span>pushed</span><span style="text-align:right">size</span></div>
+    <div role="listbox" aria-label="Repositories">${
+      list.map((r) => {
+        const id = `${r.owner}/${r.name}`;
+        return `<button class="tr${r.taken ? ' taken' : ''}" role="option" data-repo="${id}" aria-selected="${st.repo === id}" ${r.taken || st.clone ? 'disabled' : ''}>
+          <span class="nm"><b>${r.name}</b>${r.priv ? '<span class="priv">private</span>' : ''}<small>${r.taken ? `already the project ${r.taken}` : r.text}</small></span>
+          <span class="c">${r.lang}</span><span class="c">${r.branch}</span><span class="c">${r.pushed}</span><span class="c r">${r.mb} MB</span></button>`;
+      }).join('') || `<p class="whoami">Nothing in ${st.owner} matches “${st.q}”.</p>`
+    }</div>`;
+}
+
+/* The plan is what Clone will do, in order; while cloning, each item is marked as it runs. */
+function items() {
+  const r = repo();
+  return [
+    { t: 'Clone', s: `git clone https://github.com/${st.repo}.git ${folder()}` },
+    { t: `Check out ${r.branch}`, s: 'the repo’s default branch, kept as the project’s base branch' },
+    { t: 'Keep .flowboard/ out of commits', s: 'a line in .git/info/exclude; your .gitignore is not touched' },
+    { t: 'Find the check command', s: r.check ? `expected from ${r.from}` : 'no package manifest seen on GitHub; you may need to set one' },
+    { t: `Register ${r.name}`, s: 'default flow delivery · /p/' + r.name },
+  ];
+}
+
+function plan() {
+  if (!st.repo || st.gh !== 'connected') {
+    $('plan').innerHTML = `<div class="ph"><span class="lbl">clone plan</span></div><div class="plan-b"><p class="hint">Pick a repository to see what cloning it will do.</p></div>`;
+    return;
+  }
+  const r = repo();
+  const c = st.clone;
+  const IDLE = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2.6"/></svg>';
+  const mark = (i) => {
+    if (!c) return IDLE;
+    return i < c.at || c.done ? ICON.check : i === c.at ? '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.1" fill="currentColor"/><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".3"/></svg>' : '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2.6"/></svg>';
+  };
+  const its = items();
+  if (c?.done && r.check) its[3].s = `${r.check} (from ${r.from})`;
+  $('plan').innerHTML = `<div class="ph"><span class="lbl">clone plan</span><span class="sp"></span><span class="lbl">${c ? (c.done ? 'done' : 'cloning') : 'nothing done yet'}</span></div>
+    <div class="plan-b">
+      <h2>${r.name}<small>github.com/${st.repo} · about ${r.mb} MB</small></h2>
+      <div><div class="lbl" style="margin-bottom:5px">clone into</div>
+        <div class="dests"><button data-dest="default" aria-pressed="${st.dest === 'default'}" ${c ? 'disabled' : ''}>projects folder</button><button data-dest="custom" aria-pressed="${st.dest === 'custom'}" ${c ? 'disabled' : ''}>somewhere else</button></div>
+        ${st.dest === 'custom' && !c ? `<input class="path" id="custom" value="${st.custom}" style="margin-top:6px" spellcheck="false" aria-label="Parent folder">` : ''}
+        <div class="hint ${r.exists && st.dest === 'default' ? 'warn' : ''}" id="dest-hint">${destHint()}</div></div>
+      <ol class="items">${its.map((it, i) => `<li class="${c ? (i < c.at || c.done ? 'done' : i === c.at ? 'running' : '') : ''}"><span class="m">${mark(i)}</span><span>${it.t}<small>${it.s}</small>${c && i === 0 && c.at === 0 ? `<div class="bar"><i style="width:${c.pct}%"></i></div><small>receiving objects ${Math.round(c.pct)}% · ${Math.round((r.objects * c.pct) / 100)}/${r.objects}</small>` : ''}</span></li>`).join('')}</ol>
+      ${c?.done
+        ? `<div class="ready"><b>${r.name} is a project</b><span class="hint" style="margin:0">${folder()} · ${r.branch}</span><div style="display:flex;gap:8px"><button class="act" data-again>Clone another</button><button class="act primary">Open ${r.name}</button></div></div>`
+        : `<button class="act primary big" data-clone ${c || !destOk() ? 'disabled' : ''}>${c ? 'Cloning…' : `Clone and create ${r.name}`}</button>`}
+    </div>`;
+}
+function destHint() {
+  const r = repo();
+  if (st.dest === 'custom') return destOk() ? `→ ${folder()}` : 'a folder path: absolute, or starting with ~/';
+  return r.exists ? `${HOME}/${r.name} holds another clone, so → ${folder()}` : `→ ${folder()}`;
+}
+
+function render() {
+  setup();
+  owners();
+  repos();
+  plan();
+}
+
+function startClone() {
+  const r = repo();
+  st.clone = { at: 0, pct: 0, done: false };
+  const c = st.clone;
+  const tick = () => {
+    if (st.clone !== c) return;
+    if (c.at === 0) {
+      c.pct = Math.min(100, c.pct + 4 + Math.random() * 7);
+      if (c.pct >= 100) c.at = 1;
+      render();
+      return setTimeout(tick, c.at === 0 ? 140 : 380);
+    }
+    c.at++;
+    if (c.at >= 5) c.done = true;
+    render();
+    if (!c.done) setTimeout(tick, 380);
+  };
+  render();
+  setTimeout(tick, 300);
+}
+
+function move(by) {
+  const list = visible().filter((r) => !r.taken);
+  const i = list.findIndex((r) => `${r.owner}/${r.name}` === st.repo);
+  const next = list[Math.max(0, Math.min(list.length - 1, i + by))];
+  if (next) st.repo = `${next.owner}/${next.name}`;
+  render();
+  document.querySelector('.tr[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b || b.disabled) return;
+  const d = b.dataset;
+  if (d.owner) Object.assign(st, { owner: d.owner, q: '', repo: REPOS.find((r) => r.owner === d.owner && !r.taken) && `${d.owner}/${REPOS.find((r) => r.owner === d.owner && !r.taken).name}` });
+  else if (d.repo) st.repo = d.repo;
+  else if (d.dest) st.dest = d.dest;
+  else if (d.connect !== undefined) (st.gh = 'waiting'), setTimeout(() => ((st.gh = 'connected'), (st.repo = 'flowboard/api'), render()), 1600);
+  else if (d.disconnect !== undefined) Object.assign(st, { gh: 'idle', repo: null });
+  else if (d.clone !== undefined) return startClone();
+  else if (d.again !== undefined) Object.assign(st, { clone: null, repo: null });
+  else return;
+  render();
+  if (d.dest === 'custom') $('custom')?.focus();
+});
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'q') {
+    st.q = e.target.value;
+    repos();
+    const q = $('q');
+    q.focus();
+    q.setSelectionRange(q.value.length, q.value.length);
+  }
+  if (e.target.id === 'custom') {
+    st.custom = e.target.value;
+    $('dest-hint').textContent = destHint();
+    document.querySelector('[data-clone]').disabled = !destOk();
+    document.querySelector('.items small').textContent = items()[0].s;
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.target.matches('input')) {
+    if (e.key === 'Escape') e.target.blur();
+    return;
+  }
+  if (st.clone || st.gh !== 'connected') return;
+  if (e.key === 'j' || e.key === 'ArrowDown') e.preventDefault(), move(1);
+  if (e.key === 'k' || e.key === 'ArrowUp') e.preventDefault(), move(-1);
+  if (e.key === '/') e.preventDefault(), $('q').focus();
+  if (e.key === 'Enter' && st.repo && destOk()) startClone();
+});
+render();
+</script>

@@ -100,6 +100,7 @@ Any other mix of options prints these three lines, the first headed `usage:`, an
 A sandboxed run reads `.flowboard.yaml` in `--folder`, the repo it works in, as it starts; it is meant to be committed with the repo. What a step may use depends on the repo and the machine, not on the recipe, so a flow cannot set these (Alex, 2026-11-10).
 
 ```yaml
+check_command: pnpm lint && pnpm test   # what a step with an empty shell: runs
 sandbox:
   memory_mb: 4096   # every container (Docker) or the box (OpenSandbox); a whole number, 64 or more
   cpus: 2           # 1.5 is a CPU and a half
@@ -107,10 +108,11 @@ sandbox:
 
 | Key | Default | Meaning |
 |---|---|---|
+| `check_command` | none | The project's check: what a shell step whose `shell:` is empty runs (`shell:` or `shell: null`). A run with such a step in a folder whose file sets none is refused: `steps.check.shell: empty, so it runs the project's check_command, and <folder>/.flowboard.yaml sets none`. `--check` without `--folder` has no project, so it passes. The project page sets it (see [[Projects Index]]) |
 | `sandbox.memory_mb` | Docker: a quarter of what `docker info` reports, or no limit when it reports nothing. OpenSandbox: the SDK's 2 GiB | `--memory` on each Docker container, agents' and checks' alike; the box's `memory` under OpenSandbox |
 | `sandbox.cpus` | Docker: no limit. OpenSandbox: the SDK's 1 | `--cpus`; the box's `cpu` |
 
-Any other key, or a wrong value, stops the run before it starts, with exit code 2: `<folder>/.flowboard.yaml: sandbox.memory_mb: Invalid input: expected number, received string`. A run without `sandbox:` does not read the file. The limits are pinned in `flow.json` (`config.sandbox.limits`), so `--resume` keeps them. The terminal says them after the run folder: `-- sandbox limits: 1983 MB of memory (a quarter of Docker's), any CPUs`, with ` (from .flowboard.yaml)` when the file set one. A step killed at its limit ends as `exit code 137: killed by SIGKILL, out of memory most likely (the sandbox's limit is <n> MB; see .flowboard.yaml)` (`cli/src/project.ts`). The limit is per container, so parallel steps at their limit can still fill Docker's memory.
+Any other key, or a wrong value, stops the run before it starts, with exit code 2: `<folder>/.flowboard.yaml: sandbox.memory_mb: Invalid input: expected number, received string`. A run without `sandbox:` reads the file only for an empty `shell:`. The limits are pinned in `flow.json` (`config.sandbox.limits`), so `--resume` keeps them. The terminal says them after the run folder: `-- sandbox limits: 1983 MB of memory (a quarter of Docker's), any CPUs`, with ` (from .flowboard.yaml)` when the file set one. A step killed at its limit ends as `exit code 137: killed by SIGKILL, out of memory most likely (the sandbox's limit is <n> MB; see .flowboard.yaml)` (`cli/src/project.ts`). The limit is per container, so parallel steps at their limit can still fill Docker's memory.
 
 ## Step fields
 
@@ -124,7 +126,7 @@ A step is an **agent step** unless it has `shell`.
 | `produces` | `[]` | no two steps produce one type | Artifact types this step must write. They are listed under *Write your output to:*, each at `<folder>/.flowboard/<run folder name>/<type>.md` |
 | `gate: approval` | none | | A person approves this step's work before the flow moves on, even when the agent reports an outcome. A shell step may have one too |
 | `max_attempts` | `3` | a whole number, 1 or more, on a step a rework edge leads back to | The most attempts rework may give this step (see *Loops*). Every attempt counts: the first run, each rework, and each Retry at a gate other than *run failed*. Only rework is checked against it, so Retries at a verdict gate can make the next rework escalate at once. On any other step it is an error: `steps.review.max_attempts: no rework route leads back to review, so nothing reads it` |
-| `shell` | none | | A command, which makes this a shell step |
+| `shell` | none | | A command, which makes this a shell step. Empty (`shell:`), it runs the project's `check_command` (see *Project file*) |
 | `write_roots` | the folder | each a path inside the folder, relative to it; agent steps only | The only folders this agent step may edit files in, under `--folder`. An absolute path, `~` or `..` is `steps.tests.write_roots.0: must be a path inside the folder, relative to it`. Its artifacts folder is always allowed, so `write_roots: []` leaves it only that |
 | `timeout_minutes` | shell: `30`; agent: none | above 0 | A run that lasts longer is stopped, and waits at a *run failed* gate: `run failed: timed out after <n> minutes`. The clock stops while one of the run's questions waits for a person. Agent steps have no default, since their `limits` bound them |
 
