@@ -2,13 +2,10 @@
  * Settings, and where each one comes from: the app's own (`settings.json` in FlowBoard's data folder), then what a
  * project type sets over them, then the project's overrides (kept on its record, `projects.ts`). What is about the
  * code, the sandbox limits and the check command, is the repo's (`project.ts`); what is about trust, money or this
- * machine is FlowBoard's, here, so a cloned repo can never grant itself any of it.
+ * machine is FlowBoard's, here, so a cloned repo can never grant itself any of it. No Node imports: the pages use
+ * this module too; `app-settings.ts` reads and writes the app's file.
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { z } from 'zod';
-import { isFile, writeJsonFile } from './config.ts';
-import type { Result } from './projects.ts';
 
 export type Trust = 'trusted' | 'normal' | 'untrusted';
 /** `capUsd`: the most the project's runs may spend in a month, null for no cap; `alertAt`: a percent of it. */
@@ -39,6 +36,14 @@ export const PROJECT_TYPES: Record<ProjectTypeId, ProjectType> = {
   writing: { id: 'writing', name: 'Writing', text: 'Docs and long-form text drafted, reviewed and edited by steps.', flows: [], defaults: {}, soon: true },
   data: { id: 'data', name: 'Data', text: 'Notebooks and pipelines, checked by running them.', flows: [], defaults: {}, soon: true },
 };
+
+/** Each trust tier as the pages and the clone log name it. */
+export const TRUST: Record<Trust, { label: string; tier: string; text: string }> = {
+  trusted: { label: 'Trusted', tier: 'on this machine', text: 'No sandbox. Steps may not run unattended outside one, so each asks before it uses a tool.' },
+  normal: { label: 'Normal', tier: 'container', text: 'A throwaway container per step. Only the repo’s folder is writable; only allowed hosts are reachable.' },
+  untrusted: { label: 'Untrusted', tier: 'gVisor', text: 'A container under gVisor, a stronger wall for code nobody has reviewed. Needs a Linux host.' },
+};
+export const trustText = (t: Trust) => `${TRUST[t].label}: ${TRUST[t].tier}`;
 
 export const DEFAULT_PROJECTS_FOLDER = '~/FlowBoard/projects';
 
@@ -84,26 +89,6 @@ export const AppSettingsSchema = z.strictObject({
   budget: budget(cap.nullable()),
   projectsFolder: z.string().trim().regex(FOLDER_RE, { error: FOLDER }).nullable(),
 });
-
-const fileOf = (dataDir: string) => join(dataDir, 'settings.json');
-
-/** The app's settings: the defaults, with what `settings.json` sets over them. */
-export function readAppSettings(dataDir: string): AppSettings {
-  const file = fileOf(dataDir);
-  if (!isFile(file)) return APP_DEFAULTS;
-  // ponytail: a file that does not pass is ignored, as only this module writes it; say so on /settings if hand edits appear
-  const r = AppSettingsSchema.partial().safeParse(JSON.parse(readFileSync(file, 'utf8')));
-  return r.success ? { ...APP_DEFAULTS, ...r.data } : APP_DEFAULTS;
-}
-
-/** Sets the keys given; a key holding an object is replaced whole. 400 with the first rule broken. */
-export function updateAppSettings(dataDir: string, edit: Partial<AppSettings>): Result<AppSettings> {
-  const r = AppSettingsSchema.partial().safeParse(edit);
-  if (!r.success) return { ok: false, status: 400, error: r.error.issues[0].message };
-  const next = { ...readAppSettings(dataDir), ...r.data };
-  writeJsonFile(fileOf(dataDir), next);
-  return { ok: true, value: next };
-}
 
 export type From = 'app' | 'type' | 'project';
 export type Resolved = { [K in SettingKey]: { value: Settings[K]; from: From } };

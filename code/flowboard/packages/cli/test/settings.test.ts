@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { APP_DEFAULTS, OverridesSchema, readAppSettings, resolveSettings, updateAppSettings } from '../src/settings.ts';
+import { readAppSettings, updateAppSettings } from '../src/app-settings.ts';
+import { APP_DEFAULTS, OverridesSchema, resolveSettings } from '../src/settings.ts';
 
 const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'fb-settings-')));
 const value = <T>(r: { ok: true; value: T } | { ok: false; error: string }) => (r.ok ? r.value : assert.fail(r.error));

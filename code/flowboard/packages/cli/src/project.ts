@@ -69,9 +69,12 @@ const LimitsSchema = z.strictObject({
 });
 
 /** Sets `sandbox.memory_mb` and `sandbox.cpus` to the limits given, removing those left out, and `sandbox:` once empty. */
+/** What is wrong with the limits, in the words the pages use; undefined when nothing is. */
+export const limitsError = (limits: Limits) => LimitsSchema.safeParse(limits).error?.issues[0].message;
+
 export function setLimits(folder: string, limits: Limits): { ok: true } | { ok: false; errors: string[] } {
-  const r = LimitsSchema.safeParse(limits);
-  if (!r.success) return { ok: false, errors: [r.error.issues[0].message] };
+  const bad = limitsError(limits);
+  if (bad) return { ok: false, errors: [bad] };
   return editProjectFile(folder, (doc) => {
     for (const [key, v] of [['memory_mb', limits.memoryMb], ['cpus', limits.cpus]] as const) {
       if (v !== undefined) doc.setIn(['sandbox', key], v);
