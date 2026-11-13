@@ -43,7 +43,7 @@ The other sources say the same in their own words:
 
 Since 2026-11-13 a project's trust (*Trusted*, *Normal*, *Untrusted*; [[Project Settings]]) decides where its runs work (`isolation.ts`, `flow-run.ts`). Not built: an egress proxy for Docker boxes, a project budget, a New run form that picks a project (the run's `--folder` finds it).
 
-**A flow never runs without a project.** run-flow refuses a `--folder` that no registered project owns, on real paths, a task worktree under the repo included: `<folder>: not in a FlowBoard project; create one for this repo first`. `--check` and `--mermaid` run nothing and stay project-free.
+**A flow never runs without a project.** run-flow refuses a `--folder` that no registered project owns, on real paths, a task worktree under the repo included: `<folder>: not in a FlowBoard project (none in <data>/projects.json); create one for this repo first`. A repo inside another project's repo is its own project: the innermost owner decides. run-flow reads `FLOWBOARD_DATA_DIR`, else FlowBoard's own `code/flowboard/data/`, wherever it is started from. `--check` and `--mermaid` run nothing and stay project-free.
 
 **The project's tier is the floor.** The flow's own `sandbox:` may keep it or make it stronger (host < docker = opensandbox < gVisor); nothing in a flow or the repo weakens it.
 
@@ -57,6 +57,7 @@ Since 2026-11-13 a project's trust (*Trusted*, *Normal*, *Untrusted*; [[Project 
 - **Normal is refused until its credentials are set.** A container cannot read the macOS keychain, where the `claude` login is, so `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) must be set where FlowBoard runs, and `OPENROUTER_API_KEY` for an OpenCode step on OpenRouter. The image must exist (`docker build -f docker/Dockerfile -t flowboard-cli .`) and Docker be up, or the run is refused with the command. The same holds for any Docker box.
 - **Refusals** are `run-flow` error lines with exit code 2, shown as written by the runs page's New run form. Every run prints `-- isolation: Normal (container), from project <name>`.
 - **Normal's network is open**: agent containers reach the internet and hold real keys, because the egress proxy is not built.
+- **The repo's git dir is read-only in a box.** A Docker box mounts the folder read-write, and the repo's git dir (`git rev-parse --git-common-dir`) read-only over it, so a box cannot plant a hook or `core.fsmonitor` that FlowBoard's own git calls on the machine would run. Flows commit on the machine, never in a box.
 
 ### Approvals in Trusted runs
 

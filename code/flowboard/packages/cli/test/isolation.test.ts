@@ -89,3 +89,15 @@ test('findProject follows links and owns worktrees', () => {
   assert.equal(findProject(data, join(base, 'repo-other')), undefined);
   assert.equal(findProject(data, join(base, 'gone')), undefined);
 });
+
+test('findProject: a repo inside another is its own project, whichever was registered first', () => {
+  const base = realpathSync(mkdtempSync(join(tmpdir(), 'fb-find-')));
+  const inner = join(base, 'outer', 'vendor', 'inner');
+  mkdirSync(inner, { recursive: true });
+  const data = join(base, 'data');
+  mkdirSync(data);
+  const p = (id: string, repoPath: string) => ({ id, name: id, slug: id, repoPath, defaultFlow: null, baseBranch: null, createdAt: '', type: 'software', source: { kind: 'local' }, overrides: {} });
+  writeFileSync(join(data, 'projects.json'), JSON.stringify([p('outer', join(base, 'outer')), p('inner', inner)]));
+  assert.equal(findProject(data, inner)?.id, 'inner');
+  assert.equal(findProject(data, join(base, 'outer', 'vendor'))?.id, 'outer');
+});

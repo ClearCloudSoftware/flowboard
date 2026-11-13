@@ -45,6 +45,7 @@ edges:
   const out: string[] = [];
   const code = await runFlow(['--folder', 'proj', '--task', 'task.md', 'flow.yaml'], {
     cwd: base,
+    dataDir: join(base, 'data'),
     print: (l) => out.push(l),
     printErr: (l) => out.push(l),
     signals: new EventEmitter(),

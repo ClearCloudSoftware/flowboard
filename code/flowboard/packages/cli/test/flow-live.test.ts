@@ -44,7 +44,7 @@ edges:
 `,
   );
   const out: string[] = [];
-  const code = await runFlow(['--folder', 'proj', '--task', 'task.md', 'flow.yaml'], { cwd: base, print: (l) => out.push(l), printErr: (l) => out.push(l), signals: new EventEmitter() });
+  const code = await runFlow(['--folder', 'proj', '--task', 'task.md', 'flow.yaml'], { cwd: base, dataDir: join(base, 'data'), print: (l) => out.push(l), printErr: (l) => out.push(l), signals: new EventEmitter() });
   assert.equal(code, 0, out.join('\n'));
   const [run] = readdirSync(join(base, 'runs'));
   const state = JSON.parse(readFileSync(join(base, 'runs', run, 'state.json'), 'utf8')) as FlowState;

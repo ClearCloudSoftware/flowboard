@@ -6,9 +6,10 @@ import { EventEmitter } from 'node:events';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, FlowState, NormalizedEvent, Question, RunResult, RunSpec } from '@flowboard/core';
-import { hostExecHost, ReplayProvider } from '@flowboard/adapters';
+import { dockerArgs, hostExecHost, ReplayProvider } from '@flowboard/adapters';
 import type { Box } from '@flowboard/adapters';
 import { askBroker } from '@flowboard/ask-user';
 import { processStart } from '../src/flow-exec.ts';
@@ -99,6 +100,7 @@ function setup(yaml = DELIVERY, plays: Record<string, Play[]> = {}) {
   const exits: number[] = [];
   const deps: RunDeps = {
     cwd: base,
+    dataDir: join(base, 'data'),
     makeProvider: script.makeProvider,
     print: (l) => out.push(l),
     printErr: (l) => err.push(l),
@@ -1044,7 +1046,7 @@ test('an artifact a running agent produces is never pushed over its copy in the 
 test('a docker sandbox gives sandbox.env to agents only: a check gets none of it', () => {
   process.env.FB_TEST_TOKEN = 'secret';
   try {
-    const box = sandboxFor({ runtime: 'docker', image: 'x', env: ['FB_TEST_TOKEN'] }, '/art');
+    const box = sandboxFor({ runtime: 'docker', image: 'x', env: ['FB_TEST_TOKEN'] }, '/art', tmpdir());
     assert.deepEqual(box({ online: true }).profile?.env, { FB_TEST_TOKEN: 'secret' });
     assert.deepEqual(box({}).profile?.env, {});
   } finally {
@@ -1073,7 +1075,7 @@ test('a .flowboard.yaml run-flow cannot read stops the run before it starts', as
 });
 
 test('a docker sandbox puts the run\'s limits on every container', () => {
-  const box = sandboxFor({ runtime: 'docker', image: 'x', env: [], limits: { memoryMb: 2048 } }, '/art');
+  const box = sandboxFor({ runtime: 'docker', image: 'x', env: [], limits: { memoryMb: 2048 } }, '/art', tmpdir());
   assert.deepEqual(box({}).profile?.limits, { memoryMb: 2048 });
   assert.deepEqual(box({ online: true }).profile?.limits, { memoryMb: 2048 });
 });
@@ -1114,8 +1116,19 @@ test('refuses a folder outside every project', async () => {
   const { base, err, deps } = setup(SHELL_ONLY);
   registerProject(base, join(base, 'proj'), null);
   assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
-  assert.deepEqual(err, [`${join(base, 'proj')}: not in a FlowBoard project; create one for this repo first`]);
+  assert.deepEqual(err, [`${join(base, 'proj')}: not in a FlowBoard project (none in ${join(base, 'data', 'projects.json')}); create one for this repo first`]);
   assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+test("run-flow reads FlowBoard's own data folder, not data/ where it starts; FLOWBOARD_DATA_DIR still wins", async (t) => {
+  withEnv(t, 'FLOWBOARD_DATA_DIR', undefined);
+  const { base, err, deps } = setup(SHELL_ONLY); // registers proj in <base>/data, where run-flow starts
+  delete deps.dataDir;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  const own = fileURLToPath(new URL('../../../data/projects.json', import.meta.url));
+  assert.deepEqual(err, [`${join(base, 'proj')}: not in a FlowBoard project (none in ${own}); create one for this repo first`]);
+  withEnv(t, 'FLOWBOARD_DATA_DIR', 'data');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, err.join('\n'));
 });
 
 test('--check needs no project', async () => {
@@ -1329,8 +1342,20 @@ test('a resume whose project no longer holds its folder is refused', { timeout: 
   assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: its folder is no longer in its project proj`]);
 });
 
+test("a docker box mounts the repo's git dir read-only over the folder, so host-side git never runs a box's hooks", () => {
+  const repo = realpathSync(mkdtempSync(join(tmpdir(), 'fb-gitdir-')));
+  execFileSync('git', ['init', '-q'], { cwd: repo });
+  const profile = sandboxFor({ runtime: 'docker', image: 'x', env: [] }, '/art', repo)({}).profile!;
+  const gitDir = join(repo, '.git');
+  assert.ok(profile.mounts?.some((m) => m.source === gitDir && m.target === gitDir && m.readOnly), JSON.stringify(profile.mounts));
+  const args = dockerArgs(profile, 'sh', [], repo, []);
+  assert.ok(args.indexOf(`${repo}:${repo}`) < args.indexOf(`${gitDir}:${gitDir}:ro`), args.join(' '));
+  // Not a repo: nothing to mount.
+  assert.deepEqual(sandboxFor({ runtime: 'docker', image: 'x', env: [] }, '/art', tmpdir())({}).profile?.mounts, [{ source: '/art', target: '/art' }]);
+});
+
 test('an untrusted sandbox runs its containers under gVisor', () => {
-  const box = sandboxFor({ runtime: 'docker', image: 'x', env: [], gvisor: true }, '/art');
+  const box = sandboxFor({ runtime: 'docker', image: 'x', env: [], gvisor: true }, '/art', tmpdir());
   assert.equal(box({}).profile?.tier, 'gvisor');
-  assert.equal(sandboxFor({ runtime: 'docker', image: 'x', env: [] }, '/art')({}).profile?.tier, 'container');
+  assert.equal(sandboxFor({ runtime: 'docker', image: 'x', env: [] }, '/art', tmpdir())({}).profile?.tier, 'container');
 });

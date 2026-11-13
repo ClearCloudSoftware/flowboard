@@ -34,7 +34,10 @@ export const IsolationSchema = z.strictObject({
 /** The image `docker/Dockerfile` builds: a flow without its own `sandbox:` runs in it. */
 const IMAGE = 'flowboard-cli';
 
-/** The project whose repo holds `folder`, a link or a task worktree under it included. */
+/**
+ * The project whose repo holds `folder`, a link or a task worktree under it included. A repo inside another
+ * project's is its own project: the innermost owner wins, so the outer one's weaker trust never applies to it.
+ */
 export function findProject(dataDir: string, folder: string): Project | undefined {
   let real: string;
   try {
@@ -42,7 +45,9 @@ export function findProject(dataDir: string, folder: string): Project | undefine
   } catch {
     return undefined; // gone
   }
-  return readProjects(dataDir).find((p) => owns(p, real));
+  return readProjects(dataDir)
+    .filter((p) => owns(p, real))
+    .reduce<Project | undefined>((best, p) => (best && best.repoPath.length >= p.repoPath.length ? best : p), undefined);
 }
 
 /**

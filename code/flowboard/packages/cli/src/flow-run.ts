@@ -6,6 +6,7 @@
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual, parseArgs } from 'node:util';
 import { z } from 'zod';
 import { connectBox, dockerExecHost, excludeFlowboard, openBox } from '@flowboard/adapters';
@@ -127,7 +128,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
   if (loaded.ok && !v.check && !v.mermaid) {
     const { folder, sandbox, steps } = loaded.config;
     const project = findProject(dataDir, folder);
-    const r = project ? isolate(project, sandbox, steps, dataDir, deps) : { refused: [`${folder}: not in a FlowBoard project; create one for this repo first`] };
+    const r = project ? isolate(project, sandbox, steps, dataDir, deps) : { refused: [`${folder}: not in a FlowBoard project (none in ${join(dataDir, 'projects.json')}); create one for this repo first`] };
     if ('refused' in r) {
       r.refused.forEach((l) => printErr(l));
       return 2;
@@ -279,8 +280,10 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
   }
 }
 
-/** FlowBoard's data folder: FLOWBOARD_DATA_DIR, else `data/` where run-flow starts, as the app, which starts it, has it. */
-const dataDirOf = (deps: RunDeps) => deps.dataDir ?? (process.env.FLOWBOARD_DATA_DIR ? resolve(deps.cwd, process.env.FLOWBOARD_DATA_DIR) : join(deps.cwd, 'data'));
+/** FlowBoard's own data folder, `code/flowboard/data`, wherever run-flow is started from. */
+const OWN_DATA = fileURLToPath(new URL('../../../data', import.meta.url));
+/** FlowBoard's data folder: FLOWBOARD_DATA_DIR, else its own, as the app has it. */
+const dataDirOf = (deps: RunDeps) => deps.dataDir ?? (process.env.FLOWBOARD_DATA_DIR ? resolve(deps.cwd, process.env.FLOWBOARD_DATA_DIR) : OWN_DATA);
 
 /** A run's isolation, decided as it starts: the sandbox it gets and the line saying so. */
 interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string }
@@ -616,20 +619,32 @@ export function pushable(artifactsDir: string, producing: Set<string>): string[]
 /** How long an OpenSandbox box lives unattended: a paused flow keeps its box for --resume this long. */
 const BOX_SECONDS = 86_400;
 
-/** Each step's box: the folder (its cwd) and the artifacts read-write, `mounts` read-only; only agents go online. */
-export const sandboxFor = (sb: Extract<Sandbox, { runtime: 'docker' }>, artifactsDir: string): NonNullable<ExecContext['sandbox']> => ({ online, tmpDir, mounts = [] }) =>
-  dockerExecHost(
+/** The git dir of the repo holding `folder` (a worktree's included), or undefined when it is in none. */
+function gitCommonDir(folder: string): string | undefined {
+  const r = spawnSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], { cwd: folder, encoding: 'utf8' });
+  return r.status === 0 ? r.stdout.trim() : undefined;
+}
+
+/**
+ * Each step's box: the folder (its cwd) and the artifacts read-write, `mounts` read-only; only agents go online.
+ * The repo's git dir is mounted read-only over the folder: FlowBoard's own git calls on this machine would run a
+ * hook or `core.fsmonitor` a box wrote there. Flows commit on the host (workspace-git.ts), never in a box.
+ */
+export const sandboxFor = (sb: Extract<Sandbox, { runtime: 'docker' }>, artifactsDir: string, folder: string): NonNullable<ExecContext['sandbox']> => {
+  const git = gitCommonDir(folder);
+  return ({ online, tmpDir, mounts = [] }) => dockerExecHost(
     {
       tier: sb.gvisor ? 'gvisor' : 'container',
       image: sb.image,
       egressAllow: online ? ['*'] : [],
       ...(sb.limits && { limits: sb.limits }),
-      mounts: [{ source: artifactsDir, target: artifactsDir }, ...mounts.map((m) => ({ source: m, target: m, readOnly: true }))],
+      mounts: [{ source: artifactsDir, target: artifactsDir }, ...[...mounts, ...(git ? [git] : [])].map((m) => ({ source: m, target: m, readOnly: true }))],
       // sandbox.env is for the agents; a check gets none of it, only what run-flow sets (FLOWBOARD_*)
       env: online ? Object.fromEntries(sb.env.flatMap((k) => (process.env[k] === undefined ? [] : [[k, process.env[k]!]]))) : {},
     },
     { ...(tmpDir && { tmpDir }) },
   );
+};
 
 interface Drive {
   config: FlowConfig;
@@ -699,7 +714,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     answer: noTerminal,
     onInterrupt: () => interrupt(), // Ctrl+C at an agent's question
     temps,
-    ...(config.sandbox?.runtime === 'docker' && { sandbox: sandboxFor(config.sandbox, d.artifactsDir) }),
+    ...(config.sandbox?.runtime === 'docker' && { sandbox: sandboxFor(config.sandbox, d.artifactsDir, config.folder) }),
     ...(d.box && {
       sandbox: ({ tmpDir, mounts }) => d.box!.exec({ ...(tmpDir && { tmpDir }), ...(mounts && { mounts }), push: () => pushable(d.artifactsDir, producing) }),
       pull: (files) => d.box!.pullFiles(files),
