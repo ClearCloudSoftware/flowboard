@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Play, Trash2 } from 'lucide-react';
+import { Play, Trash2, X } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +24,7 @@ import { Label } from '@/components/ui/label';
 import { libraryQuery } from '../flows/api.ts';
 import { LIVE, runsQuery } from '../runs/api.ts';
 import type { RunStatus } from '../runs/api.ts';
-import { PROJECT_TYPES, resolveSettings } from '../../packages/cli/src/settings.ts';
+import { PROJECT_TYPES, resolveSettings, ruleText } from '../../packages/cli/src/settings.ts';
 import { appSettingsQuery, inProject, newRunHref, projectsQuery, removeProject, updateProject, usd } from './api.ts';
 import type { ProjectView } from './api.ts';
 import { FlowSelect } from './flow-select.tsx';
@@ -195,6 +195,41 @@ function ProjectSettings({ p }: { p: ProjectView }) {
   );
 }
 
+/** What "Allow from now on" saved on a Trusted project; removing a rule means the agent asks again. */
+function Approvals({ p }: { p: ProjectView }) {
+  const queryClient = useQueryClient();
+  const rules = p.approvals ?? [];
+  const drop = useMutation({
+    mutationFn: (i: number) => updateProject(p.id, { approvals: rules.filter((_, j) => j !== i) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
+  });
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className={lbl}>allowed from now on</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-3">
+        <ul className="border border-border bg-card">
+          {rules.map((r, i) => (
+            <li key={ruleText(r)} className="flex items-center justify-between gap-3 border-b border-border px-3 py-2 last:border-b-0">
+              <span>{ruleText(r)}</span>
+              <Button variant="ghost" size="icon-sm" aria-label={`Remove ${ruleText(r)}`} disabled={drop.isPending} onClick={() => drop.mutate(i)}>
+                <X aria-hidden />
+              </Button>
+            </li>
+          ))}
+        </ul>
+        {drop.error && (
+          <p role="alert" className="text-xs text-fail">
+            {drop.error.message}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground">Agents in this project run these without asking.</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function Remove({ p, live }: { p: ProjectView; live: number }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -327,6 +362,7 @@ export function ProjectPage() {
                 )}
               </section>
             </div>
+            {!!p.approvals?.length && <Approvals p={p} />}
             <ProjectSettings key={JSON.stringify([p.overrides, p.limits])} p={p} />
           </>
         )}

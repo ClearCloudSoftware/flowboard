@@ -126,9 +126,9 @@ export function problems(d: Draft, ctx: Ctx, mode: Mode = 'project') {
 
   const warns: { page: PageId; text: string; caution?: true }[] = [];
   const trust = effective(d, ctx, 'trust', mode);
-  if (trust === 'trusted') warns.push({ page: 'sandbox', text: `With no sandbox, ${ctx.flows.join(' and ') || 'flows'} stop at every tool use for you to allow it; nothing runs unattended.` });
+  if (trust === 'trusted') warns.push({ page: 'sandbox', text: `With no sandbox, agents in ${ctx.flows.join(' and ') || 'flows'} stop before each file edit and shell command until you allow it.` });
   if (trust === 'untrusted' && ctx.os !== 'linux')
-    warns.push({ page: 'sandbox', text: `gVisor runs on Linux only; on this ${ctx.os === 'darwin' ? 'Mac' : 'machine'}, FlowBoard uses a container until you run it on a Linux host.` });
+    warns.push({ page: 'sandbox', text: `gVisor runs on Linux only; on this ${ctx.os === 'darwin' ? 'Mac' : 'machine'}, every run of this project is refused.` });
   const kn = effective(d, ctx, 'knowledge', mode);
   if (kn.graphify) {
     const cap = effective(d, ctx, 'budget', mode).capUsd;

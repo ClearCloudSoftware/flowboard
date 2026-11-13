@@ -123,7 +123,7 @@ const PAGES: Record<Exclude<PageId, 'overview'>, (p: PageProps) => ReactNode> = 
   sandbox: (p) => (
     <>
       <Sets>
-        <Setting k="trust" title="Isolation" p={p} footnote={NOT_YET}>
+        <Setting k="trust" title="Isolation" p={p}>
           <Seg label="Isolation" value={p.draft.v.trust} options={{ trusted: `${TRUST.trusted.label} · ${TRUST.trusted.tier}`, normal: `${TRUST.normal.label} · ${TRUST.normal.tier}`, untrusted: `${TRUST.untrusted.label} · ${TRUST.untrusted.tier}` }} onPick={(trust) => set(p, { trust })} />
           <p className={desc}>{TRUST[p.draft.v.trust].text}</p>
         </Setting>

@@ -7,6 +7,10 @@
  */
 import { z } from 'zod';
 
+/** What "Allow from now on" saves on a project (`approvals.ts` matches calls against it): every file edit, or commands starting with `prefix`. */
+export type ApprovalRule = { kind: 'edit' } | { kind: 'shell'; prefix: string };
+export const ruleText = (r: ApprovalRule) => (r.kind === 'edit' ? 'every file edit' : `commands starting "${r.prefix}"`);
+
 export type Trust = 'trusted' | 'normal' | 'untrusted';
 /** `capUsd`: the most the project's runs may spend in a month, null for no cap; `alertAt`: a percent of it. */
 export interface Budget { capUsd: number | null; alertAt: number; onLimit: 'pause' | 'ask' }
@@ -48,9 +52,9 @@ export const PROJECT_TYPES: Record<ProjectTypeId, ProjectType> = {
 
 /** Each trust tier as the pages and the clone log name it. */
 export const TRUST: Record<Trust, { label: string; tier: string; text: string }> = {
-  trusted: { label: 'Trusted', tier: 'on this machine', text: 'No sandbox. Steps may not run unattended outside one, so each asks before it uses a tool.' },
-  normal: { label: 'Normal', tier: 'container', text: 'A throwaway container per step. Only the repo’s folder is writable; only allowed hosts are reachable.' },
-  untrusted: { label: 'Untrusted', tier: 'gVisor', text: 'A container under gVisor, a stronger wall for code nobody has reviewed. Needs a Linux host.' },
+  trusted: { label: 'Trusted', tier: 'on this machine', text: 'No sandbox. Agents ask before each file edit and shell command; “Allow from now on” keeps the answer for this project.' },
+  normal: { label: 'Normal', tier: 'container', text: 'A throwaway container per step. Only the repo’s folder is writable. Agents can still reach the internet until the egress proxy is built.' },
+  untrusted: { label: 'Untrusted', tier: 'gVisor', text: 'A container under gVisor, a stronger wall for code nobody has reviewed. Needs a Linux host with gVisor; anywhere else, runs are refused.' },
 };
 export const trustText = (t: Trust) => `${TRUST[t].label}: ${TRUST[t].tier}`;
 

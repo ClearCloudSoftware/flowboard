@@ -44,10 +44,10 @@ test('warnings: no sandbox, gVisor off Linux, graphify’s cost, no maps', () =>
   const texts = (d: ReturnType<typeof fresh>, c = ctx()) => problems(d, c).warns.map((w) => w.text);
   const untrusted = toggle(fresh(), 'trust', true, base);
   untrusted.v.trust = 'untrusted';
-  assert.ok(texts(untrusted).includes('gVisor runs on Linux only; on this Mac, FlowBoard uses a container until you run it on a Linux host.'));
+  assert.ok(texts(untrusted).includes('gVisor runs on Linux only; on this Mac, every run of this project is refused.'));
   assert.ok(!texts(untrusted, ctx({ os: 'linux' })).some((t) => t.startsWith('gVisor')));
   const trusted = { ...untrusted, v: { ...untrusted.v, trust: 'trusted' as const } };
-  assert.ok(texts(trusted).includes('With no sandbox, delivery and review-loop stop at every tool use for you to allow it; nothing runs unattended.'));
+  assert.ok(texts(trusted).includes('With no sandbox, agents in delivery and review-loop stop before each file edit and shell command until you allow it.'));
   const graphify = problems(fresh(), ctx()).warns.find((w) => w.page === 'knowledge');
   assert.equal(graphify?.caution, true);
   assert.match(graphify!.text, /about \$0\.38 a rebuild, on every move of main, and the project has no budget cap to stop it/);

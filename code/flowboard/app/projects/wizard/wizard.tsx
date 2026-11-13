@@ -133,7 +133,7 @@ export function Wizard({ onClose }: { onClose: () => void }) {
               <b className="font-sans text-sm font-semibold">{t.name}</b>
               {t.soon ? <span className={soonCls}>coming soon</span> : <span />}
               <p className="col-span-2 col-start-2 m-0 font-sans text-xs text-[var(--ink-2)]">{t.text}</p>
-              {!t.soon && <span className="col-span-2 col-start-2 text-[11px] text-muted-foreground">flows: {t.flows.join(', ')} · sandboxed in a container</span>}
+              {!t.soon && <span className="col-span-2 col-start-2 text-[11px] text-muted-foreground">flows: {t.flows.join(', ')}</span>}
             </button>
           );
         })}

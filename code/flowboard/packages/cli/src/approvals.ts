@@ -9,8 +9,9 @@ import type { Answers, ApprovalCall, Question } from '@flowboard/core';
 import { z } from 'zod';
 import { inside } from './flow-config.ts';
 import { addApproval, readProjects } from './projects.ts';
+import { type ApprovalRule, ruleText } from './settings.ts';
 
-export type ApprovalRule = { kind: 'edit' } | { kind: 'shell'; prefix: string };
+export { type ApprovalRule, ruleText };
 
 const CHAINED = /[;&|<>$`()\\\n]/;
 
@@ -48,8 +49,6 @@ export function allowedBy(rules: ApprovalRule[], call: ApprovalCall): ApprovalRu
   const cmd = words.join(' ');
   return rules.find((r) => r.kind === 'shell' && (cmd === r.prefix || cmd.startsWith(r.prefix + ' ')));
 }
-
-export const ruleText = (r: ApprovalRule) => (r.kind === 'edit' ? 'every file edit' : `commands starting "${r.prefix}"`);
 
 /**
  * run-flow's answer to an agent's edit or shell command in a Trusted run: a saved rule allows it at once, else the
