@@ -169,7 +169,7 @@ function ProjectSettings({ p }: { p: ProjectView }) {
   const dirty = JSON.stringify(toOverrides(draft)) !== JSON.stringify(p.overrides) || JSON.stringify(toLimits(draft)) !== JSON.stringify(p.limits);
   const ok = problems(draft, ctx).ok;
   return (
-    <Card>
+    <Card id="project-settings">
       <CardHeader>
         <CardTitle className={lbl}>project settings</CardTitle>
       </CardHeader>
