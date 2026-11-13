@@ -1,9 +1,6 @@
-import type { Metadata } from 'next';
-import { ConnectionsPage } from '../settings.tsx';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = { title: 'Connections · Settings · FlowBoard' };
-
-/** `/settings/connections`: the services FlowBoard reaches, through the logins this machine already has. */
+/** `/settings/connections`: its first page. */
 export default function Page() {
-  return <ConnectionsPage />;
+  redirect('/settings/connections/repositories');
 }

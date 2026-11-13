@@ -1,7 +1,7 @@
 'use client';
-/** The app settings sections: General, Connections and Defaults; Agents is `agents.tsx`. Each loads /api/settings. */
+/** The app settings sections: General, the three Connections pages and Defaults; Agents is `agents.tsx`. Each loads /api/settings. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FolderGit2, GitBranch, MessageSquare } from 'lucide-react';
+import { Bell, CircleDot, FileText, FolderGit2, GitBranch, ListTodo, type LucideIcon, Mail, MessageSquare, Webhook } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -107,7 +107,7 @@ function GitHub({ view }: { view: AppView }) {
   const sw = useMutation({ mutationFn: switchAccount, onSuccess: recheck });
   const gh = view.github;
   return (
-    <Row icon={<FolderGit2 className="size-5" strokeWidth={1.75} />} name="GitHub" text="Repositories to clone, fetch and push, through the GitHub CLI's login. FlowBoard keeps no token of its own, and agents never see one.">
+    <Row icon={icon(FolderGit2)} name="GitHub" text="Repositories to clone, fetch and push, through the GitHub CLI's login. FlowBoard keeps no token of its own, and agents never see one.">
       <div className="grid gap-2 font-sans text-[13px]">
         {gh.state === 'connected' ? (
           <>
@@ -148,27 +148,66 @@ function GitHub({ view }: { view: AppView }) {
 }
 
 const ul = 'm-0 list-none border border-border bg-card p-0';
+const icon = (I: LucideIcon) => <I className="size-5" strokeWidth={1.75} />;
 
-export function ConnectionsPage() {
-  const hosts = SOURCES.filter((s) => s.soon && s.id !== 'local');
+/** Connections not built yet, as rows. */
+const Soon = ({ items }: { items: { id: string; name: string; text: string; icon: LucideIcon }[] }) =>
+  items.map((s) => <Row key={s.id} icon={icon(s.icon)} name={s.name} text={s.text} soon />);
+
+export function RepositoriesPage() {
+  const view = useQuery(appSettingsQuery);
+  const hosts = SOURCES.filter((s) => s.soon && s.id !== 'local').map((s) => ({ ...s, icon: GitBranch }));
   return (
     <>
-      <Head title="Connections">The services FlowBoard reaches, each through a login this machine already has.</Head>
-      <section className="grid gap-2">
-        <h3 className="m-0 font-sans text-sm font-semibold">Repository hosts</h3>
-        <ul className={ul}>
-          <WithView>{(view) => <GitHub view={view} />}</WithView>
-          {hosts.map((s) => (
-            <Row key={s.id} icon={<GitBranch className="size-5" strokeWidth={1.75} />} name={s.name} text={s.text} soon />
-          ))}
-        </ul>
-      </section>
-      <section className="grid gap-2">
-        <h3 className="m-0 font-sans text-sm font-semibold">Chat</h3>
-        <ul className={ul}>
-          <Row icon={<MessageSquare className="size-5" strokeWidth={1.75} />} name="Slack" text="Where a question nobody answered in FlowBoard is posted, to the channel a project's escalation names." soon />
-        </ul>
-      </section>
+      <Head title="Source repositories">Where projects are cloned from, and pushed back to, through a login this machine already has.</Head>
+      <ul className={ul}>
+        {view.data ? (
+          <GitHub view={view.data} />
+        ) : (
+          <Row icon={icon(FolderGit2)} name="GitHub" text={view.isError ? view.error.message : 'Checking the GitHub CLI…'} />
+        )}
+        <Soon items={hosts} />
+      </ul>
+    </>
+  );
+}
+
+// Intake And Import's TaskSource adapters: markdown first, the rest later (Future Task Sources).
+const TASK_PROVIDERS = [
+  { id: 'markdown', name: 'Markdown backlog', text: 'A backlog file in a repo, imported as tasks; importing again updates them rather than adding copies.', icon: FileText },
+  { id: 'github', name: 'GitHub Issues', text: "A repository's issues as tasks, through the same GitHub CLI login as the repositories.", icon: CircleDot },
+  { id: 'linear', name: 'Linear', text: "A team's issues as tasks.", icon: ListTodo },
+  { id: 'jira', name: 'Jira', text: "A project's issues as tasks.", icon: ListTodo },
+  { id: 'webhook', name: 'Webhook', text: 'Any tool that can post JSON to FlowBoard creates a task.', icon: Webhook },
+];
+
+export function TaskProvidersPage() {
+  return (
+    <>
+      <Head title="Task providers">Where tasks come from, besides creating them by hand.</Head>
+      <ul className={ul}>
+        <Soon items={TASK_PROVIDERS} />
+      </ul>
+    </>
+  );
+}
+
+// Escalation And Notifications' Notifier adapters: Slack first (it answers in place), the rest later (Notification Channels).
+const CHANNELS = [
+  { id: 'slack', name: 'Slack', text: "A question nobody answered in FlowBoard is posted to the channel a project's escalation names, and can be answered there.", icon: MessageSquare },
+  { id: 'discord', name: 'Discord', text: 'The same, in a Discord channel, answered in place.', icon: MessageSquare },
+  { id: 'email', name: 'Email', text: 'A link to the question in the inbox; the answer is given in FlowBoard.', icon: Mail },
+  { id: 'webhook', name: 'Webhook', text: 'The question posted as JSON to a URL, with a link back to the inbox.', icon: Webhook },
+  { id: 'desktop', name: 'Desktop', text: 'A notification on this machine.', icon: Bell },
+];
+
+export function EscalationChannelsPage() {
+  return (
+    <>
+      <Head title="Escalation channels">Where a question that waited too long reaches you. Each project picks its channel and how long to wait, under Defaults or its own settings.</Head>
+      <ul className={ul}>
+        <Soon items={CHANNELS} />
+      </ul>
     </>
   );
 }
