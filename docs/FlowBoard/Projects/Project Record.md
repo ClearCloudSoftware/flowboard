@@ -41,7 +41,7 @@ Read from the PRD schema and the absence of any later source adding them:
 - No **status** or archive flag (flows have `is_archived`; projects do not).
 - No **owner**, members or access list. See [[Project Visibility]].
 - No **base branch**, **remote URL** or default branch. See [[Project Repository]].
-- No per-project **sandbox tier**, **budget**, **model** or **memory** setting. Those live globally in `settings` or per step. See [[Repository Trust And Sandboxing]].
+- The **sandbox tier** is per project (*repo trust*, built 2026-11-13: [[Repository Trust And Sandboxing#Built]]). No per-project **budget**, **model** or **memory** setting is acted on yet; those live globally in `settings` or per step.
 - No **updated_at**.
 
 > [!note] The feature map's tagline

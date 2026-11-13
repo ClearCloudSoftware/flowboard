@@ -3,7 +3,16 @@
 Three ways. Only the third keeps agents' edits and keys off this machine and their network to an allowlist; the
 first two have no egress proxy, so agents' keys are inside their box.
 
-## 1. Every step in its own container: `sandbox:`
+Which one a run gets starts with its project's isolation setting (Trusted, Normal, Untrusted): a flow's `sandbox:`
+may only keep it or make it stronger. A **Normal** project's flow with no `sandbox:` runs as in way 1 with the
+image `flowboard-cli` and `env` the agents' credentials; **Untrusted** is the same under gVisor (`--runtime runsc`;
+refused where Docker has no `runsc`, macOS included) and passes only the agents' credentials, never a flow's
+`sandbox.env`. Build the image first (below); run-flow refuses a Normal or Untrusted run until it exists, Docker is
+up, and the agents' tokens are set (`CLAUDE_CODE_OAUTH_TOKEN`, see Auth) in the environment FlowBoard runs in.
+A **Trusted** project runs on this machine, with approvals, unless the flow sets `sandbox:`. A folder no project
+owns is refused. Ways 2 and 3 are not chosen by a project.
+
+## 1. Every step in its own container: `sandbox:`, or a Normal or Untrusted project
 
 ```yaml
 budget_usd: 1

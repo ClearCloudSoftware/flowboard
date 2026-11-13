@@ -93,7 +93,7 @@ Any other mix of options prints these three lines, the first headed `usage:`, an
 | `defaults` | no | none | Any `run-agent` key except `folder`, applied to every agent step. A step's own key replaces the default whole: a step with `limits: { max_turns: 5 }` drops a default `budget_usd` |
 | `steps` | yes | | A mapping of step name to step; at least one |
 | `edges` | no | `[]` | The routes between steps, in the order written (see *Edges, loops and joins*) |
-| `sandbox` | no | none: steps run on the host | Where steps run: `runtime` (`docker`, the default, or `opensandbox`), `image` (required), `env` (Docker only), `egress` and `credentials` (OpenSandbox only). It is the flow's; a step has no `sandbox` key. Memory and CPU limits are not here: they are the project's (see *Project file*). See [[OpenSandbox Runtime]] |
+| `sandbox` | no | the project's: the machine for a Trusted one, a `flowboard-cli` container for Normal or Untrusted (under gVisor) | Where steps run, at least as strong as the project's trust gives ([[Repository Trust And Sandboxing#Built]]): `runtime` (`docker`, the default, or `opensandbox`), `image` (required), `env` (Docker only), `egress` and `credentials` (OpenSandbox only). It is the flow's; a step has no `sandbox` key. Memory and CPU limits are not here: they are the project's (see *Project file*). See [[OpenSandbox Runtime]] |
 
 ## Project file
 

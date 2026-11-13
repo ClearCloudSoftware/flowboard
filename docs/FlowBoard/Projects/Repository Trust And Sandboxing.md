@@ -5,7 +5,7 @@ module: Projects
 
 # Repository Trust And Sandboxing
 
-Agents read the project's repo, and the repo is untrusted input. The sandboxing design picks an isolation tier by **how far you trust the repo**, yet no project field records that trust.
+Agents read the project's repo, and the repo is untrusted input. The sandboxing design picks an isolation tier by **how far you trust the repo**; since 2026-11-13 the project record's trust field decides it ([[#Built]]).
 
 ## Why the repo matters
 
@@ -37,7 +37,46 @@ The other sources say the same in their own words:
 | Feature map §10 | *"From "no box" (fast, for work you trust) up to strong isolation for untrusted code. You pick based on how much you trust what the agent will read."* |
 
 > [!question] Where does "per repo" live?
-> The tier is configured as *"a `sandbox_profile` in `settings` (tier, image, egress allowlist, limits), overridable per step"* (PRD §11.1), with an optional `step_defs.sandbox_profile` (backlog Story 1.1). Nothing is per project, though only D8 says *"per untrusted repo"*; `08` says *"opt-in for untrusted repos"* and allows *"an explicit trusted-repo opt-out"*, D7 *"a trusted opt-out"*, and PRD §11.1 reserves gVisor/microVM *"for untrusted repos"*. **Proposal:** a nullable `projects.sandbox_profile` that overrides the global default and is overridden by the step. See [[Projects Open Questions]] #16 and [[Sandboxing Open Questions]] #5.
+> The tier is configured as *"a `sandbox_profile` in `settings` (tier, image, egress allowlist, limits), overridable per step"* (PRD §11.1), with an optional `step_defs.sandbox_profile` (backlog Story 1.1). Nothing is per project, though only D8 says *"per untrusted repo"*; `08` says *"opt-in for untrusted repos"* and allows *"an explicit trusted-repo opt-out"*, D7 *"a trusted opt-out"*, and PRD §11.1 reserves gVisor/microVM *"for untrusted repos"*. **Proposal:** a nullable `projects.sandbox_profile` that overrides the global default and is overridden by the step. See [[Projects Open Questions]] #16 and [[Sandboxing Open Questions]] #5. Answered 2026-11-13: per project, and the project's tier is the floor ([[#Built]]).
+
+## Built
+
+Since 2026-11-13 a project's trust (*Trusted*, *Normal*, *Untrusted*; [[Project Settings]]) decides where its runs work (`isolation.ts`, `flow-run.ts`). Not built: an egress proxy for Docker boxes, a project budget, a New run form that picks a project (the run's `--folder` finds it).
+
+**A flow never runs without a project.** run-flow refuses a `--folder` that no registered project owns, on real paths, a task worktree under the repo included: `<folder>: not in a FlowBoard project; create one for this repo first`. `--check` and `--mermaid` run nothing and stay project-free.
+
+**The project's tier is the floor.** The flow's own `sandbox:` may keep it or make it stronger (host < docker = opensandbox < gVisor); nothing in a flow or the repo weakens it.
+
+| Trust | Flow has no `sandbox:` | Flow has `sandbox:` |
+|---|---|---|
+| Trusted | The machine (`host`); agents ask before edits and shell commands | The flow's box, no asking |
+| Normal | Docker `flowboard-cli`, `env` the credentials the agents need | The flow's box |
+| Untrusted | Docker under gVisor (`--runtime runsc`), `flowboard-cli` | A `docker` flow: its image under gVisor. `opensandbox`: refused, *"Untrusted runs need gVisor; this flow's OpenSandbox box is not gVisor"* |
+
+- **Untrusted without gVisor is refused**, macOS included, with no container fallback: *"Untrusted runs need gVisor, and this machine's Docker has no runsc runtime; set the project to Normal, or run it on a Linux host with gVisor"*. An Untrusted box gets only the agents' credentials, never the flow's `sandbox.env`.
+- **Normal is refused until its credentials are set.** A container cannot read the macOS keychain, where the `claude` login is, so `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) must be set where FlowBoard runs, and `OPENROUTER_API_KEY` for an OpenCode step on OpenRouter. The image must exist (`docker build -f docker/Dockerfile -t flowboard-cli .`) and Docker be up, or the run is refused with the command. The same holds for any Docker box.
+- **Refusals** are `run-flow` error lines with exit code 2, shown as written by the runs page's New run form. Every run prints `-- isolation: Normal (container), from project <name>`.
+- **Normal's network is open**: agent containers reach the internet and hold real keys, because the egress proxy is not built.
+
+### Approvals in Trusted runs
+
+An agent's file edit or shell command is held until you answer: **Allow**, **Allow from now on** or **Deny**. Reads, searches and FlowBoard's own tools pass.
+
+- **Where asked:** Claude Code through a `PreToolUse` hook (Claude's `Monitor` tool counts as a shell command; a `Monitor` with no command is denied); OpenCode through its permission requests (`apply_patch` over several files asks per file, all must be allowed). The question reaches the terminal or the runs page like an `ask_user`.
+- **Fails closed:** an ask that fails (the run stopped, nobody to answer) is a no, as is an edit or shell call whose path or command is not a string.
+- **Only what the policy already allows:** an approval never grants more than the step's tool policy and guards. On Claude, a command the allow list refuses is still asked, then refused.
+- **Shell steps never ask**, the flow's or the project's check command: they are the recipe's and the project's, not an agent's choice. Only agent steps ask.
+- **Allow from now on** saves a rule on the project record (`approvals` in `data/projects.json`): all file edits, or a shell *prefix*, the command's first word plus its second unless that starts with `-` (`pnpm test --filter x` saves `pnpm test`). The project page lists the rules, each removable. Rules are read fresh at every call. A command holding `` ; & | < > $ ` ( ) \ `` or a newline never matches a rule and cannot be saved as one. Neither can a command that runs another command: shells, `env`, `sudo`, `node`, `python`, `find`, `pnpm exec` and the like; every word of a saved prefix must be plain (letters, digits, `.`, `_`, `-`; no paths or `NAME=value`). Those can be allowed once, with the help line *"This command can run other commands, so it can only be allowed once."*
+
+### Decisions open to Alex's review (2026-11-13)
+
+1. Normal with no `sandbox:` runs in `flowboard-cli`, which needs the token above, so a Normal project's runs are refused until it is set.
+2. Untrusted with an OpenSandbox flow is refused: its box is not gVisor.
+3. Shell steps never ask, even in Trusted.
+4. An approval gates only what the tool policy allows; a command the Claude allow list refuses is still asked first (ceiling: match `toolPolicy.allow` before asking).
+5. A saved shell prefix is as above, and a runner is never saved (the plan allowed `node` or `bash` prefixes; a rule for one would allow anything).
+6. Isolation is decided as the run starts and pinned in `flow.json` (`config.isolation`). `--resume` does not keep the pin: it finds the project by the pinned folder, works the tier out again from the project's current trust and the pinned flow `sandbox:`, and refuses if the project is gone, the folder left it, or the result differs from the pin: *"its project's isolation changed since it started, or its flow.json was edited; start the flow again"*. A paused run whose project's trust changed must be started again. The plan said the pin was kept; a pin an agent can edit would otherwise lower the tier.
+7. The app passes its data folder to `run-flow` as `FLOWBOARD_DATA_DIR` (starting a run and resuming one), so run-flow and the app read the same `projects.json`.
 
 ## The git boundary
 

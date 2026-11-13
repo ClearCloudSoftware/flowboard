@@ -22,7 +22,7 @@ PRD §11.1 *"optional"*, `08` *"off by default for trusted local repos"*, yet ev
 The PRD pairs permission mode with the tier. The flow-designer mockup pairs the approval gate with the sandbox and has no permission-mode field. → [[Flow Design Open Questions]] #13
 
 ### 5. Where is the trusted-repo opt-out set?
-`08` allows *"an explicit trusted-repo opt-out"* (D7: *"a trusted opt-out"*); no field or screen holds it. → [[Sandbox Configuration]]; [[Projects Open Questions]] #16 proposes a per-project profile.
+`08` allows *"an explicit trusted-repo opt-out"* (D7: *"a trusted opt-out"*); no field or screen holds it. → [[Sandbox Configuration]]; [[Projects Open Questions]] #16 proposes a per-project profile. Answered 2026-11-13: the project's trust is the opt-out and the floor ([[Repository Trust And Sandboxing#Built]]).
 
 ## Vocabulary
 
