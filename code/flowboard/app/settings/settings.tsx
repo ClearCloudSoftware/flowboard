@@ -196,6 +196,7 @@ export function TaskProvidersPage() {
 const CHANNELS = [
   { id: 'slack', name: 'Slack', text: "A question nobody answered in FlowBoard is posted to the channel a project's escalation names, and can be answered there.", icon: MessageSquare },
   { id: 'discord', name: 'Discord', text: 'The same, in a Discord channel, answered in place.', icon: MessageSquare },
+  { id: 'google-chat', name: 'Google Chat', text: 'The same, in a Google Chat space, answered in place.', icon: MessageSquare },
   { id: 'email', name: 'Email', text: 'A link to the question in the inbox; the answer is given in FlowBoard.', icon: Mail },
   { id: 'webhook', name: 'Webhook', text: 'The question posted as JSON to a URL, with a link back to the inbox.', icon: Webhook },
   { id: 'desktop', name: 'Desktop', text: 'A notification on this machine.', icon: Bell },
