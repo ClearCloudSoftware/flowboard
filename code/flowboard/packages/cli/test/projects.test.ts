@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import type { RunSummary } from '../src/flow-logs.ts';
 import { projectLimits, projectSettings, setCheckCommand, setLimits } from '../src/project.ts';
 import { APP_DEFAULTS } from '../src/settings.ts';
-import { addApproval, createProject, projectSlug, readProjects, removeProject, repoProblems, repoRoot, seedOnce, slugify, updateProject, viewProjects } from '../src/projects.ts';
+import { addApproval, createProject, ownerOf, type Project, projectSlug, projectSpendUsd, readProjects, removeProject, repoProblems, repoRoot, seedOnce, slugify, updateProject, viewProjects } from '../src/projects.ts';
 
 const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'fb-projects-'))); // macOS's temp folder is a link
 const git = (cwd: string, ...args: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd, encoding: 'utf8' });
@@ -293,4 +293,28 @@ test('a repo inside another project\'s repo is not registered: a sandboxed run m
   });
   assert.equal(readProjects(data).length, 1);
   [data, lib, outer].forEach((d) => rmSync(d, { recursive: true, force: true }));
+});
+
+test("a project's spend in a month: its runs started that month, its worktrees' included, a nested project's left out", () => {
+  const outer = temp();
+  const inner = join(outer, 'vendor', 'lib');
+  mkdirSync(join(outer, '.flowboard', 'worktrees', 't1'), { recursive: true });
+  mkdirSync(inner, { recursive: true });
+  const p = (id: string, repoPath: string) => ({ id, repoPath }) as Project;
+  const projects = [p('outer', outer), p('inner', inner)];
+  const run = (name: string, folder: string, spentUsd: number): RunSummary => ({ name, flow: 'delivery', status: 'done', folder, spentUsd });
+  const runs = [
+    run('2026-11-02T10-00-00-delivery', outer, 3),
+    run('2026-11-20T09-30-00-delivery', join(outer, '.flowboard', 'worktrees', 't1'), 2),
+    run('2026-10-31T23-10-00-delivery', outer, 7),
+    run('scratch', outer, 9),
+    run('2026-11-05T08-00-00-delivery', inner, 4),
+    run('2026-11-06T08-00-00-delivery', join(outer, 'gone'), 0.5), // its folder is gone: it counts by the path recorded
+  ];
+  assert.equal(projectSpendUsd(runs, projects, 'outer', '2026-11'), 5.5);
+  assert.equal(projectSpendUsd(runs, projects, 'outer', '2026-10'), 7);
+  assert.equal(projectSpendUsd(runs, projects, 'outer', '2026-11', '2026-11-20T09-30-00-delivery'), 3.5);
+  assert.equal(projectSpendUsd(runs, projects, 'inner', '2026-11'), 4);
+  assert.equal(ownerOf(projects, join(inner, 'src'))?.id, 'inner');
+  assert.equal(ownerOf(projects, temp()), undefined);
 });
