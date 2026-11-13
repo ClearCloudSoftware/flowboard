@@ -19,9 +19,9 @@ import type { RunDeps } from '../src/run.ts';
 import { DELIVERY, flowProject, registerProject, RUN } from './fixtures/flow.ts';
 
 const USAGE = [
-  'usage: pnpm run-flow --folder <dir> --task <file> [--workspace <task id>] [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] <flow.yaml>',
+  'usage: pnpm run-flow --folder <dir> --task <file> [--workspace <task id>] [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] [--over-project-budget] <flow.yaml>',
   '       pnpm run-flow --check | --mermaid [--folder <dir> --task <file>] <flow.yaml>',
-  '       pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page]',
+  '       pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page] [--over-project-budget]',
 ];
 
 type Play = 'pass' | 'fail' | 'none' | 'no-output' | 'error' | 'hang' | 'ask' | 'slow' | 'approve' | 'write-own';
@@ -137,7 +137,7 @@ test('--mermaid prints the diagram', async () => {
 
 test('bad arguments print the usage and exit 2', async () => {
   const cases = [
-    [], ['--nope', 'flow.yaml'], ['--check', '--mermaid', 'flow.yaml'], ['--allow-dirty', '--check', 'flow.yaml'], ['--workspace', 't1', '--check', 'flow.yaml'], ['--workspace', 't1', '--resume', 'runs/x'], ['--page', '--check', 'flow.yaml'], ['--resume', 'runs/x', 'flow.yaml'], [...RUN, 'a.yaml', 'b.yaml'],
+    [], ['--nope', 'flow.yaml'], ['--check', '--mermaid', 'flow.yaml'], ['--allow-dirty', '--check', 'flow.yaml'], ['--workspace', 't1', '--check', 'flow.yaml'], ['--workspace', 't1', '--resume', 'runs/x'], ['--page', '--check', 'flow.yaml'], ['--over-project-budget', '--check', 'flow.yaml'], ['--resume', 'runs/x', 'flow.yaml'], [...RUN, 'a.yaml', 'b.yaml'],
     ['flow.yaml'], ['--folder', 'proj', 'flow.yaml'], ['--check', '--task', 'task.md', 'flow.yaml'], ['--resume', 'runs/x', '--folder', 'proj'],
   ];
   for (const args of cases) {
@@ -1405,4 +1405,89 @@ test('a .git a box planted in the folder refuses the run before anything runs, -
   assert.equal(existsSync(marker), false);
   assert.equal(existsSync(join(sub, 'ran')), false);
   assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+// --- the project's monthly cap
+
+/** Gives the fixture project a monthly cap, over its trust. */
+function capProject(s: ReturnType<typeof setup>, capUsd: number, onLimit: 'pause' | 'ask', alertAt = 80) {
+  const path = join(s.base, 'data', 'projects.json');
+  const [p] = JSON.parse(readFileSync(path, 'utf8'));
+  p.overrides.budget = { capUsd, alertAt, onLimit };
+  writeFileSync(path, JSON.stringify([p]));
+}
+/** Another run of the project, started `name` (a dated run folder name), that has spent `usd`. */
+function spentRun(s: ReturnType<typeof setup>, name: string, usd: number) {
+  const dir = join(s.base, 'runs', name);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'flow.json'), JSON.stringify({ version: 1, config: { name: 'other', folder: join(s.base, 'proj') } }));
+  writeFileSync(join(dir, 'state.json'), JSON.stringify({ status: 'done', runs: [{ costUsd: usd }] }));
+}
+const OVER = 'project proj has spent $1.05 of its $1.00 for October 2026; raise its monthly cap on the project page, or wait for November 2026';
+
+test('a project over its monthly cap refuses a new run (pause), and makes no run folder', async () => {
+  const s = setup(CHAIN('0'));
+  capProject(s, 1, 'pause');
+  spentRun(s, '2026-10-01T08-00-00-other', 1.05);
+  spentRun(s, '2026-09-30T08-00-00-other', 50); // September's does not count
+  assert.equal(await runFlow([...RUN, '--over-project-budget', 'flow.yaml'], s.deps), 2); // the flag is for ask me first only
+  assert.deepEqual(s.err, [OVER]);
+  assert.equal(existsSync(s.runDir), false);
+});
+
+test('ask me first refuses without --over-project-budget, and runs with it, capped by the flow alone', async () => {
+  const s = setup(CHAIN('0'));
+  capProject(s, 1, 'ask');
+  spentRun(s, '2026-10-01T08-00-00-other', 1.05);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 2);
+  assert.deepEqual(s.err, [`${OVER}; to run it anyway, add --over-project-budget`]);
+  assert.equal(await runFlow([...RUN, '--over-project-budget', 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.ok(s.out.includes('-- project budget: over its $1.00 for October 2026; running anyway (--over-project-budget)'), s.out.join('\n'));
+  assert.equal(s.script.specs[0].limits?.maxBudgetUsd, undefined);
+});
+
+test("the start line, the alert, each run capped at what the project has left, and a pause once it is spent", { timeout: 10_000 }, async () => {
+  const s = setup(CHAIN('0'));
+  capProject(s, 1, 'pause');
+  spentRun(s, '2026-10-01T08-00-00-other', 0.85);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  assert.ok(s.out.includes('-- project budget: $0.85 of $1.00 spent in October 2026'), s.out.join('\n'));
+  assert.ok(s.out.includes('-- warning: project proj has spent 85% of its $1.00 for October 2026'), s.out.join('\n'));
+  assert.ok(Math.abs((s.script.specs[0].limits?.maxBudgetUsd ?? 0) - 0.15) < 1e-9, JSON.stringify(s.script.specs[0].limits));
+  assert.ok(Math.abs((s.script.specs[1].limits?.maxBudgetUsd ?? 0) - 0.05) < 1e-9, JSON.stringify(s.script.specs[1].limits));
+  assert.deepEqual(s.out.slice(-3), [
+    '-- flow paused: 2 runs, $0.20 spent, $0.00 wasted',
+    "-- the project's budget for October 2026 is spent: $1.05 of $1.00",
+    `-- continue with: pnpm run-flow --resume ${RUN_DIR}`,
+  ]);
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: ${OVER}`]);
+  capProject(s, 2, 'pause');
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+  assert.ok(s.out.includes('-- project budget: $1.05 of $2.00 spent in October 2026'), s.out.join('\n'));
+});
+
+test('ask me first: a run the cap paused resumes with --over-project-budget', { timeout: 10_000 }, async () => {
+  const s = setup(CHAIN('0'));
+  capProject(s, 1, 'ask');
+  spentRun(s, '2026-10-01T08-00-00-other', 0.85);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  assert.equal(s.out.at(-1), `-- continue with: pnpm run-flow --resume ${RUN_DIR} --over-project-budget`);
+  assert.equal(await runFlow(['--resume', RUN_DIR, '--over-project-budget'], s.deps), 0, s.out.join('\n'));
+});
+
+test("another run's spend counts while this one runs", { timeout: 10_000 }, async () => {
+  const s = setup(CHAIN('0'), { plan: ['slow'] });
+  capProject(s, 1, 'pause');
+  when(() => s.script.timeline.includes('start:plan'), () => spentRun(s, '2026-10-02T08-00-00-other', 5));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  assert.deepEqual(s.script.timeline.filter((x) => x.startsWith('start:')), ['start:plan']);
+  assert.ok(s.out.includes("-- the project's budget for October 2026 is spent: $5.10 of $1.00"), s.out.join('\n'));
+});
+
+test('no cap: no project budget lines, whatever other runs spent', async () => {
+  const s = setup(CHAIN('0'));
+  spentRun(s, '2026-10-01T08-00-00-other', 500);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.equal(s.out.filter((l) => l.includes('project budget') || l.includes("project's budget")).length, 0, s.out.join('\n'));
 });
