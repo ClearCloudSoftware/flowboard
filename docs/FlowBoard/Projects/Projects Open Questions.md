@@ -91,6 +91,9 @@ Only backlog D8 says *"per untrusted repo"*. `08` makes gVisor/microVM *"opt-in 
 > [!check] Partly built, 2026-11-10
 > A project's sandbox limits are built, outside the database: run-flow reads `sandbox.memory_mb` and `sandbox.cpus` from `.flowboard.yaml`, committed in the repo, and applies them to every container of a sandboxed run (Alex: the limits are project-wide, not the flow's). The tier and the image are still the flow's `sandbox:` key, and there is no global settings level yet. See [[Run Flow Reference#Project file]].
 
+> [!check] Decided, 2026-11-12
+> Trust is per project: *Trusted*, *Normal* or *Untrusted* (gVisor). It's stored on FlowBoard's project record, never in the repo, so a repo can't declare itself trusted. The Software type defaults it to *Normal*. It's stored and shown, but run-flow doesn't act on it yet. See [[Project Settings]].
+
 ### 18. Visibility against a single-user tool
 
 Feature map §1's idea needs identities that PRD §2 and §17 forbid. On one laptop the repo is readable regardless. See [[Project Visibility]].
@@ -118,6 +121,9 @@ PRD `flows.project_id` against the flow-designer mockup's multi-author library t
 ### 23. Which settings are per project?
 
 The feature map calls projects *"the settings for how agents work on each one"* (§1), yet only `default_flow_id` and `check_command` live on the project. Draft mode, sandbox and memory scopes are global settings (PRD §11.1, §11.2, §13). The escalation threshold is a global setting in feature map §19 (*Nudge timing*), `04` §10, `06` §15, backlog Stories 6.1 and 8.3, and the old design handoff (*"Escalation threshold is a setting (default 5 minutes)"*, `docs/old/design/README.md`); PRD §10 fixes it at 5 minutes. Should any of them be overridable per project (see #16)? Which settings exist at all is [[Settings And Plumbing Open Questions]] #1; see [[Settings Catalogue]].
+
+> [!check] Decided, 2026-11-12
+> Precedence is app → project type → project → flow → step. A project overrides trust, budget, network hosts, escalation (channel and wait), memory (the `project` scope), knowledge assets and draft mode, all on its record. Resource limits and the check command stay in the repo's `.flowboard.yaml`. Theme, credentials and the GitHub connection stay app-wide. See [[Project Settings]].
 
 ### 24. Where project-bound work runs
 

@@ -80,11 +80,11 @@ export function listFlows(dir: string): FlowSummary[] {
 /** A new recipe holds only its budget, so it opens with the one thing left to do: add steps. */
 const NEW_FLOW = 'budget_usd: 0 # the most the whole flow may spend, in dollars; 0 for no ceiling\n';
 
-/** Undefined when the name is taken. */
-export function createFlow(dir: string, name: string): FlowFile | undefined {
+/** Undefined when the name is taken. `text`: what it starts as, an empty recipe unless given. */
+export function createFlow(dir: string, name: string, text = NEW_FLOW): FlowFile | undefined {
   mkdirSync(dir, { recursive: true });
   try {
-    writeFileSync(pathOf(dir, name), NEW_FLOW, { flag: 'wx' });
+    writeFileSync(pathOf(dir, name), text, { flag: 'wx' });
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'EEXIST') return undefined;
     throw e;

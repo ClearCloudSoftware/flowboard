@@ -21,7 +21,8 @@ export interface Launch {
   [key: string]: unknown;
 }
 export interface Step extends Launch {
-  shell?: string;
+  /** null: the project's check_command, from `.flowboard.yaml` in the run's folder. */
+  shell?: string | null;
   requires?: string[];
   produces?: string[];
   gate?: 'approval';
@@ -221,7 +222,7 @@ export function fromValues(v: StepValues, s: Step): Step {
   };
   if (v.kind === 'shell') {
     const kept = Object.fromEntries(Object.entries(s).filter(([k]) => !AGENT_ONLY.includes(k))) as Step;
-    return assign(kept, { shell: v.shell, ...both });
+    return assign(kept, { shell: v.shell.trim() || null, ...both });
   }
   return assign(s, {
     shell: undefined,

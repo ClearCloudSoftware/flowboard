@@ -22,11 +22,11 @@ From the PRD, the backlog items tagged **PRD**, and the backlog **BUG** fixes to
 | M8 | Spend per project on `/costs` | PRD §13, §14 |
 | API | `GET` and `POST /api/projects`, `GET /api/projects/:id/board` | PRD §12 |
 
-- [ ] Projects list page with cards
-- [ ] New-project dialog
-- [ ] Seed project on a scratch repo
+- [x] Projects list page with cards (run counts, not task counts: there are no tasks yet)
+- [x] New-project dialog (default flow from the shared library, or *Empty*)
+- [x] Seed project on a scratch repo
 - [ ] Bugs: project links use the slug (Story 3.4); empty state and non-JSON error bodies on submit (Story 1.3)
-- [ ] Decide this week's spend: rolling 7 days or calendar week (Story 1.3 **DEC**)
+- [x] Decide this week's spend: rolling 7 days, by the run's start (2026-11-12, open to review)
 
 ## Designed beyond the PRD
 
@@ -66,6 +66,7 @@ From the PRD, the backlog items tagged **PRD**, and the backlog **BUG** fixes to
 ## Related
 
 - [[Projects Index]]
+- [[Projects Known Issues]]: minor problems left from the wizard's review
 - [[Projects Open Questions]]
 - [[Flow Design Roadmap]]
 - [[Capability Library Roadmap]]

@@ -15,12 +15,12 @@ const remembered = () => {
   }
 };
 
-export function NewRun({ flow: initial = '', onStarted, onClose }: { flow?: string; onStarted: (name: string) => void; onClose: () => void }) {
+export function NewRun({ flow: initial = '', folder: initialFolder, onStarted, onClose }: { flow?: string; folder?: string; onStarted: (name: string) => void; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const queryClient = useQueryClient();
   const library = useQuery(libraryQuery);
   const [flow, setFlow] = useState(initial);
-  const [folder, setFolder] = useState(remembered);
+  const [folder, setFolder] = useState(() => initialFolder || remembered());
   const [task, setTask] = useState('');
   const [budget, setBudget] = useState('');
   const [allowDirty, setAllowDirty] = useState(false);

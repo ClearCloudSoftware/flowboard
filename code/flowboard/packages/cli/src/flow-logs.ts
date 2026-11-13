@@ -15,7 +15,8 @@ import type { FlowConfig } from './flow-config.ts';
  * `--resume` continues it (stopped, paused at a gate, over budget, or crashed). `starting`: no state yet.
  */
 export type RunStatus = 'starting' | 'running' | 'waiting' | 'paused' | 'done' | 'failed';
-export interface RunSummary { name: string; flow: string; status: RunStatus }
+/** `folder`: where the run works; `spentUsd`: what its step runs cost so far. */
+export interface RunSummary { name: string; flow: string; status: RunStatus; folder: string; spentUsd: number }
 /** One step run's log: `lines` are its JSONL lines parsed, the unreadable ones left out. */
 export interface StepLog { run: number; step: string; lines: Record<string, unknown>[] }
 
@@ -37,8 +38,10 @@ export function listRuns(runsDir: string): RunSummary[] {
     .sort()
     .reverse()
     .map((name) => {
-      const pin = json(join(runsDir, name, 'flow.json')) as { config?: { name?: string } } | undefined;
-      return { name, flow: pin?.config?.name ?? '', status: statusOf(join(runsDir, name)) };
+      const pin = json(join(runsDir, name, 'flow.json')) as { config?: { name?: string; folder?: string } } | undefined;
+      const state = json(join(runsDir, name, 'state.json')) as { runs?: { costUsd?: number | null }[] } | undefined;
+      const spentUsd = (state?.runs ?? []).reduce((n, r) => n + (r.costUsd ?? 0), 0);
+      return { name, flow: pin?.config?.name ?? '', status: statusOf(join(runsDir, name)), folder: pin?.config?.folder ?? '', spentUsd };
     });
 }
 

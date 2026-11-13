@@ -227,3 +227,18 @@ test('a credential OpenSandbox cannot inject is an error, not silently dropped',
   const r = loadFlow('flow.yaml', osb(', credentials: [GITHUB_TOKEN]'));
   assert.ok(!r.ok && r.errors.some((e) => e.endsWith('sandbox.credentials.0: OpenSandbox injects only CLAUDE_CODE_OAUTH_TOKEN and OPENROUTER_API_KEY')), JSON.stringify(r));
 });
+
+test("an empty shell: runs the project's check_command, and a run in a folder without one is refused", () => {
+  const empty = change('{ shell: pnpm test,', '{ shell: null,');
+  const alone = loadFlow('flow.yaml', flowProject(empty));
+  assert.ok(alone.ok, JSON.stringify(alone)); // a recipe alone has no project yet
+  assert.deepEqual(alone.config.steps.check, { kind: 'shell', command: '', timeoutMinutes: 30, fromProject: true });
+  assert.deepEqual(alone.config.warnings, ["steps.check.shell: empty, so it runs the check_command in .flowboard.yaml of the folder it runs in; a run where none is set is refused"]);
+
+  const none = loadFlow('flow.yaml', flowProject(empty), RUN_IN);
+  assert.ok(!none.ok && none.errors.some((l) => /steps\.check\.shell: empty, so it runs the project's check_command, and .*proj\/\.flowboard\.yaml sets none/.test(l)), JSON.stringify(none));
+
+  const r = loadFlow('flow.yaml', flowProject(empty, { 'proj/.flowboard.yaml': 'check_command: node --test\n' }), RUN_IN);
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.deepEqual(r.config.steps.check, { kind: 'shell', command: 'node --test', timeoutMinutes: 30, fromProject: true });
+});

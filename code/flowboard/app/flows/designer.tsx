@@ -186,6 +186,9 @@ export function Designer() {
             <Play size={12} strokeWidth={1.75} aria-hidden />
             Run
           </button>
+          <Link className="act" href="/">
+            Projects
+          </Link>
           <Link className="act" href="/docs">
             Docs
           </Link>

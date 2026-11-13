@@ -117,6 +117,49 @@ browser, or run `python3 -m http.server` in this folder.
   wire it into runs on Claude or Codex.
   [Hosted copy](https://claude.ai/artifact/TSKBXrSguykDxA2d4Q8wwe) (private link).
 
+- **New project, three directions to choose from.** Each runs the same flow:
+  project type (only *Software* for now) → where the code lives (GitHub now;
+  GitLab, Bitbucket, Azure Repos and a local folder marked *coming soon*) →
+  connect GitHub and pick a repository → clone it into FlowBoard's projects
+  folder (`~/FlowBoard/projects/<repo>`) or a folder you name. A simulated clone
+  streams git's progress, then FlowBoard's set-up: base branch, `.flowboard/`
+  kept out of commits, the check command found from the repo's manifest.
+  Repos that are already a project can't be picked, and a taken default folder
+  gets a `-2`.
+  - **[`new-project-wizard.html`](./new-project-wizard.html)**: **chosen, built** (phases 1–2, 2026-11-12: the wizard on `gh` with a real clone, and the settings stored with where each comes from; see [Projects Index](../FlowBoard/Projects/Projects%20Index.md)). A
+    dialog over the projects list with a clickable step rail: Type → Source →
+    Repository → **Settings** → Clone. What the repo fixes is shown, not asked:
+    the name and `/p/` address come from the repo, the base branch follows
+    GitHub's default branch, the flows come with the type. **Settings** has a
+    page per setting, listed under the step in the rail (a filled mark is an
+    override, red is an error); an *Overview* page shows them all. Each is
+    inherited from the app or the project type, with an *override* switch:
+    sandbox (repo trust: trusted / normal container / untrusted gVisor, plus
+    resource limits kept in `.flowboard.yaml`), budget ($ a month, alert, then
+    pause or ask), escalation (Slack channel, wait), memory (project scope),
+    knowledge assets (both on for Software: Serena's symbol index, local and
+    free; graphify's code graph, with a standing ochre warning that it sends
+    the code to the AI service and what each rebuild costs against the budget; rebuilt when the base
+    branch moves, daily or by hand, each stamped with its commit) and draft mode. Network access and the check command are proposed by an
+    analysis agent after cloning, from the repo's files, and accepted on the
+    done screen or left for the project page. The clone goes, by default,
+    into your projects folder (an app setting) or, until you set one,
+    FlowBoard's `~/FlowBoard/projects`; *Somewhere else* takes a folder for
+    this project only (typed or picked from folders used before), optionally
+    saved as your projects folder for new projects. A taken folder gets a `-2`. *Open* adds the project's card
+    to the list behind. Opens on Settings for a Python (uv) repo with a budget
+    override. GitHub states: *use another account* signs in as a second
+    account; `partner-co` restricts apps, so its repos stay hidden until you
+    request access and an owner approves; a mockup control (bottom left)
+    makes GitHub reject the token, which blocks the clone until you reconnect,
+    keeping the repo and settings. Keys: `↵` continues, `Esc` closes.
+  - **[`new-project-page.html`](./new-project-page.html)**: one page where each
+    answered step folds into a one-line summary you can change; the clone
+    log runs inline.
+  - **[`new-project-workspace.html`](./new-project-workspace.html)**: type and
+    source as segmented strips, a full repository browser, and a clone plan that
+    ticks off each step as it runs. Keys: `j`/`k` move, `/` filter, `↵` clone.
+
 ## Conventions
 
 Run `/mockup` and these are applied for you — the skill carries the tokens, a skeleton, the
