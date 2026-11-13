@@ -163,7 +163,7 @@ const PAGES: Record<Exclude<PageId, 'overview'>, (p: PageProps) => ReactNode> = 
   ),
   budget: (p) => (
     <Sets>
-      <Setting k="budget" title="Monthly cap" p={p} footnote={`Everything the project’s runs cost counts, the analysis agent’s included. Each flow’s own budget still applies inside it. ${NOT_YET}`}>
+      <Setting k="budget" title="Monthly cap" p={p} footnote="Everything the project’s runs cost in a calendar month counts. Each flow’s own budget still applies inside it.">
         <div className="flex flex-wrap items-end gap-3">
           <NumField field="cap" label="$ per month" p={p} inputMode="decimal" placeholder={p.mode === 'app' ? 'no cap' : undefined} />
           <NumField field="alertAt" label="alert at, %" p={p} inputMode="numeric" />

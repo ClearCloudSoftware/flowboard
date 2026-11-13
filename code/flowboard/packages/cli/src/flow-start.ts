@@ -11,8 +11,14 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FLOW_NAME } from './flow-files.ts';
 
-export interface StartInput { flow: string; folder: string; task: string; budgetUsd?: number; allowDirty?: boolean; workspace?: string }
-export type Started = { ok: true; name: string } | { ok: false; error: string };
+/** `overProjectBudget`: `--over-project-budget`, a start past an *ask me first* project's monthly cap. */
+export interface StartInput { flow: string; folder: string; task: string; budgetUsd?: number; allowDirty?: boolean; workspace?: string; overProjectBudget?: boolean }
+/** `askOver`: run-flow refused for the project's cap and takes `--over-project-budget`, so the page may offer it. */
+export type Refused = { ok: false; error: string; askOver?: true };
+export type Started = { ok: true; name: string } | Refused;
+
+const OVER = '--over-project-budget';
+const refusedWith = (said: string): Refused => ({ ok: false, error: said, ...(said.includes(OVER) && { askOver: true as const }) });
 
 const FLOW_MAIN = resolve(dirname(fileURLToPath(import.meta.url)), 'flow-main.ts');
 const WAIT_MS = 20_000;
@@ -33,9 +39,10 @@ export async function startRun(runsDir: string, flowsDir: string, dataDir: strin
   if (input.budgetUsd !== undefined) args.push('--budget-usd', String(input.budgetUsd));
   if (input.allowDirty) args.push('--allow-dirty');
   if (input.workspace) args.push('--workspace', input.workspace);
+  if (input.overProjectBudget) args.push(OVER);
   args.push(join(flowsDir, `${input.flow}.yaml`));
   const r = await launch(args, dirname(runsDir), dataDir, log, /^-- run folder (.+)$/m);
-  if ('said' in r) return { ok: false, error: r.said };
+  if ('said' in r) return refusedWith(r.said);
   return r.ready ? { ok: true, name: r.ready[1].trim().split(/[\\/]/).at(-1)! } : { ok: false, error: `run-flow named no run folder within ${WAIT_MS / 1000} s; its output is in ${log}` };
 }
 
@@ -44,10 +51,10 @@ export async function startRun(runsDir: string, flowsDir: string, dataDir: strin
  * appended to `<runDir>/resume.log`. It resolves once run-flow says it is resuming, or with what it said when it
  * refused; still deciding after the wait, it is taken as resuming, and the page follows it from the run's files.
  */
-export async function resumeRun(runDir: string, dataDir: string, budgetUsd?: number): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function resumeRun(runDir: string, dataDir: string, budgetUsd?: number, overProjectBudget?: boolean): Promise<{ ok: true } | Refused> {
   const budget = budgetUsd === undefined ? [] : ['--budget-usd', String(budgetUsd)];
-  const r = await launch([FLOW_MAIN, '--resume', runDir, '--page', ...budget], process.cwd(), dataDir, join(runDir, 'resume.log'), /^-- resuming /m);
-  return 'said' in r ? { ok: false, error: r.said } : { ok: true };
+  const r = await launch([FLOW_MAIN, '--resume', runDir, '--page', ...budget, ...(overProjectBudget ? [OVER] : [])], process.cwd(), dataDir, join(runDir, 'resume.log'), /^-- resuming /m);
+  return 'said' in r ? refusedWith(r.said) : { ok: true };
 }
 
 /**

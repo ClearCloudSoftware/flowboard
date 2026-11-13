@@ -13,7 +13,7 @@ import { isAbsolute, join, sep } from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
 import { type ApprovalRule, ApprovalRuleSchema } from './approvals.ts';
-import { monthOf } from './budget.ts';
+import { budgetState, monthName, monthOf } from './budget.ts';
 import { isDir, isFile, writeJsonFile } from './config.ts';
 import { FLOW_NAME } from './flow-files.ts';
 import { projectSlug } from './slug.ts';
@@ -278,6 +278,8 @@ export interface ProjectView extends Project {
   problems: string[];
   runs: Partial<Record<RunStatus, number>>;
   weekSpendUsd: number;
+  /** What its runs started this calendar month have spent, against its monthly cap (`budget.ts`). */
+  monthSpendUsd: number;
 }
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
@@ -341,6 +343,13 @@ export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: 
     const counts: ProjectView['runs'] = {};
     for (const r of mine) counts[r.status] = (counts[r.status] ?? 0) + 1;
     const weekSpendUsd = mine.filter((r) => now - startOf(r.name) < WEEK_MS).reduce((n, r) => n + r.spentUsd, 0);
+    const month = monthOf(now);
+    const monthSpendUsd = projectSpendUsd(runs, projects, p.id, month);
+    const resolved = resolveSettings(app, p.type, p.overrides);
+    const cap = resolved.budget.value;
+    const b = budgetState(cap, monthSpendUsd);
+    const of = `its $${cap.capUsd?.toFixed(2)} for ${monthName(month)}`;
+    const budget = b.over ? [`spent $${monthSpendUsd.toFixed(2)} of ${of}; new runs ${cap.onLimit === 'ask' ? 'ask first' : 'are paused'}`] : b.alert ? [`spent ${b.pct}% of ${of}`] : [];
     const settings = isDir(p.repoPath) ? projectSettings(p.repoPath) : { ok: false as const, errors: [`${p.repoPath}: the repo is gone; it moved or was deleted`] };
     const checkCommand = settings.ok ? (settings.settings.checkCommand ?? null) : null;
     // Projects OQ 6: a default flow that needs the check command, in a repo that sets none, is said here, before a run.
@@ -353,10 +362,11 @@ export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: 
       baseBranch: p.baseBranch ?? null, // a record from before base branches has none
       checkCommand,
       limits: settings.ok ? settings.settings.limits : {},
-      settings: resolveSettings(app, p.type, p.overrides),
-      problems: [...(settings.ok ? [] : settings.errors), ...problems, ...(isDir(p.repoPath) ? repoProblems(p) : [])],
+      settings: resolved,
+      problems: [...(settings.ok ? [] : settings.errors), ...problems, ...budget, ...(isDir(p.repoPath) ? repoProblems(p) : [])],
       runs: counts,
       weekSpendUsd,
+      monthSpendUsd,
     };
   });
 }

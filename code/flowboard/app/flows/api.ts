@@ -7,14 +7,19 @@ export type { FlowCheck, FlowFile, FlowSummary, PromptFile };
 export interface Library { dir: string; flows: FlowSummary[] }
 export interface Draft { text: string; check: FlowCheck }
 
-/** A refusal from the API: `error` says why, `check` comes with a save the check refused. */
+/**
+ * A refusal from the API: `error` says why, `check` comes with a save the check refused, `askOver` with a run refused
+ * for its project's monthly cap that may go past it (`--over-project-budget`).
+ */
 export class ApiError extends Error {
   status: number;
   check?: FlowCheck;
-  constructor(status: number, body: { error?: string; check?: FlowCheck }) {
+  askOver?: boolean;
+  constructor(status: number, body: { error?: string; check?: FlowCheck; askOver?: boolean }) {
     super(body.error ?? `HTTP ${status}`);
     this.status = status;
     this.check = body.check;
+    this.askOver = body.askOver;
   }
 }
 

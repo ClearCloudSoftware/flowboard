@@ -6,6 +6,7 @@ import type { Question } from '../../packages/core/src/hitl/question.ts';
 import type { PageAsk } from '../../packages/cli/src/ask/page.ts';
 import { answerRun, artifactQuery, builtQuery, LIVE, logsQuery, resumeRun, runQuery, stopRun } from './api.ts';
 import type { RunDetail, StepLog } from './api.ts';
+import type { ApiError } from '../flows/api.ts';
 import { entriesOf, estimateUsd, totalsOf, usd as dollars } from './log-lines.ts';
 import type { Entry, Filter, ToolEntry } from './log-lines.ts';
 
@@ -569,14 +570,21 @@ export function RunActions({ run }: { run: RunDetail }) {
   const queryClient = useQueryClient();
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ['run', run.name] });
   const stop = useMutation({ mutationFn: () => stopRun(run.name), onSuccess: refresh });
-  const resume = useMutation({ mutationFn: (budget?: number) => resumeRun(run.name, budget), onSuccess: refresh });
+  // `over`: Resume anyway, past an ask-me-first project's monthly cap.
+  const resume = useMutation({ mutationFn: ({ budget, over }: { budget?: number; over?: boolean }) => resumeRun(run.name, budget, over), onSuccess: refresh });
   const error = stop.error?.message ?? resume.error?.message;
+  const askOver = (resume.error as ApiError | null)?.askOver;
   return (
     <>
       {error && <em className="in-err">{error}</em>}
       {run.status === 'paused' && (
         <>
-          <button type="button" className="act" disabled={resume.isPending} onClick={() => resume.mutate(undefined)}>
+          {askOver && (
+            <button type="button" className="act" disabled={resume.isPending} onClick={() => resume.mutate({ ...resume.variables, over: true })}>
+              Resume anyway
+            </button>
+          )}
+          <button type="button" className="act" disabled={resume.isPending} onClick={() => resume.mutate({})}>
             Resume
           </button>
           <button
@@ -585,7 +593,7 @@ export function RunActions({ run }: { run: RunDetail }) {
             disabled={resume.isPending}
             onClick={() => {
               const v = window.prompt(`New budget for the whole run, in dollars (spent so far: ${usd(run.spentUsd)}; 0 for no ceiling)`, String(Math.max(run.budgetUsd, run.spentUsd) * 2 || 5));
-              if (v !== null && Number.isFinite(Number(v)) && Number(v) >= 0) resume.mutate(Number(v));
+              if (v !== null && Number.isFinite(Number(v)) && Number(v) >= 0) resume.mutate({ budget: Number(v) });
             }}
           >
             Resume with more budget…

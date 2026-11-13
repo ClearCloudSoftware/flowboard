@@ -318,3 +318,19 @@ test("a project's spend in a month: its runs started that month, its worktrees' 
   assert.equal(ownerOf(projects, join(inner, 'src'))?.id, 'inner');
   assert.equal(ownerOf(projects, temp()), undefined);
 });
+
+test("a project's month spend is on its view, with a problem line at the alert and once the cap is spent", () => {
+  const r = repo();
+  const data = temp();
+  const lib = flows();
+  const proj = value(createProject(data, lib, { name: 'p', repoPath: r, type: 'software', overrides: { budget: { capUsd: 10, alertAt: 80, onLimit: 'pause' } } }));
+  const now = new Date(2026, 10, 13, 12).getTime();
+  const runs = (usd: number): RunSummary[] => [{ name: '2026-11-02T10-00-00-delivery', flow: 'delivery', status: 'done', folder: r, spentUsd: usd }];
+  const view = (usd: number, onLimit: 'pause' | 'ask' = 'pause') => viewProjects([{ ...proj, overrides: { budget: { capUsd: 10, alertAt: 80, onLimit } } }], runs(usd), lib, APP_DEFAULTS, now)[0];
+  assert.equal(view(9).monthSpendUsd, 9);
+  assert.ok(view(9).problems.includes('spent 90% of its $10.00 for November 2026'), JSON.stringify(view(9).problems));
+  assert.ok(view(10).problems.includes('spent $10.00 of its $10.00 for November 2026; new runs are paused'), JSON.stringify(view(10).problems));
+  assert.ok(view(12, 'ask').problems.includes('spent $12.00 of its $10.00 for November 2026; new runs ask first'), JSON.stringify(view(12, 'ask').problems));
+  assert.equal(view(1).problems.some((x) => x.startsWith('spent')), false);
+  assert.equal(viewProjects([proj], runs(9), lib, { ...APP_DEFAULTS }, now)[0].monthSpendUsd, 9);
+});

@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useDebouncedValue } from '@tanstack/react-pacer';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { flowQuery, libraryQuery } from '../flows/api.ts';
+import { type ApiError, flowQuery, libraryQuery } from '../flows/api.ts';
 import { FOLDER_KEY, previewQuery, rememberedFolder as remembered, workspacesQuery } from '../workspaces/api.ts';
 import type { Preview } from '../workspaces/api.ts';
 import { startRun } from './api.ts';
@@ -40,9 +40,10 @@ export function NewRun({ flow: initial = '', workspace: initialWs, folder: initi
   // A flow that fails the check can be picked, to see why; the list carries only the count, the file the lines.
   const broken = !!picked && picked.errors > 0;
   const checked = useQuery({ ...flowQuery(picked?.name ?? ''), enabled: broken });
+  // `over`: Start anyway, past an ask-me-first project's monthly cap.
   const start = useMutation({
-    mutationFn: () =>
-      startRun({ flow: picked!.name, folder: folder.trim(), task, ...(budget !== '' && { budgetUsd: Number(budget) }), ...(allowDirty && { allowDirty }), ...(id && { workspace: id }) }),
+    mutationFn: (over: boolean) =>
+      startRun({ flow: picked!.name, folder: folder.trim(), task, ...(budget !== '' && { budgetUsd: Number(budget) }), ...(allowDirty && { allowDirty }), ...(id && { workspace: id }), ...(over && { overProjectBudget: true }) }),
     onSuccess: ({ name }) => {
       try {
         localStorage.setItem(FOLDER_KEY, folder.trim());
@@ -64,7 +65,7 @@ export function NewRun({ flow: initial = '', workspace: initialWs, folder: initi
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (ready) start.mutate();
+          if (ready) start.mutate(false);
         }}
       >
         <div className="ph">
@@ -152,7 +153,19 @@ export function NewRun({ flow: initial = '', workspace: initialWs, folder: initi
             <Link href={`/flows?flow=${encodeURIComponent(picked.name)}`}>Fix in the designer</Link>
           </div>
         )}
-        {start.error && <pre className="nr-err">{start.error.message}</pre>}
+        {start.error && (
+          <pre className="nr-err">
+            {start.error.message}
+            {(start.error as ApiError).askOver && (
+              <>
+                {'\n'}
+                <button type="button" className="act" disabled={start.isPending} onClick={() => start.mutate(true)}>
+                  Start anyway
+                </button>
+              </>
+            )}
+          </pre>
+        )}
         <div className="pe-f">
           <span className="sp" />
           <button type="button" className="act" onClick={() => ref.current?.close()}>
