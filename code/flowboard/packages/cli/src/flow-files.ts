@@ -8,6 +8,7 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { isCollection, isMap, isScalar, isSeq, Pair, parse, parseDocument } from 'yaml';
 import type { Document } from 'yaml';
 import { isDir, isFile } from './config.ts';
+import type { ModelRules } from './config.ts';
 import { loadFlow } from './flow-config.ts';
 
 /** A recipe's name is its file name less `.yaml`, and follows the rule for step names. */
@@ -40,26 +41,29 @@ const parsed = (text: string): unknown => {
   }
 };
 
-/** Checks `text` as the recipe `name` in `dir`, on its own, as `run-flow --check <dir>/<name>.yaml` would. */
-export function checkFlow(dir: string, name: string, text: string): FlowCheck {
-  const r = loadFlow(`${name}.yaml`, dir, undefined, text);
+/**
+ * Checks `text` as the recipe `name` in `dir`, on its own, as `run-flow --check <dir>/<name>.yaml` would. `models`,
+ * here and below: the app's approved OpenCode models, which the routes always pass.
+ */
+export function checkFlow(dir: string, name: string, text: string, models?: ModelRules): FlowCheck {
+  const r = loadFlow(`${name}.yaml`, dir, undefined, text, models);
   if (r.ok) return { errors: [], warnings: r.config.warnings };
   const prefix = `${name}.yaml: `;
   return { errors: r.errors.map((l) => (l.startsWith(prefix) ? l.slice(prefix.length) : l)), warnings: [] };
 }
 
-export function readFlow(dir: string, name: string): FlowFile | undefined {
+export function readFlow(dir: string, name: string, models?: ModelRules): FlowFile | undefined {
   const path = pathOf(dir, name);
   if (!isFile(path)) return undefined;
   const text = readFileSync(path, 'utf8');
-  return { name, text, version: versionOf(text), raw: parsed(text), check: checkFlow(dir, name, text) };
+  return { name, text, version: versionOf(text), raw: parsed(text), check: checkFlow(dir, name, text, models) };
 }
 
-export function listFlows(dir: string): FlowSummary[] {
+export function listFlows(dir: string, models?: ModelRules): FlowSummary[] {
   if (!isDir(dir)) return [];
   const names = readdirSync(dir).filter((f) => f.endsWith('.yaml')).map((f) => f.slice(0, -'.yaml'.length));
   return names.filter((n) => FLOW_NAME.test(n)).sort().map((name) => {
-    const { text, raw, check } = readFlow(dir, name)!;
+    const { text, raw, check } = readFlow(dir, name, models)!;
     const flow = isRecord(raw) ? raw : {};
     const steps = isRecord(flow.steps) ? flow.steps : {};
     const edges = (Array.isArray(flow.edges) ? flow.edges : []).filter(isRecord);
@@ -81,7 +85,7 @@ export function listFlows(dir: string): FlowSummary[] {
 const NEW_FLOW = 'budget_usd: 0 # the most the whole flow may spend, in dollars; 0 for no ceiling\n';
 
 /** Undefined when the name is taken. `text`: what it starts as, an empty recipe unless given. */
-export function createFlow(dir: string, name: string, text = NEW_FLOW): FlowFile | undefined {
+export function createFlow(dir: string, name: string, text = NEW_FLOW, models?: ModelRules): FlowFile | undefined {
   mkdirSync(dir, { recursive: true });
   try {
     writeFileSync(pathOf(dir, name), text, { flag: 'wx' });
@@ -89,25 +93,25 @@ export function createFlow(dir: string, name: string, text = NEW_FLOW): FlowFile
     if ((e as NodeJS.ErrnoException).code === 'EEXIST') return undefined;
     throw e;
   }
-  return readFlow(dir, name);
+  return readFlow(dir, name, models);
 }
 
 /** What saving `draft` over the recipe would write, and what `--check` says of it. */
-export function draftFlow(dir: string, name: string, draft: unknown): { text: string; check: FlowCheck } | undefined {
+export function draftFlow(dir: string, name: string, draft: unknown, models?: ModelRules): { text: string; check: FlowCheck } | undefined {
   const path = pathOf(dir, name);
   if (!isFile(path)) return undefined;
   const text = toYaml(readFileSync(path, 'utf8'), draft);
-  return { text, check: checkFlow(dir, name, text) };
+  return { text, check: checkFlow(dir, name, text, models) };
 }
 
 /** Writes `draft` over the recipe opened at `version`, unless the file changed since or the result fails the check. */
-export function saveFlow(dir: string, name: string, draft: unknown, version: string): SaveResult {
+export function saveFlow(dir: string, name: string, draft: unknown, version: string, models?: ModelRules): SaveResult {
   const path = pathOf(dir, name);
   if (!isFile(path)) return { ok: false, conflict: `${name}.yaml is no longer in ${dir}` };
   const now = readFileSync(path, 'utf8');
   if (versionOf(now) !== version) return { ok: false, conflict: `${name}.yaml changed on disk after it was opened; open it again to see the change` };
   const text = toYaml(now, draft);
-  const check = checkFlow(dir, name, text);
+  const check = checkFlow(dir, name, text, models);
   if (check.errors.length) return { ok: false, check };
   writeFileSync(path, text);
   return { ok: true, file: { name, text, version: versionOf(text), raw: parsed(text), check } };

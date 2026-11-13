@@ -49,6 +49,9 @@ test('agents: each harness has a program, a model and an effort; a model the CLI
   const data = temp();
   assert.deepEqual(readAppSettings(data).agents['claude-code'], { path: null, model: 'sonnet', effort: null });
   const agents = { 'claude-code': { path: '~/bin/claude', model: 'opus', effort: 'high' as const }, opencode: { path: null, model: 'openrouter/deepseek/deepseek-v4.1-flash', effort: null } };
+  // OpenCode's default must be an approved model
+  assert.deepEqual(updateAppSettings(data, { agents }), { ok: false, status: 400, error: 'openrouter/deepseek/deepseek-v4.1-flash is not an approved model; approve it in Settings → Agents → OpenCode models' });
+  value(updateAppSettings(data, { opencodeModels: [{ id: 'openrouter/deepseek/deepseek-v4.1-flash', free: false, price: { in: 0.1, out: 0.4 }, approvedAt: '2026-11-13T00:00:00.000Z' }] }));
   value(updateAppSettings(data, { agents }));
   assert.deepEqual(readAppSettings(data).agents, agents);
   const bad = (a: unknown) => updateAppSettings(data, { agents: a as typeof agents });

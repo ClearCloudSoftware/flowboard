@@ -14,6 +14,8 @@ import { startBroker } from './ask/broker.ts';
 import type { Answerer } from './ask/broker.ts';
 import { noTerminal, terminalAnswerer } from './ask/terminal.ts';
 import { loadConfig, SKILLS_PLUGIN } from './config.ts';
+import { prepareRun } from './openrouter.ts';
+import { FREE_WARNING } from './settings.ts';
 import type { Adapter, RunConfig } from './config.ts';
 
 export interface RunDeps {
@@ -34,6 +36,11 @@ export interface RunDeps {
   connectBox?: typeof connectBox;
   /** runtime: docker without a project memory limit; default: a quarter of what `docker info` reports. */
   dockerMemoryMb?: () => number | undefined;
+  /**
+   * FlowBoard's data folder: OpenCode steps then run only on its approved models, on its saved OpenRouter key. The
+   * CLIs always pass it (`defaultDataDir()`); without it, as in tests, no model is checked.
+   */
+  dataDir?: string;
 }
 
 export const WITHDRAWN = '-- question withdrawn: the agent stopped waiting';
@@ -133,7 +140,8 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
     printErr('usage: pnpm run-agent <task.yaml>');
     return 2;
   }
-  const loaded = loadConfig(args[0], deps.cwd);
+  const models = deps.dataDir !== undefined ? await prepareRun(deps.dataDir, printErr) : undefined;
+  const loaded = loadConfig(args[0], deps.cwd, models);
   if (!loaded.ok) {
     loaded.errors.forEach((l) => printErr(l));
     return 2;
@@ -211,6 +219,7 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
     print(`-- ${adapter} ${spec.model} in ${spec.cwd}`);
     print(`-- log ${path}`);
     if (unrestrictedShell) print(`-- warning: unrestricted shell: commands can write outside ${spec.cwd}`);
+    if (adapter === 'opencode' && models?.free(spec.model)) print(`-- warning: ${spec.model} is ${FREE_WARNING}`);
 
     // `run` is set as it launches, so Ctrl+C can stop it.
     const { result, failedTools, last } = await streamRun(() => (run = (deps.makeProvider ?? defaultProvider)(adapter).launch(spec)), log, show);

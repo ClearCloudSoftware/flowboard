@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { listRuns } from '../../../packages/cli/src/flow-logs.ts';
 import { startRun } from '../../../packages/cli/src/flow-start.ts';
-import { body, flowsDir, refused, runsDir } from '../flows/local.ts';
+import { body, dataDir, flowsDir, refused, runsDir } from '../flows/local.ts';
 
 /** The run folders, newest first; `?flow=` keeps the runs of that flow. */
 export async function GET(request: Request) {
@@ -20,6 +20,6 @@ export async function POST(request: Request) {
   if (no) return no;
   const input = Start.safeParse(await body(request));
   if (!input.success) return Response.json({ error: 'send { flow, folder, task, budgetUsd?, allowDirty?, workspace? }' }, { status: 400 });
-  const r = await startRun(runsDir(), flowsDir(), input.data);
+  const r = await startRun(runsDir(), flowsDir(), input.data, dataDir());
   return r.ok ? Response.json({ name: r.name }) : Response.json({ error: r.error }, { status: 422 });
 }

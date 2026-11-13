@@ -16,7 +16,8 @@ export type Started = { ok: true; name: string } | { ok: false; error: string };
 const FLOW_MAIN = resolve(dirname(fileURLToPath(import.meta.url)), 'flow-main.ts');
 const WAIT_MS = 20_000;
 
-export async function startRun(runsDir: string, flowsDir: string, input: StartInput): Promise<Started> {
+/** `dataDir`: the app's data folder, handed on so the run checks the same approved models the app shows. */
+export async function startRun(runsDir: string, flowsDir: string, input: StartInput, dataDir?: string): Promise<Started> {
   if (!FLOW_NAME.test(input.flow)) return { ok: false, error: `"${input.flow}": not a flow name` };
   if (!input.task.trim()) return { ok: false, error: 'the task is empty' };
   const folder = input.folder.startsWith('~/') ? join(homedir(), input.folder.slice(2)) : input.folder;
@@ -36,7 +37,7 @@ export async function startRun(runsDir: string, flowsDir: string, input: StartIn
   const out = openSync(log, 'a');
   // run-flow makes its run folder in FLOWBOARD_RUNS_DIR, which it inherits, else in runs/ where it starts.
   // flow-main takes INIT_CWD over its cwd, and pnpm's (from `pnpm dev`) would be inherited: it is set to match.
-  const env = { ...process.env, INIT_CWD: dirname(runsDir) };
+  const env = { ...process.env, INIT_CWD: dirname(runsDir), ...(dataDir && { FLOWBOARD_DATA_DIR: dataDir }) };
   const child = spawn(process.execPath, args, { cwd: dirname(runsDir), env, detached: true, stdio: ['ignore', out, out] });
   child.unref();
   let exited: number | null | undefined;
