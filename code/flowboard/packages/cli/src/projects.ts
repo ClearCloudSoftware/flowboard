@@ -5,6 +5,7 @@
  * repo holds their folder.
  */
 import { spawnSync } from 'node:child_process';
+import { excludeFlowboard } from '@flowboard/adapters';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -14,7 +15,7 @@ import { isDir, isFile, writeJsonFile } from './config.ts';
 import { FLOW_NAME } from './flow-files.ts';
 import { projectSlug } from './slug.ts';
 import type { RunStatus, RunSummary } from './flow-logs.ts';
-import { excludeFromGit, type Limits, PROJECT_FILE, projectSettings, setCheckCommand, setLimits } from './project.ts';
+import { type Limits, PROJECT_FILE, projectSettings, setCheckCommand, setLimits } from './project.ts';
 import { type AppSettings, type Overrides, OverridesSchema, PROJECT_TYPES, type ProjectTypeId, type Resolved, resolveSettings } from './settings.ts';
 
 /** Where the repo came from: cloned from GitHub as `owner/name`, or a folder already on this machine. */
@@ -135,7 +136,7 @@ export function createProject(dataDir: string, flowsDir: string, input: NewProje
     if (!set.ok) return fail(400, set.errors.join('\n'));
   }
   const defaultFlow = type.flows.find((f) => isFile(join(flowsDir, `${f}.yaml`))) ?? null;
-  excludeFromGit(root.value); // .flowboard/, where FlowBoard keeps its own files in the repo, stays out of commits
+  excludeFlowboard(root.value); // .flowboard/, where FlowBoard keeps its own files in the repo, stays out of commits
   const project: Project = {
     id: randomUUID(),
     name,

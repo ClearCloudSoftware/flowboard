@@ -3,8 +3,8 @@
  * step may use depends on the repo (its test suite) and the machine, not on the recipe, so no flow sets these.
  */
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { type Document, isMap, parseDocument } from 'yaml';
 import { z } from 'zod';
 import { isFile, issueLines, readYaml } from './config.ts';
@@ -83,26 +83,6 @@ export function setLimits(folder: string, limits: Limits): { ok: true } | { ok: 
     const sb = doc.get('sandbox');
     if (isMap(sb) && sb.items.length === 0) doc.delete('sandbox');
   });
-}
-
-/** Adds `.flowboard/` to the local exclude file of `folder`'s git repository, so `git add -A` leaves it alone. */
-export function excludeFromGit(folder: string): void {
-  const git = spawnSync('git', ['rev-parse', '--git-path', 'info/exclude'], { cwd: folder, encoding: 'utf8' });
-  if (git.error || git.status !== 0) return;
-  const file = resolve(folder, git.stdout.trim());
-  let text = '';
-  try {
-    text = readFileSync(file, 'utf8');
-  } catch {
-    // no exclude file yet
-  }
-  if (text.split('\n').some((l) => l.trim() === '.flowboard/')) return;
-  try {
-    mkdirSync(dirname(file), { recursive: true });
-    appendFileSync(file, `${text && !text.endsWith('\n') ? '\n' : ''}.flowboard/\n`);
-  } catch {
-    // best effort: the uncommitted-changes check leaves .flowboard/ out anyway
-  }
 }
 
 /**

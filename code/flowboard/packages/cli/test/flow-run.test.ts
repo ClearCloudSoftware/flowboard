@@ -13,11 +13,12 @@ import type { Box } from '@flowboard/adapters';
 import { askBroker } from '@flowboard/ask-user';
 import { processStart } from '../src/flow-exec.ts';
 import { DISCARD_COMMANDS, pushable, runFlow, sandboxFor } from '../src/flow-run.ts';
+import { cleanWorkspace } from '../src/workspace.ts';
 import type { RunDeps } from '../src/run.ts';
 import { DELIVERY, flowProject, RUN } from './fixtures/flow.ts';
 
 const USAGE = [
-  'usage: pnpm run-flow --folder <dir> --task <file> [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] <flow.yaml>',
+  'usage: pnpm run-flow --folder <dir> --task <file> [--workspace <task id>] [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] <flow.yaml>',
   '       pnpm run-flow --check | --mermaid [--folder <dir> --task <file>] <flow.yaml>',
   '       pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page]',
 ];
@@ -127,7 +128,7 @@ test('--mermaid prints the diagram', async () => {
 
 test('bad arguments print the usage and exit 2', async () => {
   const cases = [
-    [], ['--nope', 'flow.yaml'], ['--check', '--mermaid', 'flow.yaml'], ['--allow-dirty', '--check', 'flow.yaml'], ['--page', '--check', 'flow.yaml'], ['--resume', 'runs/x', 'flow.yaml'], [...RUN, 'a.yaml', 'b.yaml'],
+    [], ['--nope', 'flow.yaml'], ['--check', '--mermaid', 'flow.yaml'], ['--allow-dirty', '--check', 'flow.yaml'], ['--workspace', 't1', '--check', 'flow.yaml'], ['--workspace', 't1', '--resume', 'runs/x'], ['--page', '--check', 'flow.yaml'], ['--resume', 'runs/x', 'flow.yaml'], [...RUN, 'a.yaml', 'b.yaml'],
     ['flow.yaml'], ['--folder', 'proj', 'flow.yaml'], ['--check', '--task', 'task.md', 'flow.yaml'], ['--resume', 'runs/x', '--folder', 'proj'],
   ];
   for (const args of cases) {
@@ -369,6 +370,68 @@ test('a live lock is reported before uncommitted changes', async () => {
   writeFileSync(lock, JSON.stringify({ pid: process.pid, runDir: 'runs/other' }));
   assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
   assert.deepEqual(err, [`flow.yaml: --folder: another run-flow (pid ${process.pid}) is working here on runs/other; if it is not, delete ${lock}`]);
+});
+
+/** A git repo in `proj` with one commit. */
+function gitProj(base: string): string {
+  const proj = join(base, 'proj');
+  git(proj, 'init', '-q');
+  writeFileSync(join(proj, 'f.txt'), 'one');
+  git(proj, 'add', 'f.txt');
+  git(proj, 'commit', '-qm', 'one');
+  return proj;
+}
+
+test('--workspace runs each task in its own worktree, so two tasks run at once in one repo', async () => {
+  const { base, out, err, deps } = setup(SHELL_ONLY.replace("shell: 'exit 0'", "shell: 'sleep 0.3; pwd > where.txt'"));
+  const proj = gitProj(base);
+  const codes = await Promise.all(['t1', 't2'].map((id) => runFlow([...RUN, '--workspace', id, 'flow.yaml'], deps)));
+  assert.deepEqual([codes, err], [[0, 0], []], out.join('\n'));
+  for (const id of ['t1', 't2']) {
+    const path = join(proj, '.flowboard', 'worktrees', `task-${id}`);
+    assert.ok(out.includes(`-- workspace ${path} on branch fb/task-${id}, new`), out.join('\n'));
+    assert.equal(realpathSync(readFileSync(join(path, 'where.txt'), 'utf8').trim()), path);
+    assert.equal(existsSync(join(path, '.flowboard', 'lock')), false);
+  }
+  assert.equal(existsSync(join(proj, 'where.txt')), false);
+  assert.equal(execFileSync('git', ['status', '--porcelain'], { cwd: proj, encoding: 'utf8' }), '');
+  // the second run of a task picks its worktree up again
+  assert.equal(await runFlow([...RUN, '--workspace', 't1', 'flow.yaml'], deps), 0);
+  assert.ok(out.includes(`-- workspace ${join(proj, '.flowboard', 'worktrees', 'task-t1')} on branch fb/task-t1, picked up again`), out.join('\n'));
+});
+
+test('--workspace needs a git repository and a good id, and makes nothing for a flow that does not load', async () => {
+  const { base, err, deps } = setup(SHELL_ONLY);
+  assert.equal(await runFlow([...RUN, '--workspace', 't1', 'flow.yaml'], deps), 2);
+  assert.deepEqual(err.splice(0), [`flow.yaml: --workspace: ${join(base, 'proj')} is not in a git repository`]);
+  const proj = gitProj(base);
+  assert.equal(await runFlow([...RUN, '--workspace', '../x', 'flow.yaml'], deps), 2);
+  assert.match(err.splice(0)[0], /^flow\.yaml: --workspace: task id "\.\.\/x": use letters/);
+  assert.equal(await runFlow(['--folder', 'proj', '--task', 'nope.md', '--workspace', 't1', 'flow.yaml'], deps), 2);
+  assert.equal(existsSync(join(proj, '.flowboard', 'worktrees')), false);
+});
+
+test('clean-workspace refuses while a run holds the worktree, and uncommitted work without --force', async () => {
+  const { base, deps } = setup(SHELL_ONLY.replace("shell: 'exit 0'", "shell: 'echo x > new.txt'"));
+  const proj = gitProj(base);
+  assert.equal(await runFlow([...RUN, '--workspace', 't1', 'flow.yaml'], deps), 0);
+  const path = join(proj, '.flowboard', 'worktrees', 'task-t1');
+  const out: string[] = [];
+  const err: string[] = [];
+  const clean = (...args: string[]) => cleanWorkspace([...args, 't1'], { cwd: base, print: (l) => out.push(l), printErr: (l) => err.push(l) });
+  writeFileSync(join(path, '.flowboard', 'lock'), JSON.stringify({ pid: process.pid }));
+  assert.equal(await clean('--folder', 'proj'), 2);
+  assert.deepEqual(err.splice(0), [`clean-workspace: a run-flow (pid ${process.pid}) is working in ${path}; let it finish or stop it first`]);
+  rmSync(join(path, '.flowboard', 'lock'));
+  assert.equal(await clean('--folder', 'proj'), 1); // new.txt is the flow's uncommitted work
+  assert.match(err.splice(0)[0], /pass --force to throw them away$/);
+  assert.ok(existsSync(path));
+  assert.equal(await clean('--folder', 'proj', '--force'), 0);
+  assert.deepEqual([out, err], [['-- removed the workspace of task t1'], []]);
+  assert.equal(existsSync(path), false);
+  assert.equal(execFileSync('git', ['branch', '--list', 'fb/task-t1'], { cwd: proj, encoding: 'utf8' }), '');
+  assert.equal(await clean('--folder', 'proj'), 1);
+  assert.deepEqual(err, ['clean-workspace: task t1 has no workspace']);
 });
 
 test('a live lock refuses the run; a stale one is replaced with a warning', async () => {

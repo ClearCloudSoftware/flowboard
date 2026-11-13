@@ -118,6 +118,7 @@
     cursor: default;
   }
   .act > svg {
+    display: inline-block;
     vertical-align: -2px;
     margin-right: 5px;
   }
@@ -1496,5 +1497,77 @@
     .pane.lib {
       display: none;
     }
+  }
+}
+
+/* ── the New run sheet's workspace field (docs/mockups/new-run-workspace.html) ── */
+.fd {
+  .nr-mode {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--line-2);
+  }
+  .nr-mode label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 12.5px;
+  }
+  .nr-mode label + label {
+    border-left: 1px solid var(--line-2);
+  }
+  .nr-mode label[aria-checked='true'] {
+    background: var(--surface);
+    box-shadow: inset 0 -2px 0 var(--ink);
+  }
+  .nr-mode input[type='radio'] {
+    width: auto;
+    margin: 0;
+  }
+  .nr-mode em {
+    flex-basis: 100%;
+    font-style: normal;
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .nr-ws {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .nr-ws input {
+    flex: 1;
+  }
+  .nr-pv {
+    display: block;
+    margin-top: 6px;
+    padding: 6px 10px;
+    border-left: 3px solid var(--line-2);
+    background: var(--surface-2);
+    font-size: 12px;
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+  .nr-pv.wait {
+    border-left-color: var(--wait);
+    background: var(--wait-wash);
+    color: var(--wait);
+  }
+  .nr-pv.bad {
+    border-left-color: var(--fail);
+    background: var(--fail-soft);
+    color: var(--fail);
+  }
+  .nr-cmd {
+    font-size: 11.5px;
+    color: var(--ink-3);
+    overflow-wrap: anywhere;
+  }
+  .nr-why {
+    color: var(--ink-2);
+    margin-right: 8px;
   }
 }

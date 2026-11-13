@@ -10,7 +10,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FLOW_NAME } from './flow-files.ts';
 
-export interface StartInput { flow: string; folder: string; task: string; budgetUsd?: number; allowDirty?: boolean }
+export interface StartInput { flow: string; folder: string; task: string; budgetUsd?: number; allowDirty?: boolean; workspace?: string }
 export type Started = { ok: true; name: string } | { ok: false; error: string };
 
 const FLOW_MAIN = resolve(dirname(fileURLToPath(import.meta.url)), 'flow-main.ts');
@@ -31,6 +31,7 @@ export async function startRun(runsDir: string, flowsDir: string, input: StartIn
   const args = [FLOW_MAIN, '--folder', folder, '--task', task, '--page'];
   if (input.budgetUsd !== undefined) args.push('--budget-usd', String(input.budgetUsd));
   if (input.allowDirty) args.push('--allow-dirty');
+  if (input.workspace) args.push('--workspace', input.workspace);
   args.push(join(flowsDir, `${input.flow}.yaml`));
   const out = openSync(log, 'a');
   // run-flow makes its run folder in FLOWBOARD_RUNS_DIR, which it inherits, else in runs/ where it starts.

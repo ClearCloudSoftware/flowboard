@@ -37,6 +37,9 @@ export interface Workspace {
 
 Its doc comment: *"Workspace — per-task isolation behind one port. Git worktree today; a container or microVM adapter adds a security boundary (egress allowlist, dropped caps, resource limits) and removes the shared-worktree collision the spec lists as a known constraint (PRD §11). Cleanup is explicit only — never automatic, and only when the task is done/cancelled/failed."*
 
+> [!warning] The shipped code differs
+> As built on `feature/workspace-impl` (2026-11-12), `code/flowboard/packages/core/src/ports/workspace.ts` has only `id`, `create` and `destroy`. The handle carries the path, so there is no `cwd(task)`. A flow's `sandbox` already picks the ExecHost, so there is no `execHost(task)`. `WorkspaceHandle` gains `reused` (true when the task's worktree or branch was already there), and `destroy` returns `{ branchKept }` when it leaves an unmerged branch. See [[Git Worktree Adapter]].
+
 ## The four calls
 
 | Call | Does | Source wording |

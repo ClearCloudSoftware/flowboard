@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { connectBox, dockerExecHost, openBox } from '@flowboard/adapters';
+import { connectBox, dockerExecHost, excludeFlowboard, openBox } from '@flowboard/adapters';
 import type { Box } from '@flowboard/adapters';
 import { advance, entries, GIT, newFlowState } from '@flowboard/core';
 import type { Answers, Decision, FlowCommand, FlowEvent, FlowState, Gate, Question, RunCommand } from '@flowboard/core';
@@ -19,12 +19,14 @@ import { inside, loadFlow, toMermaid } from './flow-config.ts';
 import type { FlowConfig, Sandbox } from './flow-config.ts';
 import { artifactPath, execAi, execShell, processStart, shellEnv } from './flow-exec.ts';
 import type { ExecContext, StepRun } from './flow-exec.ts';
-import { dockerDefaultMemoryMb, excludeFromGit, PROJECT_FILE, projectLimits } from './project.ts';
+import { dockerDefaultMemoryMb, PROJECT_FILE, projectLimits } from './project.ts';
+import { alive, readLock } from './lock.ts';
+import { openWorkspace } from './workspace.ts';
 import { defaultProvider, stamp } from './run.ts';
 import type { RunDeps } from './run.ts';
 
 const USAGE = [
-  'usage: pnpm run-flow --folder <dir> --task <file> [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] <flow.yaml>',
+  'usage: pnpm run-flow --folder <dir> --task <file> [--workspace <task id>] [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] <flow.yaml>',
   '       pnpm run-flow --check | --mermaid [--folder <dir> --task <file>] <flow.yaml>',
   '       pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page]',
 ];
@@ -77,6 +79,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
         'budget-usd': { type: 'string' },
         'max-runs': { type: 'string' },
         'allow-dirty': { type: 'boolean' },
+        workspace: { type: 'string' },
         page: { type: 'boolean' },
       },
     });
@@ -85,7 +88,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
   }
   const { values: v, positionals } = parsed;
   const modes = [v.check, v.mermaid, v.resume !== undefined].filter(Boolean).length;
-  if (modes > 1 || (v['allow-dirty'] && modes > 0) || (v.page && (v.check || v.mermaid))) return usage();
+  if (modes > 1 || ((v['allow-dirty'] || v.workspace !== undefined) && modes > 0) || (v.page && (v.check || v.mermaid))) return usage();
   if (v.resume !== undefined ? positionals.length > 0 : positionals.length !== 1) return usage();
   // A flow is a recipe: a run says where to work and what to do; a check may say both, or neither; a resume has them.
   const inputs = [v.folder, v.task].filter((x) => x !== undefined).length;
@@ -109,7 +112,17 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
 
   if (v.resume !== undefined) return resume(v.resume, { maxRuns, budget, page: v.page }, deps);
   const yaml = positionals[0];
-  const loaded = loadFlow(yaml, deps.cwd, v.folder !== undefined && v.task !== undefined ? { folder: v.folder, task: v.task, budgetUsd: budget } : undefined);
+  let loaded = loadFlow(yaml, deps.cwd, v.folder !== undefined && v.task !== undefined ? { folder: v.folder, task: v.task, budgetUsd: budget } : undefined);
+  // A workspace is made only for a flow that loads, then the flow is loaded again to work in it.
+  if (loaded.ok && v.workspace !== undefined) {
+    const ws = await openWorkspace(loaded.config.folder, v.workspace);
+    if ('error' in ws) {
+      printErr(`${yaml}: --workspace: ${ws.error}`);
+      return 2;
+    }
+    print(`-- workspace ${ws.path} on branch ${ws.branch}${ws.reused ? ', picked up again' : ', new'}`);
+    loaded = loadFlow(yaml, deps.cwd, { folder: ws.folder, task: v.task!, budgetUsd: budget });
+  }
   if (!loaded.ok) {
     loaded.errors.forEach((l) => printErr(l));
     return 2;
@@ -170,7 +183,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
         }
       }
     }
-    excludeFromGit(config.folder);
+    excludeFlowboard(config.folder);
 
     // The run folder is claimed by making it: a name another host made first, even this second, is passed over.
     // FLOWBOARD_RUNS_DIR is where the runs page looks, so a run it starts lands where it lists them.
@@ -257,32 +270,6 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 /** `$0.12`, or `cost unknown` when the provider reported none. */
 const cost = (usd: number | null) => (usd === null ? 'cost unknown' : `$${usd.toFixed(2)}`);
-
-/** False when `pid` names no process. */
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return (e as NodeJS.ErrnoException).code === 'EPERM'; // there, but not ours to signal
-  }
-}
-
-/** The lock's content; undefined when there is no lock, null when it cannot be read. */
-function readLock(path: string): { pid?: unknown; runDir?: unknown } | null | undefined {
-  let text: string;
-  try {
-    text = readFileSync(path, 'utf8');
-  } catch (e) {
-    return (e as NodeJS.ErrnoException).code === 'ENOENT' ? undefined : null;
-  }
-  try {
-    const v: unknown = JSON.parse(text);
-    return typeof v === 'object' && v !== null ? v : null;
-  } catch {
-    return null;
-  }
-}
 
 /** Writes `content` to `path` whole, through a temp file: linked, so only if `path` is free, or renamed over it. */
 function publish(path: string, content: object, replace: boolean): void {

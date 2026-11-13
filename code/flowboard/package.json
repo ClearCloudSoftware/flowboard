@@ -13,6 +13,7 @@
     "test:live": "FLOWBOARD_LIVE=1 node --test packages/adapters/test/claude-live.test.ts packages/adapters/test/opencode-live.test.ts packages/cli/test/cli-live.test.ts packages/cli/test/ask-live.test.ts packages/cli/test/flow-live.test.ts",
     "run-agent": "node packages/cli/src/main.ts",
     "run-flow": "node packages/cli/src/flow-main.ts",
+    "clean-workspace": "node packages/cli/src/workspace-main.ts",
     "test:app": "node --test \"app/**/*.test.ts\""
   },
   "dependencies": {
