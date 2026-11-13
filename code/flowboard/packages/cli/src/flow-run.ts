@@ -3,13 +3,11 @@
  * decides what happens next; this host carries out its commands in one
  * process and one folder, and saves the state after every transition.
  */
-import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual, parseArgs } from 'node:util';
 import { z } from 'zod';
-import { connectBox, dockerExecHost, excludeFlowboard, openBox } from '@flowboard/adapters';
+import { connectBox, dockerExecHost, excludeFlowboard, hostGit, openBox, repoGitDirs } from '@flowboard/adapters';
 import type { Box } from '@flowboard/adapters';
 import { advance, entries, GIT, newFlowState } from '@flowboard/core';
 import type { Answers, Decision, FlowCommand, FlowEvent, FlowState, Gate, Question, RunCommand } from '@flowboard/core';
@@ -31,7 +29,7 @@ import type { Project } from './projects.ts';
 import { resolveSettings, TRUST } from './settings.ts';
 import { alive, readLock } from './lock.ts';
 import { openWorkspace } from './workspace.ts';
-import { defaultProvider, stamp } from './run.ts';
+import { dataDirOf, defaultProvider, stamp } from './run.ts';
 import type { RunDeps } from './run.ts';
 
 const USAGE = [
@@ -141,7 +139,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
   }
   // A workspace is made only for a flow that loads, then the flow is loaded again to work in it.
   if (loaded.ok && v.workspace !== undefined) {
-    const ws = await openWorkspace(loaded.config.folder, v.workspace);
+    const ws = await openWorkspace(loaded.config.folder, v.workspace, dataDir);
     if ('error' in ws) {
       printErr(`${yaml}: --workspace: ${ws.error}`);
       return 2;
@@ -199,11 +197,18 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
   }
   try {
     await cleanUpAfter(taken.stale, deps.cwd, print);
+    // A .git a box could have written, --allow-dirty or not: FlowBoard's own git calls in the folder would run its config.
+    const { repoPath } = isolated!;
+    const dirs = repoGitDirs(repoPath, config.folder);
+    if ('error' in dirs && !dirs.noRepo) {
+      printErr(`${yaml}: --folder: ${dirs.error}`);
+      return 2;
+    }
     // Agents and checks can run `git checkout .` or `git clean`; only a clean tree can be got back.
     if (!v['allow-dirty']) {
       // ponytail: untracked files don't count: the flow's own new files (flow.yaml, runs/) usually are.
-      const git = spawnSync('git', ['status', '--porcelain', '--untracked-files=no', '--', '.', ':(exclude).flowboard'], { cwd: config.folder, encoding: 'utf8' });
-      if (git.error || git.status !== 0) print(`-- warning: ${config.folder} is not in a git repository; nothing can undo the flow's edits`);
+      const git = hostGit(repoPath, config.folder, ['status', '--porcelain', '--untracked-files=no', '--', '.', ':(exclude).flowboard']);
+      if ('refused' in git || git.error || git.status !== 0) print(`-- warning: ${config.folder} is not in a git repository; nothing can undo the flow's edits`);
       else {
         const changed = git.stdout.split('\n').filter(Boolean).length;
         if (changed) {
@@ -212,7 +217,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
         }
       }
     }
-    excludeFlowboard(config.folder);
+    excludeFlowboard(repoPath);
 
     // The run folder is claimed by making it: a name another host made first, even this second, is passed over.
     // FLOWBOARD_RUNS_DIR is where the runs page looks, so a run it starts lands where it lists them.
@@ -278,24 +283,19 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
       print(`-- sandbox ${box.id}: ${config.folder} at its last commit; egress ${sb.egress.join(', ') || 'none'}`);
       for (const name of box.missing) print(`-- warning: sandbox: ${name} is not set; steps that need it will fail`);
     }
-    return await drive({ config, runDir, artifactsDir, shown, pinned, lockPath, state: newFlowState(), first: { type: 'start' }, maxRuns: maxRuns ?? Infinity, page: !!v.page, dataDir, ...(box && { box }) }, deps);
+    return await drive({ config, runDir, artifactsDir, shown, pinned, lockPath, state: newFlowState(), first: { type: 'start' }, maxRuns: maxRuns ?? Infinity, page: !!v.page, dataDir, repoPath, ...(box && { box }) }, deps);
   } finally {
     releaseLock(lockPath);
   }
 }
-
-/** FlowBoard's own data folder, `code/flowboard/data`, wherever run-flow is started from. */
-const OWN_DATA = fileURLToPath(new URL('../../../data', import.meta.url));
-/** FlowBoard's data folder: FLOWBOARD_DATA_DIR, else its own, as the app has it. */
-const dataDirOf = (deps: RunDeps) => deps.dataDir ?? (process.env.FLOWBOARD_DATA_DIR ? resolve(deps.cwd, process.env.FLOWBOARD_DATA_DIR) : OWN_DATA);
 
 const NO_ONE = 'this project is Trusted, so agents ask before edits and shell commands, and no one can answer here; run it in a terminal or from the runs page';
 /** True when the run's agents would ask before edits and shell commands and neither a terminal nor the page can answer. */
 const noOneAsks = (iso: Isolation, steps: FlowConfig['steps'], page: boolean, deps: RunDeps) =>
   iso.approvals && Object.values(steps).some((s) => s.kind === 'ai') && !page && !(deps.canAsk ?? (!!deps.answer || !!process.stdin.isTTY));
 
-/** A run's isolation, decided as it starts: the sandbox it gets and the line saying so. */
-interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string }
+/** A run's isolation, decided as it starts: the sandbox it gets and the line saying so; `repoPath`: its project's repo. */
+interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string; repoPath: string }
 
 /**
  * The isolation `project` gives a run of a flow whose own sandbox is `flowSandbox` (`isolation.ts`); or why it may not
@@ -318,7 +318,7 @@ function isolate(project: Project, flowSandbox: Sandbox | undefined, steps: Flow
   const asks = r.approvals ? '; agents ask before edits and shell commands' : '';
   // A copy: the run's sandbox may be this very object, and gets the project's limits.
   const isolation: Isolation = { projectId: project.id, trust, tier: r.tier, approvals: r.approvals, ...(flowSandbox && { flowSandbox: structuredClone(flowSandbox) }) };
-  return { sandbox: r.sandbox, isolation, line: `-- isolation: ${TRUST[trust].label} (${r.tier}), from project ${project.name}${asks}` };
+  return { sandbox: r.sandbox, isolation, line: `-- isolation: ${TRUST[trust].label} (${r.tier}), from project ${project.name}${asks}`, repoPath: project.repoPath };
 }
 
 /** Makes `dir`; false when it already exists. */
@@ -597,7 +597,7 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number;
         return refuse(`${(e as Error).message}: its edits cannot be resumed; start the flow again`);
       }
     }
-    return await drive({ config, runDir, artifactsDir: pinned.artifactsDir, shown: typed, pinned: pin, lockPath, state, first: { type: 'resume' }, maxRuns: runs, page: !!given.page, dataDir, ...(box && { box }) }, deps);
+    return await drive({ config, runDir, artifactsDir: pinned.artifactsDir, shown: typed, pinned: pin, lockPath, state, first: { type: 'resume' }, maxRuns: runs, page: !!given.page, dataDir, repoPath: project.repoPath, ...(box && { box }) }, deps);
   } finally {
     releaseLock(lockPath);
   }
@@ -629,19 +629,15 @@ export function pushable(artifactsDir: string, producing: Set<string>): string[]
 /** How long an OpenSandbox box lives unattended: a paused flow keeps its box for --resume this long. */
 const BOX_SECONDS = 86_400;
 
-/** The git dir of the repo holding `folder` (a worktree's included), or undefined when it is in none. */
-function gitCommonDir(folder: string): string | undefined {
-  const r = spawnSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], { cwd: folder, encoding: 'utf8' });
-  return r.status === 0 ? r.stdout.trim() : undefined;
-}
-
 /**
  * Each step's box: the folder (its cwd) and the artifacts read-write, `mounts` read-only; only agents go online.
- * The repo's git dir is mounted read-only over the folder: FlowBoard's own git calls on this machine would run a
- * hook or `core.fsmonitor` a box wrote there. Flows commit on the host (workspace-git.ts), never in a box.
+ * The git dir of the project's repo at `repoPath` (its worktrees' too) is mounted read-only over the folder:
+ * FlowBoard's own git calls on this machine use only it (`hostGit`), and would run a hook or `core.fsmonitor` a box
+ * wrote there. Flows commit on the host (workspace-git.ts), never in a box.
  */
-export const sandboxFor = (sb: Extract<Sandbox, { runtime: 'docker' }>, artifactsDir: string, folder: string): NonNullable<ExecContext['sandbox']> => {
-  const git = gitCommonDir(folder);
+export const sandboxFor = (sb: Extract<Sandbox, { runtime: 'docker' }>, artifactsDir: string, repoPath: string): NonNullable<ExecContext['sandbox']> => {
+  const dirs = repoGitDirs(repoPath, repoPath);
+  const git = 'error' in dirs ? undefined : dirs.gitDir;
   return ({ online, tmpDir, mounts = [] }) => dockerExecHost(
     {
       tier: sb.gvisor ? 'gvisor' : 'container',
@@ -674,6 +670,8 @@ interface Drive {
   page: boolean;
   /** FlowBoard's data folder, where the run's project and its saved approvals are. */
   dataDir: string;
+  /** The top folder of the run's project's repo. */
+  repoPath: string;
 }
 
 /** Feeds the engine from `first` until the flow ends or waits on a person, and resolves with the exit code. */
@@ -724,7 +722,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     answer: noTerminal,
     onInterrupt: () => interrupt(), // Ctrl+C at an agent's question
     temps,
-    ...(config.sandbox?.runtime === 'docker' && { sandbox: sandboxFor(config.sandbox, d.artifactsDir, config.folder) }),
+    ...(config.sandbox?.runtime === 'docker' && { sandbox: sandboxFor(config.sandbox, d.artifactsDir, d.repoPath) }),
     ...(d.box && {
       sandbox: ({ tmpDir, mounts }) => d.box!.exec({ ...(tmpDir && { tmpDir }), ...(mounts && { mounts }), push: () => pushable(d.artifactsDir, producing) }),
       pull: (files) => d.box!.pullFiles(files),

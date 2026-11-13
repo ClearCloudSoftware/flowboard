@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { RunSummary } from '../src/flow-logs.ts';
@@ -243,4 +243,26 @@ test('approvals: saved on the record without repeats, replaced by an edit, and a
   assert.deepEqual(updateProject(data, lib, p.id, { approvals: [{ kind: 'shell', prefix: '' }] as never }), bad);
   assert.deepEqual(addApproval(data, p.id, { kind: 'shell', prefix: 'ls; rm' }), bad);
   assert.deepEqual(addApproval(data, 'nope', rule), { ok: false, status: 404, error: 'no such project' });
+});
+
+test("a submodule's .git a box replaced is never read by the checkout check; a repo whose .git is a file is a problem", (t) => {
+  const base = temp();
+  t.after(() => rmSync(base, { recursive: true, force: true }));
+  const r = repo();
+  t.after(() => rmSync(r, { recursive: true, force: true }));
+  const lib = join(base, 'lib');
+  mkdirSync(lib);
+  git(lib, 'init', '-q', '-b', 'main');
+  git(lib, 'commit', '-q', '--allow-empty', '-m', 'lib');
+  git(r, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', lib, 'lib');
+  git(r, 'commit', '-qm', 'lib');
+  const marker = join(base, 'PWNED');
+  rmSync(join(r, 'lib', '.git'));
+  git(r, 'init', '-q', join(r, 'lib'));
+  git(join(r, 'lib'), 'config', 'core.fsmonitor', `touch '${marker}'; false`);
+  assert.deepEqual(repoProblems({ repoPath: r, baseBranch: 'main' }), []);
+  assert.equal(existsSync(marker), false);
+  const sep = join(base, 'sep');
+  git(base, 'init', '-q', '-b', 'main', '--separate-git-dir', join(base, 'sep.git'), sep);
+  assert.deepEqual(repoProblems({ repoPath: sep, baseBranch: 'main' }), [`${join(sep, '.git')} is a file; FlowBoard needs the repo's git dir at ${join(sep, '.git')}`]);
 });

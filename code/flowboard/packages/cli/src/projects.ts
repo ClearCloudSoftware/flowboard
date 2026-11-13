@@ -5,7 +5,7 @@
  * repo holds their folder.
  */
 import { spawnSync } from 'node:child_process';
-import { excludeFlowboard } from '@flowboard/adapters';
+import { excludeFlowboard, hostGit } from '@flowboard/adapters';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -66,6 +66,7 @@ export function repoRoot(path: string): Result<string> {
   const p = path.trim().startsWith('~/') ? join(homedir(), path.trim().slice(2)) : path.trim();
   if (!isAbsolute(p)) return fail(400, 'the repo folder must be an absolute path, or start with ~/');
   if (!isDir(p)) return fail(400, `${p}: no such folder`);
+  // Plain git: registering trusts the repo the person names; from then on FlowBoard's git uses only its .git (hostGit).
   const git = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: p, encoding: 'utf8' });
   if (git.error || git.status !== 0) return fail(400, `${p}: not in a git repository; run git init there first`);
   return { ok: true, value: realpathSync(git.stdout.trim()) };
@@ -93,9 +94,10 @@ export interface NewProject {
   checkCommand?: string;
 }
 
-const gitOut = (cwd: string, ...args: string[]) => {
-  const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
-  return r.status === 0 ? r.stdout.trim() : undefined;
+/** git's output in the repo at `repo`, through `hostGit`; undefined when it fails or is refused. */
+const gitOut = (repo: string, ...args: string[]) => {
+  const r = hostGit(repo, repo, args);
+  return 'refused' in r || r.status !== 0 ? undefined : r.stdout.trim();
 };
 /** The branch checked out, even in a repo with no commits yet; undefined when HEAD is detached. */
 const currentBranch = (repo: string) => gitOut(repo, 'symbolic-ref', '--short', '-q', 'HEAD');
@@ -225,6 +227,7 @@ export function removeProject(dataDir: string, id: string): boolean {
   return true;
 }
 
+// Plain git: the scratch repo is one FlowBoard makes here, before any run.
 const git = (cwd: string, ...args: string[]) => spawnSync('git', ['-c', 'user.name=FlowBoard', '-c', 'user.email=flowboard@localhost', ...args], { cwd, encoding: 'utf8' });
 
 /**
@@ -277,9 +280,10 @@ const startOf = (run: string) => {
  */
 // ponytail: one git status per project per poll of the list; cache by the index's mtime if many repos make it slow
 export function repoProblems(p: Pick<Project, 'repoPath' | 'baseBranch'>): string[] {
-  const out = gitOut(p.repoPath, 'status', '--porcelain=v1', '--branch', '--untracked-files=no', '--', '.', ':(exclude).flowboard');
-  if (out === undefined) return [`${p.repoPath}: git cannot read this repo`];
-  const [head, ...changed] = out.split('\n');
+  const st = hostGit(p.repoPath, p.repoPath, ['status', '--porcelain=v1', '--branch', '--untracked-files=no', '--', '.', ':(exclude).flowboard']);
+  if ('refused' in st) return [st.refused];
+  if (st.status !== 0) return [`${p.repoPath}: git cannot read this repo`];
+  const [head, ...changed] = st.stdout.trim().split('\n');
   const problems: string[] = [];
   const branch = currentBranch(p.repoPath);
   if (head.startsWith('## No commits yet')) problems.push('the repo has no commits yet; commit once so work has something to branch from');

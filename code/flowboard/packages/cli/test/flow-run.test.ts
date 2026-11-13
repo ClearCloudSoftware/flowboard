@@ -427,7 +427,7 @@ test('clean-workspace refuses while a run holds the worktree, and uncommitted wo
   const path = join(proj, '.flowboard', 'worktrees', 'task-t1');
   const out: string[] = [];
   const err: string[] = [];
-  const clean = (...args: string[]) => cleanWorkspace([...args, 't1'], { cwd: base, print: (l) => out.push(l), printErr: (l) => err.push(l) });
+  const clean = (...args: string[]) => cleanWorkspace([...args, 't1'], { cwd: base, dataDir: join(base, 'data'), print: (l) => out.push(l), printErr: (l) => err.push(l) });
   writeFileSync(join(path, '.flowboard', 'lock'), JSON.stringify({ pid: process.pid }));
   assert.equal(await clean('--folder', 'proj'), 2);
   assert.deepEqual(err.splice(0), [`clean-workspace: a run-flow (pid ${process.pid}) is working in ${path}; let it finish or stop it first`]);
@@ -1386,4 +1386,23 @@ test('an untrusted sandbox runs its containers under gVisor', () => {
   const box = sandboxFor({ runtime: 'docker', image: 'x', env: [], gvisor: true }, '/art', tmpdir());
   assert.equal(box({}).profile?.tier, 'gvisor');
   assert.equal(sandboxFor({ runtime: 'docker', image: 'x', env: [] }, '/art', tmpdir())({}).profile?.tier, 'container');
+});
+
+test('a .git a box planted in the folder refuses the run before anything runs, --allow-dirty or not, and its config never runs', async (t) => {
+  const { base, err, deps } = setup(SHELL_ONLY.replace("shell: 'exit 0'", "shell: 'touch ran'"));
+  t.after(() => rmSync(base, { recursive: true, force: true }));
+  const proj = gitProj(base);
+  const sub = join(proj, 'sub');
+  const marker = join(base, 'PWNED');
+  mkdirSync(sub);
+  git(sub, 'init', '-q');
+  git(sub, 'config', 'core.fsmonitor', `touch '${marker}'; false`);
+  const planted = `flow.yaml: --folder: ${join(sub, '.git')} was not made by git for ${proj}; a sandboxed step may have written it. Remove it and check the repo.`;
+  for (const extra of [[], ['--allow-dirty']]) {
+    assert.equal(await runFlow(['--folder', 'proj/sub', '--task', 'task.md', ...extra, 'flow.yaml'], deps), 2);
+    assert.deepEqual(err.splice(0), [planted]);
+  }
+  assert.equal(existsSync(marker), false);
+  assert.equal(existsSync(join(sub, 'ran')), false);
+  assert.equal(existsSync(join(base, 'runs')), false);
 });

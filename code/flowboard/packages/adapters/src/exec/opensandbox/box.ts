@@ -246,6 +246,7 @@ export async function openBox(o: BoxOptions): Promise<Box> {
         bindings: present.map((c) => ({ name: c.toLowerCase(), match: { schemes: ['https' as const], hosts: [KNOWN[c]!.host] }, auth: { type: 'bearer' as const, credential: c.toLowerCase() } })),
       });
     }
+    // Plain git: an OpenSandbox box never writes this folder, and run-flow refuses a .git a docker box planted in it first.
     const tgz = await upload(sb, execFileSync('git', ['-C', o.folder, 'archive', '--format=tar.gz', 'HEAD'], { maxBuffer: 1 << 30 }));
     const g = `git -C ${q(o.folder)} -c user.email=flowboard@sandbox -c user.name=flowboard`;
     await root(
