@@ -53,7 +53,8 @@ export function allowedBy(rules: ApprovalRule[], call: ApprovalCall): ApprovalRu
 /**
  * run-flow's answer to an agent's edit or shell command in a Trusted run: a saved rule allows it at once, else the
  * owner is asked through the step's `ask`, and "Allow from now on" saves the rule on the project. Rules are read
- * fresh at every call. An ask that fails (stopped, no one to answer) rejects, which the adapter takes as no.
+ * fresh at every call. An ask that fails (stopped, no one to answer) rejects, which the adapter takes as no; one no one
+ * could answer says so.
  */
 export function approver(o: { dataDir: string; projectId: string; folder: string; ask: (qs: Question[], s: AbortSignal) => Promise<Answers>; show(line: string): void; step: string }) {
   return async (call: ApprovalCall, signal: AbortSignal): Promise<boolean> => {
@@ -65,13 +66,21 @@ export function approver(o: { dataDir: string; projectId: string; folder: string
     const path = call.kind === 'edit' && (inside(o.folder, call.path) ? relative(o.folder, call.path) : call.path);
     const what = call.kind === 'edit' ? `editing ${path}` : call.command;
     const rule = ruleFor(call);
-    const { approve } = await o.ask([{
+    const asked = o.ask([{
       id: 'approve',
       kind: 'single_select',
       prompt: call.kind === 'edit' ? `Edit ${path}?` : `Run ${call.command}?`,
       ...(!rule && { help: 'This command can run other commands, so it can only be allowed once.' }),
       options: [{ value: 'once', label: 'Allow' }, ...(rule ? [{ value: 'always', label: `Allow from now on: ${ruleText(rule)}` }] : []), { value: 'deny', label: 'Deny' }],
     }], signal);
+    let approve: unknown;
+    try {
+      ({ approve } = await asked);
+    } catch (e) {
+      // A withdrawn question (the step stopped) or Ctrl+C at it is the owner's doing, not news.
+      if (!signal.aborted && (e as Error).name !== 'ExitPromptError') o.show(`-- ${o.step}: denied ${what}: no one could be asked`);
+      throw e;
+    }
     // Only what was offered allows: a page answer of `always` where it was not offered is a no.
     const yes = approve === 'once' || (approve === 'always' && !!rule);
     o.show(`-- ${o.step}: ${yes ? 'allowed' : 'denied'} ${what}`);

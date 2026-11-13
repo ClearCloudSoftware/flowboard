@@ -26,6 +26,7 @@ FlowBoard ships with one project so the app is alive on first run. This note cov
 | Seed plugins | `grill-me`, `plan-implementation`, `explain-simply`, `ponytail`, `code-review`, copied into its store under FlowBoard's commit | PRD §15; Capability Library D6; see [[Seeded Capabilities]] |
 | Seed agents | `scout`, `architect`, `developer`, `tester`, `reviewer`, `scribe`, *"read-only in the editor"* | PRD §15; backlog Story 1.2 |
 | Sample tasks | drawio only | drawio (both pages) |
+| Trust | *Trusted* (`overrides.trust`, as built 2026-11-13): FlowBoard wrote the repo, so its runs work on the machine and agents ask before edits and shell commands | [[Repository Trust And Sandboxing]] |
 
 > [!warning] Sample tasks
 > Both drawio cards seed *"sample tasks"*. PRD §15 and backlog Story 1.2 seed none, and the M2 milestone says *"Create tasks manually."* See [[Projects Open Questions]] #19 and [[Intake And Import Open Questions]] #19.

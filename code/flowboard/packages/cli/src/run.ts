@@ -29,6 +29,8 @@ export interface RunDeps {
   now?: () => Date;
   /** Answers the agent's questions; default: the terminal, or a refusal when stdin is not one. */
   answer?: Answerer;
+  /** Someone can answer at this terminal; default: `answer` is given, or stdin is a TTY. */
+  canAsk?: boolean;
   /** runtime: opensandbox; default: the adapters' own. */
   openBox?: typeof openBox;
   connectBox?: typeof connectBox;

@@ -339,8 +339,9 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
       spec.guards = { ...spec.guards, writeRoots: [...(spec.guards?.writeRoots ?? []), ctx.artifactsDir] };
       if (ctx.approve) {
         const approve = ctx.approve;
+        // The run's own outputs pass: its artifacts folder is FlowBoard's, already a write root of every step.
         spec.approve = (call) =>
-          approve(call, approving.signal).catch((e: unknown) => {
+          call.kind === 'edit' && inside(ctx.artifactsDir, resolve(spec.cwd, call.path)) ? Promise.resolve(true) : approve(call, approving.signal).catch((e: unknown) => {
             if ((e as Error).name === 'ExitPromptError') ctx.onInterrupt(); // Ctrl+C at the question
             throw e;
           });

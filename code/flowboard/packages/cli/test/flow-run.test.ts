@@ -24,14 +24,15 @@ const USAGE = [
   '       pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page]',
 ];
 
-type Play = 'pass' | 'fail' | 'none' | 'no-output' | 'error' | 'hang' | 'ask' | 'slow' | 'approve';
+type Play = 'pass' | 'fail' | 'none' | 'no-output' | 'error' | 'hang' | 'ask' | 'slow' | 'approve' | 'write-own';
 const COLOUR: Question = { id: 'colour', prompt: 'Colour?', kind: 'text' };
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * A provider whose n-th run of step S plays plays[S][n] (default `pass`); S is the step's prompt text. Every run
  * costs $0.10; one stopped ends early with tokens and no price, as a Claude run does. `timeline` records start:S and end:S.
- * `approve` asks the owner to run `pnpm test` first; `approvals` records each answer (a rejected ask is a no).
+ * `approve` asks the owner to run `pnpm test` first, `write-own` to write its first output; `approvals` records each
+ * answer (a rejected ask is a no).
  */
 function scripted(plays: Record<string, Play[]>) {
   const timeline: string[] = [];
@@ -62,11 +63,12 @@ function scripted(plays: Record<string, Play[]>) {
         if (play === 'hang') await stopped;
         if (play === 'ask' && !halted) await askBroker(env.FLOWBOARD_ASK_SOCKET, { questions: [COLOUR] });
         if (play === 'approve' && !halted) approvals.push(await spec.approve!({ kind: 'shell', command: 'pnpm test' }).catch(() => false));
+        if (play === 'write-own' && !halted) approvals.push(await spec.approve!({ kind: 'edit', tool: 'Write', path: spec.prompt.outputs[0].path }).catch(() => false));
         timeline.push(`end:${step}`);
         live -= 1;
         if (halted) return { usage: { ...ZERO_USAGE, input: 1000 }, exitCode: 1, error: 'stopped' };
         if (play === 'error') return { usage, exitCode: 1, error: 'boom' };
-        if (['pass', 'fail', 'none', 'ask', 'slow', 'approve'].includes(play)) for (const o of spec.prompt.outputs) writeFileSync(o.path, step);
+        if (['pass', 'fail', 'none', 'ask', 'slow', 'approve', 'write-own'].includes(play)) for (const o of spec.prompt.outputs) writeFileSync(o.path, step);
         // set_outcome is offered only where the verdict is read
         if (play !== 'none' && env.FLOWBOARD_OUTCOME_FILE) writeFileSync(env.FLOWBOARD_OUTCOME_FILE, JSON.stringify({ outcome: play === 'fail' ? 'fail' : 'pass' }));
         return { usage, exitCode: 0 };
@@ -101,6 +103,7 @@ function setup(yaml = DELIVERY, plays: Record<string, Play[]> = {}) {
   const deps: RunDeps = {
     cwd: base,
     dataDir: join(base, 'data'),
+    canAsk: true, // as at a terminal; a run left with no one to ask pauses at its gates
     makeProvider: script.makeProvider,
     print: (l) => out.push(l),
     printErr: (l) => err.push(l),
@@ -1215,6 +1218,31 @@ test('trusted asks before an agent\'s shell command', { timeout: 10_000 }, async
   assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], s.deps), 0, s.out.join('\n'));
   assert.deepEqual(s.script.approvals, [true]);
   assert.ok(s.out.includes('-- build: allowed pnpm test'), s.out.join('\n'));
+});
+
+test("trusted never asks before an agent writes the run's own outputs", { timeout: 10_000 }, async () => {
+  const s = setup(ONE_PLAN, { plan: ['write-own'] });
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.deepEqual(s.script.approvals, [true]);
+  assert.equal(s.out.some((l) => l.includes('allowed')), false, s.out.join('\n'));
+});
+
+test('a trusted run with agents and no one to answer is refused, at start and at resume', { timeout: 10_000 }, async () => {
+  const NO_ONE = 'this project is Trusted, so agents ask before edits and shell commands, and no one can answer here; run it in a terminal or from the runs page';
+  const s = setup(ONE_BUILD);
+  s.deps.canAsk = false;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 2);
+  assert.deepEqual(s.err, [`flow.yaml: ${NO_ONE}`]);
+  assert.equal(existsSync(join(s.base, 'runs')), false);
+  // shell steps never ask, so a shell-only flow runs
+  const sh = setup(SHELL_ONLY);
+  sh.deps.canAsk = false;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], sh.deps), 0, sh.err.join('\n'));
+  const g = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], g.deps), 3, g.err.join('\n'));
+  g.deps.canAsk = false;
+  assert.equal(await runFlow(['--resume', RUN_DIR], g.deps), 2);
+  assert.deepEqual(g.err, [`${RUN_DIR}: cannot resume: ${NO_ONE}`]);
 });
 
 test('a stopped step withdraws its approval', { timeout: 10_000 }, async () => {

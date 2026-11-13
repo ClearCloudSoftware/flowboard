@@ -69,7 +69,7 @@ As built (2026-11-10), the Next.js app has run routes under `app/api/runs/`, key
 | `GET` | `/api/runs/[run]/events` | Server-sent events: `data: change` whenever a file in the run folder changes (`fs.watch`, 150 ms debounce), and a comment every 15 s | 404 |
 | `POST` | `/api/runs/[run]/answer` | `{ id, answers }`: writes `answers/<id>.json` for an open ask, once each answer fits its question | 400 bad body; 409 when the host does not take page answers, the ask is closed or an answer does not fit |
 | `POST` | `/api/runs/[run]/stop` | Writes `<run folder>/stop`; the host stops as on a first Ctrl+C | 409 unless the run is `starting`, `running` or `waiting` |
-| `POST` | `/api/runs/[run]/resume` | `{ budgetUsd? }`: starts a detached `run-flow --resume <run folder> --page`, with `--budget-usd` when given, its output appended to `<run folder>/resume.log`; returns `{ ok, pid }` | 400; 404; 409 unless the run is `paused` |
+| `POST` | `/api/runs/[run]/resume` | `{ budgetUsd? }`: starts a detached `run-flow --resume <run folder> --page`, with `--budget-usd` when given, its output appended to `<run folder>/resume.log`; waits until run-flow says it is resuming and returns `{ ok }` | 400; 404; 409 unless the run is `paused`; 422 with run-flow's words when it refuses |
 
 Approve, Send back, Retry, Fail the flow and Allow host & retry are not endpoints: they are values of a gate's `decision` and `allow_host` answers, sent through `/answer`. Stopping a single run, rather than the whole flow, is not built.
 

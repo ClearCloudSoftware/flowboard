@@ -133,6 +133,10 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
       r.refused.forEach((l) => printErr(l));
       return 2;
     }
+    if (noOneAsks(r.isolation, steps, !!v.page, deps)) {
+      printErr(`${yaml}: ${NO_ONE}`);
+      return 2;
+    }
     isolated = r;
   }
   // A workspace is made only for a flow that loads, then the flow is loaded again to work in it.
@@ -284,6 +288,11 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
 const OWN_DATA = fileURLToPath(new URL('../../../data', import.meta.url));
 /** FlowBoard's data folder: FLOWBOARD_DATA_DIR, else its own, as the app has it. */
 const dataDirOf = (deps: RunDeps) => deps.dataDir ?? (process.env.FLOWBOARD_DATA_DIR ? resolve(deps.cwd, process.env.FLOWBOARD_DATA_DIR) : OWN_DATA);
+
+const NO_ONE = 'this project is Trusted, so agents ask before edits and shell commands, and no one can answer here; run it in a terminal or from the runs page';
+/** True when the run's agents would ask before edits and shell commands and neither a terminal nor the page can answer. */
+const noOneAsks = (iso: Isolation, steps: FlowConfig['steps'], page: boolean, deps: RunDeps) =>
+  iso.approvals && Object.values(steps).some((s) => s.kind === 'ai') && !page && !(deps.canAsk ?? (!!deps.answer || !!process.stdin.isTTY));
 
 /** A run's isolation, decided as it starts: the sandbox it gets and the line saying so. */
 interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string }
@@ -553,6 +562,7 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number;
   const bare = (sb: Sandbox | undefined) => sb && { ...sb, limits: undefined, egress: undefined };
   const same = isDeepStrictEqual(bare(now.sandbox), bare(pinned.config.sandbox)) && (!was || (was.tier === now.isolation.tier && was.approvals === now.isolation.approvals));
   if (!same) return refuse(EDITED);
+  if (noOneAsks(now.isolation, pinned.config.steps, !!given.page, deps)) return refuse(NO_ONE);
   const config = { ...pinned.config, isolation: now.isolation, budgetUsd: given.budget ?? pinned.config.budgetUsd ?? 0 };
   const held = parseJson(readText(join(runDir, 'sandbox.json'))) as { id?: unknown; token?: unknown } | undefined;
   const recorded = typeof held?.id === 'string' && typeof held.token === 'string' ? { id: held.id, token: held.token } : undefined;

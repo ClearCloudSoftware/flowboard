@@ -110,3 +110,19 @@ test('approver: deny says no', async () => {
   assert.equal(await a.approve({ kind: 'shell', command: 'ls' }, a.signal), false);
   assert.deepEqual(a.shown, ['-- build: denied ls']);
 });
+
+test('approver: an ask no one can answer says so, and is a no', async () => {
+  const base = mkdtempSync(join(tmpdir(), 'fb-approve-'));
+  registerProject(base, join(base, 'proj'), 'trusted');
+  const shown: string[] = [];
+  const o = { dataDir: join(base, 'data'), projectId: 'p-1', folder: join(base, 'proj'), step: 'build', show: (l: string) => shown.push(l) };
+  const failing = approver({ ...o, ask: async () => Promise.reject(new Error('no terminal')) });
+  await assert.rejects(failing({ kind: 'shell', command: 'ls' }, new AbortController().signal), /no terminal/);
+  assert.deepEqual(shown, ['-- build: denied ls: no one could be asked']);
+  // A withdrawn question (the step stopped) is not news.
+  const stop = new AbortController();
+  stop.abort();
+  const withdrawn = approver({ ...o, ask: async () => Promise.reject(new Error('aborted')) });
+  await assert.rejects(withdrawn({ kind: 'shell', command: 'ls' }, stop.signal));
+  assert.equal(shown.length, 1);
+});

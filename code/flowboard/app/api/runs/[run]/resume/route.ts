@@ -1,15 +1,15 @@
-import { spawn } from 'node:child_process';
-import { openSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { readRun } from '../../../../../packages/cli/src/flow-logs.ts';
+import { resumeRun } from '../../../../../packages/cli/src/flow-start.ts';
 import { body, dataDir, refused, runsDir } from '../../../flows/local.ts';
 
 const Resume = z.object({ budgetUsd: z.number().min(0).optional() });
 
 /**
  * Continues a paused run: `run-flow --resume <run> --page`, with `--budget-usd` when given, in the background.
- * Its own output goes to `<run>/resume.log`; the page follows it from the run's files like any other host.
+ * Its own output goes to `<run>/resume.log`; the page follows it from the run's files like any other host. 422 with
+ * run-flow's words if it refuses.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ run: string }> }) {
   const no = refused(request);
@@ -20,15 +20,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ run
   const detail = readRun(runsDir(), run);
   if (!detail) return Response.json({ error: `no run ${run}` }, { status: 404 });
   if (detail.status !== 'paused') return Response.json({ error: `the run is ${detail.status}; only a paused run resumes` }, { status: 409 });
-  const dir = join(runsDir(), run);
-  const budget = input.data.budgetUsd === undefined ? [] : ['--budget-usd', String(input.data.budgetUsd)];
-  const out = openSync(join(dir, 'resume.log'), 'a');
-  const child = spawn(process.execPath, [join(process.cwd(), 'packages/cli/src/flow-main.ts'), '--resume', dir, '--page', ...budget], {
-    cwd: process.cwd(),
-    env: { ...process.env, FLOWBOARD_DATA_DIR: dataDir() }, // the app's data folder: where run-flow finds the run's project
-    detached: true,
-    stdio: ['ignore', out, out],
-  });
-  child.unref();
-  return Response.json({ ok: true, pid: child.pid });
+  const r = await resumeRun(join(runsDir(), run), dataDir(), input.data.budgetUsd);
+  return r.ok ? Response.json({ ok: true }) : Response.json({ error: r.error }, { status: 422 });
 }

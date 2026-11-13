@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { startRun } from '../src/flow-start.ts';
+import { resumeRun, startRun } from '../src/flow-start.ts';
 import { registerProject } from './fixtures/flow.ts';
 
 const project = () => {
@@ -44,4 +44,14 @@ test('a run run-flow refuses comes back with what it said', { timeout: 30_000 },
   assert.match((r as { error: string }).error, /nope/);
   assert.deepEqual(await startRun(p.runs, p.flows, p.data, { flow: 'quick', folder: 'rel', task: 'x' }), { ok: false, error: 'the folder must be an absolute path, or start with ~/' });
   assert.deepEqual(await startRun(p.runs, p.flows, p.data, { flow: '../x', folder: p.folder, task: 'x' }), { ok: false, error: '"../x": not a flow name' });
+});
+
+test('a resume run-flow refuses comes back with what it said this time, and the log keeps it', { timeout: 30_000 }, async () => {
+  const p = project();
+  const run = join(p.runs, 'r1');
+  mkdirSync(run, { recursive: true });
+  writeFileSync(join(run, 'resume.log'), '-- resuming an earlier time\n');
+  const r = await resumeRun(run, p.data);
+  assert.deepEqual(r, { ok: false, error: `${run}: cannot resume: no state.json` });
+  assert.match(readFileSync(join(run, 'resume.log'), 'utf8'), /^-- resuming an earlier time\n.*cannot resume: no state.json/s);
 });

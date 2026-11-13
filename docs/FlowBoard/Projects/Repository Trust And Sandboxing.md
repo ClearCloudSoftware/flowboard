@@ -61,10 +61,11 @@ Since 2026-11-13 a project's trust (*Trusted*, *Normal*, *Untrusted*; [[Project 
 
 ### Approvals in Trusted runs
 
-An agent's file edit or shell command is held until you answer: **Allow**, **Allow from now on** or **Deny**. Anything but file edits and shell commands passes.
+An agent's file edit or shell command is held until you answer: **Allow**, **Allow from now on** or **Deny**. Anything but file edits and shell commands passes, and so do edits inside the run's own artifacts folder (`.flowboard/<run>/`, where the prompts tell agents to write their outputs).
 
 - **Where asked:** Claude Code through a `PreToolUse` hook (Claude's `Monitor` tool counts as a shell command; a `Monitor` with no command is denied); OpenCode through its permission requests (`apply_patch` over several files asks per file, all must be allowed). The question reaches the terminal or the runs page like an `ask_user`.
-- **Fails closed:** an ask that fails (the run stopped, nobody to answer) is a no, as is an edit or shell call whose path or command is not a string.
+- **Someone must be able to answer.** A Trusted run with agent steps and neither a terminal nor `--page` is refused at start and at `--resume`: *"this project is Trusted, so agents ask before edits and shell commands, and no one can answer here; run it in a terminal or from the runs page"*.
+- **Fails closed:** an ask that fails (the run stopped, nobody to answer) is a no, as is an edit or shell call whose path or command is not a string. One nobody could answer shows `-- <step>: denied <what>: no one could be asked`.
 - **Only what the policy already allows:** an approval never grants more than the step's tool policy and guards. On Claude, a command the allow list refuses is still asked, then refused.
 - **Shell steps never ask**, the flow's or the project's check command: they are the recipe's and the project's, not an agent's choice. Only agent steps ask.
 - **Allow from now on** saves a rule on the project record (`approvals` in `data/projects.json`): all file edits, or a shell *prefix*, the command's first word plus its second unless that starts with `-` (`pnpm test --filter x` saves `pnpm test`). The project page lists the rules, each removable. Rules are read fresh at every call. A command holding `` ; & | < > $ ` ( ) \ `` or a newline never matches a rule and cannot be saved as one. Neither can a command that runs another command: shells, `env`, `sudo`, `node`, `python`, `find`, `pnpm exec` and the like; every word of a saved prefix must be plain (letters, digits, `.`, `_`, `-`; no paths or `NAME=value`). Those can be allowed once, with the help line *"This command can run other commands, so it can only be allowed once."*
@@ -77,7 +78,8 @@ An agent's file edit or shell command is held until you answer: **Allow**, **All
 4. An approval gates only what the tool policy allows; a command the Claude allow list refuses is still asked first (ceiling: match `toolPolicy.allow` before asking).
 5. A saved shell prefix is as above, and a runner is never saved (the plan allowed `node` or `bash` prefixes; a rule for one would allow anything).
 6. Isolation is decided as the run starts and pinned in `flow.json` (`config.isolation`). `--resume` does not keep the pin: it finds the project by the pinned `isolation.projectId` (by the pinned folder only for a pin from before isolation was built), requires the project to still own that folder, works the tier out again from the project's current trust and the pinned flow `sandbox:`, and refuses if the project is gone, the folder is no longer in it, or the result differs from the pin: *"its project's isolation changed since it started, or its flow.json was edited; start the flow again"*. A paused run whose project's trust changed must be started again. The plan said the pin was kept; a pin an agent can edit would otherwise lower the tier.
-7. The app passes its data folder to `run-flow` as `FLOWBOARD_DATA_DIR` (starting a run and resuming one), so run-flow and the app read the same `projects.json`.
+7. The app passes its data folder to `run-flow` as `FLOWBOARD_DATA_DIR` (starting a run and resuming one), so run-flow and the app read the same `projects.json`. A resume run-flow refuses comes back to the page as a 422 with its words.
+8. The seeded Scratch project is Trusted (`overrides.trust`): FlowBoard wrote its repo. Installs seeded before keep theirs.
 
 ## The git boundary
 

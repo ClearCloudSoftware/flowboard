@@ -236,7 +236,7 @@ Reject is offered only when the step has an `on_fail` edge.
 - **Questions.** Every batch the terminal would ask, a gate's decision or an agent's question, is also written to `<run folder>/asks/<id>.json` as `{ id, heading, questions, at }`. The page answers by writing `<run folder>/answers/<id>.json`; the first answer, terminal or page, wins and the other is withdrawn. Both files go once it is settled.
 - **Stop.** A `<run folder>/stop` file stops the flow as one Ctrl+C does; `--resume` continues it. This works with or without `--page`: every host watches for the file. Another stop file while it stops is a repeat, never the quit-at-once second Ctrl+C.
 - **Host.** `<run folder>/host.json`, `{ pid, page }`, is there while a `run-flow` drives the run; the page reads a run with no live host as paused.
-- **Resume.** The page's *Resume* runs `run-flow --resume <run folder> --page` in the background, with `--budget-usd` when a new budget is given; its output goes to `<run folder>/resume.log`.
+- **Resume.** The page's *Resume* runs `run-flow --resume <run folder> --page` in the background, with `--budget-usd` when a new budget is given; its output goes to `<run folder>/resume.log`. A refusal comes back to the page with run-flow's words, as for a new run.
 - **Allow host & retry.** At a *run failed* or escalation gate of an OpenSandbox run, a third question, *Host to allow before the retry*, takes a host name. With Retry, the box is let reach it at once and the host is added to `sandbox.egress` in `flow.json`, so a resumed run's box allows it too.
 
 ## Safety

@@ -89,6 +89,7 @@ test('the first look seeds a scratch project with a commit and a passing check, 
   seedOnce(data, lib);
   const [p] = readProjects(data);
   assert.deepEqual([p.name, p.slug, p.repoPath, p.defaultFlow], ['Scratch', 'scratch', join(data, 'scratch'), 'delivery']);
+  assert.deepEqual(p.overrides, { trust: 'trusted' }); // FlowBoard wrote it, so its sample runs work on this machine
   assert.equal(spawnSync('git', ['rev-list', '--count', 'HEAD'], { cwd: p.repoPath, encoding: 'utf8' }).stdout.trim(), '1');
   assert.equal(viewProjects([p], [], lib, APP_DEFAULTS)[0].checkCommand, 'node --test');
   assert.equal(spawnSync('node', ['--test'], { cwd: p.repoPath }).status, 0);

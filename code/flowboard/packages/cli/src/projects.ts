@@ -247,7 +247,8 @@ export function seedOnce(dataDir: string, flowsDir: string) {
   };
   for (const [f, text] of Object.entries(files)) writeFileSync(join(repo, f), text);
   if (git(repo, 'init', '-q', '-b', 'main').status !== 0 || git(repo, 'add', '.').status !== 0 || git(repo, 'commit', '-q', '-m', 'Scratch repo for FlowBoard').status !== 0) return;
-  createProject(dataDir, flowsDir, { name: 'Scratch', repoPath: repo, type: 'software' });
+  // FlowBoard wrote this repo itself, so its runs work on this machine, asking before agents' edits and commands.
+  createProject(dataDir, flowsDir, { name: 'Scratch', repoPath: repo, type: 'software', overrides: { trust: 'trusted' } });
 }
 
 /** A project as the projects page shows it: its runs counted by status and what they cost in the last seven days. */
