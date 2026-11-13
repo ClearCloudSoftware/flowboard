@@ -18,7 +18,7 @@ import { Finish } from './finish.tsx';
 import { ConnectBox, RepoStep } from './repo-step.tsx';
 
 const ICON = { software: Code, research: BookOpen, writing: PenLine, data: Database };
-const SOURCES = [
+export const SOURCES = [
   { id: 'github', name: 'GitHub', text: 'github.com, personal accounts and organizations' },
   { id: 'gitlab', name: 'GitLab', text: 'gitlab.com and self-managed', soon: true },
   { id: 'bitbucket', name: 'Bitbucket', text: 'Bitbucket Cloud', soon: true },

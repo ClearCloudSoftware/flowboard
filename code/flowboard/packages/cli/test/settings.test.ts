@@ -44,3 +44,15 @@ test('overrides: every rule the wizard checks, with its message', () => {
   assert.ok(bad({ trust: 'root' }));
   assert.equal(OverridesSchema.safeParse({ memory: true, draft: false }).success, true);
 });
+
+test('agents: each harness has a program, a model and an effort; a model the CLI would refuse is refused', () => {
+  const data = temp();
+  assert.deepEqual(readAppSettings(data).agents['claude-code'], { path: null, model: 'sonnet', effort: null });
+  const agents = { 'claude-code': { path: '~/bin/claude', model: 'opus', effort: 'high' as const }, opencode: { path: null, model: 'openrouter/deepseek/deepseek-v4.1-flash', effort: null } };
+  value(updateAppSettings(data, { agents }));
+  assert.deepEqual(readAppSettings(data).agents, agents);
+  const bad = (a: unknown) => updateAppSettings(data, { agents: a as typeof agents });
+  assert.deepEqual(bad({ ...agents, opencode: { ...agents.opencode, model: 'deepseek' } }), { ok: false, status: 400, error: 'providerID/modelID, like openrouter/deepseek/deepseek-v4.1-flash' });
+  assert.deepEqual(bad({ ...agents, 'claude-code': { ...agents['claude-code'], path: 'claude' } }), { ok: false, status: 400, error: 'a program path: absolute, or starting with ~/' });
+  assert.deepEqual(bad({ ...agents, 'claude-code': { ...agents['claude-code'], effort: 'huge' } }).ok, false);
+});

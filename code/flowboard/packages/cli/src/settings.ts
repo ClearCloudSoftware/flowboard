@@ -15,8 +15,17 @@ export interface Escalation { channel: string; nudgeMin: number }
 export interface Knowledge { serena: boolean; graphify: boolean; rebuild: 'push' | 'daily' | 'manual' }
 export interface Settings { trust: Trust; budget: Budget; escalation: Escalation; memory: boolean; knowledge: Knowledge; draft: boolean }
 export type SettingKey = keyof Settings;
-/** `projectsFolder`: where new projects are cloned; null for FlowBoard's own, `DEFAULT_PROJECTS_FOLDER`. */
-export interface AppSettings extends Settings { projectsFolder: string | null }
+/** The agent CLIs FlowBoard drives (Agent Providers). */
+export type Harness = 'claude-code' | 'opencode';
+export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+export type Effort = (typeof EFFORTS)[number];
+/** How to run one agent CLI: `path` null for the one on PATH; `model` and `effort` null for the CLI's own. */
+export interface HarnessConfig { path: string | null; model: string | null; effort: Effort | null }
+/**
+ * `projectsFolder`: where new projects are cloned; null for FlowBoard's own, `DEFAULT_PROJECTS_FOLDER`.
+ * `agents`: how each harness is run; app-wide, as it is about this machine, so no project overrides it.
+ */
+export interface AppSettings extends Settings { projectsFolder: string | null; agents: Record<Harness, HarnessConfig> }
 /** A project's own values; a key present is overridden. In an override, `budget.capUsd` is a number above 0. */
 export type Overrides = Partial<Settings>;
 
@@ -47,6 +56,24 @@ export const trustText = (t: Trust) => `${TRUST[t].label}: ${TRUST[t].tier}`;
 
 export const DEFAULT_PROJECTS_FOLDER = '~/FlowBoard/projects';
 
+/** Each harness as the pages name it. `login`: whose credentials it runs on; FlowBoard keeps none of its own. */
+export const HARNESSES: Record<Harness, { name: string; bin: string; text: string; login: string; model: string }> = {
+  'claude-code': {
+    name: 'Claude Code',
+    bin: 'claude',
+    text: 'Anthropic’s CLI, driven through the Agent SDK.',
+    login: 'Runs on the installed claude login, your Claude subscription. An exported ANTHROPIC_API_KEY is not passed on.',
+    model: 'an alias (haiku, sonnet, opus) or a full model id',
+  },
+  opencode: {
+    name: 'OpenCode',
+    bin: 'opencode',
+    text: 'An open-source CLI that runs other providers’ models, one local server per run.',
+    login: 'Runs on the credentials OpenCode stores itself (opencode auth login). It has no Claude subscription login, so its runs are billed by that provider.',
+    model: 'providerID/modelID, like openrouter/deepseek/deepseek-v4.1-flash',
+  },
+};
+
 export const APP_DEFAULTS: AppSettings = {
   projectsFolder: null,
   trust: 'normal',
@@ -55,6 +82,8 @@ export const APP_DEFAULTS: AppSettings = {
   memory: false,
   knowledge: { serena: false, graphify: false, rebuild: 'manual' },
   draft: false,
+  // PRD §5's default model; the effort is the model's own.
+  agents: { 'claude-code': { path: null, model: 'sonnet', effort: null }, opencode: { path: null, model: null, effort: null } },
 };
 
 const CAP = 'a dollar amount above 0';
@@ -64,6 +93,8 @@ const NUDGE = '1 to 120 minutes';
 export const FOLDER = 'a folder path: absolute, or starting with ~/';
 /** An absolute path, or one from the home folder. */
 export const FOLDER_RE = /^(~\/|\/)\S/;
+const PROGRAM = 'a program path: absolute, or starting with ~/';
+const CLAUDE_MODEL = `a Claude model: ${HARNESSES['claude-code'].model}`;
 
 const cap = z.number({ error: CAP }).positive({ error: CAP });
 const budget = (capUsd: z.ZodType<number | null>) =>
@@ -83,11 +114,21 @@ const shape = {
   draft: z.boolean(),
 };
 
+const harness = (model: z.ZodString) => z.strictObject({ path: z.string().trim().regex(FOLDER_RE, { error: PROGRAM }).nullable(), model: model.nullable(), effort: z.enum(EFFORTS).nullable() });
+
+/** Each harness's settings, as the server checks them and the agents page checks each field. */
+export const HARNESS_SCHEMAS = {
+  'claude-code': harness(z.string().trim().regex(/^[\w.[\]-]+$/, { error: CLAUDE_MODEL })),
+  // As run-agent checks it (`config.ts`): OpenCode's model ids are always providerID/modelID.
+  opencode: harness(z.string().trim().regex(/^[^\s/]+\/\S+$/, { error: HARNESSES.opencode.model })),
+};
+
 export const OverridesSchema: z.ZodType<Overrides> = z.strictObject({ ...shape, budget: budget(cap) }).partial();
 export const AppSettingsSchema = z.strictObject({
   ...shape,
   budget: budget(cap.nullable()),
   projectsFolder: z.string().trim().regex(FOLDER_RE, { error: FOLDER }).nullable(),
+  agents: z.strictObject(HARNESS_SCHEMAS),
 });
 
 export type From = 'app' | 'type' | 'project';

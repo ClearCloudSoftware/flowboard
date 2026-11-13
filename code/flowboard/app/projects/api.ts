@@ -3,7 +3,8 @@ import { queryOptions } from '@tanstack/react-query';
 import type { GhRepo, GhStatus } from '../../packages/cli/src/github.ts';
 import type { CloneInput, CloneJob } from '../../packages/cli/src/clone.ts';
 import type { NewProject, Project, ProjectEdit, ProjectView } from '../../packages/cli/src/projects.ts';
-import type { AppSettings } from '../../packages/cli/src/settings.ts';
+import type { AppSettings, Harness } from '../../packages/cli/src/settings.ts';
+import type { HarnessStatus } from '../../packages/cli/src/harnesses.ts';
 import { ApiError, call } from '../flows/api.ts';
 
 export type { AppSettings, CloneJob, GhRepo, GhStatus, Project, ProjectView };
@@ -49,3 +50,6 @@ export const cloneJobQuery = (id: string) =>
     refetchInterval: (q) => ((q.state.data && ['done', 'failed'].includes(q.state.data.phase)) || cloneLost(q.state.error) ? false : 500),
     retry: false,
   });
+
+/** Each agent CLI on this machine (`/api/agents`); slow-ish, as it runs each CLI. */
+export const agentsQuery = queryOptions({ queryKey: ['agents'], queryFn: () => call<Record<Harness, HarnessStatus>>('/api/agents') });
