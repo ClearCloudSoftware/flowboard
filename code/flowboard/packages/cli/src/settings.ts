@@ -25,7 +25,11 @@ export interface HarnessConfig { path: string | null; model: string | null; effo
  * `projectsFolder`: where new projects are cloned; null for FlowBoard's own, `DEFAULT_PROJECTS_FOLDER`.
  * `agents`: how each harness is run; app-wide, as it is about this machine, so no project overrides it.
  */
-export interface AppSettings extends Settings { projectsFolder: string | null; agents: Record<Harness, HarnessConfig> }
+export interface AppSettings extends Settings { projectsFolder: string | null; agents: Record<Harness, HarnessConfig>; internal: Record<InternalStep, InternalStepConfig> }
+/** The steps FlowBoard runs for itself, outside any flow (`internal/<id>/`, `internal-steps.ts`). */
+export type InternalStep = 'repo-analyst' | 'backlog-importer';
+/** How one internal step runs, for every project: `effort` null for the model's own; `budgetUsd` the most one run may spend. */
+export interface InternalStepConfig { adapter: Harness; model: string; effort: Effort | null; budgetUsd: number }
 /** A project's own values; a key present is overridden. In an override, `budget.capUsd` is a number above 0. */
 export type Overrides = Partial<Settings>;
 
@@ -74,6 +78,20 @@ export const HARNESSES: Record<Harness, { name: string; bin: string; text: strin
   },
 };
 
+/** Each internal step as the settings page names it; `fixed`: what it may touch, which no setting changes. */
+export const INTERNAL_STEPS: Record<InternalStep, { name: string; text: string; fixed: string }> = {
+  'repo-analyst': {
+    name: 'Repo analyst',
+    text: 'Reads a newly cloned project and proposes its stack, its check command and the package registries its sandbox must reach. Runs once per new project.',
+    fixed: 'Reads the repo; writes only its proposal. No shell, no network.',
+  },
+  'backlog-importer': {
+    name: 'Backlog importer',
+    text: 'Turns a markdown backlog the parser cannot read into tasks. Runs when you import such a file.',
+    fixed: 'Sees only the file’s text; writes only the task list. No other tools.',
+  },
+};
+
 export const APP_DEFAULTS: AppSettings = {
   projectsFolder: null,
   trust: 'normal',
@@ -84,6 +102,11 @@ export const APP_DEFAULTS: AppSettings = {
   draft: false,
   // PRD §5's default model; the effort is the model's own.
   agents: { 'claude-code': { path: null, model: 'sonnet', effort: null }, opencode: { path: null, model: null, effort: null } },
+  // The importer on haiku, as backlog Story 7.3 runs it.
+  internal: {
+    'repo-analyst': { adapter: 'claude-code', model: 'sonnet', effort: null, budgetUsd: 0.5 },
+    'backlog-importer': { adapter: 'claude-code', model: 'haiku', effort: null, budgetUsd: 0.25 },
+  },
 };
 
 const CAP = 'a dollar amount above 0';
@@ -114,14 +137,20 @@ const shape = {
   draft: z.boolean(),
 };
 
-const harness = (model: z.ZodString) => z.strictObject({ path: z.string().trim().regex(FOLDER_RE, { error: PROGRAM }).nullable(), model: model.nullable(), effort: z.enum(EFFORTS).nullable() });
+/** A model id each harness's CLI would take. */
+const MODELS = {
+  'claude-code': z.string().trim().regex(/^[\w.[\]-]+$/, { error: CLAUDE_MODEL }),
+  // As run-agent checks it (`config.ts`): OpenCode's model ids are always providerID/modelID.
+  opencode: z.string().trim().regex(/^[^\s/]+\/\S+$/, { error: HARNESSES.opencode.model }),
+};
+const harness = (h: Harness) => z.strictObject({ path: z.string().trim().regex(FOLDER_RE, { error: PROGRAM }).nullable(), model: MODELS[h].nullable(), effort: z.enum(EFFORTS).nullable() });
 
 /** Each harness's settings, as the server checks them and the agents page checks each field. */
-export const HARNESS_SCHEMAS = {
-  'claude-code': harness(z.string().trim().regex(/^[\w.[\]-]+$/, { error: CLAUDE_MODEL })),
-  // As run-agent checks it (`config.ts`): OpenCode's model ids are always providerID/modelID.
-  opencode: harness(z.string().trim().regex(/^[^\s/]+\/\S+$/, { error: HARNESSES.opencode.model })),
-};
+export const HARNESS_SCHEMAS = { 'claude-code': harness('claude-code'), opencode: harness('opencode') };
+
+const internalOn = (h: Harness) => z.strictObject({ adapter: z.literal(h), model: MODELS[h], effort: z.enum(EFFORTS).nullable(), budgetUsd: cap });
+/** One internal step's settings: the model must suit the harness it runs on. */
+export const INTERNAL_STEP_SCHEMA = z.discriminatedUnion('adapter', [internalOn('claude-code'), internalOn('opencode')]);
 
 export const OverridesSchema: z.ZodType<Overrides> = z.strictObject({ ...shape, budget: budget(cap) }).partial();
 export const AppSettingsSchema = z.strictObject({
@@ -129,6 +158,7 @@ export const AppSettingsSchema = z.strictObject({
   budget: budget(cap.nullable()),
   projectsFolder: z.string().trim().regex(FOLDER_RE, { error: FOLDER }).nullable(),
   agents: z.strictObject(HARNESS_SCHEMAS),
+  internal: z.strictObject({ 'repo-analyst': INTERNAL_STEP_SCHEMA, 'backlog-importer': INTERNAL_STEP_SCHEMA }),
 });
 
 export type From = 'app' | 'type' | 'project';
