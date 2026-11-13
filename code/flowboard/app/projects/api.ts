@@ -15,6 +15,8 @@ export const projectsQuery = queryOptions({ queryKey: ['projects'], queryFn: () 
 
 export const createProject = (input: NewProject) => call<Project>('/api/projects', { method: 'POST', body: JSON.stringify(input) });
 export const updateProject = (id: string, edit: ProjectEdit) => call<Project>(`/api/projects/${id}`, { method: 'PATCH', body: JSON.stringify(edit) });
+/** Starts the repo analyst on the project; 422 with run-flow's words when it refuses. */
+export const startAnalysis = (id: string) => call<{ run: string }>(`/api/projects/${id}/analysis`, { method: 'POST', body: '{}' });
 export const removeProject = (id: string) => call<{ ok: true }>(`/api/projects/${id}`, { method: 'DELETE', body: '{}' });
 
 /** The run's folder is the project's repo or inside it (`owns` on the server, which this page cannot import). */

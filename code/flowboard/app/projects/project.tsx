@@ -28,6 +28,7 @@ import { budgetState } from '../../packages/cli/src/budget.ts';
 import { PROJECT_TYPES, resolveSettings, ruleText } from '../../packages/cli/src/settings.ts';
 import { appSettingsQuery, inProject, newRunHref, projectsQuery, removeProject, updateProject, usd } from './api.ts';
 import type { ProjectView } from './api.ts';
+import { Analysis } from './analysis.tsx';
 import { FlowSelect } from './flow-select.tsx';
 import { Figures } from './list.tsx';
 import { type Draft, draftFrom, type PageId, problems, toLimits, toOverrides } from './settings-model.ts';
@@ -371,6 +372,11 @@ export function ProjectPage() {
                 )}
               </section>
             </div>
+            <Card>
+              <CardContent>
+                <Analysis projectId={p.id} mode="project" />
+              </CardContent>
+            </Card>
             {!!p.approvals?.length && <Approvals p={p} />}
             <ProjectSettings key={JSON.stringify([p.overrides, p.limits])} p={p} />
           </>
