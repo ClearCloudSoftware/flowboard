@@ -42,6 +42,7 @@ Feature map §19's own wording, verbatim:
 All five are global. Feature map §19 calls them *"The global switches"*, and PRD §13 calls draft mode *"a global **draft mode** toggle in settings"*. Two settings have narrower layers on top:
 
 - **Sandbox profile** is *"overridable per step"* (PRD §11.1), via *"an optional `step_defs.sandbox_profile` override"* (backlog 1.1).
+- **Internal steps** (as built, 2026-11-13; not in any source): the agent CLI, model, effort and per-run budget of the two steps FlowBoard runs for itself, `repo-analyst` and `backlog-importer`. App-wide only, on `/settings/internal`; see [[Seeded Capabilities]].
 - **Memory scopes** narrow recall per run: *"Recall the `user` scope into every run; `project`/`agent`/`task` per step"* (`09`, recommendation 2).
 
 Feature map §1 calls Projects *"Your codebases and the settings for how agents work on each one"*. The only per-project values in the schema (`default_flow_id`, `check_command`, PRD §5) are project fields, not rows in `settings`; see [[Projects Index]]. Whether any global setting should be overridable per project is [[Projects Open Questions]] #23.

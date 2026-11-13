@@ -39,6 +39,10 @@ Models and efforts stay as in the PRD table below; `requires` and `produces` sta
 Not seeds:
 
 - **`backlog-importer`** — internal to markdown import (Story 7.3); never shown in the library or the step picker, so it cannot be removed out from under import (D30).
+- **`repo-analyst`** — the skill behind the [[Project Settings|analysis agent]] that proposes a new project's stack, check command and network hosts. Internal like `backlog-importer`: it lives in FlowBoard's install at `code/flowboard/internal/repo-analyst/`, is never copied into a project's store, never shown in the library or the step picker, and nobody edits it from FlowBoard; it changes only with FlowBoard itself (Alex, 2026-11-13).
+
+> [!check] As built, 2026-11-13: internal steps
+> Both internal skills ship with a one-step flow beside them, `code/flowboard/internal/<id>/flow.yaml`, which fixes what the step may touch: `repo-analyst` reads the repo (Read, Grep, Glob) and writes only its `proposal`; `backlog-importer` gets the file's text as its task and may only write its `tasks`, with no tool to read or change anything (answering [[Intake And Import Open Questions]] #27 as proposed). The agent CLI, model, effort and per-run budget are app-wide settings, `internal` in `settings.json`, edited on `/settings/internal` (**Internal steps**); no project overrides them. Defaults: `repo-analyst` sonnet, $0.50; `backlog-importer` haiku, $0.25. `internalFlowText()` (`internal-steps.ts`) merges the two into a flow run-flow can run. Nothing launches either yet: the new-project wizard's analysis phase and backlog import will. The importer returns `import_key` only when the file states an explicit id; FlowBoard derives every other key ([[Import Key]]).
 - **`ask-three`** — the M4 smoke test; a test fixture loaded by the test setup (D30).
 - **The `researcher` flow template** and its agents (`web-researcher`, `research-summarizer`, `fact-checker`) — out of v1 until open-web research has an egress answer, such as a search-API host on the allowlist (D31). Feature map §2 still promises *"a couple of complete ones (a full software-development pipeline and a research pipeline)"*.
 
