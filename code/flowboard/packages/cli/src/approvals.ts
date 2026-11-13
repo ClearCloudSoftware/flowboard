@@ -18,11 +18,22 @@ const CHAINED = /[;&|<>$`()\\\n]/;
 /** Programs that run whatever they are given; a command starting with one is asked about every time. */
 export const RUNNERS = new Set('sh bash zsh dash ksh csh tcsh fish busybox ssh env sudo doas su xargs eval exec command builtin nohup timeout nice time watch npx pnpx bunx python node nodejs deno bun ruby perl php awk sed find'.split(' '));
 const PMS = new Set(['npm', 'pnpm', 'yarn', 'bun']);
+/** Their flags can run anything (`git -c core.fsmonitor=…`, `npm --prefix x install`): one before the subcommand saves no rule. */
+const FLAGGED = new Set(['git', ...PMS]);
 const WORD = /^[A-Za-z0-9][A-Za-z0-9._-]*$/; // no path, no NAME=value, no flag
-/** True when the command starts with a runner: `python3.12` is `python`; a package manager runs anything after `exec`, `dlx` or `x`
- * (a last `x` runs nothing, so `pnpm test --filter x` stays savable). */
-const runs = (words: string[]) =>
-  RUNNERS.has(words[0].toLowerCase().replace(/[\d.]+$/, '')) || (PMS.has(words[0]) && words.some((w, i) => i > 0 && (w === 'exec' || w === 'dlx' || (w === 'x' && i < words.length - 1))));
+/**
+ * True when the command starts with a runner: `python3.12` and `bash-5.1` are runners; a package manager runs anything
+ * after `exec`, `dlx` or `x` (a last `x` runs nothing, so `pnpm test --filter x` stays savable); git or a package
+ * manager whose second word is a flag may too.
+ */
+const runs = (words: string[]) => {
+  const first = words[0].toLowerCase();
+  return (
+    RUNNERS.has(first.replace(/[-\d.]+$/, '')) ||
+    (PMS.has(first) && words.some((w, i) => i > 0 && (w === 'exec' || w === 'dlx' || (w === 'x' && i < words.length - 1)))) ||
+    (FLAGGED.has(first) && !!words[1]?.startsWith('-'))
+  );
+};
 const wordsOf = (command: string) => command.trim().split(/\s+/);
 
 export const ApprovalRuleSchema: z.ZodType<ApprovalRule> = z.union([

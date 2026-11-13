@@ -126,3 +126,17 @@ test('approver: an ask no one can answer says so, and is a no', async () => {
   await assert.rejects(withdrawn({ kind: 'shell', command: 'ls' }, stop.signal));
   assert.equal(shown.length, 1);
 });
+
+test('git and package managers with a flag second save no rule, and a bare rule does not match them', () => {
+  for (const c of ['git -c core.fsmonitor=x status', 'npm --prefix x install', 'pnpm -r test', 'yarn --cwd x add y', 'bun -e 1', 'Git -c x status', 'NPM --global install x'])
+    assert.equal(ruleFor({ kind: 'shell', command: c }), undefined, c);
+  assert.deepEqual(ruleFor({ kind: 'shell', command: 'git status -s' }), { kind: 'shell', prefix: 'git status' });
+  assert.equal(allowedBy([{ kind: 'shell', prefix: 'git' }], { kind: 'shell', command: 'git -c x status' }), undefined);
+  assert.equal(allowedBy([{ kind: 'shell', prefix: 'npm' }], { kind: 'shell', command: 'npm --global install x' }), undefined);
+  assert.ok(allowedBy([{ kind: 'shell', prefix: 'git' }], { kind: 'shell', command: 'git status' }));
+  // a package manager's runner word is found whatever its case; a versioned runner is a runner
+  assert.equal(ruleFor({ kind: 'shell', command: 'PNPM exec rm x' }), undefined);
+  assert.equal(allowedBy([{ kind: 'shell', prefix: 'PNPM' }], { kind: 'shell', command: 'PNPM exec rm x' }), undefined);
+  for (const c of ['bash-5.1 -c x', 'python-3 x.py']) assert.equal(ruleFor({ kind: 'shell', command: c }), undefined, c);
+  assert.equal(ApprovalRuleSchema.safeParse({ kind: 'shell', prefix: 'bash-5.1' }).success, false);
+});
