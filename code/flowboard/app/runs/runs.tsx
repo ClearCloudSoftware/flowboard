@@ -2,7 +2,6 @@
 /** The runs screen: every run-flow run, newest first, and the picked one in full. */
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { LIVE, runQuery, runsQuery } from './api.ts';
 import type { RunStatus } from './api.ts';
 import { useState } from 'react';
@@ -52,18 +51,6 @@ export function Runs() {
         <button type="button" className="act primary" onClick={() => setCreating(true)}>
           + New run
         </button>
-        <Link className="act" href="/">
-          Projects
-        </Link>
-        <Link className="act" href="/workspaces">
-          Workspaces
-        </Link>
-        <Link className="act" href="/flows">
-          Flows
-        </Link>
-        <Link className="act" href="/docs">
-          Docs
-        </Link>
       </header>
       <div className="body">
         <aside className="pane rn-list">

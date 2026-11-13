@@ -121,12 +121,6 @@ export function Workspaces() {
           <Trash2 size={13} aria-hidden />
           Clean up merged ({merged})
         </button>
-        <Link className="act" href="/runs">
-          Runs
-        </Link>
-        <Link className="act" href="/flows">
-          Flows
-        </Link>
       </header>
       <div className={`body ws-body ${picked ? 'with-side' : ''}`}>
         <main className="pane">
