@@ -29,12 +29,25 @@ export interface AnalysisView { run: string; status: 'running' | 'done' | 'faile
 export const HOST = /^(?=.{1,253}$)([a-z0-9-]{1,63}\.)+[a-z]{2,63}$/i;
 export const MAX_HOSTS = 20;
 
+/**
+ * The public registries of the skill's table (SKILL.md §2). Any other host is custom: it widens the sandbox, so the
+ * page marks it, whatever the agent said, as a hostile repo can steer what the agent says.
+ */
+export const REGISTRY_HOSTS = new Set([
+  'registry.npmjs.org', 'pypi.org', 'files.pythonhosted.org', 'index.crates.io', 'static.crates.io', 'proxy.golang.org', 'sum.golang.org',
+  'repo.maven.apache.org', 'plugins.gradle.org', 'rubygems.org', 'api.nuget.org', 'repo.packagist.org',
+]);
+
+/** Text a person reads before approving it: no control, format (bidi, zero-width) or line/paragraph separator characters. */
+const VISIBLE = /^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+$/u;
+const INVISIBLE = 'only characters a person can see: no control, bidi or zero-width characters, and one line';
+
 const level = z.enum(['high', 'medium', 'low']).optional();
 const evidence = z.array(z.string().max(300)).max(20).default([]);
 const Shape = z.object({
-  stack: z.object({ value: z.array(z.string().min(1).max(40)).max(12).nullable(), evidence, confidence: level }),
+  stack: z.object({ value: z.array(z.string().trim().min(1).max(40).regex(VISIBLE, { error: INVISIBLE })).max(12).nullable(), evidence, confidence: level }),
   check_command: z.object({
-    value: z.string().min(1).max(500).regex(/^[^\r\n]+$/, { error: 'one line' }).nullable(),
+    value: z.string().trim().min(1).max(500).regex(VISIBLE, { error: INVISIBLE }).nullable(),
     evidence,
     confidence: level,
   }),
@@ -67,7 +80,7 @@ export function parseProposal(text: string): { ok: true; proposal: Proposal } | 
     proposal: {
       stack: p.stack.value,
       checkCommand: p.check_command.value,
-      networkHosts: p.network_hosts.value,
+      networkHosts: p.network_hosts.value?.map((h) => ({ ...h, custom: h.custom || !REGISTRY_HOSTS.has(h.host.toLowerCase()) })) ?? null,
       evidence: { stack: p.stack.evidence, checkCommand: p.check_command.evidence },
       confidence: { stack: p.stack.confidence, checkCommand: p.check_command.confidence, networkHosts: p.network_hosts.confidence },
       notes: p.notes.slice(0, 1000),
