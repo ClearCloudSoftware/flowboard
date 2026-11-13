@@ -1,23 +1,10 @@
 import type { Metadata } from 'next';
-import { cacheLife } from 'next/cache';
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
+import { loadDoc } from './load.ts';
 import { Mermaid } from './mermaid.tsx';
-import { renderDoc } from './render.ts';
 import '../flows/flows.css';
 import './docs.css';
 
 export const metadata: Metadata = { title: 'Docs · FlowBoard' };
-
-// The Obsidian note stays the source; this page only renders it.
-const SOURCE = path.join(process.cwd(), '../../docs/FlowBoard/Running Agent Work.md');
-
-// Prerendered with the route; 'minutes' re-reads the note at most a minute after you edit it.
-async function loadDoc() {
-  'use cache';
-  cacheLife('minutes');
-  return renderDoc(await readFile(SOURCE, 'utf8'));
-}
 
 /** `flowboard/docs`: how FlowBoard runs agent work, rendered from the vault note. */
 export default async function DocsPage() {

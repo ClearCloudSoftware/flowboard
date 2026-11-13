@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Providers } from "./providers";
+import { loadDoc } from "./docs/load.ts";
 import { AppSidebar } from "./sidebar.tsx";
 import "./globals.css";
 
@@ -24,7 +25,8 @@ export const metadata: Metadata = {
   description: "Design the flows that agents run.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const { toc } = await loadDoc(); // the docs submenu lists the guide's sections
   return (
     <html lang="en" className={`${plexMono.variable} ${plexSans.variable}`}>
       <body>
@@ -32,7 +34,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <TooltipProvider>
             {/* ponytail: the rail opens expanded on every load; read the sidebar_state cookie here if remembering it matters */}
             <SidebarProvider>
-              <AppSidebar />
+              <AppSidebar docs={toc} />
               <div className="relative flex min-w-0 flex-1 flex-col">
                 {children}
                 {/* Below md the rail is a drawer, and no page header has room for its button. */}
