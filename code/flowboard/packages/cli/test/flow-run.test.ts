@@ -1232,6 +1232,51 @@ test('a resume whose flow.json lost its isolation and sandbox is refused', { tim
   assert.ok(!s.script.timeline.includes('start:ship'));
 });
 
+/** Rewrites the paused run's pinned config with `change`. */
+function editPin(pin: string, change: (config: { sandbox?: unknown; isolation: Record<string, unknown> }) => void) {
+  const pinned = JSON.parse(readFileSync(pin, 'utf8'));
+  change(pinned.config);
+  writeFileSync(pin, JSON.stringify(pinned));
+}
+const ODD = { runtime: 'x', image: 'i', egress: [], credentials: [] };
+
+test('a resume whose pin names an unknown sandbox runtime is refused, in Normal', { timeout: 10_000 }, async (t) => {
+  const s = await pausedNormal(t);
+  editPin(s.pin, (c) => {
+    c.sandbox = ODD;
+    c.isolation.flowSandbox = ODD;
+    c.isolation.tier = 'opensandbox';
+  });
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+  assert.ok(!s.script.timeline.includes('start:ship'));
+});
+
+test('a resume whose pin names an unknown sandbox runtime is refused, in Untrusted with gVisor', { timeout: 10_000 }, async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const s = setup(GATE, { review: ['none'] });
+  registerProject(s.base, join(s.base, 'proj'), 'untrusted');
+  s.deps.docker = fakeDocker({ gvisor: true }).docker;
+  s.deps.dockerMemoryMb = () => undefined;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  editPin(join(s.runDir, 'flow.json'), (c) => {
+    c.sandbox = { ...ODD, env: ['CLAUDE_CODE_OAUTH_TOKEN'], gvisor: true }; // what isolationFor would make of ODD
+    c.isolation.flowSandbox = ODD;
+  });
+  s.deps.answer = deciding('approve').answer;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+  assert.ok(!s.script.timeline.includes('start:ship'));
+});
+
+test('a resume whose pinned tier is not one of the four is refused', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  editPin(join(s.runDir, 'flow.json'), (c) => void (c.isolation.tier = 'none'));
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+});
+
 test('a resume whose project no longer holds its folder is refused', { timeout: 10_000 }, async () => {
   const s = setup(GATE, { review: ['none'] });
   assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);

@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { isDeepStrictEqual, parseArgs } from 'node:util';
+import { z } from 'zod';
 import { connectBox, dockerExecHost, excludeFlowboard, openBox } from '@flowboard/adapters';
 import type { Box } from '@flowboard/adapters';
 import { advance, entries, GIT, newFlowState } from '@flowboard/core';
@@ -21,7 +22,7 @@ import { artifactPath, execAi, execShell, processStart, shellEnv } from './flow-
 import type { ExecContext, StepRun } from './flow-exec.ts';
 import { dockerDefaultMemoryMb, dockerHasGvisor, dockerNotReady, PROJECT_FILE, projectLimits } from './project.ts';
 import { readAppSettings } from './app-settings.ts';
-import { findProject, isolationFor } from './isolation.ts';
+import { findProject, IsolationSchema, isolationFor, SandboxSchema } from './isolation.ts';
 import type { Isolation } from './isolation.ts';
 import { owns, readProjects } from './projects.ts';
 import type { Project } from './projects.ts';
@@ -526,6 +527,9 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number;
   if (!pinned) return refuse('no flow.json');
   if (pinned.version !== 1) return refuse('made by a different version of run-flow');
   if (state.status !== 'running') return refuse(`the flow already ended (${state.status})`);
+  // A run folder inside --folder is the agents' to write: the isolation pinned is read as untrusted input.
+  const EDITED = "its project's isolation changed since it started, or its flow.json was edited; start the flow again";
+  if (!PinSchema.safeParse(pinned.config).success) return refuse(EDITED);
   // A folder moved or deleted since is not made again: the flow would carry on in an empty one.
   if (!isDir(pinned.config.folder)) return refuse(`folder not found: ${pinned.config.folder}`);
   // The pin is checked against its project as it is now: a run folder inside --folder is the agents' to write, and a
@@ -544,8 +548,12 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number;
   // Limits are the project's, set as the run started; hosts a person let through since are added to egress.
   const bare = (sb: Sandbox | undefined) => sb && { ...sb, limits: undefined, egress: undefined };
   const same = isDeepStrictEqual(bare(now.sandbox), bare(pinned.config.sandbox)) && (!was || (was.tier === now.isolation.tier && was.approvals === now.isolation.approvals));
-  if (!same) return refuse("its project's isolation changed since it started, or its flow.json was edited; start the flow again");
+  if (!same) return refuse(EDITED);
   const config = { ...pinned.config, isolation: now.isolation, budgetUsd: given.budget ?? pinned.config.budgetUsd ?? 0 };
+  const held = parseJson(readText(join(runDir, 'sandbox.json'))) as { id?: unknown; token?: unknown } | undefined;
+  const recorded = typeof held?.id === 'string' && typeof held.token === 'string' ? { id: held.id, token: held.token } : undefined;
+  // Only docker boxes each step itself; any other sandbox without its box would run the steps on this machine.
+  if (config.sandbox && config.sandbox.runtime !== 'docker' && !recorded) return refuse('its OpenSandbox box is not recorded in sandbox.json; start the flow again');
   const spent = sumCost(state.runs);
   if (config.budgetUsd && spent >= config.budgetUsd) {
     return refuse(`the budget is spent, $${spent.toFixed(2)} of $${config.budgetUsd.toFixed(2)}; give a larger one, or 0 for none, with --budget-usd`);
@@ -567,14 +575,9 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number;
     const pin = given.budget === undefined ? text! : JSON.stringify({ ...pinned, config }, null, 2) + '\n';
     if (pin !== text) writeFileSync(join(runDir, 'flow.json'), pin);
     let box: Box | undefined;
-    const held = parseJson(readText(join(runDir, 'sandbox.json'))) as { id?: unknown; token?: unknown } | undefined;
-    // Without its box, an opensandbox run's steps would run on this machine.
-    if (config.sandbox?.runtime === 'opensandbox' && (typeof held?.id !== 'string' || typeof held.token !== 'string')) {
-      return refuse('its OpenSandbox box is not recorded in sandbox.json; start the flow again');
-    }
-    if (typeof held?.id === 'string' && typeof held.token === 'string') {
+    if (recorded) {
       try {
-        box = await (deps.connectBox ?? connectBox)(held.id, { folder: config.folder, token: held.token });
+        box = await (deps.connectBox ?? connectBox)(recorded.id, { folder: config.folder, token: recorded.token });
       } catch (e) {
         // Never a fresh box: the flow's edits so far live only in the one that is gone.
         return refuse(`${(e as Error).message}: its edits cannot be resumed; start the flow again`);
@@ -585,6 +588,9 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number;
     releaseLock(lockPath);
   }
 }
+
+/** What `--resume` reads from a pinned config before trusting it; the rest of the config is not checked. */
+const PinSchema = z.object({ folder: z.string(), sandbox: SandboxSchema.optional(), isolation: IsolationSchema.optional() });
 
 /** What the runs cost, as far as their providers reported it. */
 const sumCost = (runs: FlowState['runs']) => runs.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);

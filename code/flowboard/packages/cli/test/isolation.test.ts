@@ -67,6 +67,13 @@ test('isolationFor: untrusted refuses a machine without gVisor, whatever the flo
   assert.deepEqual(isolationFor('untrusted', DOCKER, NEEDS, false), { refused: NO_GVISOR });
 });
 
+test('isolationFor: a sandbox runtime neither docker nor opensandbox is refused at every trust', () => {
+  const odd = { runtime: 'x', image: 'i', egress: [], credentials: [] } as unknown as Sandbox;
+  for (const trust of ['trusted', 'normal', 'untrusted'] as const) {
+    assert.deepEqual(isolationFor(trust, odd, NEEDS, true), { refused: 'sandbox: no runtime x; a run works in docker or opensandbox' }, trust);
+  }
+});
+
 test('findProject follows links and owns worktrees', () => {
   const base = realpathSync(mkdtempSync(join(tmpdir(), 'fb-find-')));
   const repo = join(base, 'repo');

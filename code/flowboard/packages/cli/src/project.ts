@@ -63,7 +63,7 @@ export const setCheckCommand = (folder: string, command: string | undefined) =>
 
 const MEMORY = 'a whole number of MB, 64 or more';
 const CPUS = 'more than 0; 1.5 is a CPU and a half';
-const LimitsSchema = z.strictObject({
+export const LimitsSchema = z.strictObject({
   memoryMb: z.number({ error: MEMORY }).int({ error: MEMORY }).min(64, { error: MEMORY }).optional(),
   cpus: z.number({ error: CPUS }).positive({ error: CPUS }).optional(),
 });
