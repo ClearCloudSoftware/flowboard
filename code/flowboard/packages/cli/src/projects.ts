@@ -66,6 +66,15 @@ export function readProjects(dataDir: string): Project[] {
 // ponytail: read, change, write with no lock; one person's browser is the only writer
 const writeProjects = (dataDir: string, projects: Project[]) => writeJsonFile(fileOf(dataDir), projects);
 
+/** Keeps `run` as the project's latest repo analysis; nothing when the project is gone. */
+export function setAnalysisRun(dataDir: string, id: string, run: string): void {
+  const all = readProjects(dataDir);
+  const p = all.find((x) => x.id === id);
+  if (!p) return;
+  p.analysis = { run };
+  writeProjects(dataDir, all);
+}
+
 /** The git repo holding `path` (absolute, or from `~/`): its top folder, as a real path. */
 export function repoRoot(path: string): Result<string> {
   const p = path.trim().startsWith('~/') ? join(homedir(), path.trim().slice(2)) : path.trim();

@@ -4,7 +4,10 @@ import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseProposal } from '../src/analysis.ts';
-import { analysisView } from '../src/analysis-run.ts';
+import { spawnSync } from 'node:child_process';
+import { ANALYST_TASK, analysisView, startAnalysis } from '../src/analysis-run.ts';
+import type { startRun } from '../src/flow-start.ts';
+import { createProject, readProjects } from '../src/projects.ts';
 import { loadFlow } from '../src/flow-config.ts';
 import { internalFlowText } from '../src/internal-steps.ts';
 import { APP_DEFAULTS } from '../src/settings.ts';
@@ -104,4 +107,31 @@ test("an analysis is read from its run: running, done with its proposal, failed,
   assert.deepEqual(analysisView(runs, name('5')), { run: name('5'), status: 'failed', spentUsd: 0.5, error: 'the run failed' });
   assert.deepEqual(analysisView(runs, name('6')), { run: name('6'), status: 'paused', spentUsd: 0, error: 'the run paused; see its page' });
   assert.deepEqual(analysisView(runs, name('9')), { run: name('9'), status: 'failed', spentUsd: 0, error: 'the run is gone' });
+});
+
+test('starting an analysis: the flow is written with the app’s settings, run-flow is started in the repo, and the run is kept on the record', async () => {
+  const data = temp();
+  const runs = temp();
+  const repo = temp();
+  const lib = temp();
+  writeFileSync(join(lib, 'delivery.yaml'), 'budget_usd: 0\nsteps: { a: { shell: "true" } }\n');
+  spawnSync('git', ['init', '-q', '-b', 'main'], { cwd: repo });
+  spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'init'], { cwd: repo });
+  const made = createProject(data, lib, { name: 'p', repoPath: repo, type: 'software' });
+  assert.ok(made.ok);
+  const calls: unknown[][] = [];
+  const ok: typeof startRun = async (...a) => (calls.push(a), { ok: true, name: '2026-11-13T10-00-00-repo-analyst' });
+  assert.deepEqual(await startAnalysis(data, runs, made.value, ok), { ok: true, run: '2026-11-13T10-00-00-repo-analyst' });
+  const [runsDir, flowsDir, input, dataDir] = calls[0] as [string, string, { flow: string; folder: string; task: string; allowDirty: boolean }, string];
+  assert.deepEqual([runsDir, dataDir], [runs, data]);
+  assert.deepEqual(input, { flow: 'repo-analyst', folder: repo, task: ANALYST_TASK, allowDirty: true });
+  writeFileSync(join(repo, 'task.md'), ANALYST_TASK);
+  const loaded = loadFlow(join(flowsDir, 'repo-analyst.yaml'), repo, { folder: repo, task: 'task.md' });
+  assert.ok(loaded.ok, loaded.ok ? '' : loaded.errors.join('\n'));
+  assert.equal(loaded.config.budgetUsd, APP_DEFAULTS.internal['repo-analyst'].budgetUsd);
+  assert.deepEqual(readProjects(data)[0].analysis, { run: '2026-11-13T10-00-00-repo-analyst' });
+  // a refusal keeps nothing
+  const no: typeof startRun = async () => ({ ok: false, error: 'flow.yaml: --folder: another run-flow (pid 1) is running here' });
+  assert.deepEqual(await startAnalysis(data, runs, { ...made.value, analysis: undefined }, no), { ok: false, error: 'flow.yaml: --folder: another run-flow (pid 1) is running here' });
+  assert.deepEqual(readProjects(data)[0].analysis, { run: '2026-11-13T10-00-00-repo-analyst' });
 });
