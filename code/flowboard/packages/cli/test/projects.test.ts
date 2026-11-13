@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import type { RunSummary } from '../src/flow-logs.ts';
 import { projectLimits, projectSettings, setCheckCommand, setLimits } from '../src/project.ts';
 import { APP_DEFAULTS } from '../src/settings.ts';
-import { createProject, projectSlug, readProjects, removeProject, repoProblems, repoRoot, seedOnce, slugify, updateProject, viewProjects } from '../src/projects.ts';
+import { addApproval, createProject, projectSlug, readProjects, removeProject, repoProblems, repoRoot, seedOnce, slugify, updateProject, viewProjects } from '../src/projects.ts';
 
 const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'fb-projects-'))); // macOS's temp folder is a link
 const git = (cwd: string, ...args: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd, encoding: 'utf8' });
@@ -223,4 +223,22 @@ test('a record from before types reads as a local software project with nothing 
   writeFileSync(join(data, 'projects.json'), JSON.stringify([{ id: '1', name: 'Old', slug: 'old', repoPath: repo(), defaultFlow: null, baseBranch: 'main', createdAt: '2026-11-01T00:00:00.000Z' }]));
   const [p] = readProjects(data);
   assert.deepEqual([p.type, p.source, p.overrides], ['software', { kind: 'local' }, {}]);
+});
+
+test('approvals: saved on the record without repeats, replaced by an edit, and a rule that does not pass is a 400', () => {
+  const data = temp();
+  const lib = flows();
+  const p = value(createProject(data, lib, { type: 'software', name: 'A', repoPath: repo() }));
+  assert.equal(p.approvals, undefined); // a record from before approvals has none
+  const rule = { kind: 'shell', prefix: 'pnpm test' } as const;
+  value(addApproval(data, p.id, rule));
+  value(addApproval(data, p.id, { ...rule }));
+  value(addApproval(data, p.id, { kind: 'edit' }));
+  assert.deepEqual(readProjects(data)[0].approvals, [rule, { kind: 'edit' }]);
+  assert.deepEqual(value(updateProject(data, lib, p.id, { approvals: [] })).approvals, []);
+  assert.deepEqual(readProjects(data)[0].approvals, []);
+  const bad = { ok: false, status: 400, error: "an approval is { kind: 'edit' } or { kind: 'shell', prefix }" };
+  assert.deepEqual(updateProject(data, lib, p.id, { approvals: [{ kind: 'shell', prefix: '' }] as never }), bad);
+  assert.deepEqual(addApproval(data, p.id, { kind: 'shell', prefix: 'ls; rm' }), bad);
+  assert.deepEqual(addApproval(data, 'nope', rule), { ok: false, status: 404, error: 'no such project' });
 });

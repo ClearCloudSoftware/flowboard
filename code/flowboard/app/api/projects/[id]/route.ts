@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ApprovalRule } from '../../../../packages/cli/src/approvals.ts';
 import { listRuns } from '../../../../packages/cli/src/flow-logs.ts';
 import { owns, readProjects, removeProject, updateProject } from '../../../../packages/cli/src/projects.ts';
 import type { Overrides } from '../../../../packages/cli/src/settings.ts';
@@ -14,20 +15,21 @@ const Edit = z.object({
   checkCommand: z.string().nullable().optional(),
   baseBranch: z.string().nullable().optional(),
   overrides: z.record(z.string(), z.unknown()).optional(),
+  approvals: z.array(z.unknown()).optional(),
   limits: z.object({ memoryMb: z.number().optional(), cpus: z.number().optional() }).optional(),
 });
 
 /**
- * `{ name?, defaultFlow?, checkCommand?, baseBranch?, overrides?, limits? }`; a null check command removes it from the
- * repo's `.flowboard.yaml`, `overrides` replaces the project's whole set, `limits` the repo's.
+ * `{ name?, defaultFlow?, checkCommand?, baseBranch?, overrides?, limits?, approvals? }`; a null check command removes it from the
+ * repo's `.flowboard.yaml`, `overrides` replaces the project's whole set, `limits` the repo's, `approvals` the list of saved rules.
  */
 export async function PATCH(request: Request, { params }: Params) {
   const { id } = await params;
   const no = refused(request);
   if (no) return no;
   const input = Edit.safeParse(await body(request));
-  if (!input.success) return Response.json({ error: 'send { name?, defaultFlow?, checkCommand?, baseBranch?, overrides?, limits? }' }, { status: 400 });
-  const r = updateProject(dataDir(), flowsDir(), id, { ...input.data, overrides: input.data.overrides as Overrides | undefined });
+  if (!input.success) return Response.json({ error: 'send { name?, defaultFlow?, checkCommand?, baseBranch?, overrides?, limits?, approvals? }' }, { status: 400 });
+  const r = updateProject(dataDir(), flowsDir(), id, { ...input.data, overrides: input.data.overrides as Overrides | undefined, approvals: input.data.approvals as ApprovalRule[] | undefined });
   return r.ok ? Response.json(r.value) : Response.json({ error: r.error }, { status: r.status });
 }
 

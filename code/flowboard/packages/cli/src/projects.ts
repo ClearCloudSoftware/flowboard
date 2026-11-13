@@ -11,6 +11,8 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, sep } from 'node:path';
 import { parse } from 'yaml';
+import { z } from 'zod';
+import { type ApprovalRule, ApprovalRuleSchema } from './approvals.ts';
 import { isDir, isFile, writeJsonFile } from './config.ts';
 import { FLOW_NAME } from './flow-files.ts';
 import { projectSlug } from './slug.ts';
@@ -25,7 +27,8 @@ export type Source = { kind: 'github'; repo: string } | { kind: 'local' };
  * `repoPath`: the repo's top folder, real path; `defaultFlow`: the flow new runs start on, the type's first in the
  * library at registration, or null to pick one each run; `baseBranch`: the branch work starts from and lands on, the
  * one checked out at registration (null: HEAD was detached); `type`: decides its flows and the defaults its settings
- * start from; `overrides`: the settings it sets over those (`settings.ts`).
+ * start from; `overrides`: the settings it sets over those (`settings.ts`); `approvals`: what its owner chose to
+ * allow from now on (`approvals.ts`), absent on a record from before them.
  */
 export interface Project {
   id: string;
@@ -38,12 +41,14 @@ export interface Project {
   type: ProjectTypeId;
   source: Source;
   overrides: Overrides;
+  approvals?: ApprovalRule[];
 }
 export type Result<T> = { ok: true; value: T } | { ok: false; status: 400 | 404 | 409; error: string };
 
 export const SLUG = /^[a-z0-9][a-z0-9-]*$/;
 export { projectSlug, slugify } from './slug.ts';
 const fileOf = (dataDir: string) => join(dataDir, 'projects.json');
+const BAD_APPROVAL = "an approval is { kind: 'edit' } or { kind: 'shell', prefix }";
 const fail = (status: 400 | 404 | 409, error: string) => ({ ok: false as const, status, error });
 
 export function readProjects(dataDir: string): Project[] {
@@ -153,12 +158,13 @@ export function createProject(dataDir: string, flowsDir: string, input: NewProje
   return { ok: true, value: project };
 }
 
-/** `overrides` replaces the project's whole set; `limits` replaces the repo's (an empty one removes them). */
-export interface ProjectEdit { name?: string; defaultFlow?: string | null; checkCommand?: string | null; baseBranch?: string | null; overrides?: Overrides; limits?: Limits }
+/** `overrides` replaces the project's whole set; `limits` replaces the repo's (an empty one removes them); `approvals` replaces the list. */
+export interface ProjectEdit { name?: string; defaultFlow?: string | null; checkCommand?: string | null; baseBranch?: string | null; overrides?: Overrides; limits?: Limits; approvals?: ApprovalRule[] }
 
 /**
  * Renames, moves the default flow, sets the check command (null or empty removes it), the base branch (a branch of
- * the repo, or the one checked out before its first commit), the overrides or the limits. The slug and repo stay.
+ * the repo, or the one checked out before its first commit), the overrides, the limits or the approvals. The slug and
+ * repo stay.
  */
 export function updateProject(dataDir: string, flowsDir: string, id: string, edit: ProjectEdit): Result<Project> {
   const projects = readProjects(dataDir);
@@ -169,6 +175,7 @@ export function updateProject(dataDir: string, flowsDir: string, id: string, edi
   if (badFlow) return fail(400, badFlow);
   const badOverrides = edit.overrides !== undefined ? overridesError(edit.overrides) : undefined;
   if (badOverrides) return badOverrides;
+  if (edit.approvals !== undefined && !z.array(ApprovalRuleSchema).safeParse(edit.approvals).success) return fail(400, BAD_APPROVAL);
   const branch = edit.baseBranch?.trim();
   if (branch && gitOut(projects[at].repoPath, 'rev-parse', '--verify', '-q', `refs/heads/${branch}`) === undefined && branch !== currentBranch(projects[at].repoPath)) {
     return fail(400, `${projects[at].repoPath} has no branch ${branch}`);
@@ -187,10 +194,25 @@ export function updateProject(dataDir: string, flowsDir: string, id: string, edi
     ...(edit.defaultFlow !== undefined && { defaultFlow: edit.defaultFlow || null }),
     ...(edit.baseBranch !== undefined && { baseBranch: branch || null }),
     ...(edit.overrides !== undefined && { overrides: edit.overrides }),
+    ...(edit.approvals !== undefined && { approvals: edit.approvals }),
   };
   projects[at] = p;
   writeProjects(dataDir, projects);
   return { ok: true, value: p };
+}
+
+/** Saves a rule for the project's runs from now on; a rule it already has is not saved twice. */
+export function addApproval(dataDir: string, id: string, rule: ApprovalRule): Result<Project> {
+  const parsed = ApprovalRuleSchema.safeParse(rule);
+  if (!parsed.success) return fail(400, BAD_APPROVAL);
+  const projects = readProjects(dataDir);
+  const at = projects.findIndex((x) => x.id === id);
+  if (at === -1) return fail(404, 'no such project');
+  const have = projects[at].approvals ?? [];
+  if (have.some((r) => JSON.stringify(r) === JSON.stringify(parsed.data))) return { ok: true, value: projects[at] };
+  projects[at] = { ...projects[at], approvals: [...have, parsed.data] };
+  writeProjects(dataDir, projects);
+  return { ok: true, value: projects[at] };
 }
 
 /** Forgets the project; its repo, runs and `.flowboard.yaml` stay where they are. */

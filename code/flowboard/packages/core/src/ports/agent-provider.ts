@@ -201,6 +201,9 @@ export interface AgentRun {
   stop(): void;
 }
 
+/** What a run asks the owner to allow: a file edit by a tool, or a shell command. */
+export type ApprovalCall = { kind: 'edit'; tool: string; path: string } | { kind: 'shell'; command: string };
+
 // ---------------------------------------------------------------------------
 // The port
 // ---------------------------------------------------------------------------
