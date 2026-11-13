@@ -366,3 +366,14 @@ test('a repo typed in another case than on disk registers, on a case-insensitive
   assert.deepEqual(repoRoot(join(base, 'caserepo')), { ok: true, value: onDisk });
   assert.deepEqual(repoRoot(join(base, 'caserepo', '.')), { ok: true, value: onDisk });
 });
+
+test("a project's analysis is on its view, read by the reader it is given; none without one", () => {
+  const r = repo();
+  const data = temp();
+  const lib = flows();
+  const proj = value(createProject(data, lib, { name: 'p', repoPath: r, type: 'software' }));
+  const read = (run: string) => ({ run, status: 'running' as const, spentUsd: 0 });
+  assert.equal(viewProjects([proj], [], lib, APP_DEFAULTS, Date.now(), read)[0].analysed, null);
+  const analysed = { ...proj, analysis: { run: '2026-11-13T10-00-00-repo-analyst' } };
+  assert.deepEqual(viewProjects([analysed], [], lib, APP_DEFAULTS, Date.now(), read)[0].analysed, { run: '2026-11-13T10-00-00-repo-analyst', status: 'running', spentUsd: 0 });
+});

@@ -17,6 +17,7 @@ import { budgetState, monthName, monthOf } from './budget.ts';
 import { isDir, isFile, writeJsonFile } from './config.ts';
 import { FLOW_NAME } from './flow-files.ts';
 import { projectSlug } from './slug.ts';
+import type { AnalysisView } from './analysis.ts';
 import type { RunStatus, RunSummary } from './flow-logs.ts';
 import { type Limits, PROJECT_FILE, projectSettings, setCheckCommand, setLimits } from './project.ts';
 import { type AppSettings, type Overrides, OverridesSchema, PROJECT_TYPES, type ProjectTypeId, type Resolved, resolveSettings } from './settings.ts';
@@ -29,7 +30,8 @@ export type Source = { kind: 'github'; repo: string } | { kind: 'local' };
  * library at registration, or null to pick one each run; `baseBranch`: the branch work starts from and lands on, the
  * one checked out at registration (null: HEAD was detached); `type`: decides its flows and the defaults its settings
  * start from; `overrides`: the settings it sets over those (`settings.ts`); `approvals`: what its owner chose to
- * allow from now on (`approvals.ts`), absent on a record from before them.
+ * allow from now on (`approvals.ts`), absent on a record from before them. `analysis`: the repo analyst's latest run
+ * (`analysis-run.ts`); `networkHosts`: the hosts its owner let its sandboxes reach, never set from the repo.
  */
 export interface Project {
   id: string;
@@ -43,6 +45,8 @@ export interface Project {
   source: Source;
   overrides: Overrides;
   approvals?: ApprovalRule[];
+  analysis?: { run: string };
+  networkHosts?: string[];
 }
 export type Result<T> = { ok: true; value: T } | { ok: false; status: 400 | 404 | 409; error: string };
 
@@ -287,7 +291,12 @@ export interface ProjectView extends Project {
   weekSpendUsd: number;
   /** What its runs started this calendar month have spent, against its monthly cap (`budget.ts`). */
   monthSpendUsd: number;
+  /** Its latest repo analysis as it stands, read from `analysis.run`, or null when it has none (`analysis.ts`). */
+  analysed: AnalysisView | null;
 }
+
+/** Until a caller passes `analysisView`: `projects.ts` cannot import it, as it reads runs (see `viewProjects`). */
+const unread = (run: string): AnalysisView => ({ run, status: 'failed', spentUsd: 0, error: 'not read' });
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 /** A run folder's name starts with its local start time, `2026-11-12T13-32-04`. */
@@ -343,8 +352,12 @@ function projectCheckSteps(flowsDir: string, flow: string): string[] {
   }
 }
 
+/**
+ * The pages' view of each project. `analysisOf` reads a repo analysis from its run (`analysisView`): it is passed in,
+ * because importing it here would loop back through `flow-logs.ts` and `isolation.ts` to this module.
+ */
 // ponytail: "this week" is the last seven days, and a run's whole cost counts on the day it started (Projects OQ 11)
-export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: string, app: AppSettings, now = Date.now()): ProjectView[] {
+export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: string, app: AppSettings, now = Date.now(), analysisOf: (run: string) => AnalysisView = unread): ProjectView[] {
   return projects.map((p) => {
     const mine = runs.filter((r) => owns(p, r.folder));
     const counts: ProjectView['runs'] = {};
@@ -374,6 +387,7 @@ export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: 
       runs: counts,
       weekSpendUsd,
       monthSpendUsd,
+      analysed: p.analysis ? analysisOf(p.analysis.run) : null,
     };
   });
 }

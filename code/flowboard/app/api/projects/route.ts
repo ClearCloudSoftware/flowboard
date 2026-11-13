@@ -1,5 +1,6 @@
 import { connection } from 'next/server';
 import { z } from 'zod';
+import { analysisView } from '../../../packages/cli/src/analysis-run.ts';
 import { listRuns } from '../../../packages/cli/src/flow-logs.ts';
 import { createProject, readProjects, seedOnce, viewProjects } from '../../../packages/cli/src/projects.ts';
 import { readAppSettings } from '../../../packages/cli/src/app-settings.ts';
@@ -12,7 +13,8 @@ export async function GET(request: Request) {
   const no = refused(request);
   if (no) return no;
   seedOnce(dataDir(), flowsDir());
-  return Response.json(viewProjects(readProjects(dataDir()), listRuns(runsDir()), flowsDir(), readAppSettings(dataDir())));
+  const runs = runsDir();
+  return Response.json(viewProjects(readProjects(dataDir()), listRuns(runs), flowsDir(), readAppSettings(dataDir()), Date.now(), (run) => analysisView(runs, run)));
 }
 
 /** The shape only; `createProject` checks the values (overrides, limits) and says what is wrong with them. */
