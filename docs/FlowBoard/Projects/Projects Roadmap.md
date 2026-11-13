@@ -66,6 +66,7 @@ From the PRD, the backlog items tagged **PRD**, and the backlog **BUG** fixes to
 ## Related
 
 - [[Projects Index]]
+- [[Projects Known Issues]]: minor problems left from the wizard's review
 - [[Projects Open Questions]]
 - [[Flow Design Roadmap]]
 - [[Capability Library Roadmap]]
