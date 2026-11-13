@@ -106,11 +106,11 @@ Backlog D5: *"Hook isolation for headless runs"*, default *"Empty `--settings` f
 *"No real credential is passed in: the CLI's `ANTHROPIC_BASE_URL` points at the egress proxy, which injects it."* (`03` §6) PRD §11.1 adds the dummy key: *"The CLI gets `ANTHROPIC_BASE_URL` pointing at the egress proxy and a dummy key."* See [[Credential Injecting Proxy]].
 
 > [!warning] The shipped code differs
-> No proxy is built: runs are host child processes in the real folder with the owner's credentials. Claude uses the installed CLI's subscription login, and the adapter strips `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`; OpenCode uses its own stored credentials. A dummy key behind a proxy fits an API key, not that login ([[Claude Code Adapter]]). As of 2026-10-18.
+> No proxy is built: a Trusted run without a `sandbox:` is a host child process in the real folder with the owner's credentials (what a project's trust gives is in [[Repository Trust And Sandboxing#Built]]). Claude uses the installed CLI's subscription login, and the adapter strips `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`; OpenCode uses its own stored credentials. A dummy key behind a proxy fits an API key, not that login ([[Claude Code Adapter]]). As of 2026-10-18.
 
 As built in run-flow (2026-11-10), it depends on the runtime:
 
-- **No `sandbox:`.** As above: host processes with the owner's credentials.
+- **Trusted, no `sandbox:`.** As above: host processes with the owner's credentials, and agents ask before file edits and shell commands. Normal with no key is `runtime: docker` with `flowboard-cli`; Untrusted is Docker under gVisor ([[Repository Trust And Sandboxing#Built]]).
 - **`runtime: docker`.** Agent containers get the real values of the variables `sandbox.env` names, such as `CLAUDE_CODE_OAUTH_TOKEN`, passed by name (`-e K`), and an open network: with no egress proxy, a docker sandbox takes no `egress` key (`sandbox.egress: only for runtime opensandbox`), and the container `ExecHost` refuses any list but `[]` or `['*']`. `--check` and the start warn: `sandbox: ai steps have open network access and the variables in sandbox.env`. Check containers get neither.
 - **`runtime: opensandbox`.** The box holds a fake of each credential, and the server's credential vault puts in the real value on requests to that credential's host. Egress is denied except for `sandbox.egress`. This is the [[Credential Injecting Proxy]] design, delivered by OpenSandbox rather than through `ANTHROPIC_BASE_URL` ([[OpenSandbox Runtime]]).
 

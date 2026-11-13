@@ -23,7 +23,7 @@ The drawio *Functional components* page lists the Execution box (*"dashed = not 
 | Rework loop | *"attempt 2, 3… guarded by max_attempts"* | [[Rework Loop]], [[Loop Guard And Escalation]] |
 | Split & join | *"parallel branches from one card"* | [[Fan-Out And Join]] |
 | Stop | *"kill the process"* | [[Stopping And Cancelling]] |
-| Isolate the workspace (dashed) | *"worktree per task today; devcontainer / Docker sandbox / remote host later"* | Covered by [[Workspaces Index]] and [[Task Workspace]]; the container side by [[Sandboxing Index]]. As built in run-flow (2026-11-10), a flow-level `sandbox:` runs every step in Docker, a container per step run, or in OpenSandbox, one box per flow run ([[OpenSandbox Runtime]]) |
+| Isolate the workspace (dashed) | *"worktree per task today; devcontainer / Docker sandbox / remote host later"* | Covered by [[Workspaces Index]] and [[Task Workspace]]; the container side by [[Sandboxing Index]]. As built in run-flow (2026-11-10), a sandbox, the flow's `sandbox:` or the project's default for Normal and Untrusted, runs every step in Docker, a container per step run, or in OpenSandbox, one box per flow run ([[OpenSandbox Runtime]]) |
 
 The tracker scopes the component as *"Start, run a step, advance, rework loop, split and join, stop, cancel, infra retries, loop guard"*, mapping to feature map §4 *The engine*, §7 *The runner*, §8 *The work queue*, and architecture components *"#3 Flow execution engine, #6 Runner / execution host, #7 Job queue & worker lifecycle (also #5, `08-sandboxing.md`)"*.
 

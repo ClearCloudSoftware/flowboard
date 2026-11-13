@@ -60,7 +60,7 @@ Since 2026-11-13 a project's trust (*Trusted*, *Normal*, *Untrusted*; [[Project 
 
 ### Approvals in Trusted runs
 
-An agent's file edit or shell command is held until you answer: **Allow**, **Allow from now on** or **Deny**. Reads, searches and FlowBoard's own tools pass.
+An agent's file edit or shell command is held until you answer: **Allow**, **Allow from now on** or **Deny**. Anything but file edits and shell commands passes.
 
 - **Where asked:** Claude Code through a `PreToolUse` hook (Claude's `Monitor` tool counts as a shell command; a `Monitor` with no command is denied); OpenCode through its permission requests (`apply_patch` over several files asks per file, all must be allowed). The question reaches the terminal or the runs page like an `ask_user`.
 - **Fails closed:** an ask that fails (the run stopped, nobody to answer) is a no, as is an edit or shell call whose path or command is not a string.
@@ -75,7 +75,7 @@ An agent's file edit or shell command is held until you answer: **Allow**, **All
 3. Shell steps never ask, even in Trusted.
 4. An approval gates only what the tool policy allows; a command the Claude allow list refuses is still asked first (ceiling: match `toolPolicy.allow` before asking).
 5. A saved shell prefix is as above, and a runner is never saved (the plan allowed `node` or `bash` prefixes; a rule for one would allow anything).
-6. Isolation is decided as the run starts and pinned in `flow.json` (`config.isolation`). `--resume` does not keep the pin: it finds the project by the pinned folder, works the tier out again from the project's current trust and the pinned flow `sandbox:`, and refuses if the project is gone, the folder left it, or the result differs from the pin: *"its project's isolation changed since it started, or its flow.json was edited; start the flow again"*. A paused run whose project's trust changed must be started again. The plan said the pin was kept; a pin an agent can edit would otherwise lower the tier.
+6. Isolation is decided as the run starts and pinned in `flow.json` (`config.isolation`). `--resume` does not keep the pin: it finds the project by the pinned `isolation.projectId` (by the pinned folder only for a pin from before isolation was built), requires the project to still own that folder, works the tier out again from the project's current trust and the pinned flow `sandbox:`, and refuses if the project is gone, the folder is no longer in it, or the result differs from the pin: *"its project's isolation changed since it started, or its flow.json was edited; start the flow again"*. A paused run whose project's trust changed must be started again. The plan said the pin was kept; a pin an agent can edit would otherwise lower the tier.
 7. The app passes its data folder to `run-flow` as `FLOWBOARD_DATA_DIR` (starting a run and resuming one), so run-flow and the app read the same `projects.json`.
 
 ## The git boundary
