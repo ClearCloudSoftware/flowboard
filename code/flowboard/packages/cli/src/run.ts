@@ -34,6 +34,10 @@ export interface RunDeps {
   connectBox?: typeof connectBox;
   /** runtime: docker without a project memory limit; default: a quarter of what `docker info` reports. */
   dockerMemoryMb?: () => number | undefined;
+  /** FlowBoard's data folder, where the projects are; default: FLOWBOARD_DATA_DIR from `cwd`, else `<cwd>/data`, as the app's. */
+  dataDir?: string;
+  /** The isolation tier's Docker checks; default: `dockerHasGvisor` and `dockerNotReady` (project.ts). */
+  docker?: { gvisor(): boolean; notReady(image: string): string | undefined };
 }
 
 export const WITHDRAWN = '-- question withdrawn: the agent stopped waiting';

@@ -15,11 +15,16 @@ import type { Answerer } from './ask/broker.ts';
 import { either, pageAnswerer, watchStop } from './ask/page.ts';
 import { noTerminal, terminalAnswerer } from './ask/terminal.ts';
 import { isDir } from './config.ts';
-import { inside, loadFlow, toMermaid } from './flow-config.ts';
+import { agentNeeds, inside, loadFlow, NEEDS, toMermaid } from './flow-config.ts';
 import type { FlowConfig, Sandbox } from './flow-config.ts';
 import { artifactPath, execAi, execShell, processStart, shellEnv } from './flow-exec.ts';
 import type { ExecContext, StepRun } from './flow-exec.ts';
-import { dockerDefaultMemoryMb, PROJECT_FILE, projectLimits } from './project.ts';
+import { dockerDefaultMemoryMb, dockerHasGvisor, dockerNotReady, PROJECT_FILE, projectLimits } from './project.ts';
+import { readAppSettings } from './app-settings.ts';
+import { findProject, isolationFor } from './isolation.ts';
+import type { Isolation } from './isolation.ts';
+import { readProjects } from './projects.ts';
+import { resolveSettings, TRUST } from './settings.ts';
 import { alive, readLock } from './lock.ts';
 import { openWorkspace } from './workspace.ts';
 import { defaultProvider, stamp } from './run.ts';
@@ -113,6 +118,17 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
   if (v.resume !== undefined) return resume(v.resume, { maxRuns, budget, page: v.page }, deps);
   const yaml = positionals[0];
   let loaded = loadFlow(yaml, deps.cwd, v.folder !== undefined && v.task !== undefined ? { folder: v.folder, task: v.task, budgetUsd: budget } : undefined);
+  const dataDir = dataDirOf(deps);
+  // Where a run works is its project's to say, before a workspace changes the repo; a check or a diagram runs nothing.
+  let isolated: Isolated | undefined;
+  if (loaded.ok && !v.check && !v.mermaid) {
+    const r = isolate(loaded.config, dataDir, deps);
+    if ('refused' in r) {
+      r.refused.forEach((l) => printErr(l));
+      return 2;
+    }
+    isolated = r;
+  }
   // A workspace is made only for a flow that loads, then the flow is loaded again to work in it.
   if (loaded.ok && v.workspace !== undefined) {
     const ws = await openWorkspace(loaded.config.folder, v.workspace);
@@ -137,6 +153,9 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
     print(`-- flow ok: ${plural(config.flow.steps.length, 'step')}, starting at ${entries(config.flow)[0]}`);
     return 0;
   }
+  // The project's sandbox in place of the YAML's, so the limits below apply to it.
+  config.sandbox = isolated!.sandbox;
+  config.isolation = isolated!.isolation;
   let limitsLine: string | undefined;
   if (config.sandbox) {
     const project = projectLimits(config.folder);
@@ -231,6 +250,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
     const ceiling = config.budgetUsd ? `a budget of $${config.budgetUsd.toFixed(2)}` : 'no budget ceiling';
     print(`-- flow ${config.name}: ${plural(config.flow.steps.length, 'step')} in ${config.folder}, ${ceiling}`);
     print(`-- run folder ${shown}`);
+    print(isolated!.line);
     if (limitsLine) print(limitsLine);
     const removed = shellEnv(process.env).removed;
     if (removed.length && Object.values(config.steps).some((s) => s.kind === 'shell')) print(`-- shell steps run without: ${removed.join(', ')}`);
@@ -248,10 +268,40 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
       print(`-- sandbox ${box.id}: ${config.folder} at its last commit; egress ${sb.egress.join(', ') || 'none'}`);
       for (const name of box.missing) print(`-- warning: sandbox: ${name} is not set; steps that need it will fail`);
     }
-    return await drive({ config, runDir, artifactsDir, shown, pinned, lockPath, state: newFlowState(), first: { type: 'start' }, maxRuns: maxRuns ?? Infinity, page: !!v.page, ...(box && { box }) }, deps);
+    return await drive({ config, runDir, artifactsDir, shown, pinned, lockPath, state: newFlowState(), first: { type: 'start' }, maxRuns: maxRuns ?? Infinity, page: !!v.page, dataDir, ...(box && { box }) }, deps);
   } finally {
     releaseLock(lockPath);
   }
+}
+
+/** FlowBoard's data folder: FLOWBOARD_DATA_DIR, else `data/` where run-flow starts, as the app, which starts it, has it. */
+const dataDirOf = (deps: RunDeps) => deps.dataDir ?? (process.env.FLOWBOARD_DATA_DIR ? resolve(deps.cwd, process.env.FLOWBOARD_DATA_DIR) : join(deps.cwd, 'data'));
+
+/** A run's isolation, decided as it starts: the sandbox it gets and the line saying so. */
+interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string }
+
+/**
+ * The isolation of a run of `config`, from the project that owns its folder (`isolation.ts`); or why it may not run,
+ * a line each: no project, a tier this machine cannot give, or a box that cannot start or log in.
+ */
+function isolate(config: FlowConfig, dataDir: string, deps: RunDeps): Isolated | { refused: string[] } {
+  const project = findProject(dataDir, config.folder);
+  if (!project) return { refused: [`${config.folder}: not in a FlowBoard project; create one for this repo first`] };
+  const trust = resolveSettings(readAppSettings(dataDir), project.type, project.overrides).trust.value;
+  const docker = deps.docker ?? { gvisor: () => dockerHasGvisor(), notReady: (image: string) => dockerNotReady(image) };
+  const needs = agentNeeds(config.steps).map((n) => n.credential);
+  const r = isolationFor(trust, config.sandbox, needs, trust === 'untrusted' && docker.gvisor());
+  if ('refused' in r) return { refused: [r.refused] };
+  if (r.sandbox?.runtime === 'docker') {
+    const why = docker.notReady(r.sandbox.image);
+    if (why) return { refused: [why] };
+    // A container cannot read the macOS keychain, where the claude login is: it needs a token.
+    const how = (k: string) => (k === NEEDS.claude.credential ? `Run \`claude setup-token\` and set ${k}` : `Set ${k}`);
+    const unset = needs.filter((k) => !process.env[k]).map((k) => `${k} is not set: a container cannot use this machine's login. ${how(k)} where FlowBoard runs`);
+    if (unset.length) return { refused: unset };
+  }
+  const asks = r.approvals ? '; agents ask before edits and shell commands' : '';
+  return { sandbox: r.sandbox, isolation: { projectId: project.id, trust, tier: r.tier, approvals: r.approvals }, line: `-- isolation: ${TRUST[trust].label} (${r.tier}), from project ${project.name}${asks}` };
 }
 
 /** Makes `dir`; false when it already exists. */
@@ -475,6 +525,11 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number;
   if (state.status !== 'running') return refuse(`the flow already ended (${state.status})`);
   // A folder moved or deleted since is not made again: the flow would carry on in an empty one.
   if (!isDir(pinned.config.folder)) return refuse(`folder not found: ${pinned.config.folder}`);
+  // A run keeps the isolation it started with, whatever its project says now, but never outlives its project.
+  // A run pinned before isolation was has no project id: it is its folder's project's.
+  const dataDir = dataDirOf(deps);
+  const projectId = pinned.config.isolation?.projectId;
+  if (!(projectId ? readProjects(dataDir).some((p) => p.id === projectId) : findProject(dataDir, pinned.config.folder))) return refuse('its project is gone');
   const config = { ...pinned.config, budgetUsd: given.budget ?? pinned.config.budgetUsd ?? 0 };
   const spent = sumCost(state.runs);
   if (config.budgetUsd && spent >= config.budgetUsd) {
@@ -506,7 +561,7 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number;
         return refuse(`${(e as Error).message}: its edits cannot be resumed; start the flow again`);
       }
     }
-    return await drive({ config, runDir, artifactsDir: pinned.artifactsDir, shown: typed, pinned: pin, lockPath, state, first: { type: 'resume' }, maxRuns: runs, page: !!given.page, ...(box && { box }) }, deps);
+    return await drive({ config, runDir, artifactsDir: pinned.artifactsDir, shown: typed, pinned: pin, lockPath, state, first: { type: 'resume' }, maxRuns: runs, page: !!given.page, dataDir, ...(box && { box }) }, deps);
   } finally {
     releaseLock(lockPath);
   }
@@ -539,7 +594,7 @@ const BOX_SECONDS = 86_400;
 export const sandboxFor = (sb: Extract<Sandbox, { runtime: 'docker' }>, artifactsDir: string): NonNullable<ExecContext['sandbox']> => ({ online, tmpDir, mounts = [] }) =>
   dockerExecHost(
     {
-      tier: 'container',
+      tier: sb.gvisor ? 'gvisor' : 'container',
       image: sb.image,
       egressAllow: online ? ['*'] : [],
       ...(sb.limits && { limits: sb.limits }),
@@ -566,6 +621,8 @@ interface Drive {
   box?: Box;
   /** `--page`: the runs page may also answer and decide (ask/page.ts); its Stop works on any run. */
   page: boolean;
+  /** FlowBoard's data folder, where the run's project and its saved approvals are. */
+  dataDir: string;
 }
 
 /** Feeds the engine from `first` until the flow ends or waits on a person, and resolves with the exit code. */

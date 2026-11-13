@@ -15,7 +15,7 @@ import { processStart } from '../src/flow-exec.ts';
 import { DISCARD_COMMANDS, pushable, runFlow, sandboxFor } from '../src/flow-run.ts';
 import { cleanWorkspace } from '../src/workspace.ts';
 import type { RunDeps } from '../src/run.ts';
-import { DELIVERY, flowProject, RUN } from './fixtures/flow.ts';
+import { DELIVERY, flowProject, registerProject, RUN } from './fixtures/flow.ts';
 
 const USAGE = [
   'usage: pnpm run-flow --folder <dir> --task <file> [--workspace <task id>] [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] <flow.yaml>',
@@ -472,6 +472,7 @@ test('a run folder another run made in the same second is passed over', async ()
 
 test('agents may not write the run folder, whatever the flow file is called, nor discard uncommitted edits', async () => {
   const { base, deps, script } = setup(ONE_PLAN);
+  registerProject(base, base, 'trusted'); // the base is the project here
   writeFileSync(join(base, 'a[1].yaml'), readFileSync(join(base, 'flow.yaml'), 'utf8'));
   assert.equal(await runFlow(['--folder', '.', '--task', 'task.md', 'a[1].yaml'], deps), 0);
   const guards = script.specs[0].guards!;
@@ -643,6 +644,7 @@ test('a check that deletes the run folder leaves the run resumable', { timeout: 
 edges:
   - { from: clean, to: review }
 `, { review: ['none'] });
+  registerProject(s.base, s.base, 'trusted'); // the base is the project here
   assert.equal(await runFlow(['--folder', '.', '--task', 'task.md', 'flow.yaml'], s.deps), 3, s.out.join('\n'));
   s.deps.answer = deciding('approve').answer;
   assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
@@ -1074,4 +1076,125 @@ test('FLOWBOARD_RUNS_DIR names the folder run folders go in, as the runs page re
   }
   assert.ok(existsSync(join(base, 'elsewhere', STAMPED, 'state.json')));
   assert.equal(existsSync(join(base, 'runs', STAMPED)), false);
+});
+
+// --- the project's isolation tier
+
+/** A stand-in Docker: `gvisor` says whether runsc is there, `notReady` what is missing; `calls` records each check. */
+function fakeDocker(o: { gvisor?: boolean; notReady?: string } = {}) {
+  const calls: string[] = [];
+  const docker: NonNullable<RunDeps['docker']> = {
+    gvisor: () => (calls.push('gvisor'), o.gvisor ?? false),
+    notReady: (image) => (calls.push(`notReady:${image}`), o.notReady),
+  };
+  return { calls, docker };
+}
+
+/** Sets the variable for the test, putting the old value back after. */
+function withEnv(t: { after: (fn: () => void) => void }, name: string, value: string | undefined) {
+  const old = process.env[name];
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+  t.after(() => (old === undefined ? delete process.env[name] : (process.env[name] = old)));
+}
+
+test('refuses a folder outside every project', async () => {
+  const { base, err, deps } = setup(SHELL_ONLY);
+  registerProject(base, join(base, 'proj'), null);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, [`${join(base, 'proj')}: not in a FlowBoard project; create one for this repo first`]);
+  assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+test('--check needs no project', async () => {
+  const { base, deps } = setup(SHELL_ONLY);
+  registerProject(base, join(base, 'proj'), null);
+  assert.equal(await runFlow(['--check', 'flow.yaml'], deps), 0);
+  assert.equal(await runFlow(['--check', ...RUN, 'flow.yaml'], deps), 0);
+});
+
+test('a trusted project runs on this machine, and says so before the run starts', async () => {
+  const { out, deps, runDir } = setup(SHELL_ONLY);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.ok(out.includes('-- isolation: Trusted (host), from project proj; agents ask before edits and shell commands'), out.join('\n'));
+  const { config } = JSON.parse(readFileSync(join(runDir, 'flow.json'), 'utf8'));
+  assert.deepEqual([config.sandbox, config.isolation], [undefined, { projectId: 'p-1', trust: 'trusted', tier: 'host', approvals: true }]);
+});
+
+test('normal refuses when docker is not ready', async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const { base, err, deps } = setup(ONE_BUILD);
+  const proj = gitProj(base);
+  registerProject(base, proj, 'normal');
+  deps.docker = fakeDocker({ notReady: 'Docker is not running' }).docker;
+  assert.equal(await runFlow([...RUN, '--workspace', 't1', 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, ['Docker is not running']);
+  assert.equal(existsSync(join(base, 'runs')), false);
+  assert.equal(existsSync(join(proj, '.flowboard', 'worktrees')), false);
+});
+
+test('normal refuses a box without the login its agents need', async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', undefined);
+  withEnv(t, 'OPENROUTER_API_KEY', undefined);
+  const { base, err, deps } = setup(DELIVERY);
+  registerProject(base, join(base, 'proj'), 'normal');
+  deps.docker = fakeDocker().docker;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, [
+    "CLAUDE_CODE_OAUTH_TOKEN is not set: a container cannot use this machine's login. Run `claude setup-token` and set CLAUDE_CODE_OAUTH_TOKEN where FlowBoard runs",
+    "OPENROUTER_API_KEY is not set: a container cannot use this machine's login. Set OPENROUTER_API_KEY where FlowBoard runs",
+  ]);
+  assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+test('normal boxes a flow with no sandbox', async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const { base, out, deps, runDir, script } = setup(ONE_BUILD);
+  registerProject(base, join(base, 'proj'), 'normal');
+  const fd = fakeDocker();
+  deps.docker = fd.docker;
+  deps.dockerMemoryMb = () => undefined;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.deepEqual(fd.calls, ['notReady:flowboard-cli']);
+  const { config } = JSON.parse(readFileSync(join(runDir, 'flow.json'), 'utf8'));
+  assert.deepEqual(config.sandbox, { runtime: 'docker', image: 'flowboard-cli', env: ['CLAUDE_CODE_OAUTH_TOKEN'], limits: {} });
+  assert.deepEqual(config.isolation, { projectId: 'p-1', trust: 'normal', tier: 'container', approvals: false });
+  const i = out.indexOf('-- isolation: Normal (container), from project proj');
+  assert.ok(i !== -1 && out[i + 1].startsWith('-- sandbox limits: '), out.join('\n'));
+  assert.equal(script.specs[0].exec?.profile?.tier, 'container');
+});
+
+test('untrusted refuses without gvisor', async () => {
+  const { base, err, deps } = setup(ONE_BUILD);
+  registerProject(base, join(base, 'proj'), 'untrusted');
+  deps.docker = fakeDocker({ gvisor: false }).docker;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, ["Untrusted runs need gVisor, and this machine's Docker has no runsc runtime; set the project to Normal, or run it on a Linux host with gVisor"]);
+  assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+test('resume refuses without its project', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  registerProject(s.base, join(s.base, 'proj'), null);
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: its project is gone`]);
+});
+
+test('a resume after the trust changed keeps the isolation pinned in flow.json', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  registerProject(s.base, join(s.base, 'proj'), 'untrusted');
+  const fd = fakeDocker();
+  s.deps.docker = fd.docker;
+  s.deps.answer = deciding('approve').answer;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.err.join('\n'));
+  assert.deepEqual(fd.calls, []);
+  assert.deepEqual(JSON.parse(readFileSync(join(s.runDir, 'flow.json'), 'utf8')).config.isolation, { projectId: 'p-1', trust: 'trusted', tier: 'host', approvals: true });
+});
+
+test('an untrusted sandbox runs its containers under gVisor', () => {
+  const box = sandboxFor({ runtime: 'docker', image: 'x', env: [], gvisor: true }, '/art');
+  assert.equal(box({}).profile?.tier, 'gvisor');
+  assert.equal(sandboxFor({ runtime: 'docker', image: 'x', env: [] }, '/art')({}).profile?.tier, 'container');
 });

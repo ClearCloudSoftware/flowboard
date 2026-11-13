@@ -1,10 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { startRun } from '../src/flow-start.ts';
+import { registerProject } from './fixtures/flow.ts';
 
 const project = () => {
   const base = mkdtempSync(join(tmpdir(), 'fb-start-'));
@@ -15,6 +16,7 @@ const project = () => {
   git('commit', '-q', '--allow-empty', '-m', 'init');
   mkdirSync(join(base, 'flows'));
   writeFileSync(join(base, 'flows', 'quick.yaml'), 'budget_usd: 0\nsteps:\n  a: { shell: "true" }\n');
+  registerProject(base, realpathSync(folder), 'trusted'); // in data/ where run-flow starts, as the app's
   return { base, folder, runs: join(base, 'runs'), flows: join(base, 'flows') };
 };
 
