@@ -1,6 +1,6 @@
 'use client';
 /** The settings sidebar: one entry per section, the one shown marked; a section with pages lists them under it while open. */
-import { Bot, type LucideIcon, Plug, Settings, SlidersHorizontal } from 'lucide-react';
+import { Bot, type LucideIcon, Plug, Settings, SlidersHorizontal, Workflow } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -17,6 +17,7 @@ export const SECTIONS: { href: string; title: string; icon: LucideIcon; pages?: 
     ],
   },
   { href: '/settings/agents', title: 'Agents', icon: Bot },
+  { href: '/settings/workflows', title: 'Workflows', icon: Workflow },
   { href: '/settings/defaults', title: 'Defaults', icon: SlidersHorizontal },
 ];
 
