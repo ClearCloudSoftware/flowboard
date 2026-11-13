@@ -9,8 +9,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { EFFORTS, type Effort, HARNESSES, type Harness, INTERNAL_STEP_SCHEMA, INTERNAL_STEPS, type InternalStep, type InternalStepConfig } from '../../packages/cli/src/settings.ts';
+import { APP_DEFAULTS, EFFORTS, type Effort, HARNESSES, type Harness, INTERNAL_STEP_SCHEMA, INTERNAL_STEPS, type InternalStep, type InternalStepConfig } from '../../packages/cli/src/settings.ts';
 import { type AppView, appSettingsQuery, updateAppSettings } from '../projects/api.ts';
+import { OpencodeModelSelect } from './openrouter.tsx';
 import { ErrorLine, Head } from './settings.tsx';
 
 const OWN = '-'; // Radix keeps '' for "nothing picked"
@@ -24,6 +25,10 @@ function Step({ id, view }: { id: InternalStep; view: AppView }) {
   const [f, setF] = useState({ ...saved, budget: String(saved.budgetUsd) });
   const cfg = { adapter: f.adapter, model: f.model.trim(), effort: f.effort, budgetUsd: Number(f.budget) } as InternalStepConfig;
   const errors = Object.fromEntries((INTERNAL_STEP_SCHEMA.safeParse(cfg).error?.issues ?? []).map((i) => [i.path[0], i.message]));
+  if (f.adapter === 'opencode' && !cfg.model) errors.model = 'pick an approved model';
+  // A model belongs to one CLI: switching keeps the saved one when it is that CLI's, else Claude's default or none.
+  const switchTo = (adapter: Harness) =>
+    setF({ ...f, adapter, model: adapter === saved.adapter ? saved.model : adapter === 'claude-code' ? APP_DEFAULTS.internal[id].model : '' });
   const dirty = JSON.stringify(cfg) !== JSON.stringify(saved);
   const save = useMutation({
     mutationFn: () => updateAppSettings({ internal: { ...view.app.internal, [id]: cfg } }),
@@ -44,7 +49,7 @@ function Step({ id, view }: { id: InternalStep; view: AppView }) {
         <div className="grid gap-3 sm:grid-cols-[150px_minmax(0,1fr)_150px_110px]">
           <label className={label}>
             runs on
-            <Select value={f.adapter} onValueChange={(v) => setF({ ...f, adapter: v as Harness })}>
+            <Select value={f.adapter} onValueChange={(v) => switchTo(v as Harness)}>
               <SelectTrigger className={box}>
                 <SelectValue />
               </SelectTrigger>
@@ -59,8 +64,14 @@ function Step({ id, view }: { id: InternalStep; view: AppView }) {
           </label>
           <label className={label}>
             model
-            <Input value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} placeholder={HARNESSES[f.adapter].model} spellCheck={false} autoComplete="off" aria-invalid={errors.model ? true : undefined} className={box} />
-            {err('model')}
+            {f.adapter === 'opencode' ? (
+              <OpencodeModelSelect value={f.model} onChange={(model) => setF({ ...f, model })} className={box} />
+            ) : (
+              <>
+                <Input value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })} placeholder={HARNESSES[f.adapter].model} spellCheck={false} autoComplete="off" aria-invalid={errors.model ? true : undefined} className={box} />
+                {err('model')}
+              </>
+            )}
           </label>
           <label className={label}>
             effort
