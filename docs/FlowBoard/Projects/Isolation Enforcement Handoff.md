@@ -7,7 +7,7 @@ module: Projects
 
 A project's **Isolation** setting (Trusted, Normal or Untrusted) now decides where every run of that project works. Before this branch, run-flow ignored it: only a flow's own `sandbox:` key boxed anything, and no shipped flow had one, so every run worked on your machine.
 
-This note is the state of branch `feature/isolation-enforcement` (cut from `dev` at `f89a54f`, head `ae80d05`) on 2026-11-13. The branch is not merged or pushed. It records:
+This note is the state of branch `feature/isolation-enforcement` (cut from `dev` at `f89a54f`, head `c6906d3`) on 2026-11-13. The branch is not merged or pushed. It records:
 
 - [[#Fixed: the .git escape]]: FlowBoard's own git calls no longer run config a box wrote; what that does not cover.
 - [[#What happens when a run starts]].
@@ -38,7 +38,8 @@ Every git call FlowBoard makes in a project's repo goes through `hostGit` (`pack
 - **The repo is the project's.** Its top folder comes from the registered project, never from git run in the folder.
 - **The git dir is found without running git.** Walking up from the folder, the first `.git` must be the repo's own (`<repo>/.git`, read-only in a box) or a worktree's `.git` file pointing into `<repo>/.git/worktrees/<name>`, whose own `gitdir` file, written by git, points back to it. Anything else is refused: *"`<path>/.git` was not made by git for `<repo>`; a sandboxed step may have written it. Remove it and check the repo."*
 - **Git is told which.** It runs with `GIT_DIR` and `GIT_WORK_TREE` set, so it never discovers a `.git`, with `core.fsmonitor` off. `git status` and `git diff` get `--ignore-submodules=all` on the command line, which a `.gitmodules` the box wrote cannot override. The OpenSandbox `git archive` at run start goes through it too.
-- **Other refusals.** A symlinked `<repo>/.git` (the link sits in the folder a box writes), a folder inside the git dir, and registering a repo inside another project's repo (its `.git` may be one a run made).
+- **Other refusals.** A symlinked `<repo>/.git` (the link sits in the folder a box writes), a folder inside the git dir, and registering a repo inside another project's repo (its `.git` may be one a run made), or a folder whose `.git` names a work tree that does not hold it or a git dir other than `<top>/.git`.
+- **No failing commit.** A squash land whose changes cancel out stops before `git commit` (*"nothing to land: the task's changes cancel out"*): a commit with nothing staged prints a full status, which goes into submodules whatever the command line says.
 
 A run whose folder holds a planted `.git` is refused before anything runs, `--allow-dirty` or not. A workspace whose `.git` was rewritten shows as broken on the Workspaces page, with `git -C <repo> worktree repair <path>` as the fix. The run page shows the refusal instead of a diff.
 
