@@ -294,3 +294,24 @@ test('a repo inside another project\'s repo is not registered: a sandboxed run m
   assert.equal(readProjects(data).length, 1);
   [data, lib, outer].forEach((d) => rmSync(d, { recursive: true, force: true }));
 });
+
+test("a folder whose .git points git's work tree elsewhere is not registered: a sandboxed run may have made it", () => {
+  const data = temp();
+  const lib = flows();
+  const outer = repo();
+  const other = repo(); // a repo of the person's, nowhere near
+  value(createProject(data, lib, { type: 'software', name: 'Outer', repoPath: outer }));
+  const sub = join(outer, 'sub');
+  mkdirSync(sub);
+  git(sub, 'init', '-q');
+  git(sub, 'config', 'core.worktree', other);
+  const before = readFileSync(join(other, '.git', 'info', 'exclude'), 'utf8');
+  const r = createProject(data, lib, { type: 'software', name: 'Sub', repoPath: sub });
+  assert.deepEqual(r, { ok: false, status: 400, error: `${sub} is not inside ${other}, the repo git names for it; a sandboxed run may have made its .git` });
+  assert.equal(readProjects(data).length, 1);
+  assert.equal(readFileSync(join(other, '.git', 'info', 'exclude'), 'utf8'), before);
+  // A linked worktree is not a repo's own folder either: its git dir is elsewhere.
+  git(other, 'worktree', 'add', '-q', '-b', 'w', join(data, 'w'));
+  assert.deepEqual(repoRoot(join(data, 'w')), { ok: false, status: 400, error: `${join(data, 'w')}'s git dir is ${join(other, '.git', 'worktrees', 'w')}, not ${join(data, 'w', '.git')}; register the repo's own folder` });
+  [data, lib, outer, other].forEach((d) => rmSync(d, { recursive: true, force: true }));
+});

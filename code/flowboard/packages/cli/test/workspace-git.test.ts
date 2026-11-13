@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { worktreeWorkspace } from '@flowboard/adapters';
@@ -188,4 +188,37 @@ test("a worktree whose .git a box rewrote is shown broken, and FlowBoard's git n
   const u = updateFromBase(s.root, 't1', s.runs, s.data);
   assert.ok(!u.ok && /is broken/.test(u.error), JSON.stringify(u));
   assert.equal(existsSync(marker), false);
+});
+
+test("a squash whose changes cancel out is not committed: git's status after a failed commit would walk a box's submodule", async (t) => {
+  const s = setup();
+  t.after(() => rmSync(s.base, { recursive: true, force: true }));
+  const lib = join(s.base, 'lib');
+  mkdirSync(lib);
+  git(lib, 'init', '-q', '-b', 'main');
+  writeFileSync(join(lib, 'f.txt'), 'f\n');
+  git(lib, 'add', 'f.txt');
+  git(lib, 'commit', '-qm', 'lib');
+  git(s.root, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', lib, 'lib');
+  git(s.root, 'config', '-f', '.gitmodules', 'submodule.lib.ignore', 'none'); // committed: a command-line default cannot win
+  git(s.root, 'add', '.gitmodules');
+  git(s.root, 'commit', '-qm', 'lib');
+  await worktreeWorkspace(s.root).create({ id: 't1' });
+  const wt = join(s.root, '.flowboard', 'worktrees', 'task-t1');
+  s.commit(wt, 'b.txt', 'b\n', 'add b');
+  git(wt, 'rm', '-q', 'b.txt');
+  git(wt, 'commit', '-qm', 'drop b');
+  // The box's own repo in lib/, with a clean filter on a tracked file whose stat changed.
+  const sub = join(s.root, 'lib');
+  const marker = join(s.base, 'PWNED');
+  rmSync(join(sub, '.git'));
+  git(sub, 'init', '-q');
+  git(sub, 'add', 'f.txt');
+  git(sub, 'commit', '-qm', 'box');
+  git(sub, 'config', 'filter.x.clean', `sh -c "touch '${marker}'; cat"`);
+  writeFileSync(join(sub, '.gitattributes'), '* filter=x\n');
+  utimesSync(join(sub, 'f.txt'), new Date(2020, 0, 1), new Date(2020, 0, 1));
+  assert.deepEqual(land(s.root, 't1', 'squash', 'Squash t1', s.runs, s.data), { ok: false, error: "nothing to land: the task's changes cancel out" });
+  assert.equal(existsSync(marker), false);
+  assert.equal(git(s.root, 'log', '-1', '--format=%s'), 'lib', 'nothing was committed');
 });

@@ -68,9 +68,15 @@ export function repoRoot(path: string): Result<string> {
   if (!isDir(p)) return fail(400, `${p}: no such folder`);
   // Plain git: registering trusts the repo the person names (createProject refuses one inside a project's repo, which a box
   // may have made); from then on FlowBoard's git uses only its .git (hostGit).
-  const git = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: p, encoding: 'utf8' });
+  const git = spawnSync('git', ['rev-parse', '--show-toplevel', '--absolute-git-dir'], { cwd: p, encoding: 'utf8' });
   if (git.error || git.status !== 0) return fail(400, `${p}: not in a git repository; run git init there first`);
-  return { ok: true, value: realpathSync(git.stdout.trim()) };
+  // A .git a box wrote can name any work tree (core.worktree) or git dir: the folder must be in the one, and git's
+  // dir the repo's own.
+  const [top, gitDir] = git.stdout.trim().split('\n').map((l) => realpathSync(l));
+  const here = realpathSync(p);
+  if (here !== top && !here.startsWith(top + sep)) return fail(400, `${p} is not inside ${top}, the repo git names for it; a sandboxed run may have made its .git`);
+  if (gitDir !== join(top, '.git')) return fail(400, `${top}'s git dir is ${gitDir}, not ${join(top, '.git')}; register the repo's own folder`);
+  return { ok: true, value: top };
 }
 
 /** True when the run's folder is the project's repo or a folder inside it. */

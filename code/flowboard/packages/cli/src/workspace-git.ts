@@ -319,6 +319,11 @@ export function land(input: string, id: string, strategy: Strategy, message: str
       git(repo.root, 'reset', '--merge');
       return { ok: false, error: `git merge --squash: ${m.err || m.out.trim()}`, conflicts: c };
     }
+    // A commit with nothing staged prints a full status, which goes into submodules whatever the options (host-git.ts).
+    if (git(repo.root, 'write-tree').out.trim() === git(repo.root, 'rev-parse', 'HEAD^{tree}').out.trim()) {
+      git(repo.root, 'reset', '--merge');
+      return { ok: false, error: "nothing to land: the task's changes cancel out" };
+    }
     const c = git(repo.root, 'commit', '-m', message);
     if (!c.ok) {
       git(repo.root, 'reset', '--merge');
