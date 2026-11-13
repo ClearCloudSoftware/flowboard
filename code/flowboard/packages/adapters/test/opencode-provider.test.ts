@@ -381,8 +381,8 @@ test('a sandboxed server whose random port is taken starts again on another', as
 describe('approve', () => {
   const OWNER_DENIED = { reply: 'reject', message: 'the project owner denied this' };
   /** Runs `ask` through a provider whose policy allows `git *` and edits; returns what approve saw and what was replied. */
-  async function ask(ask: object, approve: (call: ApprovalCall) => Promise<boolean>, extra: Partial<RunSpec> = {}) {
-    const { spec, provider, requests } = setup([ask, idle]);
+  async function ask(event: object, approve: (call: ApprovalCall) => Promise<boolean>, extra: Partial<RunSpec> = {}) {
+    const { spec, provider, requests } = setup([event, idle]);
     const calls: ApprovalCall[] = [];
     const res = await provider().launch({
       ...spec,
@@ -409,9 +409,25 @@ describe('approve', () => {
   });
 
   test('every path of a multi-file edit is asked', async () => {
-    const r = await ask(askedWith('per_1', 'edit', ['a.ts', 'b.ts']), async (c) => c.kind === 'edit' && c.path.endsWith('a.ts'));
-    assert.equal(r.calls.length, 2);
+    // apply_patch as OpenCode 1.19.3 sends it: a joined `filepath`, relative patterns, absolute `files`.
+    const patch = askedWith('per_1', 'edit', ['a.ts', 'b.ts'], {
+      filepath: 'a.ts, b.ts',
+      files: [{ filePath: '/repo/a.ts' }, { filePath: '/repo/b.ts' }],
+    });
+    const r = await ask(patch, async (c) => c.kind === 'edit' && c.path === '/repo/a.ts');
+    assert.deepEqual(r.calls, [
+      { kind: 'edit', tool: 'edit', path: '/repo/a.ts' },
+      { kind: 'edit', tool: 'edit', path: '/repo/b.ts' },
+    ]);
     assert.deepEqual(r.replies, [OWNER_DENIED]);
+    const bad = await ask(askedWith('per_1', 'edit', ['a.ts'], { files: [{ filePath: '/repo/a.ts' }, { filePath: 7 }] }), async () => true);
+    assert.deepEqual(bad.replies, [OWNER_DENIED]);
+  });
+
+  test('a request with no patterns is not policy-allowed, so it is not asked', async () => {
+    const r = await ask(askedWith('per_1', 'bash', [], { command: 'git status' }), async () => true);
+    assert.deepEqual(r.calls, []);
+    assert.deepEqual(r.replies, [{ reply: 'reject', message: 'Not permitted in this headless run.' }]);
   });
 
   test('rejects without asking for one the policy does not allow', async () => {
@@ -440,8 +456,9 @@ describe('approve', () => {
   });
 
   test('a request without a usable path or command is rejected unasked', async () => {
-    for (const ev of [askedWith('per_1', 'edit', []), askedWith('per_1', 'edit', [''], { filepath: 7 }), askedWith('per_1', 'bash', [])]) {
-      const r = await ask(ev, async () => true);
+    const anyBash = { toolPolicy: { allow: ['Bash', 'Write'] } };
+    for (const ev of [askedWith('per_1', 'edit', [''], { filepath: 7 }), askedWith('per_1', 'bash', [''])]) {
+      const r = await ask(ev, async () => true, anyBash);
       assert.deepEqual(r.calls, []);
       assert.deepEqual(r.replies, [OWNER_DENIED]);
     }

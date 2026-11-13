@@ -208,7 +208,7 @@ export class OpencodeProvider implements AgentProvider {
           const mode = replyFor(spec.permissionMode, req.permission);
           const gated = req.permission === 'edit' || req.permission === 'bash';
           // A mode that answers `once` to everything counts as allowing it, so `auto` cannot skip the owner.
-          const allowed = mode.reply === 'once' || req.patterns.every((p) => actionFor(policy, req.permission, p) === 'allow');
+          const allowed = mode.reply === 'once' || (req.patterns.length > 0 && req.patterns.every((p) => actionFor(policy, req.permission, p) === 'allow'));
           let reply: { reply: 'once' } | { reply: 'reject'; message: string } = mode;
           if (spec.approve && gated && allowed) {
             const calls = approvalCalls(req, directory);

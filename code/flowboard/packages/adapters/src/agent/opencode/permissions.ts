@@ -127,8 +127,9 @@ export function replyFor(
 }
 
 /**
- * What the owner is asked for an `edit` or `bash` request: one call per file (the path OpenCode names, else each
- * pattern, from `directory`), or the command. Empty when there is nothing usable to show, which the caller denies.
+ * What the owner is asked for an `edit` or `bash` request: one call per file, or the command. Files come from
+ * `metadata.files[].filePath` (apply_patch; its `filepath` is a joined string), else the single `metadata.filepath`
+ * (edit, write), else each pattern resolved from `directory`. Empty when anything is unusable, which the caller denies.
  */
 export function approvalCalls(req: PermissionRequest, directory: string): ApprovalCall[] {
   const text = (v: unknown): v is string => typeof v === 'string' && v !== '';
@@ -136,6 +137,12 @@ export function approvalCalls(req: PermissionRequest, directory: string): Approv
     const command = text(req.metadata.command) ? req.metadata.command : req.patterns.join('; ');
     return text(command) ? [{ kind: 'shell', command }] : [];
   }
-  const paths = text(req.metadata.filepath) ? [req.metadata.filepath] : req.patterns;
+  const { files, filepath } = req.metadata;
+  const paths: unknown[] =
+    Array.isArray(files) && files.length > 0
+      ? files.map((f) => (f as { filePath?: unknown } | null)?.filePath)
+      : req.patterns.length === 1 && text(filepath)
+        ? [filepath]
+        : req.patterns;
   return paths.every(text) ? paths.map((p) => ({ kind: 'edit', tool: req.permission, path: resolve(directory, p) })) : [];
 }
