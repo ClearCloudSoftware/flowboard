@@ -45,6 +45,7 @@ This is a platform component. There is no projects mockup, so this set is archit
 - [[Project Lifecycle And Deletion]]: create, the missing edit and delete, and what a cascade would remove
 - [[Project Rules And Edge Cases]]: every rule, quoted, and the edge cases the sources leave open
 - [[Repository Trust And Sandboxing]]: how trust in a repo picks an isolation tier, and the git boundary
+- [[Isolation Enforcement Handoff]]: the open critical issue, what happens when a run starts, and the rulings made while building (2026-11-13)
 - [[Project Visibility]]: the feature-map idea of per-project access, against the single-user PRD
 
 ## Where projects show

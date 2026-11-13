@@ -57,7 +57,7 @@ Since 2026-11-13 a project's trust (*Trusted*, *Normal*, *Untrusted*; [[Project 
 - **Normal is refused until its credentials are set.** A container cannot read the macOS keychain, where the `claude` login is, so `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) must be set where FlowBoard runs, and `OPENROUTER_API_KEY` for an OpenCode step on OpenRouter. The image must exist (`docker build -f docker/Dockerfile -t flowboard-cli .`) and Docker be up, or the run is refused with the command. The same holds for any Docker box.
 - **Refusals** are `run-flow` error lines with exit code 2, shown as written by the runs page's New run form. Every run prints `-- isolation: Normal (container), from project <name>`.
 - **Normal's network is open**: agent containers reach the internet and hold real keys, because the egress proxy is not built.
-- **The repo's git dir is read-only in a box.** A Docker box mounts the folder read-write, and the repo's git dir (`git rev-parse --git-common-dir`) read-only over it, so a box cannot plant a hook or `core.fsmonitor` that FlowBoard's own git calls on the machine would run. Flows commit on the machine, never in a box.
+- **The repo's git dir is read-only in a box.** A Docker box mounts the folder read-write, and the repo's git dir (`git rev-parse --git-common-dir`) read-only over it, so a box running in the repo root cannot plant a hook or `core.fsmonitor` in the repo's git dir. Flows commit on the machine, never in a box. **Not yet covered:** a box in a task workspace or a subfolder can still write a `.git` that FlowBoard's own git calls on the machine then run; see [[Isolation Enforcement Handoff#Open critical issue]].
 
 ### Approvals in Trusted runs
 
