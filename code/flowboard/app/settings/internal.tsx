@@ -46,7 +46,7 @@ function Step({ id, view }: { id: InternalStep; view: AppView }) {
         Fixed by FlowBoard: {s.fixed}
       </p>
       <div className="grid gap-3 px-4 py-3">
-        <div className="grid gap-3 sm:grid-cols-[150px_minmax(0,1fr)_150px_110px]">
+        <div className="grid gap-3 sm:grid-cols-[150px_minmax(0,1fr)_150px_140px]">
           <label className={label}>
             runs on
             <Select value={f.adapter} onValueChange={(v) => switchTo(v as Harness)}>
