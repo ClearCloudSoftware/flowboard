@@ -35,7 +35,9 @@ export async function startRun(runsDir: string, flowsDir: string, input: StartIn
   args.push(join(flowsDir, `${input.flow}.yaml`));
   const out = openSync(log, 'a');
   // run-flow makes its run folder in FLOWBOARD_RUNS_DIR, which it inherits, else in runs/ where it starts.
-  const child = spawn(process.execPath, args, { cwd: dirname(runsDir), detached: true, stdio: ['ignore', out, out] });
+  // flow-main takes INIT_CWD over its cwd, and pnpm's (from `pnpm dev`) would be inherited: it is set to match.
+  const env = { ...process.env, INIT_CWD: dirname(runsDir) };
+  const child = spawn(process.execPath, args, { cwd: dirname(runsDir), env, detached: true, stdio: ['ignore', out, out] });
   child.unref();
   let exited: number | null | undefined;
   child.on('exit', (code) => (exited = code));
