@@ -282,7 +282,7 @@ function StepPanel({ id, draft, problems }: { id: string; draft: Draft; problems
                   {input('shell', 'Command', { placeholder: "empty: the project's check_command" })}
                   {input('timeout', 'Timeout', { type: 'number', min: 1, step: 1, placeholder: '30 (minutes)' }, positive)}
                 </div>
-                <p className="in-note">Exit 0 is a pass, any other a fail. Left empty, it runs the <code>check_command</code> in the folder&rsquo;s <code>.flowboard.yaml</code>. It runs in the run&rsquo;s folder{sandboxed(draft) ? ', in the flow’s sandbox' : ', on this machine: the flow has no sandbox'}.</p>
+                <p className="in-note">Exit 0 is a pass, any other a fail. Left empty, it runs the <code>check_command</code> in the folder&rsquo;s <code>.flowboard.yaml</code>. It runs in the run&rsquo;s folder{sandboxed(draft) ? ', in the flow’s sandbox' : ', at the project’s isolation: in a box, or on this machine only for a Trusted project'}.</p>
               </>,
             )
           ) : (
