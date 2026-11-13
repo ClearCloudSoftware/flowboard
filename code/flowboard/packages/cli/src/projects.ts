@@ -72,8 +72,9 @@ export function repoRoot(path: string): Result<string> {
   if (git.error || git.status !== 0) return fail(400, `${p}: not in a git repository; run git init there first`);
   // A .git a box wrote can name any work tree (core.worktree) or git dir: the folder must be in the one, and git's
   // dir the repo's own.
-  const [top, gitDir] = git.stdout.trim().split('\n').map((l) => realpathSync(l));
-  const here = realpathSync(p);
+  // `.native`: the case on disk, as git gives it, on a case-insensitive disk too.
+  const [top, gitDir] = git.stdout.trim().split('\n').map((l) => realpathSync.native(l));
+  const here = realpathSync.native(p);
   if (here !== top && !here.startsWith(top + sep)) return fail(400, `${p} is not inside ${top}, the repo git names for it; a sandboxed run may have made its .git`);
   if (gitDir !== join(top, '.git')) return fail(400, `${top}'s git dir is ${gitDir}, not ${join(top, '.git')}; register the repo's own folder`);
   return { ok: true, value: top };

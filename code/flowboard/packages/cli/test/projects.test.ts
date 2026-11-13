@@ -315,3 +315,14 @@ test("a folder whose .git points git's work tree elsewhere is not registered: a 
   assert.deepEqual(repoRoot(join(data, 'w')), { ok: false, status: 400, error: `${join(data, 'w')}'s git dir is ${join(other, '.git', 'worktrees', 'w')}, not ${join(data, 'w', '.git')}; register the repo's own folder` });
   [data, lib, outer, other].forEach((d) => rmSync(d, { recursive: true, force: true }));
 });
+
+test('a repo typed in another case than on disk registers, on a case-insensitive disk, at its on-disk path', (t) => {
+  const base = temp();
+  t.after(() => rmSync(base, { recursive: true, force: true }));
+  const onDisk = join(base, 'CaseRepo');
+  mkdirSync(onDisk);
+  git(onDisk, 'init', '-q', '-b', 'main');
+  if (!existsSync(join(base, 'caserepo'))) return t.skip('the temp folder is case-sensitive');
+  assert.deepEqual(repoRoot(join(base, 'caserepo')), { ok: true, value: onDisk });
+  assert.deepEqual(repoRoot(join(base, 'caserepo', '.')), { ok: true, value: onDisk });
+});
