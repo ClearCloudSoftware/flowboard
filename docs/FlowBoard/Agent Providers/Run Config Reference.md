@@ -53,7 +53,7 @@ limits:
 | Field | Type | Required | Default | Checked | Meaning |
 |---|---|---|---|---|---|
 | `adapter` | `claude-code` \| `opencode` | yes | | one of the two | Which provider runs the task |
-| `model` | string | yes | | `opencode`: must contain `/` | The model. Claude: an alias (`haiku`, `sonnet`, `opus`) or a full model id. OpenCode: `providerID/modelID`, e.g. `openrouter/deepseek/deepseek-v4.1-flash` |
+| `model` | string | yes | | `opencode`: must contain `/`, and be an approved model ([[OpenRouter Models And Key]]) | The model. Claude: an alias (`haiku`, `sonnet`, `opus`) or a full model id. OpenCode: `providerID/modelID`, e.g. `openrouter/deepseek/deepseek-v4.1-flash`; a free one prints a privacy warning as the run starts |
 | `effort` | `low` \| `medium` \| `high` \| `xhigh` \| `max` | no | the model's own | one of the five | How hard the model thinks |
 | `folder` | path | yes | | an existing directory; resolved to its real path | Where the agent works. File edits and recursive `rm` are limited to it; other shell commands are not (see *Guards* and *Unrestricted shell*) |
 | `prompt` | path | yes | | an existing file; not blank unless `skill` is set | Markdown file holding the task. Its text is the task; the runner adds a fixed closing line: *"You cannot talk to the user directly. When you need their input, ask with the ask_user tool, or ask_user_batch for several questions at once, and wait for the answer. Do the task, then stop."* |

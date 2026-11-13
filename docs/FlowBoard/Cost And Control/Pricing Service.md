@@ -55,7 +55,7 @@ A second inbox fixture, already answered: `cost-rollup`, *"Roll up by model, or 
 
 ## What is not specified
 
-- Where the rate table lives (a table, a JSON file, settings) and who maintains it.
+- Where the rate table lives (a table, a JSON file, settings) and who maintains it. As built (2026-11-13), FlowBoard keeps one price list: OpenRouter's, in the data folder's `openrouter-models.json`, in dollars per million input and output tokens, refreshed hourly. Only the approval of OpenCode models reads it ([[OpenRouter Models And Key]]); no cost is priced from it.
 - The rate shape: per million input, output, cache-read and cache-write tokens is the natural reading of `Usage`, but no source says so. The Claude probe splits cache writes into 5-minute and 1-hour lifetimes, which a single cache-write rate cannot tell apart (**inferred**).
 - The provider id. `price()` takes `provider`, but the PRD `runs` table has no provider column; `02` §1 proposes adding `runs.provider`.
 
