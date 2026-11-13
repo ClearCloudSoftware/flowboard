@@ -167,6 +167,8 @@ export interface RunSpec {
   systemPrompt?: string;
   /** Enforced in-agent when the provider has `tool_hooks`. */
   guards?: GuardRules;
+  /** Asked before each file edit and shell command the guards let through; false denies it. Never grants what the tool policy refuses. */
+  approve?: (call: ApprovalCall) => Promise<boolean>;
 }
 
 // ---------------------------------------------------------------------------
