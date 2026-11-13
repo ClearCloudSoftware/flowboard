@@ -6,7 +6,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import type { SpawnSyncReturns } from 'node:child_process';
-import { lstatSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { basename, dirname, join, resolve, sep } from 'node:path';
 
 export type GitDirs = { gitDir: string; workTree: string } | { error: string; noRepo?: true };
@@ -40,13 +40,12 @@ export function repoGitDirs(repoRoot: string, cwd: string): GitDirs {
   const top = join(root, '.git');
   if (!exists(join(w, '.git'))) return { error: `${root} is not a git repository`, noRepo: true };
   if (!exists(top)) return planted;
-  let common: string;
-  try {
-    if (!statSync(top).isDirectory()) return { error: `${top} is a file; FlowBoard needs the repo's git dir at ${top}` };
-    common = realpathSync(top);
-  } catch {
-    return planted;
-  }
+  // A link sits in the folder a box writes: the box could point it at a git dir of its own.
+  const kind = lstatSync(top);
+  if (kind.isSymbolicLink()) return { error: `${top} is a link; FlowBoard needs the repo's git dir itself at ${top}` };
+  if (!kind.isDirectory()) return { error: `${top} is a file; FlowBoard needs the repo's git dir at ${top}` };
+  const common = top; // root is a real path and top no link, so this is the git dir's real path
+  if (here === common || here.startsWith(common + sep)) return { error: `${cwd} is inside the repo's git dir` };
   if (w === root) return { gitDir: common, workTree: root };
   // A linked worktree's gitfile names its git dir in <common>/worktrees/, whose `gitdir` file, git's, names it back.
   try {
@@ -65,16 +64,22 @@ export function repoGitDirs(repoRoot: string, cwd: string): GitDirs {
 /**
  * `git <args>` in `cwd`, in the repo at `repoRoot`, with the git dir `repoGitDirs` found, never one git discovers;
  * `refused` without running git when there is none it may use. Submodules are left alone: a box can replace theirs.
- * The repo's own hooks still run, from its read-only git dir.
+ * The repo's own hooks still run, from its read-only git dir. `args` start with the subcommand; `buffer`: stdout as bytes.
  */
 // ponytail: GIT_WORK_TREE is a path; a box swapping a folder for a link while git runs makes git read files elsewhere, never run config from there.
-export function hostGit(repoRoot: string, cwd: string, args: string[], opts: { maxBuffer?: number } = {}): SpawnSyncReturns<string> | { refused: string } {
+export function hostGit(repoRoot: string, cwd: string, args: string[], opts?: { maxBuffer?: number }): SpawnSyncReturns<string> | { refused: string };
+export function hostGit(repoRoot: string, cwd: string, args: string[], opts: { maxBuffer?: number; buffer: true }): SpawnSyncReturns<Buffer> | { refused: string };
+export function hostGit(repoRoot: string, cwd: string, args: string[], opts: { maxBuffer?: number; buffer?: true } = {}): SpawnSyncReturns<string | Buffer> | { refused: string } {
+  if (args[0]?.startsWith('-')) throw new Error(`hostGit: start with the subcommand, not ${args[0]}`); // so the submodule option lands after it
   const dirs = repoGitDirs(repoRoot, cwd);
   if ('error' in dirs) return { refused: dirs.error };
-  return spawnSync('git', ['-c', 'core.fsmonitor=false', '-c', 'diff.ignoreSubmodules=all', '-c', 'status.submoduleSummary=false', ...args], {
+  // The config only sets a default, which a .gitmodules the box wrote overrides (`ignore = none`); the option does not.
+  const [sub, ...rest] = args;
+  const subArgs = sub === 'status' || sub === 'diff' ? [sub, '--ignore-submodules=all', ...rest] : args;
+  return spawnSync('git', ['-c', 'core.fsmonitor=false', '-c', 'diff.ignoreSubmodules=all', '-c', 'status.submoduleSummary=false', ...subArgs], {
     cwd,
     env: { ...process.env, GIT_DIR: dirs.gitDir, GIT_WORK_TREE: dirs.workTree },
-    encoding: 'utf8',
+    encoding: opts.buffer ? 'buffer' : 'utf8',
     ...(opts.maxBuffer && { maxBuffer: opts.maxBuffer }),
   });
 }

@@ -9,7 +9,7 @@ A project's **Isolation** setting (Trusted, Normal or Untrusted) now decides whe
 
 This note is the state of branch `feature/isolation-enforcement` (cut from `dev` at `f89a54f`, head `ae80d05`) on 2026-11-13. The branch is not merged or pushed. It records:
 
-- [[#Fixed: the .git escape]]: the last way out of the box, now closed.
+- [[#Fixed: the .git escape]]: FlowBoard's own git calls no longer run config a box wrote; what that does not cover.
 - [[#What happens when a run starts]].
 - [[#Rulings made on your behalf]]: every decision taken while building, with what it costs if wrong.
 - [[#Deferred findings]].
@@ -18,7 +18,7 @@ The design and the code-level details are in [[Repository Trust And Sandboxing#B
 
 ## Fixed: the .git escape
 
-**A boxed agent could get code run on your machine through git config. That is fixed.**
+**A boxed agent could get FlowBoard's own git calls on your machine to run its git config. That is fixed. Your own git, run in the same folders, is not covered: see [[#What it does not cover]].**
 
 ### What it was
 
@@ -37,13 +37,19 @@ Every git call FlowBoard makes in a project's repo goes through `hostGit` (`pack
 
 - **The repo is the project's.** Its top folder comes from the registered project, never from git run in the folder.
 - **The git dir is found without running git.** Walking up from the folder, the first `.git` must be the repo's own (`<repo>/.git`, read-only in a box) or a worktree's `.git` file pointing into `<repo>/.git/worktrees/<name>`, whose own `gitdir` file, written by git, points back to it. Anything else is refused: *"`<path>/.git` was not made by git for `<repo>`; a sandboxed step may have written it. Remove it and check the repo."*
-- **Git is told which.** It runs with `GIT_DIR` and `GIT_WORK_TREE` set, so it never discovers a `.git`, with `core.fsmonitor` off and submodules ignored.
+- **Git is told which.** It runs with `GIT_DIR` and `GIT_WORK_TREE` set, so it never discovers a `.git`, with `core.fsmonitor` off. `git status` and `git diff` get `--ignore-submodules=all` on the command line, which a `.gitmodules` the box wrote cannot override. The OpenSandbox `git archive` at run start goes through it too.
+- **Other refusals.** A symlinked `<repo>/.git` (the link sits in the folder a box writes), a folder inside the git dir, and registering a repo inside another project's repo (its `.git` may be one a run made).
 
 A run whose folder holds a planted `.git` is refused before anything runs, `--allow-dirty` or not. A workspace whose `.git` was rewritten shows as broken on the Workspaces page, with `git -C <repo> worktree repair <path>` as the fix. The run page shows the refusal instead of a diff.
 
 A `-c` blocklist was not enough: a git dir the box controls controls all of git's config.
 
-**What it costs.** A repo whose `<repo>/.git` is a file (a separate git dir, or a worktree registered as a project) is refused. So is a nested repo below a project's root that is not registered as its own project.
+**What it costs.** A repo whose `<repo>/.git` is a file or a link (a separate git dir, or a worktree registered as a project) is refused. So is a run in a nested repo below a project's root, and registering one as its own project. Branch diffs on the Workspaces page no longer show submodule pointer changes.
+
+### What it does not cover
+
+- **Your own git.** A `.git` a box planted or rewrote stays on disk. Git you run in that folder uses it and runs its config: a shell prompt that runs `git status`, an IDE's git extension, a `git commit` you type in the workspace. FlowBoard refuses such a folder and says so, but it does not remove the `.git` or warn after a run. A scan after each run that warns about such entries is a follow-up, not built.
+- **git-lfs and other global filters.** A box can write a `.gitattributes` with `filter=lfs`. A git-lfs filter installed in your global config then runs on FlowBoard's `git status`. That is your own tool, not the box's code.
 
 ## What happens when a run starts
 

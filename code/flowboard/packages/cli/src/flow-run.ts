@@ -274,7 +274,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
     if (config.sandbox?.runtime === 'opensandbox') {
       const sb = config.sandbox;
       try {
-        box = await (deps.openBox ?? openBox)({ image: sb.image, folder: config.folder, egress: sb.egress, credentials: sb.credentials, timeoutSeconds: BOX_SECONDS, ...(sb.limits && { limits: sb.limits }) });
+        box = await (deps.openBox ?? openBox)({ image: sb.image, repo: repoPath, folder: config.folder, egress: sb.egress, credentials: sb.credentials, timeoutSeconds: BOX_SECONDS, ...(sb.limits && { limits: sb.limits }) });
       } catch (e) {
         printErr(`${yaml}: sandbox: cannot open an OpenSandbox box: ${(e as Error).message}`);
         return 2;

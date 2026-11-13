@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import type { TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hostGit, repoGitDirs } from '../src/workspace/host-git.ts';
@@ -102,23 +102,39 @@ test('a .git planted in a subfolder is refused from inside it, whether it brings
   assert.equal(existsSync(s.marker), false);
 });
 
-test("a submodule's .git replaced by a box is never read: git status from the repo leaves submodules alone", (t) => {
+test("a submodule's .git replaced by a box is never read, even when a .gitmodules the box wrote asks for it", (t) => {
   const s = setup(t);
   const lib = join(s.base, 'lib');
   mkdirSync(lib);
   git(lib, 'init', '-q', '-b', 'main');
-  git(lib, 'commit', '-q', '--allow-empty', '-m', 'lib');
+  writeFileSync(join(lib, 'f.txt'), 'f\n');
+  git(lib, 'add', 'f.txt');
+  git(lib, 'commit', '-qm', 'lib');
   git(s.r, 'submodule', 'add', '-q', lib, 'lib');
   git(s.r, 'commit', '-qm', 'lib');
-  rmSync(join(s.r, 'lib', '.git'));
-  evilGitDir(join(s.r, 'lib', '.git'), s.marker);
-  assert.ok(plainStatus(s.r, s.marker), 'the payload is live');
-  const st = hostGit(s.r, s.r, ['status', '--porcelain']);
-  assert.ok(!('refused' in st) && st.status === 0, JSON.stringify(st));
-  const diff = hostGit(s.r, s.r, ['diff', 'HEAD']);
-  assert.ok(!('refused' in diff) && diff.status === 0, JSON.stringify(diff));
-  assert.equal(existsSync(s.marker), false);
-  assert.deepEqual(repoGitDirs(s.r, join(s.r, 'lib')), { error: planted(join(s.r, 'lib'), s.r) });
+  // The box's own repo in lib/: a clean filter that `git status` and `git diff` run on a tracked file whose stat changed.
+  const sub = join(s.r, 'lib');
+  rmSync(join(sub, '.git'));
+  git(sub, 'init', '-q');
+  git(sub, 'add', 'f.txt');
+  git(sub, 'commit', '-qm', 'box');
+  git(sub, 'config', 'core.fsmonitor', `touch '${s.marker}'; false`);
+  git(sub, 'config', 'filter.x.clean', `sh -c "touch '${s.marker}'; cat"`);
+  writeFileSync(join(sub, '.gitattributes'), '* filter=x\n');
+  let day = 0;
+  const touch = () => utimesSync(join(sub, 'f.txt'), new Date(2020, 0, ++day), new Date(2020, 0, day)); // a new stat every time
+  for (const ignore of ['', 'none']) {
+    if (ignore) git(s.r, 'config', '-f', '.gitmodules', 'submodule.lib.ignore', ignore); // the command line still wins
+    touch();
+    assert.ok(plainStatus(s.r, s.marker), 'the payload is live');
+    for (const args of [['status', '--porcelain=v1', '--branch', '--untracked-files=no', '--', '.', ':(exclude).flowboard'], ['diff', '--no-color', 'HEAD']]) {
+      touch();
+      const r = hostGit(s.r, s.r, args);
+      assert.ok(!('refused' in r) && r.status === 0, JSON.stringify(r));
+      assert.equal(existsSync(s.marker), false, `${args[0]} with .gitmodules ignore=${ignore || 'unset'}`);
+    }
+  }
+  assert.deepEqual(repoGitDirs(s.r, sub), { error: planted(sub, s.r) });
 });
 
 test('a folder outside the repo, a repo whose .git is a file, and a folder in no repo are refused', (t) => {
@@ -127,6 +143,14 @@ test('a folder outside the repo, a repo whose .git is a file, and a folder in no
   const sep = join(s.base, 'sep');
   git(s.base, 'init', '-q', '--separate-git-dir', join(s.base, 'sep.git'), sep);
   assert.deepEqual(repoGitDirs(sep, sep), { error: `${join(sep, '.git')} is a file; FlowBoard needs the repo's git dir at ${join(sep, '.git')}` });
+  // A link sits in the folder a box writes, so the box could point it at a git dir of its own.
+  const linked = join(s.base, 'linked');
+  mkdirSync(linked);
+  symlinkSync(s.common, join(linked, '.git'));
+  assert.deepEqual(repoGitDirs(linked, linked), { error: `${join(linked, '.git')} is a link; FlowBoard needs the repo's git dir itself at ${join(linked, '.git')}` });
+  // The git dir is not a folder to run git in: its hooks and config are what a box must not reach.
+  assert.deepEqual(repoGitDirs(s.r, join(s.common, 'hooks')), { error: `${join(s.common, 'hooks')} is inside the repo's git dir` });
+  assert.deepEqual(repoGitDirs(s.r, s.common), { error: `${s.common} is inside the repo's git dir` });
   const plain = join(s.base, 'plain');
   mkdirSync(plain);
   assert.deepEqual(repoGitDirs(plain, plain), { error: `${plain} is not a git repository`, noRepo: true });

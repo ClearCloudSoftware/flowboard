@@ -6,7 +6,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { connectBox, openBox } from '../src/exec/opensandbox/box.ts';
@@ -38,7 +38,7 @@ before(async () => {
   git(folder, 'add', '-A');
   git(folder, 'commit', '-qm', 'base');
   writeFileSync(join(folder, 'b.txt'), 'not committed\n');
-  box = await openBox({ image: 'flowboard-sandbox', folder, egress: ['api.anthropic.com'], credentials: ['CLAUDE_CODE_OAUTH_TOKEN'], timeoutSeconds: 900 });
+  box = await openBox({ image: 'flowboard-sandbox', repo: folder, folder, egress: ['api.anthropic.com'], credentials: ['CLAUDE_CODE_OAUTH_TOKEN'], timeoutSeconds: 900 });
 });
 after(async () => {
   if (!skip) await box?.kill().catch(() => {});
@@ -98,13 +98,13 @@ test('patch keeps a deleted file and a binary file', { skip }, async () => {
 test('connectBox finds a live box and refuses a gone one', { skip }, async () => {
   const again = await connectBox(box.id, { folder, token: box.token });
   assert.equal((await sh('echo again', again)).out, 'again');
-  const other = await openBox({ image: 'flowboard-sandbox', folder, egress: [], credentials: [], timeoutSeconds: 300 });
+  const other = await openBox({ image: 'flowboard-sandbox', repo: folder, folder, egress: [], credentials: [], timeoutSeconds: 300 });
   await other.kill();
   await assert.rejects(connectBox(other.id, { folder, token: other.token }), new RegExp(`sandbox ${other.id} is gone`));
 });
 
 test('a step whose box was killed ends with an error', { skip }, async () => {
-  const doomed = await openBox({ image: 'flowboard-sandbox', folder, egress: [], credentials: [], timeoutSeconds: 300 });
+  const doomed = await openBox({ image: 'flowboard-sandbox', repo: folder, folder, egress: [], credentials: [], timeoutSeconds: 300 });
   const c = doomed.exec({}).spawn('sleep', ['30'], { cwd: folder });
   const ended = run(c);
   await new Promise((r) => setTimeout(r, 1500));
@@ -114,3 +114,25 @@ test('a step whose box was killed ends with an error', { skip }, async () => {
   assert.match(r.error!.message, new RegExp(doomed.id));
 });
 
+
+test('a box is never opened from a .git a docker box planted in the folder: git archive would run its config', async (t) => {
+  const base = realpathSync(mkdtempSync(join(tmpdir(), 'fb-box-git-')));
+  t.after(() => rmSync(base, { recursive: true, force: true }));
+  const repo = join(base, 'r');
+  const sub = join(repo, 'sub');
+  mkdirSync(sub, { recursive: true });
+  git(repo, 'init', '-q');
+  git(repo, 'commit', '-q', '--allow-empty', '-m', 'one');
+  const marker = join(base, 'PWNED');
+  git(sub, 'init', '-q');
+  writeFileSync(join(sub, 'f.txt'), 'f');
+  git(sub, 'add', 'f.txt');
+  git(sub, 'commit', '-qm', 'box');
+  git(sub, 'config', 'tar.tar.gz.command', `sh -c "touch '${marker}'; gzip -cn"`);
+  execFileSync('git', ['-C', sub, 'archive', '--format=tar.gz', 'HEAD'], { stdio: 'pipe' });
+  assert.ok(existsSync(marker), 'the payload is live');
+  rmSync(marker);
+  const planted = `${join(sub, '.git')} was not made by git for ${repo}; a sandboxed step may have written it. Remove it and check the repo.`;
+  await assert.rejects(openBox({ image: 'x', repo, folder: sub, egress: [], credentials: [], timeoutSeconds: 60 }), { message: `git archive: ${planted}` });
+  assert.equal(existsSync(marker), false);
+});

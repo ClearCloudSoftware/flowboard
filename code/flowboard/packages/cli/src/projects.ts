@@ -66,7 +66,8 @@ export function repoRoot(path: string): Result<string> {
   const p = path.trim().startsWith('~/') ? join(homedir(), path.trim().slice(2)) : path.trim();
   if (!isAbsolute(p)) return fail(400, 'the repo folder must be an absolute path, or start with ~/');
   if (!isDir(p)) return fail(400, `${p}: no such folder`);
-  // Plain git: registering trusts the repo the person names; from then on FlowBoard's git uses only its .git (hostGit).
+  // Plain git: registering trusts the repo the person names (createProject refuses one inside a project's repo, which a box
+  // may have made); from then on FlowBoard's git uses only its .git (hostGit).
   const git = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: p, encoding: 'utf8' });
   if (git.error || git.status !== 0) return fail(400, `${p}: not in a git repository; run git init there first`);
   return { ok: true, value: realpathSync(git.stdout.trim()) };
@@ -111,8 +112,9 @@ const hasLimits = (l: Limits | undefined): l is Limits => !!l && (l.memoryMb !==
 
 /**
  * Registers a repo. 400 for a folder that is not a git repo, a type not offered yet or overrides that do not pass;
- * 409 when the repo or the slug given already has a project. A slug left out comes from `projectSlug`. Limits and a
- * check command given are written to the repo's `.flowboard.yaml`, unless that file does not pass.
+ * 409 when the repo or the slug given already has a project, or the repo is inside a project's. A slug left out comes
+ * from `projectSlug`. Limits and a check command given are written to the repo's `.flowboard.yaml`, unless that file
+ * does not pass.
  */
 export function createProject(dataDir: string, flowsDir: string, input: NewProject, now = new Date()): Result<Project> {
   const name = input.name.trim();
@@ -127,6 +129,9 @@ export function createProject(dataDir: string, flowsDir: string, input: NewProje
   const projects = readProjects(dataDir);
   const twin = projects.find((p) => p.repoPath === root.value);
   if (twin) return fail(409, `${root.value} is already the project ${twin.name}`);
+  // A box writes its project's repo, so a .git found inside it may be one a run planted, not one to trust.
+  const outer = projects.find((p) => owns(p, root.value));
+  if (outer) return fail(409, `${root.value} is inside project ${outer.name}'s repo; a sandboxed run may have made its .git. Register the outer repo, or remove ${join(root.value, '.git')} if FlowBoard's runs made it`);
   let slug = input.slug?.trim();
   if (slug) {
     if (!SLUG.test(slug)) return fail(400, 'a slug may only use lowercase letters, digits and -');

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { RunSummary } from '../src/flow-logs.ts';
@@ -253,16 +253,44 @@ test("a submodule's .git a box replaced is never read by the checkout check; a r
   const lib = join(base, 'lib');
   mkdirSync(lib);
   git(lib, 'init', '-q', '-b', 'main');
-  git(lib, 'commit', '-q', '--allow-empty', '-m', 'lib');
+  writeFileSync(join(lib, 'f.txt'), 'f\n');
+  git(lib, 'add', 'f.txt');
+  git(lib, 'commit', '-qm', 'lib');
   git(r, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', lib, 'lib');
   git(r, 'commit', '-qm', 'lib');
   const marker = join(base, 'PWNED');
-  rmSync(join(r, 'lib', '.git'));
-  git(r, 'init', '-q', join(r, 'lib'));
-  git(join(r, 'lib'), 'config', 'core.fsmonitor', `touch '${marker}'; false`);
-  assert.deepEqual(repoProblems({ repoPath: r, baseBranch: 'main' }), []);
-  assert.equal(existsSync(marker), false);
+  const sub = join(r, 'lib');
+  rmSync(join(sub, '.git'));
+  git(sub, 'init', '-q');
+  git(sub, 'add', 'f.txt');
+  git(sub, 'commit', '-qm', 'box');
+  git(sub, 'config', 'core.fsmonitor', `touch '${marker}'; false`);
+  git(sub, 'config', 'filter.x.clean', `sh -c "touch '${marker}'; cat"`);
+  writeFileSync(join(sub, '.gitattributes'), '* filter=x\n');
+  for (const ignore of ['', 'none']) {
+    if (ignore) git(r, 'config', '-f', '.gitmodules', 'submodule.lib.ignore', ignore); // a box can write .gitmodules too
+    utimesSync(join(sub, 'f.txt'), new Date(2020, 0, ignore ? 2 : 1), new Date(2020, 0, ignore ? 2 : 1));
+    repoProblems({ repoPath: r, baseBranch: 'main' });
+    assert.equal(existsSync(marker), false, `.gitmodules ignore=${ignore || 'unset'}`);
+  }
   const sep = join(base, 'sep');
   git(base, 'init', '-q', '-b', 'main', '--separate-git-dir', join(base, 'sep.git'), sep);
   assert.deepEqual(repoProblems({ repoPath: sep, baseBranch: 'main' }), [`${join(sep, '.git')} is a file; FlowBoard needs the repo's git dir at ${join(sep, '.git')}`]);
+});
+
+test('a repo inside another project\'s repo is not registered: a sandboxed run may have made its .git', () => {
+  const data = temp();
+  const lib = flows();
+  const outer = repo();
+  const inner = join(outer, 'inner');
+  mkdirSync(inner);
+  git(inner, 'init', '-q', '-b', 'main');
+  const p = value(createProject(data, lib, { type: 'software', name: 'Outer', repoPath: outer }));
+  assert.deepEqual(createProject(data, lib, { type: 'software', name: 'Inner', repoPath: inner }), {
+    ok: false,
+    status: 409,
+    error: `${inner} is inside project ${p.name}'s repo; a sandboxed run may have made its .git. Register the outer repo, or remove ${join(inner, '.git')} if FlowBoard's runs made it`,
+  });
+  assert.equal(readProjects(data).length, 1);
+  [data, lib, outer].forEach((d) => rmSync(d, { recursive: true, force: true }));
 });
