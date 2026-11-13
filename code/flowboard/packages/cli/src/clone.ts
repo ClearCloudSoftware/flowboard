@@ -47,7 +47,11 @@ const fail = (status: 400 | 409, error: string) => ({ ok: false as const, status
  * Checks everything a clone needs before it starts, then starts it; the job is returned at once and fills as git goes.
  * `quietMs`: how long git may say nothing before the clone is stopped and failed (a stalled network, a prompt).
  */
-export function startClone(dataDir: string, flowsDir: string, input: CloneInput, gh = 'gh', quietMs = 5 * 60_000): Result<CloneJob> {
+/** What starts the repo analyst on a new project (`startAnalysis`); its refusal is logged, never the clone's failure. */
+export type Analyse = (project: Project) => Promise<{ ok: true; run: string } | { ok: false; error: string }>;
+
+/** `analyse`: run once the project is registered, before the job is done; none starts no analysis. */
+export function startClone(dataDir: string, flowsDir: string, input: CloneInput, gh = 'gh', quietMs = 5 * 60_000, analyse?: Analyse): Result<CloneJob> {
   if (!REPO.test(input.repo)) return fail(400, `not a GitHub repository: ${input.repo}`);
   const type = PROJECT_TYPES[input.type];
   if (!type) return fail(400, `no project type "${input.type}"`);
@@ -126,7 +130,14 @@ export function startClone(dataDir: string, flowsDir: string, input: CloneInput,
       own.length ? `-- overrides: ${own.join(', ')}` : '-- every setting inherited',
       ...(!limits ? [] : projectLimits(folder).ok ? [`-- wrote .flowboard.yaml: sandbox limits ${limits}`] : ['-- .flowboard.yaml in the repo does not pass, so the limits were not written; the project page says why']),
     );
-    Object.assign(job, { phase: 'done', project: p });
+    if (!analyse) return Object.assign(job, { phase: 'done', project: p });
+    const said = (r: Awaited<ReturnType<Analyse>>) => (r.ok ? `-- analysis started: run ${r.run}` : `-- analysis not started: ${r.error.split('\n')[0]}`);
+    void analyse(p)
+      .catch((e: Error) => ({ ok: false as const, error: e.message }))
+      .then((r) => {
+        job.lines.push(said(r));
+        Object.assign(job, { phase: 'done', project: p });
+      });
   });
   return { ok: true, value: job };
 }
