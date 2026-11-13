@@ -1,6 +1,6 @@
 'use client';
 /** The settings sidebar: one entry per section, the one shown marked; a section with pages lists them under it while open. */
-import { Bot, type LucideIcon, Plug, Settings, SlidersHorizontal, Workflow } from 'lucide-react';
+import { Bot, Cog, type LucideIcon, Plug, Settings, SlidersHorizontal, Workflow } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -14,9 +14,19 @@ export const SECTIONS: { href: string; title: string; icon: LucideIcon; pages?: 
       { href: '/settings/connections/repositories', title: 'Source repositories' },
       { href: '/settings/connections/tasks', title: 'Task providers' },
       { href: '/settings/connections/escalation', title: 'Escalation channels' },
+      { href: '/settings/connections/openrouter', title: 'OpenRouter' },
     ],
   },
-  { href: '/settings/agents', title: 'Agents', icon: Bot },
+  {
+    href: '/settings/agents',
+    title: 'Agents',
+    icon: Bot,
+    pages: [
+      { href: '/settings/agents', title: 'Agent CLIs' },
+      { href: '/settings/agents/models', title: 'OpenCode models' },
+    ],
+  },
+  { href: '/settings/internal', title: 'Internal steps', icon: Cog },
   { href: '/settings/workflows', title: 'Workflows', icon: Workflow },
   { href: '/settings/defaults', title: 'Defaults', icon: SlidersHorizontal },
 ];
@@ -29,10 +39,11 @@ export function SettingsNav() {
   return (
     <nav aria-label="Settings sections" className="flex flex-wrap gap-0.5 md:grid">
       {SECTIONS.map(({ href, title, icon: Icon, pages }) => {
-        const open = !!pages && path.startsWith(`${href}/`);
+        // A section may be its own first page (Agents), so it is open there too.
+        const open = !!pages && (path === href || path.startsWith(`${href}/`));
         return (
           <div key={href} className="contents md:grid md:gap-0.5">
-            <Link href={pages ? pages[0].href : href} aria-current={path === href ? 'page' : undefined} className={`${item} ${mark(path === href)} ${open ? 'font-medium text-foreground' : ''}`}>
+            <Link href={pages ? pages[0].href : href} aria-current={path === href && !pages ? 'page' : undefined} className={`${item} ${mark(path === href && !pages)} ${open ? 'font-medium text-foreground' : ''}`}>
               <Icon aria-hidden className="size-4 text-muted-foreground" strokeWidth={1.75} />
               {title}
             </Link>

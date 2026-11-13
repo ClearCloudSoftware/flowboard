@@ -33,6 +33,12 @@ export interface RunConfig {
 
 export type LoadResult = { ok: true; config: RunConfig } | { ok: false; errors: string[] };
 
+/**
+ * The app's rules for OpenCode's models (`openrouter.ts` builds them from the approved list): `problem` says why a
+ * model may not run, `free` whether it is a free one. Absent, as in tests, no model is checked.
+ */
+export interface ModelRules { problem(model: string): string | undefined; free(model: string): boolean }
+
 export const RunSchema = z.strictObject({
   adapter: z.enum(['claude-code', 'opencode']),
   model: z.string().min(1),
@@ -75,10 +81,10 @@ export const isDir = (p: string) => existsSync(p) && statSync(p).isDirectory();
 export const isFile = (p: string) => existsSync(p) && statSync(p).isFile();
 
 /** Writes `value` as JSON to a temp file beside `file`, then renames it over, so a reader never sees half of it. */
-export function writeJsonFile(file: string, value: unknown) {
+export function writeJsonFile(file: string, value: unknown, mode?: number) {
   mkdirSync(dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
-  writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`);
+  writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`, { mode });
   renameSync(tmp, file);
 }
 
@@ -181,10 +187,10 @@ export function readYaml(
   return { ok: true, abs, raw: raw as Record<string, unknown> };
 }
 
-export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
+export function loadConfig(yamlPath: string, baseDir: string, models?: ModelRules): LoadResult {
   const read = readYaml(yamlPath, baseDir);
   if (!read.ok) return read;
-  const r = configFromObject(read.raw, baseDir);
+  const r = configFromObject(read.raw, baseDir, models);
   if (!r.ok) return { ok: false, errors: r.errors.map((l) => `${yamlPath}: ${l}`) };
   return { ok: true, config: { yamlPath: read.abs, ...r.config } };
 }
@@ -193,6 +199,7 @@ export function loadConfig(yamlPath: string, baseDir: string): LoadResult {
 export function configFromObject(
   raw: Record<string, unknown>,
   baseDir: string,
+  models?: ModelRules,
 ): { ok: true; config: Omit<RunConfig, 'yamlPath'> } | { ok: false; errors: string[] } {
   const parsed = RunSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, errors: parsed.error.issues.flatMap((i) => issueLines(i, raw)) };
@@ -247,6 +254,10 @@ export function configFromObject(
     }
   }
   if (y.adapter === 'opencode' && !y.model.includes('/')) errors.push('model: opencode model must be "providerID/modelID"');
+  else if (y.adapter === 'opencode' && models) {
+    const problem = models.problem(y.model);
+    if (problem) errors.push(`model: ${problem}`);
+  }
   (y.guards?.deny_commands ?? []).forEach((src, i) => {
     try {
       new RegExp(src);

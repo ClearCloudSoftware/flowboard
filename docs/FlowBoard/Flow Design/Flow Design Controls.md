@@ -87,7 +87,7 @@ As built in the flow designer (2026-10-24), the inspector edits the step's own k
 |---|---|---|
 | **Name** | the step's key | Lowercase letters, digits, `-` and `_`. Renames when the field is left; the step's routes and `entry:` follow |
 | **Runs** | `shell:` or not | *an agent* or *a shell command*. A step that becomes a shell step drops its agent keys, as run-flow would refuse them |
-| **Adapter**, **Model**, **Effort** | `adapter`, `model`, `effort` | Model is free text; Claude Code's aliases `haiku`, `sonnet`, `opus` are offered. Effort runs `low` … `max` |
+| **Adapter**, **Model**, **Effort** | `adapter`, `model`, `effort` | On Claude Code, Model is free text with the aliases `haiku`, `sonnet`, `opus` offered. On OpenCode (since 2026-11-13), Model is a dropdown of the approved models only, free ones marked, with the privacy warning under it; a model the file names that is not approved stays shown as *(not approved)* ([[OpenRouter Models And Key]]). Effort runs `low` … `max` |
 | **Budget**, **Max turns** | `limits.budget_usd`, `limits.max_turns` | Above 0, or blank |
 | **Timeout** | `timeout_minutes` | On both kinds of step |
 | **Prompt**, **Skill**, **System** | `prompt`, `skill`, `system_prompt` | The prompt is a file beside the flow file; the skill is `/plugin:name`; the system prompt is inline text |

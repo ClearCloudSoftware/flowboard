@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { readFlow, saveFlow } from '../../../../packages/cli/src/flow-files.ts';
-import { badName, body, flowsDir, refused } from '../local.ts';
+import { modelRules } from '../../../../packages/cli/src/openrouter.ts';
+import { badName, body, dataDir, flowsDir, refused } from '../local.ts';
 
 type Params = { params: Promise<{ name: string }> };
 
@@ -9,7 +10,7 @@ export async function GET(request: Request, { params }: Params) {
   const { name } = await params;
   const no = refused(request) ?? badName(name);
   if (no) return no;
-  const file = readFlow(flowsDir(), name);
+  const file = readFlow(flowsDir(), name, modelRules(dataDir()));
   return file ? Response.json(file) : Response.json({ error: `no ${name}.yaml in the flows folder` }, { status: 404 });
 }
 
@@ -22,7 +23,7 @@ export async function PUT(request: Request, { params }: Params) {
   if (no) return no;
   const input = Save.safeParse(await body(request));
   if (!input.success) return Response.json({ error: 'send { draft, version }' }, { status: 400 });
-  const saved = saveFlow(flowsDir(), name, input.data.draft, input.data.version);
+  const saved = saveFlow(flowsDir(), name, input.data.draft, input.data.version, modelRules(dataDir()));
   if (saved.ok) return Response.json(saved.file);
   if ('conflict' in saved) return Response.json({ error: saved.conflict }, { status: 409 });
   return Response.json({ error: 'not saved: the recipe does not pass the check', check: saved.check }, { status: 422 });

@@ -20,6 +20,6 @@ export async function POST(request: Request) {
   if (no) return no;
   const input = Start.safeParse(await body(request));
   if (!input.success) return Response.json({ error: 'send { flow, folder, task, budgetUsd?, allowDirty?, workspace? }' }, { status: 400 });
-  const r = await startRun(runsDir(), flowsDir(), dataDir(), input.data);
+  const r = await startRun(runsDir(), flowsDir(), input.data, dataDir());
   return r.ok ? Response.json({ name: r.name }) : Response.json({ error: r.error }, { status: 422 });
 }

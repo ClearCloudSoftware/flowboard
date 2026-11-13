@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { HarnessStatus } from '../../packages/cli/src/harnesses.ts';
 import { EFFORTS, type Effort, HARNESS_SCHEMAS, HARNESSES, type Harness, type HarnessConfig } from '../../packages/cli/src/settings.ts';
 import { agentsQuery, type AppView, appSettingsQuery, updateAppSettings } from '../projects/api.ts';
+import { OpencodeModelSelect } from './openrouter.tsx';
 import { ErrorLine, Head } from './settings.tsx';
 
 const OWN = '-'; // Radix keeps '' for "nothing picked"
@@ -68,7 +69,14 @@ function Agent({ id, view, status }: { id: Harness; view: AppView; status: Harne
       <div className="grid gap-3 px-4 py-3">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_150px]">
           {field('path', 'program', `${h.bin}, on PATH`)}
-          {field('model', 'default model', id === 'opencode' ? 'none: each step names one' : 'the CLI’s own')}
+          {id === 'opencode' ? (
+            <label className="grid gap-1 text-[11px] text-muted-foreground">
+              default model
+              <OpencodeModelSelect value={f.model} onChange={(model) => setF({ ...f, model })} none="none: each step names one" className="h-8 w-full font-mono text-[13px] text-foreground" />
+            </label>
+          ) : (
+            field('model', 'default model', 'the CLI’s own')
+          )}
           <label className="grid gap-1 text-[11px] text-muted-foreground">
             default effort
             <Select value={f.effort ?? OWN} onValueChange={(v) => setF({ ...f, effort: v === OWN ? null : (v as Effort) })}>
@@ -103,7 +111,7 @@ export function AgentsPage() {
   const agents = useQuery(agentsQuery);
   return (
     <>
-      <Head title="Agents">The agent CLIs FlowBoard drives. Each runs on its own login on this machine; FlowBoard stores no key for either.</Head>
+      <Head title="Agents">The agent CLIs FlowBoard drives. Each runs on its own login on this machine; OpenCode runs on the OpenRouter key under Connections, when one is saved. Which models OpenCode may use is under OpenCode models.</Head>
       {view.isPending && <p className="m-0 text-muted-foreground">Loading…</p>}
       <ErrorLine error={view.error ?? agents.error} />
       {view.data && (

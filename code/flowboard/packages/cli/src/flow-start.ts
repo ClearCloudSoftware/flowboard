@@ -17,7 +17,7 @@ export type Started = { ok: true; name: string } | { ok: false; error: string };
 const FLOW_MAIN = resolve(dirname(fileURLToPath(import.meta.url)), 'flow-main.ts');
 const WAIT_MS = 20_000;
 
-export async function startRun(runsDir: string, flowsDir: string, dataDir: string, input: StartInput): Promise<Started> {
+export async function startRun(runsDir: string, flowsDir: string, input: StartInput, dataDir?: string): Promise<Started> {
   if (!FLOW_NAME.test(input.flow)) return { ok: false, error: `"${input.flow}": not a flow name` };
   if (!input.task.trim()) return { ok: false, error: 'the task is empty' };
   const folder = input.folder.startsWith('~/') ? join(homedir(), input.folder.slice(2)) : input.folder;
@@ -44,7 +44,7 @@ export async function startRun(runsDir: string, flowsDir: string, dataDir: strin
  * appended to `<runDir>/resume.log`. It resolves once run-flow says it is resuming, or with what it said when it
  * refused; still deciding after the wait, it is taken as resuming, and the page follows it from the run's files.
  */
-export async function resumeRun(runDir: string, dataDir: string, budgetUsd?: number): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function resumeRun(runDir: string, dataDir: string | undefined, budgetUsd?: number): Promise<{ ok: true } | { ok: false; error: string }> {
   const budget = budgetUsd === undefined ? [] : ['--budget-usd', String(budgetUsd)];
   const r = await launch([FLOW_MAIN, '--resume', runDir, '--page', ...budget], process.cwd(), dataDir, join(runDir, 'resume.log'), /^-- resuming /m);
   return 'said' in r ? { ok: false, error: r.said } : { ok: true };
@@ -54,12 +54,13 @@ export async function resumeRun(runDir: string, dataDir: string, budgetUsd?: num
  * Starts run-flow (`args`, after node) in the background with its output appended to `log`, and waits until what
  * it writes this time matches `ready`, or it exits first: then `said` is what it wrote. Neither within the wait: `{}`.
  */
-async function launch(args: string[], cwd: string, dataDir: string, log: string, ready: RegExp): Promise<{ ready?: RegExpExecArray } | { said: string }> {
+async function launch(args: string[], cwd: string, dataDir: string | undefined, log: string, ready: RegExp): Promise<{ ready?: RegExpExecArray } | { said: string }> {
   const out = openSync(log, 'a');
   const from = fstatSync(out).size; // an appended log holds earlier attempts' lines
-  // run-flow makes its run folder in FLOWBOARD_RUNS_DIR, which it inherits, else in runs/ where it starts; its data
-  // folder is the app's, given whole, as it does not start where the app does.
-  const env = { ...process.env, FLOWBOARD_DATA_DIR: dataDir };
+  // run-flow makes its run folder in FLOWBOARD_RUNS_DIR, which it inherits, else in runs/ where it starts. flow-main
+  // takes INIT_CWD over its cwd, and pnpm's (from `pnpm dev`) would be inherited: it is set to match. Its data folder
+  // is the app's, given whole, as it does not start where the app does.
+  const env = { ...process.env, INIT_CWD: cwd, ...(dataDir && { FLOWBOARD_DATA_DIR: dataDir }) };
   const child = spawn(process.execPath, args, { cwd, env, detached: true, stdio: ['ignore', out, out] });
   closeSync(out);
   child.unref();

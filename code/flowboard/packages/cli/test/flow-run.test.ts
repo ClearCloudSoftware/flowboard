@@ -118,6 +118,7 @@ function setup(yaml = DELIVERY, plays: Record<string, Play[]> = {}) {
 
 test('--check validates the flow and prints its size', async () => {
   const { out, err, deps } = setup();
+  delete deps.dataDir; // a check needs no project; with a data folder the app's OpenCode model rules apply (openrouter.ts)
   assert.equal(await runFlow(['--check', 'flow.yaml'], deps), 0);
   assert.deepEqual([out, err], [['-- flow ok: 5 steps, starting at plan'], []]);
 });
@@ -131,6 +132,7 @@ test('a bad flow exits 2 with its errors on stderr and creates nothing', async (
 
 test('--mermaid prints the diagram', async () => {
   const { out, deps } = setup();
+  delete deps.dataDir; // as --check: no project, and no model rules
   assert.equal(await runFlow(['--mermaid', 'flow.yaml'], deps), 0);
   assert.equal(out[0], 'flowchart LR');
 });
@@ -1167,6 +1169,10 @@ test('normal refuses a box without the login its agents need', async (t) => {
   const { base, err, deps } = setup(DELIVERY);
   registerProject(base, join(base, 'proj'), 'normal');
   deps.docker = fakeDocker().docker;
+  // The project from FLOWBOARD_DATA_DIR, not deps.dataDir: that would also apply the app's OpenCode model rules,
+  // which refuse DELIVERY's unapproved OpenRouter model before the login is checked.
+  withEnv(t, 'FLOWBOARD_DATA_DIR', join(base, 'data'));
+  delete deps.dataDir;
   assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
   assert.deepEqual(err, [
     "CLAUDE_CODE_OAUTH_TOKEN is not set: a container cannot use this machine's login. Run `claude setup-token` and set CLAUDE_CODE_OAUTH_TOKEN where FlowBoard runs",
