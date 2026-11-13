@@ -65,6 +65,8 @@ export function repoGitDirs(repoRoot: string, cwd: string): GitDirs {
  * `git <args>` in `cwd`, in the repo at `repoRoot`, with the git dir `repoGitDirs` found, never one git discovers;
  * `refused` without running git when there is none it may use. Submodules are left alone: a box can replace theirs.
  * The repo's own hooks still run, from its read-only git dir. `args` start with the subcommand; `buffer`: stdout as bytes.
+ * `commit` with nothing staged prints a full status, which goes into submodules whatever the command line says (a
+ * committed `.gitmodules` `ignore = none` wins, `--no-status` does not stop it): check something is staged first.
  */
 // ponytail: GIT_WORK_TREE is a path; a box swapping a folder for a link while git runs makes git read files elsewhere, never run config from there.
 export function hostGit(repoRoot: string, cwd: string, args: string[], opts?: { maxBuffer?: number }): SpawnSyncReturns<string> | { refused: string };

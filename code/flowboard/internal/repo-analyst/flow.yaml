@@ -1,0 +1,12 @@
+# FlowBoard's own step, run once a new project is cloned: proposes its stack, check command and network hosts.
+# Internal: never in the library, never copied into a project. What it may touch is fixed here; the agent CLI,
+# model, effort and budget come from /settings → Internal steps at launch (internal-steps.ts), for every project.
+budget_usd: 0.5                    # replaced by the app's setting at launch
+steps:
+  analyse:
+    skills: [.]                    # this folder's SKILL.md
+    skill: /repo-analyst
+    produces: [proposal]
+    write_roots: []                # it edits nothing but its output file
+    permissions: { allow: [Read, Grep, Glob, Write], deny: [Bash, Edit, WebFetch, WebSearch] }
+    limits: { max_turns: 40 }

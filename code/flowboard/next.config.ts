@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     agentFeedback: true,
   },
   cacheComponents: true,
+  // `/settings/connections` opens its first page; a page that redirects as it renders fails instant validation.
+  redirects: async () => [{ source: "/settings/connections", destination: "/settings/connections/repositories", permanent: false }],
   partialPrefetching: true,
   turbopack: {
     rules: {

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { useForm } from '@tanstack/react-form';
+import { useQuery } from '@tanstack/react-query';
 import { useSelector } from '@tanstack/react-store';
 import { entries, isRework } from '../../packages/core/src/flow/flow.ts';
 import {
@@ -27,10 +28,11 @@ import { editor, selectedStep } from './editor.ts';
 import { Pencil } from 'lucide-react';
 import { WarnIcon } from './icons.tsx';
 import { PromptFileEditor, SystemPromptEditor } from './prompt-editor.tsx';
+import { openrouterQuery } from '../projects/api.ts';
 
 const ADAPTERS = ['claude-code', 'opencode'];
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
-/** Claude Code's model aliases. OpenCode takes `provider/model`, so its field stays free text. */
+/** Claude Code's model aliases. OpenCode's model is picked from the approved list instead (`OpencodeModel`). */
 const CLAUDE_MODELS = ['haiku', 'sonnet', 'opus'];
 /** The flow-designer guide's words for each condition. */
 const WHEN: Record<Condition, string> = {
@@ -108,6 +110,39 @@ function AddChip({ id, placeholder, options, check, onAdd }: { id: string; place
       ) : null}
       {error && <em className="in-err">{error}</em>}
     </span>
+  );
+}
+
+/**
+ * OpenCode's model, picked from the models approved under Settings → Agents → OpenCode models, never typed: the run
+ * check refuses any other. A value the list lacks, as written in the file, stays shown and marked until it is changed.
+ */
+function OpencodeModel({ id, value, unset, onChange }: { id: string; value: string; unset: string; onChange: (v: string) => void }) {
+  const q = useQuery(openrouterQuery);
+  const approved = q.data?.approved ?? [];
+  const picked = approved.find((m) => m.id === value);
+  return (
+    <>
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{unset}</option>
+        {value !== '' && !picked && <option value={value}>{value} (not approved)</option>}
+        {approved.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.id}
+            {m.free ? ' · free' : ''}
+            {m.problem ? ' (refused)' : ''}
+          </option>
+        ))}
+      </select>
+      {q.data && approved.length === 0 && (
+        <em className="in-err">
+          No models approved yet: <a href="/settings/agents/models">approve some</a>
+        </em>
+      )}
+      {value !== '' && !picked && q.data && <em className="in-err">not an approved model; pick one</em>}
+      {picked?.problem && <em className="in-err">{picked.problem}</em>}
+      {picked?.free && <em className="in-err">free: its provider may keep your prompts, which include the project&rsquo;s code</em>}
+    </>
   );
 }
 
@@ -294,10 +329,17 @@ function StepPanel({ id, draft, problems }: { id: string; draft: Draft; problems
                 <>
                   <div className="in-f">
                     {select('adapter', 'Adapter', ADAPTERS, inherited(defaults.adapter))}
-                    {input('model', 'Model', {
-                      placeholder: inherited(defaults.model, adapter === 'opencode' ? 'provider/model' : 'sonnet'),
-                      list: adapter === 'opencode' ? undefined : 'claude-models',
-                    })}
+                    {adapter === 'opencode' ? (
+                      <form.Field name="model">
+                        {(f) => (
+                          <Row id="f-model" label="Model">
+                            <OpencodeModel id="f-model" value={f.state.value} unset={inherited(defaults.model, 'pick an approved model')} onChange={f.handleChange} />
+                          </Row>
+                        )}
+                      </form.Field>
+                    ) : (
+                      input('model', 'Model', { placeholder: inherited(defaults.model, 'sonnet'), list: 'claude-models' })
+                    )}
                     {select('effort', 'Effort', EFFORTS, inherited(defaults.effort, "the model's own"))}
                   </div>
                   <datalist id="claude-models">
@@ -534,7 +576,21 @@ function FlowPanel({ draft, problems }: { draft: Draft; problems: string[] }) {
         </div>
         <div className="in-f">
           {choose('adapter', 'Adapter', ADAPTERS, 'not set')}
-          {field('model', 'Model', { placeholder: 'not set', list: 'claude-models-flow' })}
+          <form.Subscribe selector={(s) => s.values.adapter}>
+            {(adapter) =>
+              adapter === 'opencode' ? (
+                <form.Field name="model">
+                  {(f) => (
+                    <Row id="g-model" label="Model">
+                      <OpencodeModel id="g-model" value={f.state.value} unset="not set" onChange={f.handleChange} />
+                    </Row>
+                  )}
+                </form.Field>
+              ) : (
+                field('model', 'Model', { placeholder: 'not set', list: 'claude-models-flow' })
+              )
+            }
+          </form.Subscribe>
           {choose('effort', 'Effort', EFFORTS, "the model's own")}
           {field('run_budget', 'Budget', { type: 'number', min: 0.01, step: 0.1, placeholder: 'per run, not set' }, positive)}
           {field('max_turns', 'Max turns', { type: 'number', min: 1, step: 1, placeholder: 'not set' }, whole)}

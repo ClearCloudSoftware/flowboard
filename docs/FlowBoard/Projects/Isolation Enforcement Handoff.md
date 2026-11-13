@@ -7,14 +7,75 @@ module: Projects
 
 A project's **Isolation** setting (Trusted, Normal or Untrusted) now decides where every run of that project works. Before this branch, run-flow ignored it: only a flow's own `sandbox:` key boxed anything, and no shipped flow had one, so every run worked on your machine.
 
-This note is the state of branch `feature/isolation-enforcement` (cut from `dev` at `f89a54f`, head `ae80d05`) on 2026-11-13. The branch is not merged or pushed. It records:
+This work was built on branch `feature/isolation-enforcement` (cut from `dev` at `f89a54f`) and merged into `dev` as `6b3d3a6` on 2026-11-13. This note records:
 
+- [[#Merged into dev]]: how it joined `dev`, and what was tested.
+- [[#Before you use it]]: what a Normal project needs on your machine.
 - [[#Fixed: the .git escape]]: FlowBoard's own git calls no longer run config a box wrote; what that does not cover.
 - [[#What happens when a run starts]].
 - [[#Rulings made on your behalf]]: every decision taken while building, with what it costs if wrong.
 - [[#Deferred findings]].
 
 The design and the code-level details are in [[Repository Trust And Sandboxing#Built]]. The plan is `docs/superpowers/plans/2026-11-13-isolation-enforcement.md`.
+
+## Merged into dev
+
+While the branch was being built, `dev` moved 10 commits ahead with the OpenCode model work ([[Running Agent Work]]). `dev` was merged into the branch first (`86f4e9c`), and the branch was then merged into `dev` (`6b3d3a6`).
+
+**The one overlap.** Both sides had started passing FlowBoard's data folder to run-flow:
+
+- This branch passes it so run-flow can find the project that owns `--folder`.
+- `dev` passes it so OpenCode steps run only on approved models, with the saved OpenRouter key.
+
+They are now one setting, `RunDeps.dataDir`, used for both:
+
+- `startRun(runsDir, flowsDir, input, dataDir?)` keeps `dev`'s argument order.
+- The helper that starts run-flow in the background, for both a new run and a resume, sets `INIT_CWD` to the folder it starts in, and `FLOWBOARD_DATA_DIR` to the app's data folder.
+- With no data folder given, run-flow uses `FLOWBOARD_DATA_DIR`, else FlowBoard's own `data/`, to find the project. In that case no OpenCode model is checked.
+
+**Three tests changed, not the code.** Passing a data folder now also turns on the model check, which is `dev`'s intended behaviour. So the `--check` and `--mermaid` tests no longer pass one, since they need no project. The test that refuses a box without its agents' login reads its project from `FLOWBOARD_DATA_DIR`, so the fixture flow's unapproved OpenRouter model doesn't get refused first.
+
+**Tested on the merged tree** (the same tree that went into `dev`):
+
+| Check | Result |
+|---|---|
+| `pnpm test:packages` | 560 pass, 24 skipped (live), 2 fail: two `flow-exec` timing tests the merge didn't touch, which pass 34/34 when that file runs alone, three times over |
+| `pnpm test:app` | 23/23 |
+| `pnpm typecheck:packages` | clean |
+| eslint on the merged files | no errors |
+
+**Real runs** (before the merge, on the branch, one Haiku step each in a throwaway repo, about $0.003 each):
+
+- **Normal project.** The run logged `-- isolation: Normal (container), from project live-normal` and `-- sandbox limits: 1983 MB of memory (a quarter of Docker's)`. The agent's `ls -la` showed files owned by `node`, the container's user. Nothing asked.
+- **Trusted project, started with `--page`.** The run logged `-- isolation: Trusted (host), …; agents ask before edits and shell commands`. The agent asked `Edit hello.txt?`, which was allowed once, and `Run ls -la?`, which was allowed from now on. That saved `{"kind":"shell","prefix":"ls"}` on the project. Writing the run's own notes didn't ask.
+
+Not run for real: Untrusted (it can't run on a Mac), OpenCode steps, and answering from the runs page in a browser.
+
+The branch and its worktree are removed. The build log, with every ruling and every minor finding, is kept locally at `.superpowers/sdd/2026-11-13-isolation-enforcement/progress.md` in the main checkout. That file is git-ignored.
+
+## Before you use it
+
+A **Normal** project, which is the default for a new Software project, now runs every step in a Docker box. Until the steps below are done, its runs are refused, with a message that names what is missing.
+
+1. **Docker running.** Otherwise the run is refused with `Docker is not running`.
+2. **A current `flowboard-cli` image.** Build it from `code/flowboard`:
+
+   ```
+   docker build -f docker/Dockerfile -t flowboard-cli .
+   ```
+
+   The image on this machine is from 2026-10-24. It worked in the real run because FlowBoard's own code is mounted into the box from your checkout, not taken from the image. Rebuild it anyway when the agent CLIs or the toolchain in `docker/Dockerfile` change.
+3. **`CLAUDE_CODE_OAUTH_TOKEN` set where FlowBoard runs**, which is the environment of `pnpm dev` or the app. A box cannot read the macOS keychain, where your `claude` login lives. Make a token with `claude setup-token`; yours is in `~/.flowboard-claude-token`. For example:
+
+   ```
+   export CLAUDE_CODE_OAUTH_TOKEN="$(cat ~/.flowboard-claude-token)"
+   ```
+
+   OpenCode steps on OpenRouter need `OPENROUTER_API_KEY` in the same way.
+
+A **Trusted** project needs none of this: its runs work on your machine with your `claude` login. Start them from the runs page or a terminal, so there is someone to answer the agents' questions. An **Untrusted** project needs a Linux host with gVisor (`runsc`); on a Mac it is always refused.
+
+The sample **Scratch** project is seeded as Trusted on a fresh install. An existing install keeps its Scratch project as it is.
 
 ## Fixed: the .git escape
 
@@ -38,7 +99,8 @@ Every git call FlowBoard makes in a project's repo goes through `hostGit` (`pack
 - **The repo is the project's.** Its top folder comes from the registered project, never from git run in the folder.
 - **The git dir is found without running git.** Walking up from the folder, the first `.git` must be the repo's own (`<repo>/.git`, read-only in a box) or a worktree's `.git` file pointing into `<repo>/.git/worktrees/<name>`, whose own `gitdir` file, written by git, points back to it. Anything else is refused: *"`<path>/.git` was not made by git for `<repo>`; a sandboxed step may have written it. Remove it and check the repo."*
 - **Git is told which.** It runs with `GIT_DIR` and `GIT_WORK_TREE` set, so it never discovers a `.git`, with `core.fsmonitor` off. `git status` and `git diff` get `--ignore-submodules=all` on the command line, which a `.gitmodules` the box wrote cannot override. The OpenSandbox `git archive` at run start goes through it too.
-- **Other refusals.** A symlinked `<repo>/.git` (the link sits in the folder a box writes), a folder inside the git dir, and registering a repo inside another project's repo (its `.git` may be one a run made).
+- **Other refusals.** A symlinked `<repo>/.git` (the link sits in the folder a box writes), a folder inside the git dir, and registering a repo inside another project's repo (its `.git` may be one a run made), or a folder whose `.git` names a work tree that does not hold it or a git dir other than `<top>/.git`.
+- **No failing commit.** A squash land whose changes cancel out stops before `git commit` (*"nothing to land: the task's changes cancel out"*): a commit with nothing staged prints a full status, which goes into submodules whatever the command line says.
 
 A run whose folder holds a planted `.git` is refused before anything runs, `--allow-dirty` or not. A workspace whose `.git` was rewritten shows as broken on the Workspaces page, with `git -C <repo> worktree repair <path>` as the fix. The run page shows the refusal instead of a diff.
 
@@ -149,7 +211,7 @@ An OpenSandbox run with no box recorded is refused too. From the runs page, a re
 
 ## Rulings made on your behalf
 
-These are the decisions taken while building, in the order they were made. They are recorded in full in the run's ledger, `.superpowers/sdd/2026-11-13-isolation-enforcement/progress.md` in the worktree.
+These are the decisions taken while building, in the order they were made. They are recorded in full in the run's ledger, `.superpowers/sdd/2026-11-13-isolation-enforcement/progress.md` in the main checkout (git-ignored, local only).
 
 | # | Ruling | Why | Cost if wrong |
 |---|---|---|---|
@@ -176,6 +238,12 @@ These are the decisions taken while building, in the order they were made. They 
 | 21 | The sample Scratch project is seeded as Trusted, for new installs only | FlowBoard writes that repo itself, and a fresh install's first run would need Docker, the image and a token | A fresh install's sample runs ask before edits instead of running boxed |
 | 22 | Small fixes before merge: `git` or a package manager followed by a flag saves no rule; the package-manager check ignores case; the flow designer no longer says "the flow has no sandbox" | A bare `git` or `npm` rule allowed `git -c core.fsmonitor=…` or `npm install` | None |
 | 23 | A test-only hook `RunDeps.canAsk`; the no-one-to-answer refusal applies only to flows with agent steps; Ctrl+C at a question isn't logged as "no one could be asked" | Shell steps never ask, and Ctrl+C is your own choice | None |
+| 24 | The `.git` escape is fixed by never letting FlowBoard's git use a git dir outside the repo's real one, found without running git, instead of a `-c` blocklist | A git dir the box controls controls all of git's config | A repo whose `<repo>/.git` is a file or a link is refused |
+| 25 | `git status` and `git diff` get `--ignore-submodules=all` on the command line | A box-written `.gitmodules` overrode the config default and sent git into a replaced submodule | Workspaces branch diffs don't show submodule pointer changes |
+| 26 | Also refused: a symlinked `<repo>/.git`, a folder inside the git dir, and registering a repo inside another project's repo; the OpenSandbox `git archive` goes through the same check | Each was a way to the same escape | An honest nested repo can't be registered as its own project |
+| 27 | The docs claim only that FlowBoard's own git calls are safe; a scan after each run for planted `.git` entries is a follow-up, not built | A `.git` a box left on disk still works for your own git | None |
+| 28 | A squash land compares the staged tree with HEAD before committing, rather than `git diff --cached --quiet` | A commit with nothing staged prints a status that enters submodules; the diff would miss a submodule-only change | None |
+| 29 | Registration checks git's answer: the folder must be inside the toplevel git names, and the git dir must be `<top>/.git`, compared in on-disk letter case | A planted `.git` with `core.worktree` could steer registration to another repo | None |
 
 ## Deferred findings
 
@@ -186,6 +254,8 @@ These are lower priority, kept for later. The full list is in the ledger.
 - **Resume of a gone OpenSandbox box** from the page still fails silently.
 - **`projects.json` locking.** Both the app and run-flow write it with no lock, so a rare simultaneous write could be lost.
 - **Containerised run-flow.** run-flow started from the Docker image now needs `FLOWBOARD_DATA_DIR`.
+- **Letter case in `--folder`.** On macOS, a `--folder` typed in a different case than on disk finds no project and is refused. The app always passes exact paths.
+- **Cloning into a registered repo.** The wizard clones first and only then refuses a parent folder inside a registered project's repo, leaving the clone on disk.
 
 ## Related
 

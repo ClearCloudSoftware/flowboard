@@ -1,0 +1,13 @@
+# FlowBoard's own step, run on a markdown backlog the parser cannot read: turns it into tasks.
+# Internal: never in the library, never copied into a project. The file's text arrives as the task, so the step
+# gets no tool to read or change anything; it only writes its output. The agent CLI, model, effort and budget come
+# from /settings → Internal steps at launch (internal-steps.ts), for every project.
+budget_usd: 0.25                   # replaced by the app's setting at launch
+steps:
+  import:
+    skills: [.]                    # this folder's SKILL.md
+    skill: /backlog-importer
+    produces: [tasks]
+    write_roots: []
+    permissions: { allow: [Write], deny: [Read, Glob, Grep, Bash, Edit, WebFetch, WebSearch] }
+    limits: { max_turns: 6 }

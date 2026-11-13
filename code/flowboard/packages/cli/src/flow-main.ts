@@ -1,4 +1,5 @@
+import { defaultDataDir } from './app-settings.ts';
 import { runFlow } from './flow-run.ts';
 
 // pnpm runs scripts in the package folder; INIT_CWD is where it was invoked.
-process.exitCode = await runFlow(process.argv.slice(2), { cwd: process.env.INIT_CWD ?? process.cwd() });
+process.exitCode = await runFlow(process.argv.slice(2), { cwd: process.env.INIT_CWD ?? process.cwd(), dataDir: defaultDataDir() });

@@ -281,6 +281,7 @@ Agent Providers is the layer that lets FlowBoard drive different AI coding CLIs 
 | `NormalizedEvent` | One of eight kinds: `assistant_text`, `thinking`, `tool_use`, `tool_result`, `system`, `usage`, `result`, and `error`. Each event can carry the native message as `raw`. |
 | Provider capability | One of eleven flags, such as `effort`, `resume_fork`, `mcp_tools`, `native_cost`, and `tool_hooks`, that says what a CLI supports. |
 | Logical model id | A provider-neutral model name that `resolveModel` maps to a native id. As built, there is no shared vocabulary (see *Limits and status*). |
+| Approved model | An OpenCode model you approved under **Settings → Agents → OpenCode models**. An OpenCode step runs only on one, free or paid. |
 | `GuardRules` | `RunSpec.guards`: `writeRoots`, `denyPaths`, and `denyCommands`. An adapter with `tool_hooks` checks every tool call against them inside the agent. |
 | `ExecHost` | The seam that decides *where* a process runs, separate from *which* agent runs it. Adapters spawn through `RunSpec.exec`. |
 | Ask-user shim | `packages/ask-user`, an MCP server named `flowboard` that gives the agent `ask_user` and `ask_user_batch`, plus `set_outcome` in a flow step that needs a verdict. It forwards each call to the address in `FLOWBOARD_ASK_SOCKET`: a Unix socket, or `host:port` with `FLOWBOARD_ASK_TOKEN` inside a Docker sandbox. |
@@ -332,7 +333,15 @@ To run one agent with either provider, use `run-agent`:
 
 3. Run `pnpm run-agent task.yaml`. The command prints each event, asks the agent's questions in the terminal, and logs the run to `runs/<YYYY-MM-DDTHH-MM-SS>-<adapter>.jsonl`. It exits `0` on success, `1` on failure, `2` on a config error (before anything launches), and `130` when stopped.
 
-If you set `adapter: opencode`, write `model` as `providerID/modelID`, for example `openrouter/deepseek/deepseek-v4.1-flash`. A Claude alias such as `sonnet` fails there. On OpenCode, an allow entry that globs to any shell command (`*`, `b*`, `Bash(?*)`) needs `permissions.allow_unrestricted_shell: true`.
+If you set `adapter: opencode`, write `model` as `providerID/modelID`, for example `openrouter/deepseek/deepseek-v4.1-flash`. A Claude alias such as `sonnet` fails there.
+
+An OpenCode step also needs an **approved** model, and the OpenRouter key it runs on can be saved in FlowBoard:
+
+1. Go to **Settings → Connections → OpenRouter**, paste your key, and click **Save**. Click **Test** to see its credit limit and spend. Without a saved key, OpenCode uses its own login (`opencode auth login`); a key in `OPENROUTER_API_KEY` wins over the saved one.
+2. Go to **Settings → Agents → OpenCode models** and tick each model a step may use. Free models need ticking too. Ticking one first warns you that its provider may keep your prompts, which include the project's code.
+3. Pick the model from the dropdown in the flow designer, or name it in the YAML.
+
+A run on a model that is not approved, no longer listed, or dearer than when you approved it is refused before anything launches: `model: <model> is not an approved model; approve it in Settings → Agents → OpenCode models`. A free model runs with a warning. See [[OpenRouter Models And Key]]. On OpenCode, an allow entry that globs to any shell command (`*`, `b*`, `Bash(?*)`) needs `permissions.allow_unrestricted_shell: true`.
 
 To mix providers in one flow, set `adapter` per step in a `run-flow` recipe. Each agent step is one `run-agent` run, and `defaults` supplies the shared keys:
 
@@ -362,6 +371,7 @@ To add a provider, follow the acceptance test from the design:
 - **Built (2026-10-23):** `run-flow`, which runs several agent and shell steps as one flow. It is a terminal stand-in for the runner.
 - **Not built:** the runner, job queue, database (`runs`, `run_events`), the designed run routes over `run_events` (the app's `app/api/runs/` routes read `run-flow`'s run folders instead), `PricingService`, `SpecTransform` and draft mode, and context-replay for resume.
 - **Capability negotiation is design only.** No code reads `provider.capabilities`. Claude Code and OpenCode both declare all eleven flags, although OpenCode honours several in part: `plugins` mounts only `<dir>/skills`, `partial_stream` emits one `usage` event per step, and the adapter enforces `budget_cap` itself and never trips on an unpriced model.
+- **Built (2026-11-13):** approved OpenCode models and a saved OpenRouter key. Only OpenRouter models can be approved, so an OpenCode step on another provider is refused.
 - **No shared logical model vocabulary.** The Claude adapter passes aliases through as written. `run-agent` builds OpenCode with an empty `models` table, so OpenCode needs `providerID/modelID`.
 - **The neutral vocabulary is Claude Code's.** `toolPolicy` entries and the six `PermissionMode` values are Claude's; OpenCode emulates them, and a pattern can match on one provider and not the other.
 - **Guards have gaps.** Only file-edit tools and recursive `rm` are checked against paths. Any other permitted shell command can write anywhere, and a script, `eval`, or `git clean` gets around the `rm` rule.
@@ -378,6 +388,7 @@ To add a provider, follow the acceptance test from the design:
 - [[Normalized Event Envelope|The eight event kinds and where each comes from]]
 - [[Capability Negotiation|Designed graceful degradation per missing capability]]
 - [[Run Config Reference|Every field of the run-agent YAML file]]
+- [[OpenRouter Models And Key|Approved OpenCode models, the free-model warning, and the saved key]]
 - [[Run Flow Reference|Every field of a run-flow recipe and how a flow runs]]
 - [[Adding A Provider|The acceptance test for a new adapter]]
 - [[Agent Providers Open Questions|Where the sources disagree or leave a gap]]
