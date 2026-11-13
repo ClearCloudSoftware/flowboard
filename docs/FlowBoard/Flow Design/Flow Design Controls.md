@@ -100,7 +100,7 @@ As built in the flow designer (2026-10-24), the inspector edits the step's own k
 
 With nothing selected: **Budget** (`budget_usd`, `0` for no ceiling), **Starts at** (`entry:`, blank to let the routes say), and the defaults' adapter, model, effort, budget and max turns. A selected route shows **When**, its condition, with the guide's words for it, and **Delete this route**. There is no Agent field, as there is no such key. `permissions`, `guards`, `skills` and `plugins` have no field and are kept as written.
 
-As of 2026-11-10, a flow file also takes a flow-level `sandbox:` key (a per-step `sandbox` is still `unknown key`). The designer has no field for it and keeps it as written. It reads it for one line only: a shell step's note says *"Exit 0 is a pass, any other a fail. It runs in the run’s folder, in the flow’s sandbox."* when the file has a `sandbox:` key, and *"…It runs in the run’s folder, on this machine: the flow has no sandbox."* when it has none. The key's rules are in [[Step Guardrails]] and [[Run Flow Reference]].
+As of 2026-11-10, a flow file also takes a flow-level `sandbox:` key (a per-step `sandbox` is still `unknown key`). The designer has no field for it and keeps it as written. It reads it for one line only: a shell step's note says *"Exit 0 is a pass, any other a fail. It runs in the run’s folder, in the flow’s sandbox."* when the file has a `sandbox:` key, and *"…It runs in the run’s folder, at the project’s isolation: in a box, or on this machine only for a Trusted project."* when it has none (since 2026-11-13 the project's trust decides where a run works; [[Repository Trust And Sandboxing]]). The key's rules are in [[Step Guardrails]] and [[Run Flow Reference]].
 
 ### The step panel
 

@@ -7,11 +7,11 @@ tags: [flowboard, guide, agent-providers, capability-library, flow-design, execu
 This page explains how FlowBoard turns a task into finished work by running AI coding agents and shell checks through a flow. It covers five components on one page: Flow Design, Execution, Agent Providers, Capability Library, and Sandboxing. Each section distills the component's folder of notes. To go deeper, follow the links at the end of each section.
 
 > [!note] Design versus build
-> Much of FlowBoard is designed further than it's built. Each section marks what is built, with the date it was built or corrected, and what is still design only. This page reflects the notes as of 2026-11-10. Where a note and the code disagree, the code-checked note wins.
+> Much of FlowBoard is designed further than it's built. Each section marks what is built, with the date it was built or corrected, and what is still design only. This page reflects the notes as of 2026-11-13. Where a note and the code disagree, the code-checked note wins.
 
 ## How the parts fit together
 
-A task follows a *flow*, a recipe of steps and routes. *Execution* runs one step at a time and decides what comes next. Each agent step launches through an *agent provider*, which wraps one AI coding CLI. The *capability library* supplies the skills and agent roles a step names. *Sandboxing* decides where the process runs: on your machine, in a container, or in a remote box.
+A task follows a *flow*, a recipe of steps and routes. *Execution* runs one step at a time and decides what comes next. Each agent step launches through an *agent provider*, which wraps one AI coding CLI. The *capability library* supplies the skills and agent roles a step names. *Sandboxing* decides where the process runs: on your machine, in a container, or in a remote box. The project's trust sets the floor; the flow's `sandbox:` can only raise it.
 
 ```mermaid
 flowchart LR
@@ -31,7 +31,7 @@ The components hand off through a few named types and keys:
 | Execution | Agent Providers | `run-flow` builds a `RunSpec` per agent step and reads back `RunResult { usage, exitCode, outcome?, error? }` plus the `set_outcome` verdict. The engine never sees provider JSON. |
 | Capability Library | Agent Providers | `RunSpec.capabilities`, a list of `CapabilityPack` records mounted as `plugin_dir`, `system_prompt`, or `native`. As built, steps name `skills:` and `plugins:` folders directly. |
 | Agent Providers | Sandboxing | `RunSpec.exec`, an `ExecHost`. Without it, adapters spawn on the host through `hostExecHost`. |
-| Flow Design | Sandboxing | The flow-level `sandbox:` key (`runtime`, `image`, `env`, `egress`, `credentials`). A per-step `sandbox` key is an error. |
+| Flow Design | Sandboxing | The flow-level `sandbox:` key (`runtime`, `image`, `env`, `egress`, `credentials`), which may only keep or raise the project's tier. A per-step `sandbox` key is an error. |
 
 Three rules hold across every component:
 
@@ -133,7 +133,7 @@ To start a run, click **Run**. The runs page opens its **New run** sheet on the 
 - **No versions, adoption, or projects.** The designer hashes each file only to refuse a save over a changed file. No run records the hash, so you can't group runs or cost by version.
 - **No `manual` step kind.** For a person's sign-off, use `shell: "true"` with `gate: approval`.
 - **No known-types list.** A typo in `requires` fails as *no step before it produces that*. Capability-contract, provider-match, and tool-intersection checks aren't built.
-- **The sandbox is per flow.** The top-level `sandbox:` key sets `runtime` (`docker` by default, or `opensandbox`), `image`, `env`, `egress`, and `credentials`; a per-step `sandbox` is an unknown key. The designer has no field for it and keeps it as written.
+- **The sandbox key is per flow, and the project's isolation is its floor** (2026-11-13): the key may keep that tier or make it stricter, never weaker ([[Repository Trust And Sandboxing#Built]]). The top-level `sandbox:` key sets `runtime` (`docker` by default, or `opensandbox`), `image`, `env`, `egress`, and `credentials`; a per-step `sandbox` is an unknown key. The designer has no field for it and keeps it as written.
 - **Placeholders aren't filled.** `{{…}}` reaches the agent as written.
 - **Designed, not built:** draft mode, `board_order` board columns, the library's domains, authors, variants, preview, and **Use this flow**, and the *unattended and unsandboxed* flag. The built library has search and a shape glyph derived from the routes.
 - **Local only.** The flows API returns `403` unless the request's `Host` is `localhost`, `127.0.0.1`, or `[::1]`.
@@ -500,13 +500,13 @@ To remove a plugin or agent, click **Remove** and confirm. The button stays disa
 
 ## Sandboxing
 
-Sandboxing runs agent and shell steps inside a security boundary, a container or a remote box, instead of directly on your machine. Agents run headless and read untrusted content, so a prompt injection can redirect them; a sandbox limits what they can reach. It has no screen of its own: it sits under the runner as the `ExecHost` port, and you turn it on with one flow-level `sandbox:` key.
+Sandboxing runs agent and shell steps inside a security boundary, a container or a remote box, instead of directly on your machine. Agents run headless and read untrusted content, so a prompt injection can redirect them; a sandbox limits what they can reach. It has no screen of its own: it sits under the runner as the `ExecHost` port, and the project's isolation setting decides it, which a flow-level `sandbox:` key can only make stricter ([[Repository Trust And Sandboxing#Built]]).
 
 ### Key concepts
 
 | Term | Meaning |
 |---|---|
-| Isolation tier | How strong the boundary is. The design defines `IsolationTier = 'host' \| 'container' \| 'gvisor' \| 'microvm'`, weakest to strongest. run-flow builds three levels: no sandbox (host), `runtime: docker`, and `runtime: opensandbox`. None of them is a gVisor or microVM tier. |
+| Isolation tier | How strong the boundary is. The design defines `IsolationTier = 'host' \| 'container' \| 'gvisor' \| 'microvm'`, weakest to strongest. run-flow builds four: no sandbox (host), `runtime: docker`, `runtime: opensandbox`, and Docker under gVisor, which only an Untrusted project gets. No microVM tier exists. The project's trust picks the floor (host for Trusted, Docker for Normal, gVisor for Untrusted). |
 | `ExecHost` | The port that decides *where* a process runs, independent of *which* provider runs it. A provider builds the command; the `ExecHost` spawns it. That makes any provider work at any tier ("2×N, not N×M"). |
 | `SandboxProfile` | The settings an `ExecHost` applies: `tier`, `image`, `egressAllow`, `limits`, `mounts`, `env`, and `nonRoot`. |
 | Egress allowlist | The outbound hosts a sandbox can reach; everything else is denied. The load-bearing control: prompt injection can't change what the firewall permits. |
@@ -518,7 +518,7 @@ Sandboxing runs agent and shell steps inside a security boundary, a container or
 
 ### How it works
 
-Without a `sandbox:` key, run-flow leaves `RunSpec.exec` unset: both provider adapters spawn on the host with `hostExecHost` (`adapters/src/exec/host.ts`), and a shell check is a plain host process. With a `sandbox:` key, run-flow (`cli/src/flow-exec.ts`) sets `spec.exec` for every agent run and sends shell checks through the same `ExecHost`.
+A run must start in a folder a FlowBoard project owns, and the project's trust decides the sandbox (`cli/src/isolation.ts`): Trusted with no `sandbox:` key leaves `RunSpec.exec` unset, so both provider adapters spawn on the host with `hostExecHost` (`adapters/src/exec/host.ts`), a shell check is a plain host process, and an agent's file edits and shell commands ask you first. Normal with no key runs `{ runtime: docker, image: flowboard-cli }`. Untrusted runs Docker under gVisor, or is refused. A flow's own `sandbox:` key replaces the default when it is as strong. Whenever there is a sandbox, run-flow (`cli/src/flow-exec.ts`) sets `spec.exec` for every agent run and sends shell checks through the same `ExecHost`. See [[Repository Trust And Sandboxing#Built]].
 
 ```mermaid
 flowchart LR
@@ -530,7 +530,7 @@ flowchart LR
 
 The three levels behave differently:
 
-| | No `sandbox:` | `runtime: docker` (default) | `runtime: opensandbox` |
+| | Trusted, no `sandbox:` | `runtime: docker` (default; Normal's too) | `runtime: opensandbox` |
 |---|---|---|---|
 | Where steps run | Host | One `docker run --rm` container per step run | One box per flow run |
 | Network | Open | Agent containers open (`egressAllow: ['*']`); check containers `--network none` | Deny by default, plus the `egress` allowlist |
@@ -584,17 +584,18 @@ To choose which keys are injected, set `sandbox.credentials`. Only `CLAUDE_CODE_
 
 To unblock a denied host during an OpenSandbox run, answer the **run failed** or escalation gate at the terminal prompt `Host to allow before the retry`, or on the runs page if you started the run with `--page`. On the page, enter the host in the host field, which comes pre-filled with the host the failed run most likely needed, and then click **Allow host & retry**. The live box can reach the host at once, and run-flow adds it to `sandbox.egress` in the run's `flow.json`, never to the recipe.
 
-To run each step in a local container, set `sandbox: { runtime: docker }` with an `image`, and list in `env` the variables agent containers need. `egress` and `credentials` are errors under Docker, and `env` is an error under OpenSandbox. If the flow has an agent step, `--check` and every start print `-- warning: sandbox: ai steps have open network access and the variables in sandbox.env`. Under OpenSandbox, they print `-- warning: sandbox: agents' edits stay in the sandbox; the run ends with changes.patch to review` instead.
+A Normal project already runs each step in a local container (`flowboard-cli`) with no `sandbox:` key. To choose the image or the variables yourself, or to run a Trusted project's steps in one, set `sandbox: { runtime: docker }` with an `image`, and list in `env` the variables agent containers need. `egress` and `credentials` are errors under Docker, and `env` is an error under OpenSandbox. If the flow has an agent step, `--check` and every start print `-- warning: sandbox: ai steps have open network access and the variables in sandbox.env`. Under OpenSandbox, they print `-- warning: sandbox: agents' edits stay in the sandbox; the run ends with changes.patch to review` instead.
 
 ### Limits and status
 
-- **Built 2026-10-24, corrected 2026-11-10:** `runtime: docker` (per-step-run containers, hardened as described earlier in this section) and `runtime: opensandbox` (one box per run, egress allowlist, credential vault, `changes.patch`). Both are optional and set once per flow. `flow.json` pins the tier in `config.sandbox`, and the run page shows it.
+- **Built 2026-10-24, corrected 2026-11-10:** `runtime: docker` (per-step-run containers, hardened as described earlier in this section) and `runtime: opensandbox` (one box per run, egress allowlist, credential vault, `changes.patch`). The flow's key is optional and set once per flow; without it the project's tier applies. `flow.json` pins the tier in `config.sandbox` and `config.isolation`, and the run page shows it.
 - **No egress proxy for Docker.** FlowBoard's own Squid or tinyproxy proxy on an internal `fb-sandbox` network is not built. Docker agent containers have open network access and hold real keys; only OpenSandbox enforces an allowlist and injects credentials.
 - **Permission gate not built as designed.** No tier relaxes the refusal: on every tier, `bypassPermissions`, `auto`, or an unrestricted shell allow entry is refused unless the step sets `permissions.allow_unrestricted_shell: true`. `permissions.mode` defaults to `acceptEdits`.
 - **Resource limits.** Memory and CPUs are the project's, set in `.flowboard.yaml` in the repo, never in a flow. Docker caps every container at 512 processes and, when the project file sets no memory, at a quarter of Docker's memory. OpenSandbox uses the SDK's defaults, 1 CPU and 2 GiB, unless the project file sets them ([[Run Flow Reference#Project file]]). `timeout_minutes` is the wall clock: 30 minutes by default for a shell step, none for an agent step. No mapping from `max_turns` or `max_budget_usd` to physical limits exists.
 - **OpenSandbox limits.** The box holds only the last commit (no `node_modules`, submodules, or LFS objects), so install dependencies in a first shell step. Shell steps share the agents' allowlist. Anyone who can call the server can run root commands in the box.
 - **Failure handling.** A sandboxed shell check that exits 125 is a setup failure (*"exit code 125: the sandbox could not start the command"*) and opens a **run failed** gate. The 2026-11-10 Docker fixes are tested only without a Docker daemon.
-- **Design only:** the `gvisor` and `microvm` tiers, `settings.sandbox_profile`, the `runs.sandbox` column, a per-step override, a startup Docker probe, the `flowboard-runner` image, and an injection scan over artifacts.
+- **Built 2026-11-13:** the project's trust is the floor (Trusted: the machine with approvals; Normal: Docker; Untrusted: Docker under gVisor, refused where Docker has no `runsc`), and a run outside every project is refused. `--resume` works the isolation out again from the project's current trust and refuses if it changed or `flow.json` was edited. Untrusted boxes get only the agents' credentials, never the flow's `sandbox.env`.
+- **Design only:** the `microvm` tier, `settings.sandbox_profile`, the `runs.sandbox` column, a per-step override, a startup Docker probe, the `flowboard-runner` image, and an injection scan over artifacts.
 - **Residual risk, by design:** a hardened sandbox *"cannot stop a malicious repo from exfiltrating whatever is inside the sandbox … to whatever the allowlist permits."* Run trusted repos, keep the allowlist tight, and mount no host secrets. Plain containers also share the host kernel.
 
 ### Related notes

@@ -6,16 +6,17 @@ import { EventEmitter } from 'node:events';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, FlowState, NormalizedEvent, Question, RunResult, RunSpec } from '@flowboard/core';
-import { hostExecHost, ReplayProvider } from '@flowboard/adapters';
+import { dockerArgs, hostExecHost, ReplayProvider } from '@flowboard/adapters';
 import type { Box } from '@flowboard/adapters';
 import { askBroker } from '@flowboard/ask-user';
 import { processStart } from '../src/flow-exec.ts';
 import { DISCARD_COMMANDS, pushable, runFlow, sandboxFor } from '../src/flow-run.ts';
 import { cleanWorkspace } from '../src/workspace.ts';
 import type { RunDeps } from '../src/run.ts';
-import { DELIVERY, flowProject, RUN } from './fixtures/flow.ts';
+import { DELIVERY, flowProject, registerProject, RUN } from './fixtures/flow.ts';
 
 const USAGE = [
   'usage: pnpm run-flow --folder <dir> --task <file> [--workspace <task id>] [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] <flow.yaml>',
@@ -23,18 +24,21 @@ const USAGE = [
   '       pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page]',
 ];
 
-type Play = 'pass' | 'fail' | 'none' | 'no-output' | 'error' | 'hang' | 'ask' | 'slow';
+type Play = 'pass' | 'fail' | 'none' | 'no-output' | 'error' | 'hang' | 'ask' | 'slow' | 'approve' | 'write-own';
 const COLOUR: Question = { id: 'colour', prompt: 'Colour?', kind: 'text' };
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * A provider whose n-th run of step S plays plays[S][n] (default `pass`); S is the step's prompt text. Every run
  * costs $0.10; one stopped ends early with tokens and no price, as a Claude run does. `timeline` records start:S and end:S.
+ * `approve` asks the owner to run `pnpm test` first, `write-own` to write its first output; `approvals` records each
+ * answer (a rejected ask is a no).
  */
 function scripted(plays: Record<string, Play[]>) {
   const timeline: string[] = [];
   const specs: RunSpec[] = [];
   const counts: Record<string, number> = {};
+  const approvals: boolean[] = [];
   let live = 0;
   let maxLive = 0;
   const provider: AgentProvider = {
@@ -58,11 +62,13 @@ function scripted(plays: Record<string, Play[]>) {
         await delay(play === 'slow' ? 300 : 20); // long enough for parallel runs to overlap
         if (play === 'hang') await stopped;
         if (play === 'ask' && !halted) await askBroker(env.FLOWBOARD_ASK_SOCKET, { questions: [COLOUR] });
+        if (play === 'approve' && !halted) approvals.push(await spec.approve!({ kind: 'shell', command: 'pnpm test' }).catch(() => false));
+        if (play === 'write-own' && !halted) approvals.push(await spec.approve!({ kind: 'edit', tool: 'Write', path: spec.prompt.outputs[0].path }).catch(() => false));
         timeline.push(`end:${step}`);
         live -= 1;
         if (halted) return { usage: { ...ZERO_USAGE, input: 1000 }, exitCode: 1, error: 'stopped' };
         if (play === 'error') return { usage, exitCode: 1, error: 'boom' };
-        if (['pass', 'fail', 'none', 'ask', 'slow'].includes(play)) for (const o of spec.prompt.outputs) writeFileSync(o.path, step);
+        if (['pass', 'fail', 'none', 'ask', 'slow', 'approve', 'write-own'].includes(play)) for (const o of spec.prompt.outputs) writeFileSync(o.path, step);
         // set_outcome is offered only where the verdict is read
         if (play !== 'none' && env.FLOWBOARD_OUTCOME_FILE) writeFileSync(env.FLOWBOARD_OUTCOME_FILE, JSON.stringify({ outcome: play === 'fail' ? 'fail' : 'pass' }));
         return { usage, exitCode: 0 };
@@ -77,6 +83,7 @@ function scripted(plays: Record<string, Play[]>) {
     makeProvider: () => provider,
     timeline,
     specs,
+    approvals,
     get maxLive() {
       return maxLive;
     },
@@ -95,6 +102,8 @@ function setup(yaml = DELIVERY, plays: Record<string, Play[]> = {}) {
   const exits: number[] = [];
   const deps: RunDeps = {
     cwd: base,
+    dataDir: join(base, 'data'),
+    canAsk: true, // as at a terminal; a run left with no one to ask pauses at its gates
     makeProvider: script.makeProvider,
     print: (l) => out.push(l),
     printErr: (l) => err.push(l),
@@ -109,6 +118,7 @@ function setup(yaml = DELIVERY, plays: Record<string, Play[]> = {}) {
 
 test('--check validates the flow and prints its size', async () => {
   const { out, err, deps } = setup();
+  delete deps.dataDir; // a check needs no project; with a data folder the app's OpenCode model rules apply (openrouter.ts)
   assert.equal(await runFlow(['--check', 'flow.yaml'], deps), 0);
   assert.deepEqual([out, err], [['-- flow ok: 5 steps, starting at plan'], []]);
 });
@@ -122,6 +132,7 @@ test('a bad flow exits 2 with its errors on stderr and creates nothing', async (
 
 test('--mermaid prints the diagram', async () => {
   const { out, deps } = setup();
+  delete deps.dataDir; // as --check: no project, and no model rules
   assert.equal(await runFlow(['--mermaid', 'flow.yaml'], deps), 0);
   assert.equal(out[0], 'flowchart LR');
 });
@@ -418,7 +429,7 @@ test('clean-workspace refuses while a run holds the worktree, and uncommitted wo
   const path = join(proj, '.flowboard', 'worktrees', 'task-t1');
   const out: string[] = [];
   const err: string[] = [];
-  const clean = (...args: string[]) => cleanWorkspace([...args, 't1'], { cwd: base, print: (l) => out.push(l), printErr: (l) => err.push(l) });
+  const clean = (...args: string[]) => cleanWorkspace([...args, 't1'], { cwd: base, dataDir: join(base, 'data'), print: (l) => out.push(l), printErr: (l) => err.push(l) });
   writeFileSync(join(path, '.flowboard', 'lock'), JSON.stringify({ pid: process.pid }));
   assert.equal(await clean('--folder', 'proj'), 2);
   assert.deepEqual(err.splice(0), [`clean-workspace: a run-flow (pid ${process.pid}) is working in ${path}; let it finish or stop it first`]);
@@ -472,6 +483,7 @@ test('a run folder another run made in the same second is passed over', async ()
 
 test('agents may not write the run folder, whatever the flow file is called, nor discard uncommitted edits', async () => {
   const { base, deps, script } = setup(ONE_PLAN);
+  registerProject(base, base, 'trusted'); // the base is the project here
   writeFileSync(join(base, 'a[1].yaml'), readFileSync(join(base, 'flow.yaml'), 'utf8'));
   assert.equal(await runFlow(['--folder', '.', '--task', 'task.md', 'a[1].yaml'], deps), 0);
   const guards = script.specs[0].guards!;
@@ -643,6 +655,7 @@ test('a check that deletes the run folder leaves the run resumable', { timeout: 
 edges:
   - { from: clean, to: review }
 `, { review: ['none'] });
+  registerProject(s.base, s.base, 'trusted'); // the base is the project here
   assert.equal(await runFlow(['--folder', '.', '--task', 'task.md', 'flow.yaml'], s.deps), 3, s.out.join('\n'));
   s.deps.answer = deciding('approve').answer;
   assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
@@ -1013,6 +1026,14 @@ test('--resume refuses when the box is gone', async () => {
   assert.ok(s.err.includes(`${join('runs', STAMPED)}: cannot resume: sandbox box-1 is gone: its edits cannot be resumed; start the flow again`), s.err.join('\n'));
 });
 
+test('--resume refuses an opensandbox run whose box is not recorded, rather than run it on this machine', async () => {
+  const s = setup(BOXED(GATE), { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fakeBox().deps }), 3);
+  rmSync(join(s.runDir, 'sandbox.json'));
+  assert.equal(await runFlow(['--resume', join('runs', STAMPED)], { ...s.deps, ...fakeBox().deps }), 2);
+  assert.deepEqual(s.err, [`${join('runs', STAMPED)}: cannot resume: its OpenSandbox box is not recorded in sandbox.json; start the flow again`]);
+});
+
 test('a missing credential is a warning, not an error', async () => {
   const s = setup(BOXED(LINEAR));
   assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fakeBox({ missing: ['CLAUDE_CODE_OAUTH_TOKEN'] }).deps }), 0, s.out.join('\n'));
@@ -1030,7 +1051,7 @@ test('an artifact a running agent produces is never pushed over its copy in the 
 test('a docker sandbox gives sandbox.env to agents only: a check gets none of it', () => {
   process.env.FB_TEST_TOKEN = 'secret';
   try {
-    const box = sandboxFor({ runtime: 'docker', image: 'x', env: ['FB_TEST_TOKEN'] }, '/art');
+    const box = sandboxFor({ runtime: 'docker', image: 'x', env: ['FB_TEST_TOKEN'] }, '/art', tmpdir());
     assert.deepEqual(box({ online: true }).profile?.env, { FB_TEST_TOKEN: 'secret' });
     assert.deepEqual(box({}).profile?.env, {});
   } finally {
@@ -1059,7 +1080,7 @@ test('a .flowboard.yaml run-flow cannot read stops the run before it starts', as
 });
 
 test('a docker sandbox puts the run\'s limits on every container', () => {
-  const box = sandboxFor({ runtime: 'docker', image: 'x', env: [], limits: { memoryMb: 2048 } }, '/art');
+  const box = sandboxFor({ runtime: 'docker', image: 'x', env: [], limits: { memoryMb: 2048 } }, '/art', tmpdir());
   assert.deepEqual(box({}).profile?.limits, { memoryMb: 2048 });
   assert.deepEqual(box({ online: true }).profile?.limits, { memoryMb: 2048 });
 });
@@ -1074,4 +1095,320 @@ test('FLOWBOARD_RUNS_DIR names the folder run folders go in, as the runs page re
   }
   assert.ok(existsSync(join(base, 'elsewhere', STAMPED, 'state.json')));
   assert.equal(existsSync(join(base, 'runs', STAMPED)), false);
+});
+
+// --- the project's isolation tier
+
+/** A stand-in Docker: `gvisor` says whether runsc is there, `notReady` what is missing; `calls` records each check. */
+function fakeDocker(o: { gvisor?: boolean; notReady?: string } = {}) {
+  const calls: string[] = [];
+  const docker: NonNullable<RunDeps['docker']> = {
+    gvisor: () => (calls.push('gvisor'), o.gvisor ?? false),
+    notReady: (image) => (calls.push(`notReady:${image}`), o.notReady),
+  };
+  return { calls, docker };
+}
+
+/** Sets the variable for the test, putting the old value back after. */
+function withEnv(t: { after: (fn: () => void) => void }, name: string, value: string | undefined) {
+  const old = process.env[name];
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+  t.after(() => (old === undefined ? delete process.env[name] : (process.env[name] = old)));
+}
+
+test('refuses a folder outside every project', async () => {
+  const { base, err, deps } = setup(SHELL_ONLY);
+  registerProject(base, join(base, 'proj'), null);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, [`${join(base, 'proj')}: not in a FlowBoard project (none in ${join(base, 'data', 'projects.json')}); create one for this repo first`]);
+  assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+test("run-flow reads FlowBoard's own data folder, not data/ where it starts; FLOWBOARD_DATA_DIR still wins", async (t) => {
+  withEnv(t, 'FLOWBOARD_DATA_DIR', undefined);
+  const { base, err, deps } = setup(SHELL_ONLY); // registers proj in <base>/data, where run-flow starts
+  delete deps.dataDir;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  const own = fileURLToPath(new URL('../../../data/projects.json', import.meta.url));
+  assert.deepEqual(err, [`${join(base, 'proj')}: not in a FlowBoard project (none in ${own}); create one for this repo first`]);
+  withEnv(t, 'FLOWBOARD_DATA_DIR', 'data');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, err.join('\n'));
+});
+
+test('--check needs no project', async () => {
+  const { base, deps } = setup(SHELL_ONLY);
+  registerProject(base, join(base, 'proj'), null);
+  assert.equal(await runFlow(['--check', 'flow.yaml'], deps), 0);
+  assert.equal(await runFlow(['--check', ...RUN, 'flow.yaml'], deps), 0);
+});
+
+test('a trusted project runs on this machine, and says so before the run starts', async () => {
+  const { out, deps, runDir } = setup(SHELL_ONLY);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.ok(out.includes('-- isolation: Trusted (host), from project proj; agents ask before edits and shell commands'), out.join('\n'));
+  const { config } = JSON.parse(readFileSync(join(runDir, 'flow.json'), 'utf8'));
+  assert.deepEqual([config.sandbox, config.isolation], [undefined, { projectId: 'p-1', trust: 'trusted', tier: 'host', approvals: true }]);
+});
+
+test('normal refuses when docker is not ready', async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const { base, err, deps } = setup(ONE_BUILD);
+  const proj = gitProj(base);
+  registerProject(base, proj, 'normal');
+  deps.docker = fakeDocker({ notReady: 'Docker is not running' }).docker;
+  assert.equal(await runFlow([...RUN, '--workspace', 't1', 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, ['Docker is not running']);
+  assert.equal(existsSync(join(base, 'runs')), false);
+  assert.equal(existsSync(join(proj, '.flowboard', 'worktrees')), false);
+});
+
+test('normal refuses a box without the login its agents need', async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', undefined);
+  withEnv(t, 'OPENROUTER_API_KEY', undefined);
+  const { base, err, deps } = setup(DELIVERY);
+  registerProject(base, join(base, 'proj'), 'normal');
+  deps.docker = fakeDocker().docker;
+  // The project from FLOWBOARD_DATA_DIR, not deps.dataDir: that would also apply the app's OpenCode model rules,
+  // which refuse DELIVERY's unapproved OpenRouter model before the login is checked.
+  withEnv(t, 'FLOWBOARD_DATA_DIR', join(base, 'data'));
+  delete deps.dataDir;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, [
+    "CLAUDE_CODE_OAUTH_TOKEN is not set: a container cannot use this machine's login. Run `claude setup-token` and set CLAUDE_CODE_OAUTH_TOKEN where FlowBoard runs",
+    "OPENROUTER_API_KEY is not set: a container cannot use this machine's login. Set OPENROUTER_API_KEY where FlowBoard runs",
+  ]);
+  assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+test('normal boxes a flow with no sandbox', async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const { base, out, deps, runDir, script } = setup(ONE_BUILD);
+  registerProject(base, join(base, 'proj'), 'normal');
+  const fd = fakeDocker();
+  deps.docker = fd.docker;
+  deps.dockerMemoryMb = () => undefined;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.deepEqual(fd.calls, ['notReady:flowboard-cli']);
+  const { config } = JSON.parse(readFileSync(join(runDir, 'flow.json'), 'utf8'));
+  assert.deepEqual(config.sandbox, { runtime: 'docker', image: 'flowboard-cli', env: ['CLAUDE_CODE_OAUTH_TOKEN'], limits: {} });
+  assert.deepEqual(config.isolation, { projectId: 'p-1', trust: 'normal', tier: 'container', approvals: false });
+  const i = out.indexOf('-- isolation: Normal (container), from project proj');
+  assert.ok(i !== -1 && out[i + 1].startsWith('-- sandbox limits: '), out.join('\n'));
+  assert.equal(script.specs[0].exec?.profile?.tier, 'container');
+});
+
+test('normal never asks', async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const { base, out, deps, script } = setup(ONE_BUILD);
+  registerProject(base, join(base, 'proj'), 'normal');
+  deps.docker = fakeDocker().docker;
+  deps.dockerMemoryMb = () => undefined;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.equal(script.specs[0].approve, undefined);
+});
+
+/** The first ask the page is offered, once there is one; none within 4 s is a failure. */
+async function pageAsk(runDir: string): Promise<{ id: string; heading: string; questions: Question[] }> {
+  for (let i = 0; i < 200; i++) {
+    const asks = existsSync(join(runDir, 'asks')) ? readdirSync(join(runDir, 'asks')) : [];
+    if (asks.length) return JSON.parse(readFileSync(join(runDir, 'asks', asks[0]), 'utf8'));
+    await delay(20);
+  }
+  throw new Error('the page was never asked');
+}
+
+test('trusted asks before an agent\'s shell command', { timeout: 10_000 }, async () => {
+  const s = setup(ONE_BUILD, { build: ['approve'] });
+  void pageAsk(s.runDir).then((ask) => writeFileSync(join(s.runDir, 'answers', `${ask.id}.json`), JSON.stringify({ approve: 'once' })));
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.deepEqual(s.script.approvals, [true]);
+  assert.ok(s.out.includes('-- build: allowed pnpm test'), s.out.join('\n'));
+});
+
+test("trusted never asks before an agent writes the run's own outputs", { timeout: 10_000 }, async () => {
+  const s = setup(ONE_PLAN, { plan: ['write-own'] });
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.deepEqual(s.script.approvals, [true]);
+  assert.equal(s.out.some((l) => l.includes('allowed')), false, s.out.join('\n'));
+});
+
+test('a trusted run with agents and no one to answer is refused, at start and at resume', { timeout: 10_000 }, async () => {
+  const NO_ONE = 'this project is Trusted, so agents ask before edits and shell commands, and no one can answer here; run it in a terminal or from the runs page';
+  const s = setup(ONE_BUILD);
+  s.deps.canAsk = false;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 2);
+  assert.deepEqual(s.err, [`flow.yaml: ${NO_ONE}`]);
+  assert.equal(existsSync(join(s.base, 'runs')), false);
+  // shell steps never ask, so a shell-only flow runs
+  const sh = setup(SHELL_ONLY);
+  sh.deps.canAsk = false;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], sh.deps), 0, sh.err.join('\n'));
+  const g = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], g.deps), 3, g.err.join('\n'));
+  g.deps.canAsk = false;
+  assert.equal(await runFlow(['--resume', RUN_DIR], g.deps), 2);
+  assert.deepEqual(g.err, [`${RUN_DIR}: cannot resume: ${NO_ONE}`]);
+});
+
+test('a stopped step withdraws its approval', { timeout: 10_000 }, async () => {
+  const s = setup(ONE_BUILD, { build: ['approve'] });
+  void pageAsk(s.runDir).then((ask) => {
+    assert.deepEqual([ask.heading, ask.questions[0].prompt], ['-- build asks:', 'Run pnpm test?']);
+    s.signals.emit('SIGINT');
+  });
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], s.deps), 130, s.out.join('\n'));
+  assert.deepEqual(s.script.approvals, [false]);
+  assert.deepEqual(readdirSync(join(s.runDir, 'asks')), []);
+  assert.ok(s.out.some((l) => l.startsWith('-- flow stopped: ')), s.out.join('\n'));
+});
+
+test('untrusted refuses without gvisor', async () => {
+  const { base, err, deps } = setup(ONE_BUILD);
+  registerProject(base, join(base, 'proj'), 'untrusted');
+  deps.docker = fakeDocker({ gvisor: false }).docker;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, ["Untrusted runs need gVisor, and this machine's Docker has no runsc runtime; set the project to Normal, or run it on a Linux host with gVisor"]);
+  assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+test('resume refuses without its project', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  registerProject(s.base, join(s.base, 'proj'), null);
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: its project is gone`]);
+});
+
+const CHANGED = `${RUN_DIR}: cannot resume: its project's isolation changed since it started, or its flow.json was edited; start the flow again`;
+
+/** A GATE run paused at its gate in a Normal project, in a box: Docker and the token faked. */
+async function pausedNormal(t: { after: (fn: () => void) => void }) {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const s = setup(GATE, { review: ['none'] });
+  registerProject(s.base, join(s.base, 'proj'), 'normal');
+  const fd = fakeDocker();
+  s.deps.docker = fd.docker;
+  s.deps.dockerMemoryMb = () => 2048;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  s.deps.answer = deciding('approve').answer;
+  return { ...s, fd, pin: join(s.runDir, 'flow.json') };
+}
+
+test('a boxed run resumes in the box it started in, with Docker checked again', { timeout: 10_000 }, async (t) => {
+  const s = await pausedNormal(t);
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.err.join('\n'));
+  assert.deepEqual(s.fd.calls, ['notReady:flowboard-cli', 'notReady:flowboard-cli']);
+  assert.equal(s.script.specs.at(-1)?.exec?.profile?.tier, 'container');
+});
+
+test('a resume after the project\'s trust changed is refused', { timeout: 10_000 }, async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  registerProject(s.base, join(s.base, 'proj'), 'normal');
+  s.deps.docker = fakeDocker().docker;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+});
+
+test('a resume whose flow.json lost its isolation and sandbox is refused', { timeout: 10_000 }, async (t) => {
+  const s = await pausedNormal(t);
+  const pinned = JSON.parse(readFileSync(s.pin, 'utf8'));
+  delete pinned.config.isolation;
+  delete pinned.config.sandbox;
+  writeFileSync(s.pin, JSON.stringify(pinned));
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+  assert.ok(!s.script.timeline.includes('start:ship'));
+});
+
+/** Rewrites the paused run's pinned config with `change`. */
+function editPin(pin: string, change: (config: { sandbox?: unknown; isolation: Record<string, unknown> }) => void) {
+  const pinned = JSON.parse(readFileSync(pin, 'utf8'));
+  change(pinned.config);
+  writeFileSync(pin, JSON.stringify(pinned));
+}
+const ODD = { runtime: 'x', image: 'i', egress: [], credentials: [] };
+
+test('a resume whose pin names an unknown sandbox runtime is refused, in Normal', { timeout: 10_000 }, async (t) => {
+  const s = await pausedNormal(t);
+  editPin(s.pin, (c) => {
+    c.sandbox = ODD;
+    c.isolation.flowSandbox = ODD;
+    c.isolation.tier = 'opensandbox';
+  });
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+  assert.ok(!s.script.timeline.includes('start:ship'));
+});
+
+test('a resume whose pin names an unknown sandbox runtime is refused, in Untrusted with gVisor', { timeout: 10_000 }, async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const s = setup(GATE, { review: ['none'] });
+  registerProject(s.base, join(s.base, 'proj'), 'untrusted');
+  s.deps.docker = fakeDocker({ gvisor: true }).docker;
+  s.deps.dockerMemoryMb = () => undefined;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  editPin(join(s.runDir, 'flow.json'), (c) => {
+    c.sandbox = { ...ODD, env: ['CLAUDE_CODE_OAUTH_TOKEN'], gvisor: true }; // what isolationFor would make of ODD
+    c.isolation.flowSandbox = ODD;
+  });
+  s.deps.answer = deciding('approve').answer;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+  assert.ok(!s.script.timeline.includes('start:ship'));
+});
+
+test('a resume whose pinned tier is not one of the four is refused', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  editPin(join(s.runDir, 'flow.json'), (c) => void (c.isolation.tier = 'none'));
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+});
+
+test('a resume whose project no longer holds its folder is refused', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  registerProject(s.base, join(s.base, 'elsewhere'), 'trusted'); // the same project, p-1, moved to another repo
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: its folder is no longer in its project proj`]);
+});
+
+test("a docker box mounts the repo's git dir read-only over the folder, so host-side git never runs a box's hooks", () => {
+  const repo = realpathSync(mkdtempSync(join(tmpdir(), 'fb-gitdir-')));
+  execFileSync('git', ['init', '-q'], { cwd: repo });
+  const profile = sandboxFor({ runtime: 'docker', image: 'x', env: [] }, '/art', repo)({}).profile!;
+  const gitDir = join(repo, '.git');
+  assert.ok(profile.mounts?.some((m) => m.source === gitDir && m.target === gitDir && m.readOnly), JSON.stringify(profile.mounts));
+  const args = dockerArgs(profile, 'sh', [], repo, []);
+  assert.ok(args.indexOf(`${repo}:${repo}`) < args.indexOf(`${gitDir}:${gitDir}:ro`), args.join(' '));
+  // Not a repo: nothing to mount.
+  assert.deepEqual(sandboxFor({ runtime: 'docker', image: 'x', env: [] }, '/art', tmpdir())({}).profile?.mounts, [{ source: '/art', target: '/art' }]);
+});
+
+test('an untrusted sandbox runs its containers under gVisor', () => {
+  const box = sandboxFor({ runtime: 'docker', image: 'x', env: [], gvisor: true }, '/art', tmpdir());
+  assert.equal(box({}).profile?.tier, 'gvisor');
+  assert.equal(sandboxFor({ runtime: 'docker', image: 'x', env: [] }, '/art', tmpdir())({}).profile?.tier, 'container');
+});
+
+test('a .git a box planted in the folder refuses the run before anything runs, --allow-dirty or not, and its config never runs', async (t) => {
+  const { base, err, deps } = setup(SHELL_ONLY.replace("shell: 'exit 0'", "shell: 'touch ran'"));
+  t.after(() => rmSync(base, { recursive: true, force: true }));
+  const proj = gitProj(base);
+  const sub = join(proj, 'sub');
+  const marker = join(base, 'PWNED');
+  mkdirSync(sub);
+  git(sub, 'init', '-q');
+  git(sub, 'config', 'core.fsmonitor', `touch '${marker}'; false`);
+  const planted = `flow.yaml: --folder: ${join(sub, '.git')} was not made by git for ${proj}; a sandboxed step may have written it. Remove it and check the repo.`;
+  for (const extra of [[], ['--allow-dirty']]) {
+    assert.equal(await runFlow(['--folder', 'proj/sub', '--task', 'task.md', ...extra, 'flow.yaml'], deps), 2);
+    assert.deepEqual(err.splice(0), [planted]);
+  }
+  assert.equal(existsSync(marker), false);
+  assert.equal(existsSync(join(sub, 'ran')), false);
+  assert.equal(existsSync(join(base, 'runs')), false);
 });

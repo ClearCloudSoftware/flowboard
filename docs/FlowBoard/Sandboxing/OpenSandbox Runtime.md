@@ -12,7 +12,7 @@ Built 2026-10-24. It delivers the [[Egress Allowlist]], the [[Credential Injecti
 > [!note] Three runtimes
 > | YAML | Where steps run | Network | Keys | Host folder |
 > |---|---|---|---|---|
-> | no `sandbox:` | host | open | host env | edited in place |
+> | no `sandbox:` (Trusted project; Normal gets docker, Untrusted docker under gVisor) | host | open | host env | edited in place |
 > | `runtime: docker` (default) | one container per step | shell offline, agents open | passed in by `sandbox.env` | bind-mounted, edited in place |
 > | `runtime: opensandbox` | one box per run | allowlist | fakes inside, real injected outside | untouched; `changes.patch` at the end |
 

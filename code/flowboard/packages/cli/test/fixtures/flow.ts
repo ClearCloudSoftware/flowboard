@@ -33,7 +33,10 @@ edges:
 export const RUN = ['--folder', 'proj', '--task', 'task.md'];
 export const RUN_IN = { folder: 'proj', task: 'task.md' };
 
-/** A temp base holding proj/, task.md, prompts/<name>.md (each holding its name), flow.yaml and `extra` (path → text). */
+/**
+ * A temp base holding proj/, task.md, prompts/<name>.md (each holding its name), flow.yaml and `extra` (path → text);
+ * data/projects.json registers proj as a Trusted project, so its runs work on this machine.
+ */
 export function flowProject(yaml: string, extra: Record<string, string> = {}): string {
   const base = realpathSync(mkdtempSync(join(tmpdir(), 'fb-flow-'))); // macOS's temp folder is a link
   mkdirSync(join(base, 'proj'));
@@ -41,9 +44,17 @@ export function flowProject(yaml: string, extra: Record<string, string> = {}): s
   writeFileSync(join(base, 'task.md'), 'Build it.');
   for (const n of ['plan', 'implement', 'tests', 'review', 'x', 'a', 'c', 'd']) writeFileSync(join(base, 'prompts', `${n}.md`), n);
   writeFileSync(join(base, 'flow.yaml'), yaml);
+  registerProject(base, join(base, 'proj'), 'trusted');
   for (const [path, text] of Object.entries(extra)) {
     mkdirSync(dirname(join(base, path)), { recursive: true });
     writeFileSync(join(base, path), text);
   }
   return base;
+}
+
+/** Writes `<base>/data/projects.json` holding one project for `repoPath` at `trust`, or none when `trust` is null. */
+export function registerProject(base: string, repoPath: string, trust: 'trusted' | 'normal' | 'untrusted' | null): void {
+  const project = { id: 'p-1', name: 'proj', slug: 'proj', repoPath, defaultFlow: null, baseBranch: null, createdAt: '2026-11-13T00:00:00.000Z', type: 'software', source: { kind: 'local' }, overrides: { trust } };
+  mkdirSync(join(base, 'data'), { recursive: true });
+  writeFileSync(join(base, 'data', 'projects.json'), JSON.stringify(trust === null ? [] : [project]));
 }

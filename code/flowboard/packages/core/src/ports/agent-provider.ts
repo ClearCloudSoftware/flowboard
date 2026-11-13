@@ -167,6 +167,8 @@ export interface RunSpec {
   systemPrompt?: string;
   /** Enforced in-agent when the provider has `tool_hooks`. */
   guards?: GuardRules;
+  /** Asked before each file edit and shell command the guards let through; false denies it. Never grants what the tool policy refuses. */
+  approve?: (call: ApprovalCall) => Promise<boolean>;
 }
 
 // ---------------------------------------------------------------------------
@@ -200,6 +202,9 @@ export interface AgentRun {
   /** Stop the run; `result` settles as stopped. */
   stop(): void;
 }
+
+/** What a run asks the owner to allow: a file edit by a tool, or a shell command. */
+export type ApprovalCall = { kind: 'edit'; tool: string; path: string } | { kind: 'shell'; command: string };
 
 // ---------------------------------------------------------------------------
 // The port

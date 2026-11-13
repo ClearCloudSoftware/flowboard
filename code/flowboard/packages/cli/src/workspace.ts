@@ -7,13 +7,17 @@ import { parseArgs } from 'node:util';
 import { worktreeWorkspace } from '@flowboard/adapters';
 import { toAbs } from './config.ts';
 import { removeWorkspace, repoOf } from './workspace-git.ts';
+import { dataDirOf } from './run.ts';
 import type { RunDeps } from './run.ts';
 
 const USAGE = 'usage: pnpm clean-workspace --folder <dir> [--force] <task id>';
 
-/** Makes task `id`'s workspace in `folder`'s repository, or picks it up again; `folder` is the run's place in it. */
-export async function openWorkspace(folder: string, id: string): Promise<{ path: string; branch?: string; reused: boolean; folder: string } | { error: string }> {
-  const repo = repoOf(folder);
+/**
+ * Makes task `id`'s workspace in the repo of `folder`'s project (in `dataDir`), or picks it up again; `folder` is the
+ * run's place in it.
+ */
+export async function openWorkspace(folder: string, id: string, dataDir: string): Promise<{ path: string; branch?: string; reused: boolean; folder: string } | { error: string }> {
+  const repo = repoOf(folder, dataDir);
   if ('error' in repo) return repo;
   try {
     const ws = await worktreeWorkspace(repo.root).create({ id });
@@ -24,7 +28,7 @@ export async function openWorkspace(folder: string, id: string): Promise<{ path:
 }
 
 /** `pnpm clean-workspace`: removes a task's worktree, and its branch when that is merged. */
-export async function cleanWorkspace(args: string[], deps: Pick<RunDeps, 'cwd' | 'print' | 'printErr'>): Promise<number> {
+export async function cleanWorkspace(args: string[], deps: Pick<RunDeps, 'cwd' | 'print' | 'printErr' | 'dataDir'>): Promise<number> {
   const print = deps.print ?? console.log;
   const printErr = deps.printErr ?? console.error;
   let parsed;
@@ -40,7 +44,7 @@ export async function cleanWorkspace(args: string[], deps: Pick<RunDeps, 'cwd' |
     return 2;
   }
   const id = positionals[0];
-  const repo = repoOf(toAbs(v.folder, deps.cwd));
+  const repo = repoOf(toAbs(v.folder, deps.cwd), dataDirOf(deps));
   if ('error' in repo) {
     printErr(`clean-workspace: --folder: ${repo.error}`);
     return 2;

@@ -5,7 +5,7 @@
  * See docs/FlowBoard/Agent Providers/Claude Code Adapter.md.
  */
 import { checkToolCall, renderPrompt } from '@flowboard/core';
-import type { RunSpec } from '@flowboard/core';
+import type { ApprovalCall, RunSpec } from '@flowboard/core';
 import type { HookCallback, Options, SpawnedProcess, SpawnOptions } from '@anthropic-ai/claude-agent-sdk';
 
 /** The largest timer Node accepts (about 24.8 days); in practice, no limit. */
@@ -68,18 +68,39 @@ export function buildQuery(spec: RunSpec, base: QueryBase): { prompt: string; op
     maxBudgetUsd: spec.limits?.maxBudgetUsd,
   };
 
-  const guards = spec.guards;
-  if (guards) {
+  const { guards, approve } = spec;
+  if (guards || approve) {
     const guard: HookCallback = async (input) => {
       if (input.hook_event_name !== 'PreToolUse') return {};
+      const deny = (reason: string) => ({
+        hookSpecificOutput: { hookEventName: 'PreToolUse' as const, permissionDecision: 'deny' as const, permissionDecisionReason: reason },
+      });
       // input.cwd is where the shell is now: a cd persists between Bash calls.
-      const reason = checkToolCall(guards, input.tool_name, input.tool_input, spec.cwd, input.cwd);
-      return reason
-        ? { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } }
-        : {};
+      const reason = guards && checkToolCall(guards, input.tool_name, input.tool_input, spec.cwd, input.cwd);
+      if (reason) return deny(reason); // a guard deny never reaches the owner
+      if (!approve || !ASKED.has(input.tool_name)) return {};
+      const call = approvalCall(input.tool_name, input.tool_input);
+      if (!call) return deny('the project owner denied this'); // an asked tool with no usable target fails closed
+      try {
+        return (await approve(call)) ? {} : deny('the project owner denied this');
+      } catch (e) {
+        // A throw would reach the CLI as a hook error, which does not block the tool: fail closed.
+        return deny(`the project owner's approval could not be asked: ${e instanceof Error ? e.message : String(e)}`);
+      }
     };
     options.hooks = { PreToolUse: [{ hooks: [guard] }] };
   }
 
   return { prompt, options };
+}
+
+/** Tools that edit files or run a shell command: each is asked, never waved through. */
+const ASKED = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Bash', 'Monitor']);
+
+/** The owner-facing call for an asked tool; undefined when its path or command is missing. */
+function approvalCall(tool: string, input: unknown): ApprovalCall | undefined {
+  const i = (input ?? {}) as Record<string, unknown>;
+  if (tool === 'Bash' || tool === 'Monitor') return typeof i.command === 'string' ? { kind: 'shell', command: i.command } : undefined;
+  const path = tool === 'NotebookEdit' ? i.notebook_path : i.file_path;
+  return typeof path === 'string' ? { kind: 'edit', tool, path } : undefined;
 }

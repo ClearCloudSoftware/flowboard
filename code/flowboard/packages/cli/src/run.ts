@@ -4,7 +4,8 @@
  */
 import { appendFileSync, closeSync, mkdirSync, mkdtempSync, openSync, realpathSync, rmSync } from 'node:fs';
 import { cp } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, AgentRun, RunResult, RunSpec } from '@flowboard/core';
 import { ClaudeCodeProvider, OpencodeProvider } from '@flowboard/adapters';
@@ -31,17 +32,27 @@ export interface RunDeps {
   now?: () => Date;
   /** Answers the agent's questions; default: the terminal, or a refusal when stdin is not one. */
   answer?: Answerer;
+  /** Someone can answer at this terminal; default: `answer` is given, or stdin is a TTY. */
+  canAsk?: boolean;
   /** runtime: opensandbox; default: the adapters' own. */
   openBox?: typeof openBox;
   connectBox?: typeof connectBox;
   /** runtime: docker without a project memory limit; default: a quarter of what `docker info` reports. */
   dockerMemoryMb?: () => number | undefined;
   /**
-   * FlowBoard's data folder: OpenCode steps then run only on its approved models, on its saved OpenRouter key. The
-   * CLIs always pass it (`defaultDataDir()`); without it, as in tests, no model is checked.
+   * FlowBoard's data folder: where run-flow finds the projects (absent: FLOWBOARD_DATA_DIR from `cwd`, else FlowBoard's
+   * own `data/`, `dataDirOf`), and OpenCode steps then run only on its approved models, on its saved OpenRouter key.
+   * The CLIs always pass it (`defaultDataDir()`); without it, as in tests, no model is checked.
    */
   dataDir?: string;
+  /** The isolation tier's Docker checks; default: `dockerHasGvisor` and `dockerNotReady` (project.ts). */
+  docker?: { gvisor(): boolean; notReady(image: string): string | undefined };
 }
+
+/** FlowBoard's own data folder, `code/flowboard/data`, wherever run-flow is started from. */
+const OWN_DATA = fileURLToPath(new URL('../../../data', import.meta.url));
+/** FlowBoard's data folder: FLOWBOARD_DATA_DIR, else its own, as the app has it. */
+export const dataDirOf = (deps: Pick<RunDeps, 'cwd' | 'dataDir'>) => deps.dataDir ?? (process.env.FLOWBOARD_DATA_DIR ? resolve(deps.cwd, process.env.FLOWBOARD_DATA_DIR) : OWN_DATA);
 
 export const WITHDRAWN = '-- question withdrawn: the agent stopped waiting';
 export const WITHDRAWN_QUEUED = '-- question withdrawn before it was shown: the agent stopped waiting';

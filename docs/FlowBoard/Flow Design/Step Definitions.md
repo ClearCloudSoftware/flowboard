@@ -47,7 +47,7 @@ The run-flow column is the flow file's key as built on 2026-10-23 ([[Run Flow Re
 - **Caps are optional.** The flow's required `budget_usd` caps the whole flow, `0` for none (Alex's call, 2026-10-23), and each agent run may spend only what is left of it. In a flow with no ceiling, `--check` warns about an agent step with neither `limits.max_turns` nor `limits.budget_usd` (the run-flow plan, Flow Design #37).
 - **`max_attempts`** (1 or more) is read only when a rework route leads back to the step; anywhere else it is an error (`steps.review.max_attempts: no rework route leads back to review, so nothing reads it`).
 - **The entry is derived**, the one step no route points to, unless the flow names it with `entry:`, which it must when every step has a route into it. A step's key is its only name, and positions, display names and an agent reference have no key (Claude's calls, 2026-10-23, open to Alex's review; see [[Run Flow Reference#Rules this command settles]]).
-- **The sandbox is the flow's** (2026-11-10). A top-level `sandbox:` holds `runtime` (`docker`, the default, or `opensandbox`), `image` (required), `env` (Docker only) and `egress` and `credentials` (OpenSandbox only). A step has no sandbox key: `steps.a.sandbox: unknown key`. See [[Flow Validation]] and [[OpenSandbox Runtime]].
+- **The sandbox key is the flow's, and the project's trust is its floor** (2026-11-10, 2026-11-13: [[Repository Trust And Sandboxing#Built]]). A top-level `sandbox:` holds `runtime` (`docker`, the default, or `opensandbox`), `image` (required), `env` (Docker only) and `egress` and `credentials` (OpenSandbox only). A step has no sandbox key: `steps.a.sandbox: unknown key`. See [[Flow Validation]] and [[OpenSandbox Runtime]].
 
 ## The prompt template
 

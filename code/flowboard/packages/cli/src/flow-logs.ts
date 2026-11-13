@@ -2,13 +2,14 @@
  * The flow designer's view of run-flow's run folders: `runs/<stamp>-<flow>/`, each with its pinned `flow.json`,
  * its `state.json`, and one `<NNN>-<step>.jsonl` log per step run, a line per event as the adapter emitted it.
  */
-import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FlowState, Gate, RunRecord } from '../../core/src/flow/engine.ts';
+import { hostGit } from '@flowboard/adapters';
 import type { PageAsk } from './ask/page.ts';
 import { isDir, isFile } from './config.ts';
 import type { FlowConfig } from './flow-config.ts';
+import { findProject } from './isolation.ts';
 
 /**
  * `running`: its host is alive. `waiting`: alive, and asking the page. `paused`: no host, not ended, so
@@ -271,13 +272,17 @@ export function stopRun(runsDir: string, name: string): string | undefined {
 
 /**
  * What the run built, as a diff: its `changes.patch` (an OpenSandbox run never touches the folder), else the
- * folder's uncommitted changes against HEAD, `.flowboard/` left out. `from` says which.
+ * folder's uncommitted changes against HEAD, `.flowboard/` left out, in the repo of its project in `dataDir`. `from`
+ * says which; `error`, why git was not run in the folder.
  */
-export function builtOf(runsDir: string, name: string): { from: 'patch' | 'folder' | 'none'; text: string; cut: boolean } | undefined {
+export function builtOf(runsDir: string, name: string, dataDir: string): { from: 'patch' | 'folder' | 'none'; text: string; cut: boolean } | { error: string } | undefined {
   const run = readRun(runsDir, name);
   if (!run) return undefined;
   if (run.patch) return { from: 'patch', ...run.patch };
-  const git = spawnSync('git', ['diff', '--no-color', 'HEAD', '--', '.', ':(exclude).flowboard'], { cwd: run.folder, encoding: 'utf8', maxBuffer: 16 * PATCH_MAX });
+  const project = findProject(dataDir, run.folder);
+  if (!project) return { from: 'none', text: '', cut: false };
+  const git = hostGit(project.repoPath, run.folder, ['diff', '--no-color', 'HEAD', '--', '.', ':(exclude).flowboard'], { maxBuffer: 16 * PATCH_MAX });
+  if ('refused' in git) return { error: git.refused };
   if (git.status !== 0 || !git.stdout) return { from: 'none', text: '', cut: false };
   return { from: 'folder', text: git.stdout.slice(0, PATCH_MAX), cut: git.stdout.length > PATCH_MAX };
 }

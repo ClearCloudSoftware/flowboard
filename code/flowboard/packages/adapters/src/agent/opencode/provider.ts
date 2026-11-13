@@ -16,13 +16,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createOpencodeClient } from '@opencode-ai/sdk/v2';
-import type { Event } from '@opencode-ai/sdk/v2';
+import type { Event, PermissionRequest } from '@opencode-ai/sdk/v2';
 import { ZERO_USAGE } from '@flowboard/core';
 import type { AgentProvider, AgentRun, Capability, NormalizedEvent, RunResult, RunSpec } from '@flowboard/core';
 import { hostExecHost } from '../../exec/host.ts';
 import { createNormalizer } from './normalize.ts';
 import { buildLaunch, pickVariant } from './options.ts';
-import { replyFor } from './permissions.ts';
+import { actionFor, approvalCalls, replyFor, toPermissionRules } from './permissions.ts';
 import { ServerStartError, startServer } from './server.ts';
 import type { StartedServer } from './server.ts';
 import { KILL_GRACE_MS, terminate } from '../../exec/terminate.ts';
@@ -202,16 +202,40 @@ export class OpencodeProvider implements AgentProvider {
           }),
         );
 
+        // Without an approver the mode answers; with one, an edit or shell command the policy allows goes to the owner first.
+        const policy = spec.approve ? toPermissionRules({ ...spec, approve: undefined }) : [];
+        const answer = async (req: PermissionRequest) => {
+          const mode = replyFor(spec.permissionMode, req.permission);
+          const gated = req.permission === 'edit' || req.permission === 'bash';
+          // A mode that answers `once` to everything counts as allowing it, so `auto` cannot skip the owner.
+          const allowed = mode.reply === 'once' || (req.patterns.length > 0 && req.patterns.every((p) => actionFor(policy, req.permission, p) === 'allow'));
+          let reply: { reply: 'once' } | { reply: 'reject'; message: string } = mode;
+          if (spec.approve && gated && allowed) {
+            const calls = approvalCalls(req, directory);
+            try {
+              let yes = calls.length > 0;
+              for (const call of calls) yes = yes && (await spec.approve(call));
+              reply = yes ? { reply: 'once' } : { reply: 'reject', message: 'the project owner denied this' };
+            } catch (e) {
+              reply = { reply: 'reject', message: `the project owner's approval could not be asked: ${e instanceof Error ? e.message : String(e)}` };
+            }
+          }
+          // A reject settles the session's other pending requests too; replying to one of those is a 404.
+          await client!.permission.reply({ requestID: req.id, directory, ...reply }).catch((e: unknown) => {
+            if ((e as { cause?: { status?: number } }).cause?.status !== 404) throw e;
+          });
+        };
+
         for (let r = await events.next(); !r.done; r = await events.next()) {
           const event = r.value as Event;
           // One server per run: every permission request is this run's, and an unanswered one hangs it.
+          // Answered off the loop: the owner may take a while, and stop() and the step and budget limits must not wait for them.
           if (event.type === 'permission.asked') {
-            // A reject settles the session's other pending requests too; replying to one of those is a 404.
-            await client.permission
-              .reply({ requestID: event.properties.id, directory, ...replyFor(spec.permissionMode, event.properties.permission) })
-              .catch((e: unknown) => {
-                if ((e as { cause?: { status?: number } }).cause?.status !== 404) throw e;
-              });
+            answer(event.properties).catch((e: unknown) => {
+              if (finished || stopped || error !== undefined) return;
+              emit({ type: 'error', message: e instanceof Error ? e.message : String(e) });
+              streamAbort.abort();
+            });
           }
           const part = event.type === 'message.part.updated' ? event.properties.part : undefined;
           if (part?.type === 'step-finish' && part.sessionID === sessionID) {

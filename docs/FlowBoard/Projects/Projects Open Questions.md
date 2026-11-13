@@ -91,8 +91,8 @@ Only backlog D8 says *"per untrusted repo"*. `08` makes gVisor/microVM *"opt-in 
 > [!check] Partly built, 2026-11-10
 > A project's sandbox limits are built, outside the database: run-flow reads `sandbox.memory_mb` and `sandbox.cpus` from `.flowboard.yaml`, committed in the repo, and applies them to every container of a sandboxed run (Alex: the limits are project-wide, not the flow's). The tier and the image are still the flow's `sandbox:` key, and there is no global settings level yet. See [[Run Flow Reference#Project file]].
 
-> [!check] Decided, 2026-11-12
-> Trust is per project: *Trusted*, *Normal* or *Untrusted* (gVisor). It's stored on FlowBoard's project record, never in the repo, so a repo can't declare itself trusted. The Software type defaults it to *Normal*. It's stored and shown, but run-flow doesn't act on it yet. See [[Project Settings]].
+> [!check] Decided, 2026-11-12; built, 2026-11-13
+> Trust is per project: *Trusted*, *Normal* or *Untrusted* (gVisor). It's stored on FlowBoard's project record, never in the repo, so a repo can't declare itself trusted. The Software type defaults it to *Normal*. The project's tier is the floor: a flow's `sandbox:` may keep it or make it stronger, never weaker. The tier and the image are no longer only the flow's key, as the 2026-11-10 note above says. See [[Project Settings]] and [[Repository Trust And Sandboxing#Built]].
 
 ### 18. Visibility against a single-user tool
 

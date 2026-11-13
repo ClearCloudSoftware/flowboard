@@ -114,7 +114,7 @@ The canvas bar shows *est. $X ceiling per task*: the sum of every step's budget.
 
 ### 13. Sandbox levels, and the unattended rule
 
-> [!check] **Answered by run-flow, 2026-11-10.** The levels are the host (no `sandbox:` key), `runtime: docker` (one container per step run) and `runtime: opensandbox` (one box per flow run), set once per flow; a per-step sandbox is `unknown key`. No level relaxes the `bypassPermissions` or `auto` refusal: either needs `permissions.allow_unrestricted_shell: true` on every tier. The *unattended and unsandboxed* flag is not built. See [[Step Guardrails#The sandbox rule]].
+> [!check] **Answered by run-flow, 2026-11-10.** The levels are the host (a Trusted project, no `sandbox:` key; since 2026-11-13 the project's trust sets the floor: [[Repository Trust And Sandboxing#Built]]), `runtime: docker` (one container per step run) and `runtime: opensandbox` (one box per flow run), set once per flow; a per-step sandbox is `unknown key`. No level relaxes the `bypassPermissions` or `auto` refusal: either needs `permissions.allow_unrestricted_shell: true` on every tier. The *unattended and unsandboxed* flag is not built. See [[Step Guardrails#The sandbox rule]].
 
 Sandbox values differ by source:
 

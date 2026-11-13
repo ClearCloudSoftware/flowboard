@@ -11,10 +11,13 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_RESOURCE_LIMITS, Sandbox } from '@alibaba-group/opensandbox';
 import type { ExecHost } from '@flowboard/core';
+import { hostGit } from '../../workspace/host-git.ts';
 import { relayExecHost } from './relay-host.ts';
 
 export interface BoxOptions {
   image: string;
+  /** The top folder of the project's repo, which holds `folder`. */
+  repo: string;
   folder: string;
   egress: string[];
   /** Names of this machine's env variables to inject on the way out; the box gets a fake of each. */
@@ -222,6 +225,9 @@ function boxOf(sb: Sandbox, folder: string, token: string, missing: string[]): B
 }
 
 export async function openBox(o: BoxOptions): Promise<Box> {
+  // Before the box: git archive runs config commands (tar.<format>.command), so only the repo's own git dir is used.
+  const archive = hostGit(o.repo, o.folder, ['archive', '--format=tar.gz', 'HEAD'], { maxBuffer: 1 << 30, buffer: true });
+  if ('refused' in archive || archive.status !== 0) throw new Error(`git archive: ${'refused' in archive ? archive.refused : archive.error?.message || archive.stderr.toString().trim()}`);
   const known = o.credentials.filter((c) => KNOWN[c]);
   const missing = known.filter((c) => !process.env[c]);
   const present = known.filter((c) => process.env[c]);
@@ -246,7 +252,7 @@ export async function openBox(o: BoxOptions): Promise<Box> {
         bindings: present.map((c) => ({ name: c.toLowerCase(), match: { schemes: ['https' as const], hosts: [KNOWN[c]!.host] }, auth: { type: 'bearer' as const, credential: c.toLowerCase() } })),
       });
     }
-    const tgz = await upload(sb, execFileSync('git', ['-C', o.folder, 'archive', '--format=tar.gz', 'HEAD'], { maxBuffer: 1 << 30 }));
+    const tgz = await upload(sb, archive.stdout);
     const g = `git -C ${q(o.folder)} -c user.email=flowboard@sandbox -c user.name=flowboard`;
     await root(
       sb,

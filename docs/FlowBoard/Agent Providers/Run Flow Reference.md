@@ -93,7 +93,7 @@ Any other mix of options prints these three lines, the first headed `usage:`, an
 | `defaults` | no | none | Any `run-agent` key except `folder`, applied to every agent step. A step's own key replaces the default whole: a step with `limits: { max_turns: 5 }` drops a default `budget_usd` |
 | `steps` | yes | | A mapping of step name to step; at least one |
 | `edges` | no | `[]` | The routes between steps, in the order written (see *Edges, loops and joins*) |
-| `sandbox` | no | none: steps run on the host | Where steps run: `runtime` (`docker`, the default, or `opensandbox`), `image` (required), `env` (Docker only), `egress` and `credentials` (OpenSandbox only). It is the flow's; a step has no `sandbox` key. Memory and CPU limits are not here: they are the project's (see *Project file*). See [[OpenSandbox Runtime]] |
+| `sandbox` | no | the project's: the machine for a Trusted one, a `flowboard-cli` container for Normal or Untrusted (under gVisor) | Where steps run, at least as strong as the project's trust gives ([[Repository Trust And Sandboxing#Built]]): `runtime` (`docker`, the default, or `opensandbox`), `image` (required), `env` (Docker only), `egress` and `credentials` (OpenSandbox only). It is the flow's; a step has no `sandbox` key. Memory and CPU limits are not here: they are the project's (see *Project file*). See [[OpenSandbox Runtime]] |
 
 ## Project file
 
@@ -236,7 +236,7 @@ Reject is offered only when the step has an `on_fail` edge.
 - **Questions.** Every batch the terminal would ask, a gate's decision or an agent's question, is also written to `<run folder>/asks/<id>.json` as `{ id, heading, questions, at }`. The page answers by writing `<run folder>/answers/<id>.json`; the first answer, terminal or page, wins and the other is withdrawn. Both files go once it is settled.
 - **Stop.** A `<run folder>/stop` file stops the flow as one Ctrl+C does; `--resume` continues it. This works with or without `--page`: every host watches for the file. Another stop file while it stops is a repeat, never the quit-at-once second Ctrl+C.
 - **Host.** `<run folder>/host.json`, `{ pid, page }`, is there while a `run-flow` drives the run; the page reads a run with no live host as paused.
-- **Resume.** The page's *Resume* runs `run-flow --resume <run folder> --page` in the background, with `--budget-usd` when a new budget is given; its output goes to `<run folder>/resume.log`.
+- **Resume.** The page's *Resume* runs `run-flow --resume <run folder> --page` in the background, with `--budget-usd` when a new budget is given; its output goes to `<run folder>/resume.log`. A refusal comes back to the page with run-flow's words, as for a new run.
 - **Allow host & retry.** At a *run failed* or escalation gate of an OpenSandbox run, a third question, *Host to allow before the retry*, takes a host name. With Retry, the box is let reach it at once and the host is added to `sandbox.egress` in `flow.json`, so a resumed run's box allows it too.
 
 ## Safety

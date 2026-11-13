@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFi
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runFlow } from '../src/flow-run.ts';
+import { registerProject } from './fixtures/flow.ts';
 
 const live = { skip: !(process.env.FLOWBOARD_LIVE && process.env.FLOWBOARD_OPENSANDBOX === '1'), timeout: 600_000 };
 
@@ -18,6 +19,7 @@ test('a flow in an OpenSandbox box leaves the folder alone and hands back change
   const base = realpathSync(mkdtempSync(join(tmpdir(), 'fb-osb-live-')));
   const proj = join(base, 'proj');
   mkdirSync(proj);
+  registerProject(base, proj, 'trusted'); // a run needs a project; Trusted keeps the flow's own box
   writeFileSync(join(proj, 'README.md'), 'a project\n');
   const git = (...a: string[]) => execFileSync('git', ['-C', proj, '-c', 'user.email=t@t', '-c', 'user.name=t', ...a], { encoding: 'utf8' });
   git('init', '-q');
@@ -43,6 +45,7 @@ edges:
   const out: string[] = [];
   const code = await runFlow(['--folder', 'proj', '--task', 'task.md', 'flow.yaml'], {
     cwd: base,
+    dataDir: join(base, 'data'),
     print: (l) => out.push(l),
     printErr: (l) => out.push(l),
     signals: new EventEmitter(),

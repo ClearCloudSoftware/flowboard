@@ -1,13 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { RunSummary } from '../src/flow-logs.ts';
 import { projectLimits, projectSettings, setCheckCommand, setLimits } from '../src/project.ts';
 import { APP_DEFAULTS } from '../src/settings.ts';
-import { createProject, projectSlug, readProjects, removeProject, repoProblems, repoRoot, seedOnce, slugify, updateProject, viewProjects } from '../src/projects.ts';
+import { addApproval, createProject, projectSlug, readProjects, removeProject, repoProblems, repoRoot, seedOnce, slugify, updateProject, viewProjects } from '../src/projects.ts';
 
 const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'fb-projects-'))); // macOS's temp folder is a link
 const git = (cwd: string, ...args: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd, encoding: 'utf8' });
@@ -89,6 +89,7 @@ test('the first look seeds a scratch project with a commit and a passing check, 
   seedOnce(data, lib);
   const [p] = readProjects(data);
   assert.deepEqual([p.name, p.slug, p.repoPath, p.defaultFlow], ['Scratch', 'scratch', join(data, 'scratch'), 'delivery']);
+  assert.deepEqual(p.overrides, { trust: 'trusted' }); // FlowBoard wrote it, so its sample runs work on this machine
   assert.equal(spawnSync('git', ['rev-list', '--count', 'HEAD'], { cwd: p.repoPath, encoding: 'utf8' }).stdout.trim(), '1');
   assert.equal(viewProjects([p], [], lib, APP_DEFAULTS)[0].checkCommand, 'node --test');
   assert.equal(spawnSync('node', ['--test'], { cwd: p.repoPath }).status, 0);
@@ -223,4 +224,105 @@ test('a record from before types reads as a local software project with nothing 
   writeFileSync(join(data, 'projects.json'), JSON.stringify([{ id: '1', name: 'Old', slug: 'old', repoPath: repo(), defaultFlow: null, baseBranch: 'main', createdAt: '2026-11-01T00:00:00.000Z' }]));
   const [p] = readProjects(data);
   assert.deepEqual([p.type, p.source, p.overrides], ['software', { kind: 'local' }, {}]);
+});
+
+test('approvals: saved on the record without repeats, replaced by an edit, and a rule that does not pass is a 400', () => {
+  const data = temp();
+  const lib = flows();
+  const p = value(createProject(data, lib, { type: 'software', name: 'A', repoPath: repo() }));
+  assert.equal(p.approvals, undefined); // a record from before approvals has none
+  const rule = { kind: 'shell', prefix: 'pnpm test' } as const;
+  value(addApproval(data, p.id, rule));
+  value(addApproval(data, p.id, { ...rule }));
+  value(addApproval(data, p.id, { kind: 'edit' }));
+  assert.deepEqual(readProjects(data)[0].approvals, [rule, { kind: 'edit' }]);
+  assert.deepEqual(value(updateProject(data, lib, p.id, { approvals: [] })).approvals, []);
+  assert.deepEqual(readProjects(data)[0].approvals, []);
+  assert.deepEqual(value(updateProject(data, lib, p.id, { approvals: [{ kind: 'shell', prefix: ' pnpm test ' }] })).approvals, [rule]); // saved as parsed: trimmed
+  const bad = { ok: false, status: 400, error: "an approval is { kind: 'edit' } or { kind: 'shell', prefix }" };
+  assert.deepEqual(updateProject(data, lib, p.id, { approvals: [{ kind: 'shell', prefix: '' }] as never }), bad);
+  assert.deepEqual(addApproval(data, p.id, { kind: 'shell', prefix: 'ls; rm' }), bad);
+  assert.deepEqual(addApproval(data, 'nope', rule), { ok: false, status: 404, error: 'no such project' });
+});
+
+test("a submodule's .git a box replaced is never read by the checkout check; a repo whose .git is a file is a problem", (t) => {
+  const base = temp();
+  t.after(() => rmSync(base, { recursive: true, force: true }));
+  const r = repo();
+  t.after(() => rmSync(r, { recursive: true, force: true }));
+  const lib = join(base, 'lib');
+  mkdirSync(lib);
+  git(lib, 'init', '-q', '-b', 'main');
+  writeFileSync(join(lib, 'f.txt'), 'f\n');
+  git(lib, 'add', 'f.txt');
+  git(lib, 'commit', '-qm', 'lib');
+  git(r, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', lib, 'lib');
+  git(r, 'commit', '-qm', 'lib');
+  const marker = join(base, 'PWNED');
+  const sub = join(r, 'lib');
+  rmSync(join(sub, '.git'));
+  git(sub, 'init', '-q');
+  git(sub, 'add', 'f.txt');
+  git(sub, 'commit', '-qm', 'box');
+  git(sub, 'config', 'core.fsmonitor', `touch '${marker}'; false`);
+  git(sub, 'config', 'filter.x.clean', `sh -c "touch '${marker}'; cat"`);
+  writeFileSync(join(sub, '.gitattributes'), '* filter=x\n');
+  for (const ignore of ['', 'none']) {
+    if (ignore) git(r, 'config', '-f', '.gitmodules', 'submodule.lib.ignore', ignore); // a box can write .gitmodules too
+    utimesSync(join(sub, 'f.txt'), new Date(2020, 0, ignore ? 2 : 1), new Date(2020, 0, ignore ? 2 : 1));
+    repoProblems({ repoPath: r, baseBranch: 'main' });
+    assert.equal(existsSync(marker), false, `.gitmodules ignore=${ignore || 'unset'}`);
+  }
+  const sep = join(base, 'sep');
+  git(base, 'init', '-q', '-b', 'main', '--separate-git-dir', join(base, 'sep.git'), sep);
+  assert.deepEqual(repoProblems({ repoPath: sep, baseBranch: 'main' }), [`${join(sep, '.git')} is a file; FlowBoard needs the repo's git dir at ${join(sep, '.git')}`]);
+});
+
+test('a repo inside another project\'s repo is not registered: a sandboxed run may have made its .git', () => {
+  const data = temp();
+  const lib = flows();
+  const outer = repo();
+  const inner = join(outer, 'inner');
+  mkdirSync(inner);
+  git(inner, 'init', '-q', '-b', 'main');
+  const p = value(createProject(data, lib, { type: 'software', name: 'Outer', repoPath: outer }));
+  assert.deepEqual(createProject(data, lib, { type: 'software', name: 'Inner', repoPath: inner }), {
+    ok: false,
+    status: 409,
+    error: `${inner} is inside project ${p.name}'s repo; a sandboxed run may have made its .git. Register the outer repo, or remove ${join(inner, '.git')} if FlowBoard's runs made it`,
+  });
+  assert.equal(readProjects(data).length, 1);
+  [data, lib, outer].forEach((d) => rmSync(d, { recursive: true, force: true }));
+});
+
+test("a folder whose .git points git's work tree elsewhere is not registered: a sandboxed run may have made it", () => {
+  const data = temp();
+  const lib = flows();
+  const outer = repo();
+  const other = repo(); // a repo of the person's, nowhere near
+  value(createProject(data, lib, { type: 'software', name: 'Outer', repoPath: outer }));
+  const sub = join(outer, 'sub');
+  mkdirSync(sub);
+  git(sub, 'init', '-q');
+  git(sub, 'config', 'core.worktree', other);
+  const before = readFileSync(join(other, '.git', 'info', 'exclude'), 'utf8');
+  const r = createProject(data, lib, { type: 'software', name: 'Sub', repoPath: sub });
+  assert.deepEqual(r, { ok: false, status: 400, error: `${sub} is not inside ${other}, the repo git names for it; a sandboxed run may have made its .git` });
+  assert.equal(readProjects(data).length, 1);
+  assert.equal(readFileSync(join(other, '.git', 'info', 'exclude'), 'utf8'), before);
+  // A linked worktree is not a repo's own folder either: its git dir is elsewhere.
+  git(other, 'worktree', 'add', '-q', '-b', 'w', join(data, 'w'));
+  assert.deepEqual(repoRoot(join(data, 'w')), { ok: false, status: 400, error: `${join(data, 'w')}'s git dir is ${join(other, '.git', 'worktrees', 'w')}, not ${join(data, 'w', '.git')}; register the repo's own folder` });
+  [data, lib, outer, other].forEach((d) => rmSync(d, { recursive: true, force: true }));
+});
+
+test('a repo typed in another case than on disk registers, on a case-insensitive disk, at its on-disk path', (t) => {
+  const base = temp();
+  t.after(() => rmSync(base, { recursive: true, force: true }));
+  const onDisk = join(base, 'CaseRepo');
+  mkdirSync(onDisk);
+  git(onDisk, 'init', '-q', '-b', 'main');
+  if (!existsSync(join(base, 'caserepo'))) return t.skip('the temp folder is case-sensitive');
+  assert.deepEqual(repoRoot(join(base, 'caserepo')), { ok: true, value: onDisk });
+  assert.deepEqual(repoRoot(join(base, 'caserepo', '.')), { ok: true, value: onDisk });
 });

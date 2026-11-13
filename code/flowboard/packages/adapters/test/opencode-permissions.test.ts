@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { RunSpec } from '@flowboard/core';
-import { replyFor, rulesToConfig, toPermissionRules } from '../src/agent/opencode/permissions.ts';
+import { actionFor, replyFor, rulesToConfig, toPermissionRules } from '../src/agent/opencode/permissions.ts';
 
 const base: RunSpec = { prompt: { preamble: '', inputs: [], outputs: [], closing: '' }, model: 'm', cwd: '/repo/wt' };
 const REJECT = { reply: 'reject', message: 'Not permitted in this headless run.' };
@@ -93,4 +93,28 @@ test('an explicit Read(.env) allow still wins over the .env rules', () => {
   const i = (pattern: string, action: string) => rules.findIndex((r) => r.permission === 'read' && r.pattern === pattern && r.action === action);
   assert.ok(i('*.env', 'ask') < i('.env', 'allow'), 'the specific allow comes after the .env ask');
   assert.ok(rules.findLastIndex((r) => r.permission === 'read' && r.pattern === '*') < i('*.env', 'ask'), 'a plain Read allow does not');
+});
+
+test('actionFor takes the last match', () => {
+  const rules = [
+    { permission: '*', pattern: '*', action: 'ask' },
+    { permission: 'bash', pattern: 'git *', action: 'allow' },
+    { permission: 'b*', pattern: 'git push *', action: 'deny' },
+  ] as const;
+  assert.equal(actionFor([...rules], 'bash', 'git status'), 'allow');
+  assert.equal(actionFor([...rules], 'bash', 'git push origin'), 'deny');
+  assert.equal(actionFor([...rules], 'edit', 'a.ts'), 'ask');
+  assert.equal(actionFor([], 'bash', 'ls'), 'ask');
+});
+
+test('approve adds ask rules before the denies', () => {
+  const policy = { allow: ['Write', 'Bash(git *)'], deny: ['Bash(rm *)'] };
+  const rules = toPermissionRules({ ...base, approve: async () => true, toolPolicy: policy });
+  const at = (r: object) => rules.findIndex((x) => JSON.stringify(x) === JSON.stringify(r));
+  const deny = at({ permission: 'bash', pattern: 'rm *', action: 'deny' });
+  assert.ok(at({ permission: 'bash', pattern: 'git *', action: 'allow' }) < at({ permission: 'edit', pattern: '*', action: 'ask' }));
+  assert.ok(at({ permission: 'edit', pattern: '*', action: 'ask' }) < deny && at({ permission: 'bash', pattern: '*', action: 'ask' }) < deny);
+  assert.equal(actionFor(rules, 'bash', 'git status'), 'ask');
+  assert.equal(actionFor(rules, 'bash', 'rm -rf x'), 'deny');
+  assert.deepEqual(toPermissionRules({ ...base, toolPolicy: policy }), toPermissionRules({ ...base, approve: undefined, toolPolicy: policy }));
 });

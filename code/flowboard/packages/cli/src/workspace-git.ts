@@ -3,40 +3,49 @@
  * the base branch, a task branch's commits and diffs, landing it, and removing it. Agents never run git here;
  * every command is one a person could type, and the pages show it.
  */
-import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, relative } from 'node:path';
-import { TASK_ID, worktreeWorkspace } from '@flowboard/adapters';
+import { hostGit, repoGitDirs, TASK_ID, worktreeWorkspace } from '@flowboard/adapters';
 import { listRuns } from './flow-logs.ts';
 import type { RunStatus } from './flow-logs.ts';
+import { findProject } from './isolation.ts';
 import { heldBy } from './lock.ts';
 
 export const ID_RULE = 'use letters, digits, - and _, starting with a letter or digit';
 
-function git(cwd: string, ...args: string[]): { ok: boolean; code: number | null; out: string; err: string } {
-  const r = spawnSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+type Git = { ok: boolean; code: number | null; out: string; err: string; refused?: true };
+/** git in `cwd`, a worktree of the repo at `root` or the repo itself, through `hostGit`; a refusal is a failure with its reason. */
+function gitIn(root: string, cwd: string, ...args: string[]): Git {
+  const r = hostGit(root, cwd, args, { maxBuffer: 64 * 1024 * 1024 });
+  if ('refused' in r) return { ok: false, code: null, out: '', err: r.refused, refused: true };
   return { ok: !r.error && r.status === 0, code: r.status, out: r.stdout ?? '', err: (r.stderr || r.error?.message || '').trim() };
 }
+/** git in the repo's own top folder `root`. */
+const git = (root: string, ...args: string[]) => gitIn(root, root, ...args);
 const lines = (s: string) => s.split('\n').filter(Boolean);
 
-/** The repository `folder` is in, and where `folder` sits inside it, so a run in a subfolder keeps its place. */
-export function repoOf(folder: string): { root: string; sub: string } | { error: string } {
+/**
+ * The repository `folder` is in, and where `folder` sits inside it, so a run in a subfolder keeps its place. The
+ * repo is its project's (in `dataDir`), never one git finds from `folder`: a box can plant a `.git` there.
+ */
+export function repoOf(folder: string, dataDir: string): { root: string; sub: string } | { error: string } {
   if (!existsSync(folder)) return { error: `${folder}: no such folder` };
-  const top = git(folder, 'rev-parse', '--show-toplevel');
-  if (!top.ok) return { error: `${folder} is not in a git repository` };
-  const root = realpathSync(top.out.trim());
-  return { root, sub: relative(root, realpathSync(folder)) };
+  const project = findProject(dataDir, folder);
+  if (!project) return { error: `${folder} is not in a FlowBoard project; create one for its repo first` };
+  const dirs = repoGitDirs(project.repoPath, project.repoPath);
+  if ('error' in dirs) return { error: dirs.noRepo ? `${folder} is not in a git repository` : dirs.error };
+  return { root: dirs.workTree, sub: relative(dirs.workTree, realpathSync(folder)) };
 }
 
 /** A repo as the pages see it: its top folder, the branch it is on (the base every task branch lands in), and that branch's tip. */
 export interface Repo { root: string; sub: string; base: string; head: string }
 
 /** `~/` and absolute paths only: the pages run in a server whose own folder means nothing to the person typing. */
-export function openRepo(input: string): Repo | { error: string } {
+export function openRepo(input: string, dataDir: string): Repo | { error: string } {
   const folder = input.startsWith('~/') ? join(homedir(), input.slice(2)) : input;
   if (!isAbsolute(folder)) return { error: 'the folder must be an absolute path, or start with ~/' };
-  const r = repoOf(folder);
+  const r = repoOf(folder, dataDir);
   if ('error' in r) return r;
   const base = git(r.root, 'symbolic-ref', '--short', 'HEAD');
   if (!base.ok) return { error: `${r.root} is not on a branch; check out the branch tasks land in first` };
@@ -125,8 +134,14 @@ function inspect(repo: Repo, id: string, registered: Map<string, string>, runs: 
       row.problem = `the worktree is on ${on || 'no branch'}, not ${branch}`;
       row.fix = `git -C ${path} switch ${branch}`;
     } else {
-      row.uncommitted = lines(git(path, 'status', '--porcelain').out).map((l) => l.slice(3));
-      row.pid = heldBy(join(path, '.flowboard', 'lock'));
+      const st = gitIn(repo.root, path, 'status', '--porcelain');
+      if (st.refused) {
+        row.problem = st.err;
+        row.fix = `git -C ${repo.root} worktree repair ${path}`;
+      } else {
+        row.uncommitted = lines(st.out).map((l) => l.slice(3));
+        row.pid = heldBy(join(path, '.flowboard', 'lock'));
+      }
     }
   }
   if (hasBranch(repo, branch)) {
@@ -162,8 +177,8 @@ export interface Preview {
   refused?: string;
 }
 
-export function preview(input: string, id: string, runsDir: string): Preview {
-  const repo = openRepo(input);
+export function preview(input: string, id: string, runsDir: string, dataDir: string): Preview {
+  const repo = openRepo(input, dataDir);
   const mode = id ? 'workspace' : 'folder';
   if ('error' in repo) return { mode, refused: repo.error };
   if (!id) {
@@ -207,8 +222,8 @@ function commits(repo: Repo, range: string): Commit[] {
   });
 }
 
-export function review(input: string, id: string, runsDir: string): Review | { error: string } {
-  const repo = openRepo(input);
+export function review(input: string, id: string, runsDir: string, dataDir: string): Review | { error: string } {
+  const repo = openRepo(input, dataDir);
   if ('error' in repo) return repo;
   if (!TASK_ID.test(id)) return { error: `task id ${JSON.stringify(id)}: ${ID_RULE}` };
   const row = inspectOne(repo, id, runsDir);
@@ -221,8 +236,8 @@ export function review(input: string, id: string, runsDir: string): Review | { e
 }
 
 /** The diff of the whole branch against the base (`commit` absent), or of one commit on either side. */
-export function diffOf(input: string, id: string, commit?: string): FileDiff[] | { error: string } {
-  const repo = openRepo(input);
+export function diffOf(input: string, id: string, dataDir: string, commit?: string): FileDiff[] | { error: string } {
+  const repo = openRepo(input, dataDir);
   if ('error' in repo) return repo;
   if (!TASK_ID.test(id)) return { error: `task id ${JSON.stringify(id)}: ${ID_RULE}` };
   const branch = branchOf(id);
@@ -261,8 +276,8 @@ export function preflight(repo: Repo, row: WorkspaceRow): Array<{ ok: boolean; t
 export type Strategy = 'merge' | 'squash' | 'ff';
 type Act = { ok: true; head?: string; note?: string } | { ok: false; error: string; conflicts?: string[] };
 
-function ready(input: string, id: string, runsDir: string): { repo: Repo; row: WorkspaceRow } | { error: string } {
-  const repo = openRepo(input);
+function ready(input: string, id: string, runsDir: string, dataDir: string): { repo: Repo; row: WorkspaceRow } | { error: string } {
+  const repo = openRepo(input, dataDir);
   if ('error' in repo) return repo;
   if (!TASK_ID.test(id)) return { error: `task id ${JSON.stringify(id)}: ${ID_RULE}` };
   const row = inspectOne(repo, id, runsDir);
@@ -271,8 +286,8 @@ function ready(input: string, id: string, runsDir: string): { repo: Repo; row: W
 }
 
 /** Merges in memory, touching no checkout: whether landing would conflict, and where. */
-export function dryRun(input: string, id: string, runsDir: string): (Act & { checks?: ReturnType<typeof preflight> }) {
-  const r = ready(input, id, runsDir);
+export function dryRun(input: string, id: string, runsDir: string, dataDir: string): (Act & { checks?: ReturnType<typeof preflight> }) {
+  const r = ready(input, id, runsDir, dataDir);
   if ('error' in r) return { ok: false, error: r.error };
   const checks = preflight(r.repo, r.row);
   const m = git(r.repo.root, 'merge-tree', '--write-tree', '--name-only', '--no-messages', r.repo.base, r.row.branch);
@@ -282,14 +297,14 @@ export function dryRun(input: string, id: string, runsDir: string): (Act & { che
 }
 
 /** Lands the task branch in the base, in the repo's own checkout; undone in full when git stops half-way. */
-export function land(input: string, id: string, strategy: Strategy, message: string, runsDir: string): Act {
-  const r = ready(input, id, runsDir);
+export function land(input: string, id: string, strategy: Strategy, message: string, runsDir: string, dataDir: string): Act {
+  const r = ready(input, id, runsDir, dataDir);
   if ('error' in r) return { ok: false, error: r.error };
   const { repo, row } = r;
   const failed = preflight(repo, row).filter((c) => !c.ok);
   if (failed.length) return { ok: false, error: failed.map((c) => c.text).join('; ') };
   if (strategy !== 'ff' && !message.trim()) return { ok: false, error: 'the commit message is empty' };
-  const conflicts = (cwd: string) => lines(git(cwd, 'diff', '--name-only', '--diff-filter=U').out);
+  const conflicts = (cwd: string) => lines(gitIn(repo.root, cwd, 'diff', '--name-only', '--diff-filter=U').out);
   if (strategy === 'merge') {
     const m = git(repo.root, 'merge', '--no-ff', '-m', message, row.branch);
     if (!m.ok) {
@@ -303,6 +318,11 @@ export function land(input: string, id: string, strategy: Strategy, message: str
       const c = conflicts(repo.root);
       git(repo.root, 'reset', '--merge');
       return { ok: false, error: `git merge --squash: ${m.err || m.out.trim()}`, conflicts: c };
+    }
+    // A commit with nothing staged prints a full status, which goes into submodules whatever the options (host-git.ts).
+    if (git(repo.root, 'write-tree').out.trim() === git(repo.root, 'rev-parse', 'HEAD^{tree}').out.trim()) {
+      git(repo.root, 'reset', '--merge');
+      return { ok: false, error: "nothing to land: the task's changes cancel out" };
     }
     const c = git(repo.root, 'commit', '-m', message);
     if (!c.ok) {
@@ -321,23 +341,24 @@ export function land(input: string, id: string, strategy: Strategy, message: str
 }
 
 function rebase(repo: Repo, row: WorkspaceRow): Act {
-  const b = git(row.path, 'rebase', repo.base);
+  const b = gitIn(repo.root, row.path, 'rebase', repo.base);
   if (b.ok) return { ok: true };
-  const c = lines(git(row.path, 'diff', '--name-only', '--diff-filter=U').out);
-  git(row.path, 'rebase', '--abort');
+  if (b.refused) return { ok: false, error: b.err };
+  const c = lines(gitIn(repo.root, row.path, 'diff', '--name-only', '--diff-filter=U').out);
+  gitIn(repo.root, row.path, 'rebase', '--abort');
   return { ok: false, error: `the branch does not replay cleanly on ${repo.base}; nothing was changed`, conflicts: c };
 }
 
 /** Replays the task branch on the base's tip, in the workspace; a conflict is undone in full and named. */
-export function updateFromBase(input: string, id: string, runsDir: string): Act {
-  const r = ready(input, id, runsDir);
+export function updateFromBase(input: string, id: string, runsDir: string, dataDir: string): Act {
+  const r = ready(input, id, runsDir, dataDir);
   if ('error' in r) return { ok: false, error: r.error };
   const { repo, row } = r;
   if (row.state === 'running' || row.state === 'dirty' || row.state === 'broken' || row.state === 'branch-only') {
     return { ok: false, error: `the workspace is ${row.state === 'dirty' ? 'holding uncommitted work' : row.state}; it can be updated only when it is idle and clean` };
   }
   const u = rebase(repo, row);
-  return u.ok ? { ok: true, head: git(row.path, 'rev-parse', '--short', 'HEAD').out.trim() } : u;
+  return u.ok ? { ok: true, head: gitIn(repo.root, row.path, 'rev-parse', '--short', 'HEAD').out.trim() } : u;
 }
 
 /**

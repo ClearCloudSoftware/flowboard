@@ -5,12 +5,14 @@
  * repo holds their folder.
  */
 import { spawnSync } from 'node:child_process';
-import { excludeFlowboard } from '@flowboard/adapters';
+import { excludeFlowboard, hostGit } from '@flowboard/adapters';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, sep } from 'node:path';
 import { parse } from 'yaml';
+import { z } from 'zod';
+import { type ApprovalRule, ApprovalRuleSchema } from './approvals.ts';
 import { isDir, isFile, writeJsonFile } from './config.ts';
 import { FLOW_NAME } from './flow-files.ts';
 import { projectSlug } from './slug.ts';
@@ -25,7 +27,8 @@ export type Source = { kind: 'github'; repo: string } | { kind: 'local' };
  * `repoPath`: the repo's top folder, real path; `defaultFlow`: the flow new runs start on, the type's first in the
  * library at registration, or null to pick one each run; `baseBranch`: the branch work starts from and lands on, the
  * one checked out at registration (null: HEAD was detached); `type`: decides its flows and the defaults its settings
- * start from; `overrides`: the settings it sets over those (`settings.ts`).
+ * start from; `overrides`: the settings it sets over those (`settings.ts`); `approvals`: what its owner chose to
+ * allow from now on (`approvals.ts`), absent on a record from before them.
  */
 export interface Project {
   id: string;
@@ -38,12 +41,14 @@ export interface Project {
   type: ProjectTypeId;
   source: Source;
   overrides: Overrides;
+  approvals?: ApprovalRule[];
 }
 export type Result<T> = { ok: true; value: T } | { ok: false; status: 400 | 404 | 409; error: string };
 
 export const SLUG = /^[a-z0-9][a-z0-9-]*$/;
 export { projectSlug, slugify } from './slug.ts';
 const fileOf = (dataDir: string) => join(dataDir, 'projects.json');
+const BAD_APPROVAL = "an approval is { kind: 'edit' } or { kind: 'shell', prefix }";
 const fail = (status: 400 | 404 | 409, error: string) => ({ ok: false as const, status, error });
 
 export function readProjects(dataDir: string): Project[] {
@@ -61,9 +66,18 @@ export function repoRoot(path: string): Result<string> {
   const p = path.trim().startsWith('~/') ? join(homedir(), path.trim().slice(2)) : path.trim();
   if (!isAbsolute(p)) return fail(400, 'the repo folder must be an absolute path, or start with ~/');
   if (!isDir(p)) return fail(400, `${p}: no such folder`);
-  const git = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: p, encoding: 'utf8' });
+  // Plain git: registering trusts the repo the person names (createProject refuses one inside a project's repo, which a box
+  // may have made); from then on FlowBoard's git uses only its .git (hostGit).
+  const git = spawnSync('git', ['rev-parse', '--show-toplevel', '--absolute-git-dir'], { cwd: p, encoding: 'utf8' });
   if (git.error || git.status !== 0) return fail(400, `${p}: not in a git repository; run git init there first`);
-  return { ok: true, value: realpathSync(git.stdout.trim()) };
+  // A .git a box wrote can name any work tree (core.worktree) or git dir: the folder must be in the one, and git's
+  // dir the repo's own.
+  // `.native`: the case on disk, as git gives it, on a case-insensitive disk too.
+  const [top, gitDir] = git.stdout.trim().split('\n').map((l) => realpathSync.native(l));
+  const here = realpathSync.native(p);
+  if (here !== top && !here.startsWith(top + sep)) return fail(400, `${p} is not inside ${top}, the repo git names for it; a sandboxed run may have made its .git`);
+  if (gitDir !== join(top, '.git')) return fail(400, `${top}'s git dir is ${gitDir}, not ${join(top, '.git')}; register the repo's own folder`);
+  return { ok: true, value: top };
 }
 
 /** True when the run's folder is the project's repo or a folder inside it. */
@@ -88,9 +102,10 @@ export interface NewProject {
   checkCommand?: string;
 }
 
-const gitOut = (cwd: string, ...args: string[]) => {
-  const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
-  return r.status === 0 ? r.stdout.trim() : undefined;
+/** git's output in the repo at `repo`, through `hostGit`; undefined when it fails or is refused. */
+const gitOut = (repo: string, ...args: string[]) => {
+  const r = hostGit(repo, repo, args);
+  return 'refused' in r || r.status !== 0 ? undefined : r.stdout.trim();
 };
 /** The branch checked out, even in a repo with no commits yet; undefined when HEAD is detached. */
 const currentBranch = (repo: string) => gitOut(repo, 'symbolic-ref', '--short', '-q', 'HEAD');
@@ -104,8 +119,9 @@ const hasLimits = (l: Limits | undefined): l is Limits => !!l && (l.memoryMb !==
 
 /**
  * Registers a repo. 400 for a folder that is not a git repo, a type not offered yet or overrides that do not pass;
- * 409 when the repo or the slug given already has a project. A slug left out comes from `projectSlug`. Limits and a
- * check command given are written to the repo's `.flowboard.yaml`, unless that file does not pass.
+ * 409 when the repo or the slug given already has a project, or the repo is inside a project's. A slug left out comes
+ * from `projectSlug`. Limits and a check command given are written to the repo's `.flowboard.yaml`, unless that file
+ * does not pass.
  */
 export function createProject(dataDir: string, flowsDir: string, input: NewProject, now = new Date()): Result<Project> {
   const name = input.name.trim();
@@ -120,6 +136,9 @@ export function createProject(dataDir: string, flowsDir: string, input: NewProje
   const projects = readProjects(dataDir);
   const twin = projects.find((p) => p.repoPath === root.value);
   if (twin) return fail(409, `${root.value} is already the project ${twin.name}`);
+  // A box writes its project's repo, so a .git found inside it may be one a run planted, not one to trust.
+  const outer = projects.find((p) => owns(p, root.value));
+  if (outer) return fail(409, `${root.value} is inside project ${outer.name}'s repo; a sandboxed run may have made its .git. Register the outer repo, or remove ${join(root.value, '.git')} if FlowBoard's runs made it`);
   let slug = input.slug?.trim();
   if (slug) {
     if (!SLUG.test(slug)) return fail(400, 'a slug may only use lowercase letters, digits and -');
@@ -153,12 +172,13 @@ export function createProject(dataDir: string, flowsDir: string, input: NewProje
   return { ok: true, value: project };
 }
 
-/** `overrides` replaces the project's whole set; `limits` replaces the repo's (an empty one removes them). */
-export interface ProjectEdit { name?: string; defaultFlow?: string | null; checkCommand?: string | null; baseBranch?: string | null; overrides?: Overrides; limits?: Limits }
+/** `overrides` replaces the project's whole set; `limits` replaces the repo's (an empty one removes them); `approvals` replaces the list. */
+export interface ProjectEdit { name?: string; defaultFlow?: string | null; checkCommand?: string | null; baseBranch?: string | null; overrides?: Overrides; limits?: Limits; approvals?: ApprovalRule[] }
 
 /**
  * Renames, moves the default flow, sets the check command (null or empty removes it), the base branch (a branch of
- * the repo, or the one checked out before its first commit), the overrides or the limits. The slug and repo stay.
+ * the repo, or the one checked out before its first commit), the overrides, the limits or the approvals. The slug and
+ * repo stay.
  */
 export function updateProject(dataDir: string, flowsDir: string, id: string, edit: ProjectEdit): Result<Project> {
   const projects = readProjects(dataDir);
@@ -169,6 +189,8 @@ export function updateProject(dataDir: string, flowsDir: string, id: string, edi
   if (badFlow) return fail(400, badFlow);
   const badOverrides = edit.overrides !== undefined ? overridesError(edit.overrides) : undefined;
   if (badOverrides) return badOverrides;
+  const approvals = edit.approvals !== undefined ? z.array(ApprovalRuleSchema).safeParse(edit.approvals) : undefined;
+  if (approvals && !approvals.success) return fail(400, BAD_APPROVAL);
   const branch = edit.baseBranch?.trim();
   if (branch && gitOut(projects[at].repoPath, 'rev-parse', '--verify', '-q', `refs/heads/${branch}`) === undefined && branch !== currentBranch(projects[at].repoPath)) {
     return fail(400, `${projects[at].repoPath} has no branch ${branch}`);
@@ -187,10 +209,25 @@ export function updateProject(dataDir: string, flowsDir: string, id: string, edi
     ...(edit.defaultFlow !== undefined && { defaultFlow: edit.defaultFlow || null }),
     ...(edit.baseBranch !== undefined && { baseBranch: branch || null }),
     ...(edit.overrides !== undefined && { overrides: edit.overrides }),
+    ...(approvals?.success && { approvals: approvals.data }),
   };
   projects[at] = p;
   writeProjects(dataDir, projects);
   return { ok: true, value: p };
+}
+
+/** Saves a rule for the project's runs from now on; a rule it already has is not saved twice. */
+export function addApproval(dataDir: string, id: string, rule: ApprovalRule): Result<Project> {
+  const parsed = ApprovalRuleSchema.safeParse(rule);
+  if (!parsed.success) return fail(400, BAD_APPROVAL);
+  const projects = readProjects(dataDir);
+  const at = projects.findIndex((x) => x.id === id);
+  if (at === -1) return fail(404, 'no such project');
+  const have = projects[at].approvals ?? [];
+  if (have.some((r) => JSON.stringify(r) === JSON.stringify(parsed.data))) return { ok: true, value: projects[at] };
+  projects[at] = { ...projects[at], approvals: [...have, parsed.data] };
+  writeProjects(dataDir, projects);
+  return { ok: true, value: projects[at] };
 }
 
 /** Forgets the project; its repo, runs and `.flowboard.yaml` stay where they are. */
@@ -202,6 +239,7 @@ export function removeProject(dataDir: string, id: string): boolean {
   return true;
 }
 
+// Plain git: the scratch repo is one FlowBoard makes here, before any run.
 const git = (cwd: string, ...args: string[]) => spawnSync('git', ['-c', 'user.name=FlowBoard', '-c', 'user.email=flowboard@localhost', ...args], { cwd, encoding: 'utf8' });
 
 /**
@@ -224,7 +262,8 @@ export function seedOnce(dataDir: string, flowsDir: string) {
   };
   for (const [f, text] of Object.entries(files)) writeFileSync(join(repo, f), text);
   if (git(repo, 'init', '-q', '-b', 'main').status !== 0 || git(repo, 'add', '.').status !== 0 || git(repo, 'commit', '-q', '-m', 'Scratch repo for FlowBoard').status !== 0) return;
-  createProject(dataDir, flowsDir, { name: 'Scratch', repoPath: repo, type: 'software' });
+  // FlowBoard wrote this repo itself, so its runs work on this machine, asking before agents' edits and commands.
+  createProject(dataDir, flowsDir, { name: 'Scratch', repoPath: repo, type: 'software', overrides: { trust: 'trusted' } });
 }
 
 /** A project as the projects page shows it: its runs counted by status and what they cost in the last seven days. */
@@ -253,9 +292,10 @@ const startOf = (run: string) => {
  */
 // ponytail: one git status per project per poll of the list; cache by the index's mtime if many repos make it slow
 export function repoProblems(p: Pick<Project, 'repoPath' | 'baseBranch'>): string[] {
-  const out = gitOut(p.repoPath, 'status', '--porcelain=v1', '--branch', '--untracked-files=no', '--', '.', ':(exclude).flowboard');
-  if (out === undefined) return [`${p.repoPath}: git cannot read this repo`];
-  const [head, ...changed] = out.split('\n');
+  const st = hostGit(p.repoPath, p.repoPath, ['status', '--porcelain=v1', '--branch', '--untracked-files=no', '--', '.', ':(exclude).flowboard']);
+  if ('refused' in st) return [st.refused];
+  if (st.status !== 0) return [`${p.repoPath}: git cannot read this repo`];
+  const [head, ...changed] = st.stdout.trim().split('\n');
   const problems: string[] = [];
   const branch = currentBranch(p.repoPath);
   if (head.startsWith('## No commits yet')) problems.push('the repo has no commits yet; commit once so work has something to branch from');

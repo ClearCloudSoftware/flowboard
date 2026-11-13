@@ -10,6 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FlowState } from '@flowboard/core';
 import { runFlow } from '../src/flow-run.ts';
+import { registerProject } from './fixtures/flow.ts';
 
 const live = { skip: !process.env.FLOWBOARD_LIVE, timeout: 300_000 };
 const OPENCODE_MODEL = process.env.FLOWBOARD_OPENCODE_MODEL ?? 'openrouter/deepseek/deepseek-v4.1-flash';
@@ -17,6 +18,7 @@ const OPENCODE_MODEL = process.env.FLOWBOARD_OPENCODE_MODEL ?? 'openrouter/deeps
 test('a flow writes with Claude Code, checks in the shell and judges with OpenCode', live, async () => {
   const base = realpathSync(mkdtempSync(join(tmpdir(), 'fb-flow-live-'))); // macOS's temp folder is a link
   mkdirSync(join(base, 'proj'));
+  registerProject(base, join(base, 'proj'), 'trusted'); // a run needs a project; Trusted runs on this machine
   // The task is every step's preamble, so it states the goal; each step's own prompt says what that step does.
   writeFileSync(join(base, 'task.md'), 'Together, the steps of this flow produce a greeting file holding the single word hello, in lowercase.');
   writeFileSync(join(base, 'write.md'), 'Write the single word hello, in lowercase, into your output file. Nothing else.');
@@ -42,7 +44,7 @@ edges:
 `,
   );
   const out: string[] = [];
-  const code = await runFlow(['--folder', 'proj', '--task', 'task.md', 'flow.yaml'], { cwd: base, print: (l) => out.push(l), printErr: (l) => out.push(l), signals: new EventEmitter() });
+  const code = await runFlow(['--folder', 'proj', '--task', 'task.md', 'flow.yaml'], { cwd: base, dataDir: join(base, 'data'), print: (l) => out.push(l), printErr: (l) => out.push(l), signals: new EventEmitter() });
   assert.equal(code, 0, out.join('\n'));
   const [run] = readdirSync(join(base, 'runs'));
   const state = JSON.parse(readFileSync(join(base, 'runs', run, 'state.json'), 'utf8')) as FlowState;

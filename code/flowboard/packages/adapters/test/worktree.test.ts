@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { worktreeWorkspace } from '../src/workspace/worktree.ts';
@@ -77,4 +77,17 @@ test('bad ids, a plain folder in the way, and a switched branch are refused', as
   const { path } = await ws.create({ id: 't1' });
   git(path, 'switch', '-q', '-c', 'other');
   await assert.rejects(ws.create({ id: 't1' }), /is on other, not fb\/task-t1/);
+});
+
+test("a worktree whose .git a box rewrote is refused, not picked up or cleaned with the box's git dir", async (t) => {
+  const r = repo();
+  t.after(() => rmSync(r, { recursive: true, force: true }));
+  const ws = worktreeWorkspace(r);
+  const { path } = await ws.create({ id: 't1' });
+  git(path, 'init', '-q', '--bare', 'evil');
+  git(path, '--git-dir', 'evil', 'config', 'core.bare', 'false');
+  writeFileSync(join(path, '.git'), 'gitdir: evil\n');
+  const planted = `${join(path, '.git')} was not made by git for ${r}; a sandboxed step may have written it. Remove it and check the repo.`;
+  await assert.rejects(ws.create({ id: 't1' }), { message: planted });
+  await assert.rejects(ws.destroy({ id: 't1' }), /does not point back/); // git's own check
 });

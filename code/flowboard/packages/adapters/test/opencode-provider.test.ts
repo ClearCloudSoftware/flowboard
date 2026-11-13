@@ -1,10 +1,10 @@
-import { after, test } from 'node:test';
+import { after, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ExecHost, NormalizedEvent, RunSpec } from '@flowboard/core';
+import type { ApprovalCall, ExecHost, NormalizedEvent, RunSpec } from '@flowboard/core';
 import { OpencodeProvider } from '../src/agent/opencode/provider.ts';
 import { startServer } from '../src/agent/opencode/server.ts';
 import { hostExecHost } from '../src/exec/host.ts';
@@ -67,6 +67,11 @@ const idle = { type: 'session.idle', properties: { sessionID: '$SESSION' } };
 const asked = (id: string, sessionID: string, permission: string) => ({
   type: 'permission.asked',
   properties: { id, sessionID, permission, patterns: ['*'], metadata: {}, always: [] },
+});
+
+const askedWith = (id: string, permission: string, patterns: string[], metadata: Record<string, unknown> = {}) => ({
+  type: 'permission.asked',
+  properties: { id, sessionID: '$SESSION', permission, patterns, metadata, always: [] },
 });
 
 async function drain(events: AsyncIterable<NormalizedEvent>) {
@@ -371,4 +376,102 @@ test('a sandboxed server whose random port is taken starts again on another', as
   assert.equal(res.exitCode, 0, res.error);
   assert.ok(existsSync(busy), 'the first server never hit the busy port');
   assert.equal(calls.endpoint.length, 1); // only the server that came up is reached
+});
+
+describe('approve', () => {
+  const OWNER_DENIED = { reply: 'reject', message: 'the project owner denied this' };
+  /** Runs `ask` through a provider whose policy allows `git *` and edits; returns what approve saw and what was replied. */
+  async function ask(event: object, approve: (call: ApprovalCall) => Promise<boolean>, extra: Partial<RunSpec> = {}) {
+    const { spec, provider, requests } = setup([event, idle]);
+    const calls: ApprovalCall[] = [];
+    const res = await provider().launch({
+      ...spec,
+      toolPolicy: { allow: ['Bash(git *)', 'Write'] },
+      approve: (c) => (calls.push(c), approve(c)),
+      ...extra,
+    }).result;
+    return { calls, res, cwd: spec.cwd, replies: requests().filter((r) => r.path?.startsWith('/permission/')).map((r) => r.body) };
+  }
+
+  test('asks approve for an allowed bash command', async () => {
+    const yes = await ask(askedWith('per_1', 'bash', ['git status'], { command: 'git status && git log' }), async () => true);
+    assert.deepEqual(yes.calls, [{ kind: 'shell', command: 'git status && git log' }]);
+    assert.deepEqual(yes.replies, [{ reply: 'once' }]);
+    const joined = await ask(askedWith('per_1', 'bash', ['git status', 'git log']), async () => true);
+    assert.deepEqual(joined.calls, [{ kind: 'shell', command: 'git status; git log' }]);
+  });
+
+  test('asks approve for an allowed edit, with its path resolved from the run folder', async () => {
+    const rel = await ask(askedWith('per_1', 'edit', ['src/a.ts']), async () => true);
+    assert.deepEqual(rel.calls, [{ kind: 'edit', tool: 'edit', path: join(rel.cwd, 'src/a.ts') }]);
+    const abs = await ask(askedWith('per_1', 'edit', ['*'], { filepath: '/elsewhere/b.ts' }), async () => true);
+    assert.deepEqual(abs.calls, [{ kind: 'edit', tool: 'edit', path: '/elsewhere/b.ts' }]);
+  });
+
+  test('every path of a multi-file edit is asked', async () => {
+    // apply_patch as OpenCode 1.19.3 sends it: a joined `filepath`, relative patterns, absolute `files`.
+    const patch = askedWith('per_1', 'edit', ['a.ts', 'b.ts'], {
+      filepath: 'a.ts, b.ts',
+      files: [{ filePath: '/repo/a.ts' }, { filePath: '/repo/b.ts' }],
+    });
+    const r = await ask(patch, async (c) => c.kind === 'edit' && c.path === '/repo/a.ts');
+    assert.deepEqual(r.calls, [
+      { kind: 'edit', tool: 'edit', path: '/repo/a.ts' },
+      { kind: 'edit', tool: 'edit', path: '/repo/b.ts' },
+    ]);
+    assert.deepEqual(r.replies, [OWNER_DENIED]);
+    const bad = await ask(askedWith('per_1', 'edit', ['a.ts'], { files: [{ filePath: '/repo/a.ts' }, { filePath: 7 }] }), async () => true);
+    assert.deepEqual(bad.replies, [OWNER_DENIED]);
+  });
+
+  test('a request with no patterns is not policy-allowed, so it is not asked', async () => {
+    const r = await ask(askedWith('per_1', 'bash', [], { command: 'git status' }), async () => true);
+    assert.deepEqual(r.calls, []);
+    assert.deepEqual(r.replies, [{ reply: 'reject', message: 'Not permitted in this headless run.' }]);
+  });
+
+  test('rejects without asking for one the policy does not allow', async () => {
+    const r = await ask(askedWith('per_1', 'bash', ['rm -rf x'], { command: 'rm -rf x' }), async () => true);
+    assert.deepEqual(r.calls, []);
+    assert.deepEqual(r.replies, [{ reply: 'reject', message: 'Not permitted in this headless run.' }]);
+  });
+
+  test('a mode that answers everything still asks the owner first', async () => {
+    const r = await ask(askedWith('per_1', 'bash', ['rm -rf x'], { command: 'rm -rf x' }), async () => false, { permissionMode: 'auto' });
+    assert.equal(r.calls.length, 1);
+    assert.deepEqual(r.replies, [OWNER_DENIED]);
+  });
+
+  test('a denied approval rejects', async () => {
+    const r = await ask(askedWith('per_1', 'bash', ['git push'], { command: 'git push' }), async () => false);
+    assert.deepEqual(r.replies, [OWNER_DENIED]);
+    assert.equal(r.res.error, undefined);
+  });
+
+  test('an approval that cannot be asked rejects, never allows', async () => {
+    const r = await ask(askedWith('per_1', 'bash', ['git push'], { command: 'git push' }), async () => {
+      throw new Error('boom');
+    });
+    assert.deepEqual(r.replies, [{ reply: 'reject', message: "the project owner's approval could not be asked: boom" }]);
+  });
+
+  test('a request without a usable path or command is rejected unasked', async () => {
+    const anyBash = { toolPolicy: { allow: ['Bash', 'Write'] } };
+    for (const ev of [askedWith('per_1', 'edit', [''], { filepath: 7 }), askedWith('per_1', 'bash', [''])]) {
+      const r = await ask(ev, async () => true, anyBash);
+      assert.deepEqual(r.calls, []);
+      assert.deepEqual(r.replies, [OWNER_DENIED]);
+    }
+  });
+
+  test('a pending question does not hold up stop()', { timeout: 10_000 }, async () => {
+    const { spec, provider } = setup([askedWith('per_1', 'bash', ['git status'], { command: 'git status' })]);
+    let asked!: () => void;
+    const seen = new Promise<void>((r) => (asked = r));
+    const run = provider().launch({ ...spec, toolPolicy: { allow: ['Bash(git *)'] }, approve: () => (asked(), new Promise<boolean>(() => {})) });
+    await seen;
+    run.stop();
+    const res = await run.result;
+    assert.equal(res.error, 'stopped');
+  });
 });

@@ -63,7 +63,7 @@ export const setCheckCommand = (folder: string, command: string | undefined) =>
 
 const MEMORY = 'a whole number of MB, 64 or more';
 const CPUS = 'more than 0; 1.5 is a CPU and a half';
-const LimitsSchema = z.strictObject({
+export const LimitsSchema = z.strictObject({
   memoryMb: z.number({ error: MEMORY }).int({ error: MEMORY }).min(64, { error: MEMORY }).optional(),
   cpus: z.number({ error: CPUS }).positive({ error: CPUS }).optional(),
 });
@@ -94,4 +94,22 @@ export function dockerDefaultMemoryMb(docker = 'docker'): number | undefined {
   const r = spawnSync(docker, ['info', '--format', '{{.MemTotal}}'], { encoding: 'utf8', timeout: 10_000 });
   const total = Number(r.stdout?.trim());
   return r.status === 0 && total > 0 ? Math.floor(total / 4 / 2 ** 20) : undefined;
+}
+
+/** Whether Docker has gVisor's `runsc` runtime installed (the Untrusted isolation tier needs it). */
+export function dockerHasGvisor(docker = 'docker'): boolean {
+  const r = spawnSync(docker, ['info', '--format', '{{json .Runtimes}}'], { encoding: 'utf8', timeout: 10_000 });
+  if (r.status !== 0) return false;
+  try {
+    return 'runsc' in JSON.parse(r.stdout);
+  } catch {
+    return false;
+  }
+}
+
+/** Why a step cannot run in `image` yet, or undefined when Docker is up and has the image. */
+export function dockerNotReady(image: string, docker = 'docker'): string | undefined {
+  const run = (...args: string[]) => spawnSync(docker, args, { stdio: 'ignore', timeout: 10_000 }).status === 0;
+  if (run('image', 'inspect', image)) return undefined;
+  return run('info') ? `no image ${image}; build it from code/flowboard: docker build -f docker/Dockerfile -t ${image} .` : 'Docker is not running';
 }

@@ -3,8 +3,9 @@
  * the adapter's answer to each `permission.asked` (OpenCode waits forever on
  * an unanswered one).
  */
-import type { PermissionMode, RunSpec } from '@flowboard/core';
-import type { PermissionRule } from '@opencode-ai/sdk/v2';
+import { resolve } from 'node:path';
+import type { ApprovalCall, PermissionMode, RunSpec } from '@flowboard/core';
+import type { PermissionRequest, PermissionRule } from '@opencode-ai/sdk/v2';
 
 /** Claude tool names (FlowBoard's tool-policy vocabulary) -> OpenCode permission keys. Unknown names are lowercased. */
 export const TOOL_NAMES: Record<string, string> = {
@@ -54,6 +55,12 @@ export function allowsAnyShell(entry: string): boolean {
   return wildcardMatch('bash', permission) && pattern.includes('*') && /^[*?\s]*$/.test(pattern);
 }
 
+/** What OpenCode does with `permission` on `pattern` under `rules`: the last match, `ask` when none matches. */
+export function actionFor(rules: PermissionRule[], permission: string, pattern: string): PermissionRule['action'] {
+  const hit = rules.findLast((r) => wildcardMatch(permission, r.permission) && wildcardMatch(pattern, r.pattern));
+  return hit?.action ?? 'ask';
+}
+
 /** Ordered rules; OpenCode applies the last match. */
 export function toPermissionRules(spec: RunSpec): PermissionRule[] {
   const base: PermissionRule[] =
@@ -75,6 +82,10 @@ export function toPermissionRules(spec: RunSpec): PermissionRule[] {
     // Injected tool servers (ask_user) are always allowed, so no allow list can lock out HITL; an explicit
     // deny still wins, as it does on Claude.
     ...(spec.tools ?? []).map((t): PermissionRule => ({ permission: `${t.name}_*`, pattern: '*', action: 'allow' })),
+    // With an approver, what the policy allows is still asked about (the provider answers it); a deny below still wins.
+    ...(spec.approve
+      ? (['edit', 'bash'] as const).map((permission): PermissionRule => ({ permission, pattern: '*', action: 'ask' }))
+      : []),
     ...(spec.toolPolicy?.deny ?? []).map((e): PermissionRule => ({ ...parse(e), action: 'deny' })),
     // OpenCode's own `question` tool blocks until someone answers it; a headless run asks through ask_user instead.
     // A final deny hides the tool from the model entirely.
@@ -113,4 +124,25 @@ export function replyFor(
 ): { reply: 'once' } | { reply: 'reject'; message: string } {
   const allow = mode === 'bypassPermissions' || mode === 'auto' || (mode === 'acceptEdits' && permission === 'edit');
   return allow ? { reply: 'once' } : { reply: 'reject', message: REJECT_MESSAGE };
+}
+
+/**
+ * What the owner is asked for an `edit` or `bash` request: one call per file, or the command. Files come from
+ * `metadata.files[].filePath` (apply_patch; its `filepath` is a joined string), else the single `metadata.filepath`
+ * (edit, write), else each pattern resolved from `directory`. Empty when anything is unusable, which the caller denies.
+ */
+export function approvalCalls(req: PermissionRequest, directory: string): ApprovalCall[] {
+  const text = (v: unknown): v is string => typeof v === 'string' && v !== '';
+  if (req.permission === 'bash') {
+    const command = text(req.metadata.command) ? req.metadata.command : req.patterns.join('; ');
+    return text(command) ? [{ kind: 'shell', command }] : [];
+  }
+  const { files, filepath } = req.metadata;
+  const paths: unknown[] =
+    Array.isArray(files) && files.length > 0
+      ? files.map((f) => (f as { filePath?: unknown } | null)?.filePath)
+      : req.patterns.length === 1 && text(filepath)
+        ? [filepath]
+        : req.patterns;
+  return paths.every(text) ? paths.map((p) => ({ kind: 'edit', tool: req.permission, path: resolve(directory, p) })) : [];
 }

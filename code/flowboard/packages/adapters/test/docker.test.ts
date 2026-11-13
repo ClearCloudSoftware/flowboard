@@ -24,6 +24,12 @@ test("dockerArgs: ['*'] is the open network; ports are published on loopback onl
   assert.ok(a.includes('-p 127.0.0.1:4096:4096'));
 });
 
+test('dockerArgs: the gvisor tier runs under runsc, the container tier does not', () => {
+  const pair = (a: string[]) => a.some((x, i) => x === '--runtime' && a[i + 1] === 'runsc');
+  assert.ok(pair(dockerArgs({ ...PROFILE, tier: 'gvisor' }, 'sh', [], '/w', [])));
+  assert.ok(!pair(dockerArgs(PROFILE, 'sh', [], '/w', [])));
+});
+
 test('dockerArgs refuses an egress allowlist: there is no proxy to enforce it', () => {
   assert.throws(() => dockerArgs({ ...PROFILE, egressAllow: ['api.anthropic.com'] }, 'sh', [], '/w', []), /egress proxy/);
   assert.throws(() => dockerArgs({ ...PROFILE, image: undefined }, 'sh', [], '/w', []), /no image/);

@@ -15,6 +15,7 @@ import type { ModelRules, RunConfig } from './config.ts';
 import { FREE_WARNING } from './settings.ts';
 import { PROJECT_FILE, projectSettings } from './project.ts';
 import type { Limits } from './project.ts';
+import type { Isolation } from './isolation.ts';
 
 export const OUTCOME_CLOSING =
   'Before you stop, report your verdict with the set_outcome tool: "pass" if the work meets the task, "fail" if it does not, with a one-line reason.';
@@ -28,12 +29,16 @@ export interface ShellStep { kind: 'shell'; command: string; timeoutMinutes: num
  * variables it gets, such as the agents' auth. `opensandbox`: one OpenSandbox box per run holding the folder;
  * only `egress` hosts are reachable, and `credentials` are injected on the way out, never put in the box.
  * `limits` are the project's (`.flowboard.yaml`), set as a run starts and pinned with it; a recipe has none.
+ * `gvisor`: the containers run under gVisor's runsc, as an Untrusted project's do (`isolation.ts`); a recipe sets none.
  */
 export type Sandbox =
-  | { runtime: 'docker'; image: string; env: string[]; limits?: Limits }
+  | { runtime: 'docker'; image: string; env: string[]; limits?: Limits; gvisor?: true }
   | { runtime: 'opensandbox'; image: string; egress: string[]; credentials: string[]; limits?: Limits };
-/** `folder`: the run's; `budgetUsd`: the most the whole flow may spend, 0 for no ceiling. */
-export interface FlowConfig { yamlPath: string; name: string; folder: string; budgetUsd: number; flow: FlowDef; steps: Record<string, AiStep | ShellStep>; warnings: string[]; sandbox?: Sandbox }
+/**
+ * `folder`: the run's; `budgetUsd`: the most the whole flow may spend, 0 for no ceiling; `isolation`: where the run
+ * works, decided by its project as it starts and pinned with it.
+ */
+export interface FlowConfig { yamlPath: string; name: string; folder: string; budgetUsd: number; flow: FlowDef; steps: Record<string, AiStep | ShellStep>; warnings: string[]; sandbox?: Sandbox; isolation?: Isolation }
 export type FlowLoadResult = { ok: true; config: FlowConfig } | { ok: false; errors: string[] };
 /**
  * What one run of a recipe adds, as typed: relative paths resolve against the folder run-flow starts in.
@@ -67,7 +72,7 @@ const StepName = z.string({
 });
 const VAR = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'must be a variable name');
 /** What an agent needs to reach, by adapter: its API host and the credential sent there. */
-const NEEDS = { claude: { host: 'api.anthropic.com', credential: 'CLAUDE_CODE_OAUTH_TOKEN' }, openrouter: { host: 'openrouter.ai', credential: 'OPENROUTER_API_KEY' } };
+export const NEEDS = { claude: { host: 'api.anthropic.com', credential: 'CLAUDE_CODE_OAUTH_TOKEN' }, openrouter: { host: 'openrouter.ai', credential: 'OPENROUTER_API_KEY' } };
 const RECIPE = 'not in a flow file: a flow is a reusable recipe, and each run gives its';
 const FlowSchema = z.strictObject({
   budget_usd: z.number({ error: 'must be a number of dollars' }).min(0, { error: 'must be 0 or more; 0 means no ceiling' }),
@@ -259,11 +264,8 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
     const known = Object.values(NEEDS).map((n) => n.credential);
     const unknown = (y.sandbox.credentials ?? []).findIndex((c) => !known.includes(c));
     if (unknown !== -1) return fail([`sandbox.credentials.${unknown}: OpenSandbox injects only ${known.join(' and ')}`]);
-    const needs = Object.values(steps).flatMap((st) =>
-      st.kind !== 'ai' ? [] : st.run.adapter === 'claude-code' ? [NEEDS.claude] : st.run.spec.model.startsWith('openrouter/') ? [NEEDS.openrouter] : [],
-    );
-    const uniq = (xs: string[]) => [...new Set(xs)];
-    sandbox = { runtime: 'opensandbox', image: y.sandbox.image, egress: y.sandbox.egress ?? uniq(needs.map((n) => n.host)), credentials: y.sandbox.credentials ?? uniq(needs.map((n) => n.credential)) };
+    const needs = agentNeeds(steps);
+    sandbox = { runtime: 'opensandbox', image: y.sandbox.image, egress: y.sandbox.egress ?? needs.map((n) => n.host), credentials: y.sandbox.credentials ?? needs.map((n) => n.credential) };
     warnings.push("sandbox: agents' edits stay in the sandbox; the run ends with changes.patch to review");
   } else if (y.sandbox) {
     for (const key of ['egress', 'credentials'] as const) if (y.sandbox[key]) return fail([`sandbox.${key}: only for runtime opensandbox`]);
@@ -273,6 +275,15 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
   }
   return { ok: true, config: { yamlPath: read.abs, name: basename(read.abs, extname(read.abs)), folder, budgetUsd, flow, steps, warnings, ...(sandbox && { sandbox }) } };
 }
+
+/** What the flow's agents need to reach, each once: an agent on neither Claude nor OpenRouter (a local model) needs nothing. */
+export const agentNeeds = (steps: FlowConfig['steps']) => [
+  ...new Set(
+    Object.values(steps).flatMap((st) =>
+      st.kind !== 'ai' ? [] : st.run.adapter === 'claude-code' ? [NEEDS.claude] : st.run.spec.model.startsWith('openrouter/') ? [NEEDS.openrouter] : [],
+    ),
+  ),
+];
 
 /** Rework routes are dotted and marked ↺. */
 export function toMermaid(flow: FlowDef): string {
