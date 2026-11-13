@@ -7,58 +7,43 @@ module: Projects
 
 A project's **Isolation** setting (Trusted, Normal or Untrusted) now decides where every run of that project works. Before this branch, run-flow ignored it: only a flow's own `sandbox:` key boxed anything, and no shipped flow had one, so every run worked on your machine.
 
-This note is the state of branch `feature/isolation-enforcement` (cut from `dev` at `f89a54f`, head `2310793`) on 2026-11-13. The branch is not merged or pushed. It records:
+This note is the state of branch `feature/isolation-enforcement` (cut from `dev` at `f89a54f`, head `ae80d05`) on 2026-11-13. The branch is not merged or pushed. It records:
 
-- [[#Open critical issue]]: a way out of the box that is still open.
+- [[#Fixed: the .git escape]]: the last way out of the box, now closed.
 - [[#What happens when a run starts]].
 - [[#Rulings made on your behalf]]: every decision taken while building, with what it costs if wrong.
 - [[#Deferred findings]].
 
 The design and the code-level details are in [[Repository Trust And Sandboxing#Built]]. The plan is `docs/superpowers/plans/2026-11-13-isolation-enforcement.md`.
 
-## Open critical issue
+## Fixed: the .git escape
 
-**A boxed agent can still get code run on your machine through git config.** It needs a Normal or Untrusted run that works in a task workspace or a subfolder of the repo.
+**A boxed agent could get code run on your machine through git config. That is fixed.**
 
-### How it works
+### What it was
 
-Git reads its settings from whatever `.git` it finds in the working folder, and two settings run commands:
+Git reads its settings from whatever `.git` it finds from its working folder, and some of them run commands: `core.fsmonitor` on `git status`, clean filters, hooks, `diff.external`. A Docker box mounts the run's folder read-write, so it could:
 
-- `core.fsmonitor` runs on `git status`.
-- `core.hooksPath`, or a file in `.git/hooks/`, runs on checkout, rebase and commit.
+- rewrite a task workspace's `.git` file to point at a git dir it wrote,
+- create `<subfolder>/.git`, which git finds before the repo's,
+- from the repo root, rewrite *other* workspaces' `.git` files under `.flowboard/worktrees/`,
+- replace a submodule's `.git`, which `git status` recurses into.
 
-A Docker box mounts the run's folder read-write. Anything the agent writes to a `.git` inside that folder is waiting for the next git call **on your machine**, outside the box. Under Untrusted, gVisor does not help, because the command runs outside it.
+FlowBoard's next git call **on your machine** (the dirty check, the Workspaces page, landing, the Projects page, the run page's diff) then ran the box's command outside the box. The reviewer reproduced the first two.
 
-FlowBoard runs git on your machine in these places:
+### How it is fixed
 
-- The dirty-tree check when a run starts (`flow-run.ts`).
-- `git status` for every task on the Workspaces page (`workspace-git.ts`).
-- The rebase when you land a workspace (`workspace-git.ts`).
-- `git status` for the repo problems on the Projects page (`projects.ts`).
+Every git call FlowBoard makes in a project's repo goes through `hostGit` (`packages/adapters/src/workspace/host-git.ts`):
 
-### What is fixed
+- **The repo is the project's.** Its top folder comes from the registered project, never from git run in the folder.
+- **The git dir is found without running git.** Walking up from the folder, the first `.git` must be the repo's own (`<repo>/.git`, read-only in a box) or a worktree's `.git` file pointing into `<repo>/.git/worktrees/<name>`, whose own `gitdir` file, written by git, points back to it. Anything else is refused: *"`<path>/.git` was not made by git for `<repo>`; a sandboxed step may have written it. Remove it and check the repo."*
+- **Git is told which.** It runs with `GIT_DIR` and `GIT_WORK_TREE` set, so it never discovers a `.git`, with `core.fsmonitor` off and submodules ignored.
 
-When a run works in the repo root, the repo's git dir is mounted read-only over the writable folder. The box cannot change `<repo>/.git`.
+A run whose folder holds a planted `.git` is refused before anything runs, `--allow-dirty` or not. A workspace whose `.git` was rewritten shows as broken on the Workspaces page, with `git -C <repo> worktree repair <path>` as the fix. The run page shows the refusal instead of a diff.
 
-### What is still open
+A `-c` blocklist was not enough: a git dir the box controls controls all of git's config.
 
-The reviewer reproduced the first two cases on this machine.
-
-| Run works in | What the box can do | What runs it on your machine |
-|---|---|---|
-| A task workspace (`--workspace`, `<repo>/.flowboard/worktrees/task-*`) | Rewrite the workspace's `.git` *file* to point at a git dir it wrote, with `core.fsmonitor` set | The Workspaces page's `git status`, the landing rebase, the dirty check when the workspace is picked up again |
-| A subfolder of the repo | Create `<subfolder>/.git` with hostile settings; git finds it before the repo's | The dirty check on the next run in that subfolder |
-| The repo root | Rewrite *other* task workspaces' `.git` files, which sit under the writable `.flowboard/worktrees/` | The Workspaces page and landing for those workspaces |
-
-A repo with submodules has the same problem: a box can replace a submodule's `.git`, and `git status` on your machine recurses into it.
-
-### Is it a regression?
-
-No. On `dev`, these steps ran on your machine with no box at all. But this branch presents Normal and Untrusted as walls, and the Untrusted text says "a stronger wall for code nobody has reviewed". That is not fully true until this is fixed.
-
-### Suggested fix
-
-Make every git call FlowBoard runs on your machine, in a run folder or workspace, ignore box-writable settings. Do this either with `git -c core.fsmonitor= -c core.hooksPath=/dev/null …`, or by passing an explicit `--git-dir` resolved before any box ran. This one change covers all three cases, plus submodules. As extra layers, a root box could also mount `.flowboard/worktrees/` read-only, and a workspace box its own `.git` file read-only.
+**What it costs.** A repo whose `<repo>/.git` is a file (a separate git dir, or a worktree registered as a project) is refused. So is a nested repo below a project's root that is not registered as its own project.
 
 ## What happens when a run starts
 
@@ -102,7 +87,7 @@ For a Docker box, run-flow checks, in order:
 
    OpenRouter steps need `OPENROUTER_API_KEY` in the same way.
 
-The repo's git dir is mounted read-only in the box (see [[#Open critical issue]] for what that does not cover).
+The repo's git dir is mounted read-only in the box, and FlowBoard's own git calls use only it (see [[#Fixed: the .git escape]]).
 
 ### 4. Check someone can answer
 
