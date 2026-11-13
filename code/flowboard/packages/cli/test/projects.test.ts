@@ -377,3 +377,19 @@ test("a project's analysis is on its view, read by the reader it is given; none 
   const analysed = { ...proj, analysis: { run: '2026-11-13T10-00-00-repo-analyst' } };
   assert.deepEqual(viewProjects([analysed], [], lib, APP_DEFAULTS, Date.now(), read)[0].analysed, { run: '2026-11-13T10-00-00-repo-analyst', status: 'running', spentUsd: 0 });
 });
+
+test("network hosts: saved sorted and once each on the record; anything but a host name is refused; an invalid .flowboard.yaml refuses a check command", () => {
+  const r = repo();
+  const data = temp();
+  const lib = flows();
+  const proj = value(createProject(data, lib, { name: 'p', repoPath: r, type: 'software' }));
+  assert.deepEqual(value(updateProject(data, lib, proj.id, { networkHosts: ['pypi.org', 'registry.npmjs.org', 'pypi.org'] })).networkHosts, ['pypi.org', 'registry.npmjs.org']);
+  assert.deepEqual(readProjects(data)[0].networkHosts, ['pypi.org', 'registry.npmjs.org']);
+  for (const bad of ['evil.com/x', 'evil.com:8080', 'https://pypi.org'])
+    assert.deepEqual(updateProject(data, lib, proj.id, { networkHosts: [bad] }), { ok: false, status: 400, error: `network hosts: ${bad} is not a host name` });
+  assert.equal(updateProject(data, lib, proj.id, { networkHosts: Array.from({ length: 21 }, (_, i) => `h${i}.example.com`) }).ok, false);
+  writeFileSync(join(r, '.flowboard.yaml'), 'sandbox: [nope\n');
+  const set = updateProject(data, lib, proj.id, { checkCommand: 'node --test' });
+  assert.equal(set.ok, false);
+  assert.match((set as { error: string }).error, /\.flowboard\.yaml/);
+});

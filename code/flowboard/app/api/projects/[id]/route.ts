@@ -16,6 +16,7 @@ const Edit = z.object({
   baseBranch: z.string().nullable().optional(),
   overrides: z.record(z.string(), z.unknown()).optional(),
   approvals: z.array(z.unknown()).optional(),
+  networkHosts: z.array(z.string()).optional(),
   limits: z.object({ memoryMb: z.number().optional(), cpus: z.number().optional() }).optional(),
 });
 
@@ -28,7 +29,7 @@ export async function PATCH(request: Request, { params }: Params) {
   const no = refused(request);
   if (no) return no;
   const input = Edit.safeParse(await body(request));
-  if (!input.success) return Response.json({ error: 'send { name?, defaultFlow?, checkCommand?, baseBranch?, overrides?, limits?, approvals? }' }, { status: 400 });
+  if (!input.success) return Response.json({ error: 'send { name?, defaultFlow?, checkCommand?, baseBranch?, overrides?, limits?, approvals?, networkHosts? }' }, { status: 400 });
   const r = updateProject(dataDir(), flowsDir(), id, { ...input.data, overrides: input.data.overrides as Overrides | undefined, approvals: input.data.approvals as ApprovalRule[] | undefined });
   return r.ok ? Response.json(r.value) : Response.json({ error: r.error }, { status: r.status });
 }

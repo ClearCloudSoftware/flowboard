@@ -369,7 +369,7 @@ function isolate(project: Project, flowSandbox: Sandbox | undefined, steps: Flow
   const trust = resolveSettings(readAppSettings(dataDir), project.type, project.overrides).trust.value;
   const docker = deps.docker ?? { gvisor: () => dockerHasGvisor(), notReady: (image: string) => dockerNotReady(image) };
   const needs = agentNeeds(steps).map((n) => n.credential);
-  const r = isolationFor(trust, flowSandbox, needs, trust === 'untrusted' && docker.gvisor());
+  const r = isolationFor(trust, flowSandbox, needs, trust === 'untrusted' && docker.gvisor(), project.networkHosts ?? []);
   if ('refused' in r) return { refused: [r.refused] };
   if (r.sandbox?.runtime === 'docker') {
     const why = docker.notReady(r.sandbox.image);

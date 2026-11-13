@@ -5,6 +5,7 @@
  * `analysis-run.ts` reads it from a run.
  */
 import { z } from 'zod';
+import type { ProjectView } from './projects.ts';
 
 export type Level = 'high' | 'medium' | 'low';
 export interface ProposedHost { host: string; evidence: string[]; custom: boolean }
@@ -71,5 +72,15 @@ export function parseProposal(text: string): { ok: true; proposal: Proposal } | 
       confidence: { stack: p.stack.confidence, checkCommand: p.check_command.confidence, networkHosts: p.network_hosts.confidence },
       notes: p.notes.slice(0, 1000),
     },
+  };
+}
+
+/** Each proposal the project already holds: its check command equal, every proposed host in its list. */
+export function analysisAccepted(p: Pick<ProjectView, 'checkCommand' | 'networkHosts' | 'analysed'>): { checkCommand: boolean; networkHosts: boolean } {
+  const proposal = p.analysed?.proposal;
+  const hosts = new Set(p.networkHosts ?? []);
+  return {
+    checkCommand: !!proposal?.checkCommand && proposal.checkCommand === p.checkCommand,
+    networkHosts: !!proposal?.networkHosts?.length && proposal.networkHosts.every((h) => hosts.has(h.host)),
   };
 }

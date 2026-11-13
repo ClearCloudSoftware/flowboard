@@ -57,11 +57,16 @@ export function isolationFor(
   flow: Sandbox | undefined,
   needs: string[],
   gvisor: boolean,
+  hosts: string[] = [],
 ): { sandbox?: Sandbox; tier: Isolation['tier']; approvals: boolean } | { refused: string } {
   // A runtime neither of these is no box at all: the run's steps would work on this machine.
   const runtime: string | undefined = flow?.runtime;
   if (runtime !== undefined && runtime !== 'docker' && runtime !== 'opensandbox') return { refused: `sandbox: no runtime ${runtime}; a run works in docker or opensandbox` };
-  const own = (sb: Sandbox) => ({ sandbox: sb, tier: sb.runtime === 'docker' ? ('container' as const) : ('opensandbox' as const), approvals: false });
+  // The project's own hosts (the repo analyst's, accepted) join an OpenSandbox box's egress; a docker box is online.
+  const own = (sb: Sandbox) =>
+    sb.runtime === 'docker'
+      ? { sandbox: sb, tier: 'container' as const, approvals: false }
+      : { sandbox: hosts.length ? { ...sb, egress: [...new Set([...sb.egress, ...hosts])] } : sb, tier: 'opensandbox' as const, approvals: false };
   const box: Sandbox = { runtime: 'docker', image: IMAGE, env: needs };
   if (trust === 'trusted') return flow ? own(flow) : { tier: 'host', approvals: true };
   if (trust === 'normal') return own(flow ?? box);

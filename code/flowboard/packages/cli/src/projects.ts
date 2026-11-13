@@ -17,7 +17,7 @@ import { budgetState, monthName, monthOf } from './budget.ts';
 import { isDir, isFile, writeJsonFile } from './config.ts';
 import { FLOW_NAME } from './flow-files.ts';
 import { projectSlug } from './slug.ts';
-import type { AnalysisView } from './analysis.ts';
+import { type AnalysisView, HOST, MAX_HOSTS } from './analysis.ts';
 import type { RunStatus, RunSummary } from './flow-logs.ts';
 import { type Limits, PROJECT_FILE, projectSettings, setCheckCommand, setLimits } from './project.ts';
 import { type AppSettings, type Overrides, OverridesSchema, PROJECT_TYPES, type ProjectTypeId, type Resolved, resolveSettings } from './settings.ts';
@@ -194,7 +194,7 @@ export function createProject(dataDir: string, flowsDir: string, input: NewProje
 }
 
 /** `overrides` replaces the project's whole set; `limits` replaces the repo's (an empty one removes them); `approvals` replaces the list. */
-export interface ProjectEdit { name?: string; defaultFlow?: string | null; checkCommand?: string | null; baseBranch?: string | null; overrides?: Overrides; limits?: Limits; approvals?: ApprovalRule[] }
+export interface ProjectEdit { name?: string; defaultFlow?: string | null; checkCommand?: string | null; baseBranch?: string | null; overrides?: Overrides; limits?: Limits; approvals?: ApprovalRule[]; networkHosts?: string[] }
 
 /**
  * Renames, moves the default flow, sets the check command (null or empty removes it), the base branch (a branch of
@@ -212,6 +212,11 @@ export function updateProject(dataDir: string, flowsDir: string, id: string, edi
   if (badOverrides) return badOverrides;
   const approvals = edit.approvals !== undefined ? z.array(ApprovalRuleSchema).safeParse(edit.approvals) : undefined;
   if (approvals && !approvals.success) return fail(400, BAD_APPROVAL);
+  if (edit.networkHosts !== undefined) {
+    const bad = edit.networkHosts.find((h) => !HOST.test(h));
+    if (bad !== undefined) return fail(400, `network hosts: ${bad} is not a host name`);
+    if (new Set(edit.networkHosts).size > MAX_HOSTS) return fail(400, `network hosts: at most ${MAX_HOSTS}`);
+  }
   const branch = edit.baseBranch?.trim();
   if (branch && gitOut(projects[at].repoPath, 'rev-parse', '--verify', '-q', `refs/heads/${branch}`) === undefined && branch !== currentBranch(projects[at].repoPath)) {
     return fail(400, `${projects[at].repoPath} has no branch ${branch}`);
@@ -231,6 +236,7 @@ export function updateProject(dataDir: string, flowsDir: string, id: string, edi
     ...(edit.baseBranch !== undefined && { baseBranch: branch || null }),
     ...(edit.overrides !== undefined && { overrides: edit.overrides }),
     ...(approvals?.success && { approvals: approvals.data }),
+    ...(edit.networkHosts !== undefined && { networkHosts: [...new Set(edit.networkHosts)].sort() }),
   };
   projects[at] = p;
   writeProjects(dataDir, projects);

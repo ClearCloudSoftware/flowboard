@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseProposal } from '../src/analysis.ts';
+import { analysisAccepted, parseProposal } from '../src/analysis.ts';
 import { spawnSync } from 'node:child_process';
 import { ANALYST_TASK, analysisView, startAnalysis } from '../src/analysis-run.ts';
 import type { startRun } from '../src/flow-start.ts';
-import { createProject, readProjects } from '../src/projects.ts';
+import { createProject, type ProjectView, readProjects } from '../src/projects.ts';
 import { loadFlow } from '../src/flow-config.ts';
 import { internalFlowText } from '../src/internal-steps.ts';
 import { APP_DEFAULTS } from '../src/settings.ts';
@@ -134,4 +134,13 @@ test('starting an analysis: the flow is written with the app’s settings, run-f
   const no: typeof startRun = async () => ({ ok: false, error: 'flow.yaml: --folder: another run-flow (pid 1) is running here' });
   assert.deepEqual(await startAnalysis(data, runs, { ...made.value, analysis: undefined }, no), { ok: false, error: 'flow.yaml: --folder: another run-flow (pid 1) is running here' });
   assert.deepEqual(readProjects(data)[0].analysis, { run: '2026-11-13T10-00-00-repo-analyst' });
+});
+
+test('a proposal is accepted once the project holds it: the same check command, every host in its list', () => {
+  const p = parseProposal(JSON.stringify(EXAMPLE));
+  assert.ok(p.ok);
+  const view = (checkCommand: string | null, networkHosts?: string[]) => ({ checkCommand, networkHosts, analysed: { run: 'r', status: 'done' as const, spentUsd: 0, proposal: p.proposal } }) as unknown as ProjectView;
+  assert.deepEqual(analysisAccepted(view(null)), { checkCommand: false, networkHosts: false });
+  assert.deepEqual(analysisAccepted(view('pnpm lint && pnpm test', ['npm.internal.example.com', 'pypi.org', 'registry.npmjs.org'])), { checkCommand: true, networkHosts: true });
+  assert.deepEqual(analysisAccepted(view('pnpm test', ['registry.npmjs.org'])), { checkCommand: false, networkHosts: false });
 });
