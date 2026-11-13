@@ -7,7 +7,7 @@ module: Projects
 
 A project's **Isolation** setting (Trusted, Normal or Untrusted) now decides where every run of that project works. Before this branch, run-flow ignored it: only a flow's own `sandbox:` key boxed anything, and no shipped flow had one, so every run worked on your machine.
 
-This note is the state of branch `feature/isolation-enforcement` (cut from `dev` at `f89a54f`, head `c6906d3`) on 2026-11-13. The branch is not merged or pushed. It records:
+This note is the state of branch `feature/isolation-enforcement` (cut from `dev` at `f89a54f`, head `3135cb8`) on 2026-11-13. The branch is not merged or pushed. It records:
 
 - [[#Fixed: the .git escape]]: FlowBoard's own git calls no longer run config a box wrote; what that does not cover.
 - [[#What happens when a run starts]].
@@ -177,6 +177,12 @@ These are the decisions taken while building, in the order they were made. They 
 | 21 | The sample Scratch project is seeded as Trusted, for new installs only | FlowBoard writes that repo itself, and a fresh install's first run would need Docker, the image and a token | A fresh install's sample runs ask before edits instead of running boxed |
 | 22 | Small fixes before merge: `git` or a package manager followed by a flag saves no rule; the package-manager check ignores case; the flow designer no longer says "the flow has no sandbox" | A bare `git` or `npm` rule allowed `git -c core.fsmonitor=…` or `npm install` | None |
 | 23 | A test-only hook `RunDeps.canAsk`; the no-one-to-answer refusal applies only to flows with agent steps; Ctrl+C at a question isn't logged as "no one could be asked" | Shell steps never ask, and Ctrl+C is your own choice | None |
+| 24 | The `.git` escape is fixed by never letting FlowBoard's git use a git dir outside the repo's real one, found without running git, instead of a `-c` blocklist | A git dir the box controls controls all of git's config | A repo whose `<repo>/.git` is a file or a link is refused |
+| 25 | `git status` and `git diff` get `--ignore-submodules=all` on the command line | A box-written `.gitmodules` overrode the config default and sent git into a replaced submodule | Workspaces branch diffs don't show submodule pointer changes |
+| 26 | Also refused: a symlinked `<repo>/.git`, a folder inside the git dir, and registering a repo inside another project's repo; the OpenSandbox `git archive` goes through the same check | Each was a way to the same escape | An honest nested repo can't be registered as its own project |
+| 27 | The docs claim only that FlowBoard's own git calls are safe; a scan after each run for planted `.git` entries is a follow-up, not built | A `.git` a box left on disk still works for your own git | None |
+| 28 | A squash land compares the staged tree with HEAD before committing, rather than `git diff --cached --quiet` | A commit with nothing staged prints a status that enters submodules; the diff would miss a submodule-only change | None |
+| 29 | Registration checks git's answer: the folder must be inside the toplevel git names, and the git dir must be `<top>/.git`, compared in on-disk letter case | A planted `.git` with `core.worktree` could steer registration to another repo | None |
 
 ## Deferred findings
 
@@ -187,6 +193,8 @@ These are lower priority, kept for later. The full list is in the ledger.
 - **Resume of a gone OpenSandbox box** from the page still fails silently.
 - **`projects.json` locking.** Both the app and run-flow write it with no lock, so a rare simultaneous write could be lost.
 - **Containerised run-flow.** run-flow started from the Docker image now needs `FLOWBOARD_DATA_DIR`.
+- **Letter case in `--folder`.** On macOS, a `--folder` typed in a different case than on disk finds no project and is refused. The app always passes exact paths.
+- **Cloning into a registered repo.** The wizard clones first and only then refuses a parent folder inside a registered project's repo, leaving the clone on disk.
 
 ## Related
 
