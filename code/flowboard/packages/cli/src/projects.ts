@@ -13,6 +13,7 @@ import { isAbsolute, join, sep } from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
 import { type ApprovalRule, ApprovalRuleSchema } from './approvals.ts';
+import { budgetState, monthName, monthOf } from './budget.ts';
 import { isDir, isFile, writeJsonFile } from './config.ts';
 import { FLOW_NAME } from './flow-files.ts';
 import { projectSlug } from './slug.ts';
@@ -81,7 +82,14 @@ export function repoRoot(path: string): Result<string> {
 }
 
 /** True when the run's folder is the project's repo or a folder inside it. */
-export const owns = (p: Project, folder: string) => folder === p.repoPath || folder.startsWith(p.repoPath + sep);
+export const owns = (p: Pick<Project, 'repoPath'>, folder: string) => folder === p.repoPath || folder.startsWith(p.repoPath + sep);
+
+/**
+ * The project of `realFolder` among `projects`: the innermost whose repo holds it, so a repo inside another project's
+ * is its own project and the outer one's settings never apply to it.
+ */
+export const ownerOf = <P extends Pick<Project, 'repoPath'>>(projects: P[], realFolder: string) =>
+  projects.filter((p) => owns(p, realFolder)).reduce<P | undefined>((best, p) => (best && best.repoPath.length >= p.repoPath.length ? best : p), undefined);
 
 const flowCheck = (flowsDir: string, flow: string | null | undefined) =>
   flow && (!FLOW_NAME.test(flow) || !isFile(join(flowsDir, `${flow}.yaml`))) ? `no flow "${flow}" in the library` : undefined;
@@ -277,14 +285,34 @@ export interface ProjectView extends Project {
   problems: string[];
   runs: Partial<Record<RunStatus, number>>;
   weekSpendUsd: number;
+  /** What its runs started this calendar month have spent, against its monthly cap (`budget.ts`). */
+  monthSpendUsd: number;
 }
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 /** A run folder's name starts with its local start time, `2026-11-12T13-32-04`. */
-const startOf = (run: string) => {
+export const startOf = (run: string) => {
   const m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d)-(\d\d)-(\d\d)/.exec(run);
   return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : NaN;
 };
+
+const realOr = (path: string) => {
+  try {
+    return realpathSync(path);
+  } catch {
+    return path; // gone: the path as the run recorded it
+  }
+};
+
+/**
+ * What the project `projectId`'s runs that started in `month` (`'2026-11'`, `budget.ts`) have spent, the run named
+ * `except` left out. A run counts toward the innermost project holding its folder (`ownerOf`).
+ */
+export function projectSpendUsd(runs: RunSummary[], projects: Pick<Project, 'id' | 'repoPath'>[], projectId: string, month: string, except?: string): number {
+  return runs
+    .filter((r) => r.name !== except && monthOf(startOf(r.name)) === month && ownerOf(projects, realOr(r.folder))?.id === projectId)
+    .reduce((n, r) => n + r.spentUsd, 0);
+}
 
 /**
  * What in the repo's checkout stops or misleads a run: run-flow refuses uncommitted changes, a worktree needs a commit
@@ -322,6 +350,13 @@ export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: 
     const counts: ProjectView['runs'] = {};
     for (const r of mine) counts[r.status] = (counts[r.status] ?? 0) + 1;
     const weekSpendUsd = mine.filter((r) => now - startOf(r.name) < WEEK_MS).reduce((n, r) => n + r.spentUsd, 0);
+    const month = monthOf(now);
+    const monthSpendUsd = projectSpendUsd(runs, projects, p.id, month);
+    const resolved = resolveSettings(app, p.type, p.overrides);
+    const cap = resolved.budget.value;
+    const b = budgetState(cap, monthSpendUsd);
+    const of = `its $${cap.capUsd?.toFixed(2)} for ${monthName(month)}`;
+    const budget = b.over ? [`spent $${monthSpendUsd.toFixed(2)} of ${of}; new runs ${cap.onLimit === 'ask' ? 'ask first' : 'are paused'}`] : b.alert ? [`spent ${b.pct}% of ${of}`] : [];
     const settings = isDir(p.repoPath) ? projectSettings(p.repoPath) : { ok: false as const, errors: [`${p.repoPath}: the repo is gone; it moved or was deleted`] };
     const checkCommand = settings.ok ? (settings.settings.checkCommand ?? null) : null;
     // Projects OQ 6: a default flow that needs the check command, in a repo that sets none, is said here, before a run.
@@ -334,10 +369,11 @@ export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: 
       baseBranch: p.baseBranch ?? null, // a record from before base branches has none
       checkCommand,
       limits: settings.ok ? settings.settings.limits : {},
-      settings: resolveSettings(app, p.type, p.overrides),
-      problems: [...(settings.ok ? [] : settings.errors), ...problems, ...(isDir(p.repoPath) ? repoProblems(p) : [])],
+      settings: resolved,
+      problems: [...(settings.ok ? [] : settings.errors), ...problems, ...budget, ...(isDir(p.repoPath) ? repoProblems(p) : [])],
       runs: counts,
       weekSpendUsd,
+      monthSpendUsd,
     };
   });
 }

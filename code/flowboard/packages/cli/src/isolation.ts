@@ -6,7 +6,7 @@ import { realpathSync } from 'node:fs';
 import { z } from 'zod';
 import type { Sandbox } from './flow-config.ts';
 import { LimitsSchema } from './project.ts';
-import { owns, readProjects } from './projects.ts';
+import { ownerOf, readProjects } from './projects.ts';
 import type { Project } from './projects.ts';
 import type { Trust } from './settings.ts';
 
@@ -45,9 +45,7 @@ export function findProject(dataDir: string, folder: string): Project | undefine
   } catch {
     return undefined; // gone
   }
-  return readProjects(dataDir)
-    .filter((p) => owns(p, real))
-    .reduce<Project | undefined>((best, p) => (best && best.repoPath.length >= p.repoPath.length ? best : p), undefined);
+  return ownerOf(readProjects(dataDir), real);
 }
 
 /**

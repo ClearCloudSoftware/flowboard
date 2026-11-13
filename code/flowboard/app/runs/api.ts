@@ -28,10 +28,12 @@ export const artifactQuery = (run: string, type: string) =>
 const post = (url: string, body: unknown = {}) => call<{ ok: true }>(url, { method: 'POST', body: JSON.stringify(body) });
 export const answerRun = (run: string, id: string, answers: Record<string, unknown>) => post(`${at(run)}/answer`, { id, answers });
 export const stopRun = (run: string) => post(`${at(run)}/stop`);
-export const resumeRun = (run: string, budgetUsd?: number) => post(`${at(run)}/resume`, budgetUsd === undefined ? {} : { budgetUsd });
+/** `overProjectBudget`: past an *ask me first* project's monthly cap, after the page asked. */
+export const resumeRun = (run: string, budgetUsd?: number, overProjectBudget?: boolean) =>
+  post(`${at(run)}/resume`, { ...(budgetUsd !== undefined && { budgetUsd }), ...(overProjectBudget && { overProjectBudget }) });
 
 export const builtQuery = (run: string) =>
   queryOptions({ queryKey: ['built', run], queryFn: () => call<{ from: 'patch' | 'folder' | 'none'; text: string; cut: boolean }>(`${at(run)}/built`) });
 
-export const startRun = (input: { flow: string; folder: string; task: string; budgetUsd?: number; allowDirty?: boolean }) =>
+export const startRun = (input: { flow: string; folder: string; task: string; budgetUsd?: number; allowDirty?: boolean; workspace?: string; overProjectBudget?: boolean }) =>
   call<{ name: string }>('/api/runs', { method: 'POST', body: JSON.stringify(input) });

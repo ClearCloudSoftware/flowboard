@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { monthOf } from '../src/budget.ts';
 import { resumeRun, startRun } from '../src/flow-start.ts';
 import { registerProject } from './fixtures/flow.ts';
 
@@ -54,4 +55,24 @@ test('a resume run-flow refuses comes back with what it said this time, and the 
   const r = await resumeRun(run, p.data);
   assert.deepEqual(r, { ok: false, error: `${run}: cannot resume: no state.json` });
   assert.match(readFileSync(join(run, 'resume.log'), 'utf8'), /^-- resuming an earlier time\n.*cannot resume: no state.json/s);
+});
+
+test('ask me first: a start run-flow refuses for the cap says the page may ask, and overProjectBudget sends the flag', { timeout: 60_000 }, async () => {
+  const p = project();
+  const path = join(p.data, 'projects.json');
+  const [rec] = JSON.parse(readFileSync(path, 'utf8'));
+  rec.overrides.budget = { capUsd: 1, alertAt: 80, onLimit: 'ask' };
+  writeFileSync(path, JSON.stringify([rec]));
+  const spent = join(p.runs, `${monthOf(Date.now())}-01T00-00-01-other`);
+  mkdirSync(spent, { recursive: true });
+  writeFileSync(join(spent, 'flow.json'), JSON.stringify({ version: 1, config: { name: 'other', folder: realpathSync(p.folder) } }));
+  writeFileSync(join(spent, 'state.json'), JSON.stringify({ status: 'done', runs: [{ costUsd: 2 }] }));
+  const r = await startRun(p.runs, p.flows, { flow: 'quick', folder: p.folder, task: 'do it' }, p.data);
+  assert.equal(r.ok, false);
+  assert.equal((r as { askOver?: true }).askOver, true, JSON.stringify(r));
+  const again = await startRun(p.runs, p.flows, { flow: 'quick', folder: p.folder, task: 'do it', overProjectBudget: true }, p.data);
+  assert.ok(again.ok, JSON.stringify(again));
+  // a refusal for anything else does not ask
+  const other = await startRun(p.runs, p.flows, { flow: 'quick', folder: join(p.base, 'nope'), task: 'do it' }, p.data);
+  assert.equal((other as { askOver?: true }).askOver, undefined);
 });

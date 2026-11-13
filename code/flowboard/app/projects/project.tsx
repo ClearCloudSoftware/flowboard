@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { libraryQuery } from '../flows/api.ts';
 import { LIVE, runsQuery } from '../runs/api.ts';
 import type { RunStatus } from '../runs/api.ts';
+import { budgetState } from '../../packages/cli/src/budget.ts';
 import { PROJECT_TYPES, resolveSettings, ruleText } from '../../packages/cli/src/settings.ts';
 import { appSettingsQuery, inProject, newRunHref, projectsQuery, removeProject, updateProject, usd } from './api.ts';
 import type { ProjectView } from './api.ts';
@@ -325,6 +326,14 @@ export function ProjectPage() {
                 {p.defaultFlow ? `starts on ${p.defaultFlow}` : 'no default flow'}
                 <span className="px-[0.45em] text-input">·</span>
                 {usd(p.weekSpendUsd)} in the last 7 days
+                {p.settings.budget.value.capUsd && (
+                  <>
+                    <span className="px-[0.45em] text-input">·</span>
+                    <span className={budgetState(p.settings.budget.value, p.monthSpendUsd).alert ? 'text-wait' : undefined}>
+                      {usd(p.monthSpendUsd)} of {usd(p.settings.budget.value.capUsd)} this month
+                    </span>
+                  </>
+                )}
               </span>
             </div>
             <div className="grid items-start gap-5 md:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
