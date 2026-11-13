@@ -23,18 +23,20 @@ const USAGE = [
   '       pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page]',
 ];
 
-type Play = 'pass' | 'fail' | 'none' | 'no-output' | 'error' | 'hang' | 'ask' | 'slow';
+type Play = 'pass' | 'fail' | 'none' | 'no-output' | 'error' | 'hang' | 'ask' | 'slow' | 'approve';
 const COLOUR: Question = { id: 'colour', prompt: 'Colour?', kind: 'text' };
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * A provider whose n-th run of step S plays plays[S][n] (default `pass`); S is the step's prompt text. Every run
  * costs $0.10; one stopped ends early with tokens and no price, as a Claude run does. `timeline` records start:S and end:S.
+ * `approve` asks the owner to run `pnpm test` first; `approvals` records each answer (a rejected ask is a no).
  */
 function scripted(plays: Record<string, Play[]>) {
   const timeline: string[] = [];
   const specs: RunSpec[] = [];
   const counts: Record<string, number> = {};
+  const approvals: boolean[] = [];
   let live = 0;
   let maxLive = 0;
   const provider: AgentProvider = {
@@ -58,11 +60,12 @@ function scripted(plays: Record<string, Play[]>) {
         await delay(play === 'slow' ? 300 : 20); // long enough for parallel runs to overlap
         if (play === 'hang') await stopped;
         if (play === 'ask' && !halted) await askBroker(env.FLOWBOARD_ASK_SOCKET, { questions: [COLOUR] });
+        if (play === 'approve' && !halted) approvals.push(await spec.approve!({ kind: 'shell', command: 'pnpm test' }).catch(() => false));
         timeline.push(`end:${step}`);
         live -= 1;
         if (halted) return { usage: { ...ZERO_USAGE, input: 1000 }, exitCode: 1, error: 'stopped' };
         if (play === 'error') return { usage, exitCode: 1, error: 'boom' };
-        if (['pass', 'fail', 'none', 'ask', 'slow'].includes(play)) for (const o of spec.prompt.outputs) writeFileSync(o.path, step);
+        if (['pass', 'fail', 'none', 'ask', 'slow', 'approve'].includes(play)) for (const o of spec.prompt.outputs) writeFileSync(o.path, step);
         // set_outcome is offered only where the verdict is read
         if (play !== 'none' && env.FLOWBOARD_OUTCOME_FILE) writeFileSync(env.FLOWBOARD_OUTCOME_FILE, JSON.stringify({ outcome: play === 'fail' ? 'fail' : 'pass' }));
         return { usage, exitCode: 0 };
@@ -77,6 +80,7 @@ function scripted(plays: Record<string, Play[]>) {
     makeProvider: () => provider,
     timeline,
     specs,
+    approvals,
     get maxLive() {
       return maxLive;
     },
@@ -1170,6 +1174,46 @@ test('normal boxes a flow with no sandbox', async (t) => {
   const i = out.indexOf('-- isolation: Normal (container), from project proj');
   assert.ok(i !== -1 && out[i + 1].startsWith('-- sandbox limits: '), out.join('\n'));
   assert.equal(script.specs[0].exec?.profile?.tier, 'container');
+});
+
+test('normal never asks', async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const { base, out, deps, script } = setup(ONE_BUILD);
+  registerProject(base, join(base, 'proj'), 'normal');
+  deps.docker = fakeDocker().docker;
+  deps.dockerMemoryMb = () => undefined;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.equal(script.specs[0].approve, undefined);
+});
+
+/** The first ask the page is offered, once there is one; none within 4 s is a failure. */
+async function pageAsk(runDir: string): Promise<{ id: string; heading: string; questions: Question[] }> {
+  for (let i = 0; i < 200; i++) {
+    const asks = existsSync(join(runDir, 'asks')) ? readdirSync(join(runDir, 'asks')) : [];
+    if (asks.length) return JSON.parse(readFileSync(join(runDir, 'asks', asks[0]), 'utf8'));
+    await delay(20);
+  }
+  throw new Error('the page was never asked');
+}
+
+test('trusted asks before an agent\'s shell command', { timeout: 10_000 }, async () => {
+  const s = setup(ONE_BUILD, { build: ['approve'] });
+  void pageAsk(s.runDir).then((ask) => writeFileSync(join(s.runDir, 'answers', `${ask.id}.json`), JSON.stringify({ approve: 'once' })));
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.deepEqual(s.script.approvals, [true]);
+  assert.ok(s.out.includes('-- build: allowed pnpm test'), s.out.join('\n'));
+});
+
+test('a stopped step withdraws its approval', { timeout: 10_000 }, async () => {
+  const s = setup(ONE_BUILD, { build: ['approve'] });
+  void pageAsk(s.runDir).then((ask) => {
+    assert.deepEqual([ask.heading, ask.questions[0].prompt], ['-- build asks:', 'Run pnpm test?']);
+    s.signals.emit('SIGINT');
+  });
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], s.deps), 130, s.out.join('\n'));
+  assert.deepEqual(s.script.approvals, [false]);
+  assert.deepEqual(readdirSync(join(s.runDir, 'asks')), []);
+  assert.ok(s.out.some((l) => l.startsWith('-- flow stopped: ')), s.out.join('\n'));
 });
 
 test('untrusted refuses without gvisor', async () => {

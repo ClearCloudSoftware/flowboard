@@ -24,6 +24,7 @@ import { dockerDefaultMemoryMb, dockerHasGvisor, dockerNotReady, PROJECT_FILE, p
 import { readAppSettings } from './app-settings.ts';
 import { findProject, IsolationSchema, isolationFor, SandboxSchema } from './isolation.ts';
 import type { Isolation } from './isolation.ts';
+import { approver } from './approvals.ts';
 import { owns, readProjects } from './projects.ts';
 import type { Project } from './projects.ts';
 import { resolveSettings, TRUST } from './settings.ts';
@@ -834,8 +835,9 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     let left = minutes === undefined ? undefined : Math.min(minutes * 60_000, MAX_TIMER_MS);
     let timer: NodeJS.Timeout | undefined;
     let since = 0;
+    let over = false; // an answer coming in after the run ended must not start its clock again
     const startClock = () => {
-      if (left === undefined) return;
+      if (left === undefined || over) return;
       since = Date.now();
       timer = setTimeout(() => run.stop(`timed out after ${minutes} minutes`), left);
     };
@@ -845,15 +847,19 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
       timer = undefined;
       left = Math.max(0, left! - (Date.now() - since));
     };
+    let waiting = 0; // an agent's approvals may be open at once: the clock runs again once none is
     const ask: Answerer = async (qs, signal) => {
-      stopClock();
+      if (waiting++ === 0) stopClock();
       try {
         return await asker!(qs, signal, `-- ${cmd.step} asks:`);
       } finally {
-        startClock();
+        if (--waiting === 0) startClock();
       }
     };
-    const runCtx: ExecContext = { ...ctx, answer: asker ? ask : noTerminal };
+    const answer = asker ? ask : noTerminal;
+    const iso = config.isolation;
+    const approve = iso?.approvals && step.kind === 'ai' ? approver({ dataDir: d.dataDir, projectId: iso.projectId, folder: config.folder, ask: answer, show, step: cmd.step }) : undefined;
+    const runCtx: ExecContext = { ...ctx, answer, ...(approve && { approve }) };
     // ponytail: parallel runs may each spend all that is left; the ceiling is checked again as each one ends.
     const capUsd = budget > 0 ? budget - sumCost(state.runs) : undefined;
     const run = step.kind === 'shell' ? execShell(step.command, config.folder, cmd, produces, runCtx) : execAi(step.run, cmd, produces, runCtx, { verdict: step.verdict, capUsd });
@@ -865,6 +871,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     startClock();
     run.ended
       .then((end) => {
+        over = true;
         stopClock();
         if (stopping) return; // stopAll feeds it
         live.delete(cmd.run);

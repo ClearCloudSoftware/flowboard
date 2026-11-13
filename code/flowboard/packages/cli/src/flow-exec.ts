@@ -8,7 +8,7 @@ import { randomBytes } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { SHIM_ENTRY } from '@flowboard/ask-user';
 import { fingerprint, ZERO_USAGE } from '@flowboard/core';
-import type { AgentProvider, AgentRun, ExecHost, Outcome, RunCommand, RunEnd, RunResult, RunSpec } from '@flowboard/core';
+import type { AgentProvider, AgentRun, ApprovalCall, ExecHost, Outcome, RunCommand, RunEnd, RunResult, RunSpec } from '@flowboard/core';
 import { startBroker } from './ask/broker.ts';
 import { inside } from './flow-config.ts';
 import type { Answerer } from './ask/broker.ts';
@@ -45,6 +45,8 @@ export interface ExecContext {
   // ai steps:
   makeProvider(adapter: Adapter): AgentProvider;
   answer: Answerer;
+  /** Trusted runs: asks the owner before an agent's edit or shell command; `signal` withdraws the question. */
+  approve?: (call: ApprovalCall, signal: AbortSignal) => Promise<boolean>;
   onInterrupt(): void;
   /** Live agent runs' temp folders, for a host that must exit before their runs end. */
   temps?: Set<string>;
@@ -252,6 +254,8 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
   let stopReason: string | undefined;
   let agent: AgentRun | undefined;
   let agentPid: number | undefined;
+  /** Withdraws the owner's open approval questions once the run is stopped or over. */
+  const approving = new AbortController();
   const ended = (async (): Promise<RunEnd> => {
     let logger: ReturnType<typeof runLog> | undefined;
     const log: Log = (kind, body) => logger?.log(kind, body);
@@ -333,6 +337,14 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
         outputs: produces.map(ref),
       };
       spec.guards = { ...spec.guards, writeRoots: [...(spec.guards?.writeRoots ?? []), ctx.artifactsDir] };
+      if (ctx.approve) {
+        const approve = ctx.approve;
+        spec.approve = (call) =>
+          approve(call, approving.signal).catch((e: unknown) => {
+            if ((e as Error).name === 'ExitPromptError') ctx.onInterrupt(); // Ctrl+C at the question
+            throw e;
+          });
+      }
       if (opts.capUsd !== undefined) spec.limits = { ...spec.limits, maxBudgetUsd: Math.min(spec.limits?.maxBudgetUsd ?? Infinity, opts.capUsd) };
       log('start', { step: run.step, attempt: run.attempt, adapter: config.adapter, config: spec });
       if (stopReason) return noRun(stopReason);
@@ -372,6 +384,7 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
       if (unwritten.length) end.missing = unwritten;
       return end;
     } finally {
+      approving.abort();
       tunnel?.close();
       await broker?.close();
       logger?.close();
@@ -389,6 +402,7 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
     ended,
     stop(reason = 'stopped') {
       stopReason ??= reason;
+      approving.abort();
       agent?.stop();
     },
     kill() {

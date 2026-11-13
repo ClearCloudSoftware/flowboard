@@ -4,8 +4,11 @@
  * is never matched by a rule and never saved as one, so a saved `pnpm test` cannot carry `&& rm -rf`. Neither is a
  * command that runs another command (`bash -c`, `node -e`, `pnpm exec`): a rule for it would allow anything.
  */
-import type { ApprovalCall } from '@flowboard/core';
+import { relative } from 'node:path';
+import type { Answers, ApprovalCall, Question } from '@flowboard/core';
 import { z } from 'zod';
+import { inside } from './flow-config.ts';
+import { addApproval, readProjects } from './projects.ts';
 
 export type ApprovalRule = { kind: 'edit' } | { kind: 'shell'; prefix: string };
 
@@ -47,3 +50,36 @@ export function allowedBy(rules: ApprovalRule[], call: ApprovalCall): ApprovalRu
 }
 
 export const ruleText = (r: ApprovalRule) => (r.kind === 'edit' ? 'every file edit' : `commands starting "${r.prefix}"`);
+
+/**
+ * run-flow's answer to an agent's edit or shell command in a Trusted run: a saved rule allows it at once, else the
+ * owner is asked through the step's `ask`, and "Allow from now on" saves the rule on the project. Rules are read
+ * fresh at every call. An ask that fails (stopped, no one to answer) rejects, which the adapter takes as no.
+ */
+export function approver(o: { dataDir: string; projectId: string; folder: string; ask: (qs: Question[], s: AbortSignal) => Promise<Answers>; show(line: string): void; step: string }) {
+  return async (call: ApprovalCall, signal: AbortSignal): Promise<boolean> => {
+    const saved = allowedBy(readProjects(o.dataDir).find((p) => p.id === o.projectId)?.approvals ?? [], call);
+    if (saved) {
+      o.show(`-- ${o.step}: allowed by a saved rule (${ruleText(saved)})`);
+      return true;
+    }
+    const path = call.kind === 'edit' && (inside(o.folder, call.path) ? relative(o.folder, call.path) : call.path);
+    const what = call.kind === 'edit' ? `editing ${path}` : call.command;
+    const rule = ruleFor(call);
+    const { approve } = await o.ask([{
+      id: 'approve',
+      kind: 'single_select',
+      prompt: call.kind === 'edit' ? `Edit ${path}?` : `Run ${call.command}?`,
+      ...(!rule && { help: 'This command can run other commands, so it can only be allowed once.' }),
+      options: [{ value: 'once', label: 'Allow' }, ...(rule ? [{ value: 'always', label: `Allow from now on: ${ruleText(rule)}` }] : []), { value: 'deny', label: 'Deny' }],
+    }], signal);
+    // Only what was offered allows: a page answer of `always` where it was not offered is a no.
+    const yes = approve === 'once' || (approve === 'always' && !!rule);
+    o.show(`-- ${o.step}: ${yes ? 'allowed' : 'denied'} ${what}`);
+    if (approve === 'always' && rule) {
+      const r = addApproval(o.dataDir, o.projectId, rule);
+      if (!r.ok) o.show(`-- ${o.step}: could not save the rule: ${r.error}`);
+    }
+    return yes;
+  };
+}
