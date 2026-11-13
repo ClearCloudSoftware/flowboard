@@ -78,8 +78,15 @@ export function buildQuery(spec: RunSpec, base: QueryBase): { prompt: string; op
       // input.cwd is where the shell is now: a cd persists between Bash calls.
       const reason = guards && checkToolCall(guards, input.tool_name, input.tool_input, spec.cwd, input.cwd);
       if (reason) return deny(reason); // a guard deny never reaches the owner
+      if (!approve || !ASKED.has(input.tool_name)) return {};
       const call = approvalCall(input.tool_name, input.tool_input);
-      return call && approve && !(await approve(call)) ? deny('the project owner denied this') : {};
+      if (!call) return deny('the project owner denied this'); // an asked tool with no usable target fails closed
+      try {
+        return (await approve(call)) ? {} : deny('the project owner denied this');
+      } catch (e) {
+        // A throw would reach the CLI as a hook error, which does not block the tool: fail closed.
+        return deny(`the project owner's approval could not be asked: ${e instanceof Error ? e.message : String(e)}`);
+      }
     };
     options.hooks = { PreToolUse: [{ hooks: [guard] }] };
   }
@@ -87,10 +94,13 @@ export function buildQuery(spec: RunSpec, base: QueryBase): { prompt: string; op
   return { prompt, options };
 }
 
-/** The owner-facing call for a file edit or shell command; undefined for every other tool. */
+/** Tools that edit files or run a shell command: each is asked, never waved through. */
+const ASKED = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Bash', 'Monitor']);
+
+/** The owner-facing call for an asked tool; undefined when its path or command is missing. */
 function approvalCall(tool: string, input: unknown): ApprovalCall | undefined {
   const i = (input ?? {}) as Record<string, unknown>;
-  if (tool === 'Bash') return typeof i.command === 'string' ? { kind: 'shell', command: i.command } : undefined;
-  const path = tool === 'NotebookEdit' ? i.notebook_path : ['Write', 'Edit', 'MultiEdit'].includes(tool) ? i.file_path : undefined;
+  if (tool === 'Bash' || tool === 'Monitor') return typeof i.command === 'string' ? { kind: 'shell', command: i.command } : undefined;
+  const path = tool === 'NotebookEdit' ? i.notebook_path : i.file_path;
   return typeof path === 'string' ? { kind: 'edit', tool, path } : undefined;
 }
