@@ -11,6 +11,16 @@ test('ruleFor: edits by kind, shell by prefix', () => {
   assert.equal(ruleFor({ kind: 'shell', command: '   ' }), undefined);
 });
 
+test('a command that runs another command is asked about every time', () => {
+  for (const c of ['bash -c "x"', 'node -e 1', 'env FOO=1 ls', 'pnpm exec tsc', 'npx foo', 'find . -name x', 'yarn dlx x', 'bun x y'])
+    assert.equal(ruleFor({ kind: 'shell', command: c }), undefined, c);
+  assert.deepEqual(ruleFor({ kind: 'shell', command: 'pnpm test' }), { kind: 'shell', prefix: 'pnpm test' });
+  assert.equal(allowedBy([{ kind: 'shell', prefix: 'node' }], { kind: 'shell', command: 'node x.js' }), undefined);
+  assert.equal(allowedBy([{ kind: 'shell', prefix: 'pnpm' }], { kind: 'shell', command: 'pnpm exec rm x' }), undefined);
+  for (const prefix of ['bash', 'pnpm exec', 'node'])
+    assert.equal(ApprovalRuleSchema.safeParse({ kind: 'shell', prefix }).success, false, prefix);
+});
+
 test('allowedBy refuses chained commands', () => {
   const rules: ApprovalRule[] = [{ kind: 'shell', prefix: 'pnpm test' }];
   assert.ok(allowedBy(rules, { kind: 'shell', command: 'pnpm test' }));

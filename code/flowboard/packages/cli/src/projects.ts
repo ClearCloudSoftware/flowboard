@@ -175,7 +175,8 @@ export function updateProject(dataDir: string, flowsDir: string, id: string, edi
   if (badFlow) return fail(400, badFlow);
   const badOverrides = edit.overrides !== undefined ? overridesError(edit.overrides) : undefined;
   if (badOverrides) return badOverrides;
-  if (edit.approvals !== undefined && !z.array(ApprovalRuleSchema).safeParse(edit.approvals).success) return fail(400, BAD_APPROVAL);
+  const approvals = edit.approvals !== undefined ? z.array(ApprovalRuleSchema).safeParse(edit.approvals) : undefined;
+  if (approvals && !approvals.success) return fail(400, BAD_APPROVAL);
   const branch = edit.baseBranch?.trim();
   if (branch && gitOut(projects[at].repoPath, 'rev-parse', '--verify', '-q', `refs/heads/${branch}`) === undefined && branch !== currentBranch(projects[at].repoPath)) {
     return fail(400, `${projects[at].repoPath} has no branch ${branch}`);
@@ -194,7 +195,7 @@ export function updateProject(dataDir: string, flowsDir: string, id: string, edi
     ...(edit.defaultFlow !== undefined && { defaultFlow: edit.defaultFlow || null }),
     ...(edit.baseBranch !== undefined && { baseBranch: branch || null }),
     ...(edit.overrides !== undefined && { overrides: edit.overrides }),
-    ...(edit.approvals !== undefined && { approvals: edit.approvals }),
+    ...(approvals?.success && { approvals: approvals.data }),
   };
   projects[at] = p;
   writeProjects(dataDir, projects);

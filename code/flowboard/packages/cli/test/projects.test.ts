@@ -237,6 +237,7 @@ test('approvals: saved on the record without repeats, replaced by an edit, and a
   assert.deepEqual(readProjects(data)[0].approvals, [rule, { kind: 'edit' }]);
   assert.deepEqual(value(updateProject(data, lib, p.id, { approvals: [] })).approvals, []);
   assert.deepEqual(readProjects(data)[0].approvals, []);
+  assert.deepEqual(value(updateProject(data, lib, p.id, { approvals: [{ kind: 'shell', prefix: ' pnpm test ' }] })).approvals, [rule]); // saved as parsed: trimmed
   const bad = { ok: false, status: 400, error: "an approval is { kind: 'edit' } or { kind: 'shell', prefix }" };
   assert.deepEqual(updateProject(data, lib, p.id, { approvals: [{ kind: 'shell', prefix: '' }] as never }), bad);
   assert.deepEqual(addApproval(data, p.id, { kind: 'shell', prefix: 'ls; rm' }), bad);
