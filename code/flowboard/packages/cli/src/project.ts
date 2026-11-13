@@ -95,3 +95,21 @@ export function dockerDefaultMemoryMb(docker = 'docker'): number | undefined {
   const total = Number(r.stdout?.trim());
   return r.status === 0 && total > 0 ? Math.floor(total / 4 / 2 ** 20) : undefined;
 }
+
+/** Whether Docker has gVisor's `runsc` runtime installed (the Untrusted isolation tier needs it). */
+export function dockerHasGvisor(docker = 'docker'): boolean {
+  const r = spawnSync(docker, ['info', '--format', '{{json .Runtimes}}'], { encoding: 'utf8', timeout: 10_000 });
+  if (r.status !== 0) return false;
+  try {
+    return 'runsc' in JSON.parse(r.stdout);
+  } catch {
+    return false;
+  }
+}
+
+/** Why a step cannot run in `image` yet, or undefined when Docker is up and has the image. */
+export function dockerNotReady(image: string, docker = 'docker'): string | undefined {
+  const run = (...args: string[]) => spawnSync(docker, args, { stdio: 'ignore', timeout: 10_000 }).status === 0;
+  if (run('image', 'inspect', image)) return undefined;
+  return run('info') ? `no image ${image}; build it from code/flowboard: docker build -f docker/Dockerfile -t ${image} .` : 'Docker is not running';
+}

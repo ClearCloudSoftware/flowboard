@@ -18,6 +18,7 @@ export function dockerArgs(profile: SandboxProfile, command: string, args: strin
     'run', '--rm', '-i', '--init', '--label', 'flowboard=sandbox',
     ...(open ? [] : ['--network', 'none']),
     ...ports.flatMap((p) => ['-p', `127.0.0.1:${p}:${p}`]),
+    ...(profile.tier === 'gvisor' ? ['--runtime', 'runsc'] : []),
     '--cap-drop', 'ALL',
     '--security-opt', 'no-new-privileges',
     '--read-only', '--tmpfs', '/tmp',
