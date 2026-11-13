@@ -103,7 +103,7 @@ export function AgentsPage() {
   const agents = useQuery(agentsQuery);
   return (
     <>
-      <Head title="Agents">The agent CLIs FlowBoard drives. Each runs on its own login on this machine; FlowBoard stores no key for either.</Head>
+      <Head title="Agents">The agent CLIs FlowBoard drives. Each runs on its own login on this machine; OpenCode runs on the OpenRouter key under Connections, when one is saved. Which models OpenCode may use is under OpenCode models.</Head>
       {view.isPending && <p className="m-0 text-muted-foreground">Loading…</p>}
       <ErrorLine error={view.error ?? agents.error} />
       {view.data && (

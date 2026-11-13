@@ -11,7 +11,8 @@ import { z } from 'zod';
 import { DEFAULT_MAX_ATTEMPTS, isRework, validateFlow } from '@flowboard/core';
 import type { FlowDef } from '@flowboard/core';
 import { CLOSING, configFromObject, isDir, isFile, issueLines, readPlugin, readYaml, RunSchema, toAbs } from './config.ts';
-import type { RunConfig } from './config.ts';
+import type { ModelRules, RunConfig } from './config.ts';
+import { FREE_WARNING } from './settings.ts';
 import { PROJECT_FILE, projectSettings } from './project.ts';
 import type { Limits } from './project.ts';
 
@@ -102,9 +103,10 @@ export const inside = (dir: string, p: string) => {
 /**
  * Loads the recipe at `yamlPath` (relative to `baseDir`) for one `run`. Without one, as for `--check`, the recipe
  * is checked on its own: a stand-in folder and task let run-agent's checks run. `text`, the flow designer's unsaved
- * edit, is checked in place of the file's YAML; its paths still resolve against the file's folder.
+ * edit, is checked in place of the file's YAML; its paths still resolve against the file's folder. `models`: the
+ * app's approved OpenCode models; without them no model is checked.
  */
-export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, text?: string): FlowLoadResult {
+export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, text?: string, models?: ModelRules): FlowLoadResult {
   const read = readYaml(yamlPath, baseDir, text);
   if (!read.ok) return read;
   const fail = (lines: string[]): FlowLoadResult => ({ ok: false, errors: lines.map((l) => `${yamlPath}: ${l}`) });
@@ -229,7 +231,7 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
     if (!filesOk) continue; // every step would repeat the folder or task error
 
     // The task file is every step's preamble; the step's own prompt is its template.
-    const r = configFromObject({ ...merged, folder, prompt: taskAbs }, recipeDir);
+    const r = configFromObject({ ...merged, folder, prompt: taskAbs }, recipeDir, models);
     if (!r.ok) {
       r.errors.forEach((l) => err(7, `${at}.${l}`));
       continue;
@@ -239,6 +241,7 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
     // The verdict is asked for, and set_outcome offered, where a route or the approval gate reads it.
     const verdict = st.gate === 'approval' || y.edges.some((e) => e.from === name && e.condition !== 'always');
     if (verdict) spec.prompt.closing = `${CLOSING} ${OUTCOME_CLOSING}`;
+    if (r.config.adapter === 'opencode' && models?.free(spec.model)) warnings.push(`${at}.model: ${spec.model} is ${FREE_WARNING}`);
     if (r.config.unrestrictedShell) warnings.push(`${at}: unrestricted shell: commands can write outside ${run ? folder : 'the folder'}`);
     if (st.write_roots) spec.guards = { ...spec.guards, writeRoots: roots }; // [] leaves only the artifacts folder
     steps[name] = {

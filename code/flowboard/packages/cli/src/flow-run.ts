@@ -24,6 +24,7 @@ import { alive, readLock } from './lock.ts';
 import { openWorkspace } from './workspace.ts';
 import { defaultProvider, stamp } from './run.ts';
 import type { RunDeps } from './run.ts';
+import { prepareRun, applySavedKey } from './openrouter.ts';
 
 const USAGE = [
   'usage: pnpm run-flow --folder <dir> --task <file> [--workspace <task id>] [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] <flow.yaml>',
@@ -110,9 +111,14 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
     budget = Number(v['budget-usd']);
   }
 
-  if (v.resume !== undefined) return resume(v.resume, { maxRuns, budget, page: v.page }, deps);
+  // A resumed run keeps the models it was checked with when it started; it still needs the key.
+  if (v.resume !== undefined) {
+    if (deps.dataDir !== undefined) applySavedKey(deps.dataDir);
+    return resume(v.resume, { maxRuns, budget, page: v.page }, deps);
+  }
   const yaml = positionals[0];
-  let loaded = loadFlow(yaml, deps.cwd, v.folder !== undefined && v.task !== undefined ? { folder: v.folder, task: v.task, budgetUsd: budget } : undefined);
+  const models = deps.dataDir !== undefined ? await prepareRun(deps.dataDir, printErr) : undefined;
+  let loaded = loadFlow(yaml, deps.cwd, v.folder !== undefined && v.task !== undefined ? { folder: v.folder, task: v.task, budgetUsd: budget } : undefined, undefined, models);
   // A workspace is made only for a flow that loads, then the flow is loaded again to work in it.
   if (loaded.ok && v.workspace !== undefined) {
     const ws = await openWorkspace(loaded.config.folder, v.workspace);
@@ -121,7 +127,7 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
       return 2;
     }
     print(`-- workspace ${ws.path} on branch ${ws.branch}${ws.reused ? ', picked up again' : ', new'}`);
-    loaded = loadFlow(yaml, deps.cwd, { folder: ws.folder, task: v.task!, budgetUsd: budget });
+    loaded = loadFlow(yaml, deps.cwd, { folder: ws.folder, task: v.task!, budgetUsd: budget }, undefined, models);
   }
   if (!loaded.ok) {
     loaded.errors.forEach((l) => printErr(l));

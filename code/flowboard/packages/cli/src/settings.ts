@@ -24,8 +24,50 @@ export interface HarnessConfig { path: string | null; model: string | null; effo
 /**
  * `projectsFolder`: where new projects are cloned; null for FlowBoard's own, `DEFAULT_PROJECTS_FOLDER`.
  * `agents`: how each harness is run; app-wide, as it is about this machine, so no project overrides it.
+ * `opencodeModels`: the only models an OpenCode step may run on; app-wide, as it is about money and privacy.
  */
-export interface AppSettings extends Settings { projectsFolder: string | null; agents: Record<Harness, HarnessConfig>; internal: Record<InternalStep, InternalStepConfig> }
+export interface AppSettings extends Settings {
+  projectsFolder: string | null;
+  agents: Record<Harness, HarnessConfig>;
+  internal: Record<InternalStep, InternalStepConfig>;
+  opencodeModels: ApprovedModel[];
+}
+
+/**
+ * A model approved for OpenCode, free or paid: `id` as a step names it (`openrouter/<OpenRouter's id>`); `free` and
+ * `price` (dollars per million input and output tokens) as OpenRouter listed it when it was ticked.
+ */
+export interface ApprovedModel { id: string; free: boolean; price: { in: number; out: number }; approvedAt: string }
+/** One model as OpenRouter lists it, prices in dollars per million tokens; `id` is OpenCode's, with `openrouter/`. */
+export interface CatalogueModel { id: string; name: string; free: boolean; price: { in: number; out: number }; context: number | null }
+export interface Catalogue { fetchedAt: string; models: CatalogueModel[] }
+
+export const MODELS_PAGE = 'Settings → Agents → OpenCode models';
+/** What a free model costs instead of money, as the pages and the flow check say it. */
+export const FREE_WARNING = 'a free model: its provider may keep your prompts and train on them, and the prompts include the project’s code';
+
+const perM = (n: number) => `$${Number(n.toFixed(4))}`;
+/**
+ * Why an OpenCode step may not run on `id`, or undefined when it may: it must be approved, still be listed, and
+ * cost no more than when it was approved. Without a catalogue only the approval is checked.
+ */
+export function modelProblem(id: string, approved: ApprovedModel[], catalogue: Catalogue | null): string | undefined {
+  const a = approved.find((m) => m.id === id);
+  if (!a) return `${id} is not an approved model; approve it in ${MODELS_PAGE}`;
+  if (!catalogue || !id.startsWith('openrouter/')) return undefined;
+  const now = catalogue.models.find((m) => m.id === id);
+  if (!now) return `${id} is no longer listed by OpenRouter; pick another model`;
+  const rose = (['in', 'out'] as const).filter((k) => now.price[k] > a.price[k] + 1e-9);
+  if (rose.length) {
+    const was = rose.map((k) => `${k}put ${perM(a.price[k])} → ${perM(now.price[k])}`).join(', ');
+    return `${id} costs more than when you approved it (${was} per million tokens); approve it again in ${MODELS_PAGE}`;
+  }
+  return undefined;
+}
+
+/** Free as OpenRouter lists it now, else as it was when approved. */
+export const isFree = (id: string, approved: ApprovedModel[], catalogue: Catalogue | null) =>
+  catalogue?.models.find((m) => m.id === id)?.free ?? approved.find((m) => m.id === id)?.free ?? false;
 /** The steps FlowBoard runs for itself, outside any flow (`internal/<id>/`, `internal-steps.ts`). */
 export type InternalStep = 'repo-analyst' | 'backlog-importer';
 /** How one internal step runs, for every project: `effort` null for the model's own; `budgetUsd` the most one run may spend. */
@@ -60,7 +102,7 @@ export const trustText = (t: Trust) => `${TRUST[t].label}: ${TRUST[t].tier}`;
 
 export const DEFAULT_PROJECTS_FOLDER = '~/FlowBoard/projects';
 
-/** Each harness as the pages name it. `login`: whose credentials it runs on; FlowBoard keeps none of its own. */
+/** Each harness as the pages name it. `login`: whose credentials it runs on; FlowBoard keeps only an OpenRouter key. */
 export const HARNESSES: Record<Harness, { name: string; bin: string; text: string; login: string; model: string }> = {
   'claude-code': {
     name: 'Claude Code',
@@ -73,7 +115,7 @@ export const HARNESSES: Record<Harness, { name: string; bin: string; text: strin
     name: 'OpenCode',
     bin: 'opencode',
     text: 'An open-source CLI that runs other providers’ models, one local server per run.',
-    login: 'Runs on the credentials OpenCode stores itself (opencode auth login). It has no Claude subscription login, so its runs are billed by that provider.',
+    login: 'Runs on the OpenRouter key saved in Settings → Connections → OpenRouter, else on the credentials OpenCode stores itself (opencode auth login). It has no Claude subscription login, so its runs are billed by that provider.',
     model: 'providerID/modelID, like openrouter/deepseek/deepseek-v4.1-flash',
   },
 };
@@ -107,6 +149,8 @@ export const APP_DEFAULTS: AppSettings = {
     'repo-analyst': { adapter: 'claude-code', model: 'sonnet', effort: null, budgetUsd: 0.5 },
     'backlog-importer': { adapter: 'claude-code', model: 'haiku', effort: null, budgetUsd: 0.25 },
   },
+  // None: an OpenCode step runs only on a model someone approved.
+  opencodeModels: [],
 };
 
 const CAP = 'a dollar amount above 0';
@@ -152,6 +196,12 @@ const internalOn = (h: Harness) => z.strictObject({ adapter: z.literal(h), model
 /** One internal step's settings: the model must suit the harness it runs on. */
 export const INTERNAL_STEP_SCHEMA = z.discriminatedUnion('adapter', [internalOn('claude-code'), internalOn('opencode')]);
 
+const usd = z.number().nonnegative();
+/** The approved models, each id once. */
+export const APPROVED_MODELS_SCHEMA = z
+  .array(z.strictObject({ id: z.string().regex(/^openrouter\/\S+$/, { error: 'an OpenRouter model, like openrouter/deepseek/deepseek-v4.1-flash' }), free: z.boolean(), price: z.strictObject({ in: usd, out: usd }), approvedAt: z.string() }))
+  .refine((ms) => new Set(ms.map((m) => m.id)).size === ms.length, { error: 'each model once' });
+
 export const OverridesSchema: z.ZodType<Overrides> = z.strictObject({ ...shape, budget: budget(cap) }).partial();
 export const AppSettingsSchema = z.strictObject({
   ...shape,
@@ -159,6 +209,7 @@ export const AppSettingsSchema = z.strictObject({
   projectsFolder: z.string().trim().regex(FOLDER_RE, { error: FOLDER }).nullable(),
   agents: z.strictObject(HARNESS_SCHEMAS),
   internal: z.strictObject({ 'repo-analyst': INTERNAL_STEP_SCHEMA, 'backlog-importer': INTERNAL_STEP_SCHEMA }),
+  opencodeModels: APPROVED_MODELS_SCHEMA,
 });
 
 export type From = 'app' | 'type' | 'project';
