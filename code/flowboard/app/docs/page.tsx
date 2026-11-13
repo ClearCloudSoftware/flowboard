@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { cacheLife } from 'next/cache';
-import Link from 'next/link';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Mermaid } from './mermaid.tsx';
@@ -32,12 +31,6 @@ export default async function DocsPage() {
           <span>docs</span>
         </div>
         <span className="sp" />
-        <Link className="act" href="/flows">
-          Flows
-        </Link>
-        <Link className="act" href="/runs">
-          Runs
-        </Link>
       </header>
       <div className="doc-body">
         <nav className="doc-toc" aria-label="On this page">

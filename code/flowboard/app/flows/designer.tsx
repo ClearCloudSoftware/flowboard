@@ -10,7 +10,6 @@ import { useSelector } from '@tanstack/react-store';
 import { ReactFlowProvider } from '@xyflow/react';
 import { Play } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { ApiError, checkQuery, createFlow, flowQuery, libraryQuery, saveFlow } from './api.ts';
 import type { FlowFile } from './api.ts';
 import { Canvas } from './canvas.tsx';
@@ -186,12 +185,6 @@ export function Designer() {
             <Play size={12} strokeWidth={1.75} aria-hidden />
             Run
           </button>
-          <Link className="act" href="/">
-            Projects
-          </Link>
-          <Link className="act" href="/docs">
-            Docs
-          </Link>
         </header>
 
         {(notice || (changed && dirty)) && (

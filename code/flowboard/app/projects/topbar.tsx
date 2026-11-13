@@ -1,7 +1,6 @@
-/** The projects pages' top bar: the trail back to the list, the page's own actions, then the other screens. */
+/** The projects pages' top bar: the trail back to the list, then the page's own actions. The other screens are in the side rail. */
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
 
 /** `slug`: a project's page; `here`: another top-level page, such as settings. */
 export function Topbar({ slug, here, children }: { slug?: string; here?: string; children?: ReactNode }) {
@@ -24,13 +23,6 @@ export function Topbar({ slug, here, children }: { slug?: string; here?: string;
       </nav>
       <span className="flex-1" />
       {children}
-      {(['flows', 'runs', 'docs', 'settings'] as const).map((to) => (
-        <Button key={to} variant="outline" size="sm" asChild>
-          <Link href={`/${to}`} className="capitalize">
-            {to}
-          </Link>
-        </Button>
-      ))}
     </header>
   );
 }
