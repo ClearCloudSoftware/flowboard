@@ -6,7 +6,7 @@
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, linkSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { parseArgs } from 'node:util';
+import { isDeepStrictEqual, parseArgs } from 'node:util';
 import { connectBox, dockerExecHost, excludeFlowboard, openBox } from '@flowboard/adapters';
 import type { Box } from '@flowboard/adapters';
 import { advance, entries, GIT, newFlowState } from '@flowboard/core';
@@ -23,7 +23,8 @@ import { dockerDefaultMemoryMb, dockerHasGvisor, dockerNotReady, PROJECT_FILE, p
 import { readAppSettings } from './app-settings.ts';
 import { findProject, isolationFor } from './isolation.ts';
 import type { Isolation } from './isolation.ts';
-import { readProjects } from './projects.ts';
+import { owns, readProjects } from './projects.ts';
+import type { Project } from './projects.ts';
 import { resolveSettings, TRUST } from './settings.ts';
 import { alive, readLock } from './lock.ts';
 import { openWorkspace } from './workspace.ts';
@@ -122,7 +123,9 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
   // Where a run works is its project's to say, before a workspace changes the repo; a check or a diagram runs nothing.
   let isolated: Isolated | undefined;
   if (loaded.ok && !v.check && !v.mermaid) {
-    const r = isolate(loaded.config, dataDir, deps);
+    const { folder, sandbox, steps } = loaded.config;
+    const project = findProject(dataDir, folder);
+    const r = project ? isolate(project, sandbox, steps, dataDir, deps) : { refused: [`${folder}: not in a FlowBoard project; create one for this repo first`] };
     if ('refused' in r) {
       r.refused.forEach((l) => printErr(l));
       return 2;
@@ -281,16 +284,14 @@ const dataDirOf = (deps: RunDeps) => deps.dataDir ?? (process.env.FLOWBOARD_DATA
 interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string }
 
 /**
- * The isolation of a run of `config`, from the project that owns its folder (`isolation.ts`); or why it may not run,
- * a line each: no project, a tier this machine cannot give, or a box that cannot start or log in.
+ * The isolation `project` gives a run of a flow whose own sandbox is `flowSandbox` (`isolation.ts`); or why it may not
+ * run, a line each: a tier this machine cannot give, or a box that cannot start or log in.
  */
-function isolate(config: FlowConfig, dataDir: string, deps: RunDeps): Isolated | { refused: string[] } {
-  const project = findProject(dataDir, config.folder);
-  if (!project) return { refused: [`${config.folder}: not in a FlowBoard project; create one for this repo first`] };
+function isolate(project: Project, flowSandbox: Sandbox | undefined, steps: FlowConfig['steps'], dataDir: string, deps: RunDeps): Isolated | { refused: string[] } {
   const trust = resolveSettings(readAppSettings(dataDir), project.type, project.overrides).trust.value;
   const docker = deps.docker ?? { gvisor: () => dockerHasGvisor(), notReady: (image: string) => dockerNotReady(image) };
-  const needs = agentNeeds(config.steps).map((n) => n.credential);
-  const r = isolationFor(trust, config.sandbox, needs, trust === 'untrusted' && docker.gvisor());
+  const needs = agentNeeds(steps).map((n) => n.credential);
+  const r = isolationFor(trust, flowSandbox, needs, trust === 'untrusted' && docker.gvisor());
   if ('refused' in r) return { refused: [r.refused] };
   if (r.sandbox?.runtime === 'docker') {
     const why = docker.notReady(r.sandbox.image);
@@ -301,7 +302,9 @@ function isolate(config: FlowConfig, dataDir: string, deps: RunDeps): Isolated |
     if (unset.length) return { refused: unset };
   }
   const asks = r.approvals ? '; agents ask before edits and shell commands' : '';
-  return { sandbox: r.sandbox, isolation: { projectId: project.id, trust, tier: r.tier, approvals: r.approvals }, line: `-- isolation: ${TRUST[trust].label} (${r.tier}), from project ${project.name}${asks}` };
+  // A copy: the run's sandbox may be this very object, and gets the project's limits.
+  const isolation: Isolation = { projectId: project.id, trust, tier: r.tier, approvals: r.approvals, ...(flowSandbox && { flowSandbox: structuredClone(flowSandbox) }) };
+  return { sandbox: r.sandbox, isolation, line: `-- isolation: ${TRUST[trust].label} (${r.tier}), from project ${project.name}${asks}` };
 }
 
 /** Makes `dir`; false when it already exists. */
@@ -525,12 +528,24 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number;
   if (state.status !== 'running') return refuse(`the flow already ended (${state.status})`);
   // A folder moved or deleted since is not made again: the flow would carry on in an empty one.
   if (!isDir(pinned.config.folder)) return refuse(`folder not found: ${pinned.config.folder}`);
-  // A run keeps the isolation it started with, whatever its project says now, but never outlives its project.
-  // A run pinned before isolation was has no project id: it is its folder's project's.
+  // The pin is checked against its project as it is now: a run folder inside --folder is the agents' to write, and a
+  // pin they edited must not take the run below its project's tier. A run pinned before isolation was has no project
+  // id: it is its folder's project's, and its sandbox was the flow's own.
   const dataDir = dataDirOf(deps);
-  const projectId = pinned.config.isolation?.projectId;
-  if (!(projectId ? readProjects(dataDir).some((p) => p.id === projectId) : findProject(dataDir, pinned.config.folder))) return refuse('its project is gone');
-  const config = { ...pinned.config, budgetUsd: given.budget ?? pinned.config.budgetUsd ?? 0 };
+  const was = pinned.config.isolation;
+  const project = was ? readProjects(dataDir).find((p) => p.id === was.projectId) : findProject(dataDir, pinned.config.folder);
+  if (!project) return refuse('its project is gone');
+  if (!owns(project, realpathSync(pinned.config.folder))) return refuse(`its folder is no longer in its project ${project.name}`);
+  const now = isolate(project, was ? was.flowSandbox : pinned.config.sandbox, pinned.config.steps, dataDir, deps);
+  if ('refused' in now) {
+    now.refused.forEach((l) => printErr(`${typed}: cannot resume: ${l}`));
+    return 2;
+  }
+  // Limits are the project's, set as the run started; hosts a person let through since are added to egress.
+  const bare = (sb: Sandbox | undefined) => sb && { ...sb, limits: undefined, egress: undefined };
+  const same = isDeepStrictEqual(bare(now.sandbox), bare(pinned.config.sandbox)) && (!was || (was.tier === now.isolation.tier && was.approvals === now.isolation.approvals));
+  if (!same) return refuse("its project's isolation changed since it started, or its flow.json was edited; start the flow again");
+  const config = { ...pinned.config, isolation: now.isolation, budgetUsd: given.budget ?? pinned.config.budgetUsd ?? 0 };
   const spent = sumCost(state.runs);
   if (config.budgetUsd && spent >= config.budgetUsd) {
     return refuse(`the budget is spent, $${spent.toFixed(2)} of $${config.budgetUsd.toFixed(2)}; give a larger one, or 0 for none, with --budget-usd`);
@@ -553,6 +568,10 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number;
     if (pin !== text) writeFileSync(join(runDir, 'flow.json'), pin);
     let box: Box | undefined;
     const held = parseJson(readText(join(runDir, 'sandbox.json'))) as { id?: unknown; token?: unknown } | undefined;
+    // Without its box, an opensandbox run's steps would run on this machine.
+    if (config.sandbox?.runtime === 'opensandbox' && (typeof held?.id !== 'string' || typeof held.token !== 'string')) {
+      return refuse('its OpenSandbox box is not recorded in sandbox.json; start the flow again');
+    }
     if (typeof held?.id === 'string' && typeof held.token === 'string') {
       try {
         box = await (deps.connectBox ?? connectBox)(held.id, { folder: config.folder, token: held.token });

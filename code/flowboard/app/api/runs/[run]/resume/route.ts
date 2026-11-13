@@ -3,7 +3,7 @@ import { openSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { readRun } from '../../../../../packages/cli/src/flow-logs.ts';
-import { body, refused, runsDir } from '../../../flows/local.ts';
+import { body, dataDir, refused, runsDir } from '../../../flows/local.ts';
 
 const Resume = z.object({ budgetUsd: z.number().min(0).optional() });
 
@@ -25,6 +25,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ run
   const out = openSync(join(dir, 'resume.log'), 'a');
   const child = spawn(process.execPath, [join(process.cwd(), 'packages/cli/src/flow-main.ts'), '--resume', dir, '--page', ...budget], {
     cwd: process.cwd(),
+    env: { ...process.env, FLOWBOARD_DATA_DIR: dataDir() }, // the app's data folder: where run-flow finds the run's project
     detached: true,
     stdio: ['ignore', out, out],
   });

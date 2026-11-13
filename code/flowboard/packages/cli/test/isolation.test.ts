@@ -54,7 +54,8 @@ test("isolationFor: normal keeps the flow's own sandbox", () => {
 
 test("isolationFor: untrusted runs under gVisor, in the flow's image or flowboard-cli", () => {
   assert.deepEqual(isolationFor('untrusted', undefined, NEEDS, true), { sandbox: { runtime: 'docker', image: 'flowboard-cli', env: NEEDS, gvisor: true }, tier: 'gvisor', approvals: false });
-  assert.deepEqual(isolationFor('untrusted', DOCKER, NEEDS, true), { sandbox: { ...DOCKER, gvisor: true }, tier: 'gvisor', approvals: false });
+  // the flow's image, but never its sandbox.env: only what the agents need
+  assert.deepEqual(isolationFor('untrusted', DOCKER, NEEDS, true), { sandbox: { ...DOCKER, env: NEEDS, gvisor: true }, tier: 'gvisor', approvals: false });
 });
 
 test("isolationFor: untrusted refuses an OpenSandbox box, which is not gVisor", () => {

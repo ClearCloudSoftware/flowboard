@@ -1015,6 +1015,14 @@ test('--resume refuses when the box is gone', async () => {
   assert.ok(s.err.includes(`${join('runs', STAMPED)}: cannot resume: sandbox box-1 is gone: its edits cannot be resumed; start the flow again`), s.err.join('\n'));
 });
 
+test('--resume refuses an opensandbox run whose box is not recorded, rather than run it on this machine', async () => {
+  const s = setup(BOXED(GATE), { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fakeBox().deps }), 3);
+  rmSync(join(s.runDir, 'sandbox.json'));
+  assert.equal(await runFlow(['--resume', join('runs', STAMPED)], { ...s.deps, ...fakeBox().deps }), 2);
+  assert.deepEqual(s.err, [`${join('runs', STAMPED)}: cannot resume: its OpenSandbox box is not recorded in sandbox.json; start the flow again`]);
+});
+
 test('a missing credential is a warning, not an error', async () => {
   const s = setup(BOXED(LINEAR));
   assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fakeBox({ missing: ['CLAUDE_CODE_OAUTH_TOKEN'] }).deps }), 0, s.out.join('\n'));
@@ -1181,16 +1189,55 @@ test('resume refuses without its project', { timeout: 10_000 }, async () => {
   assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: its project is gone`]);
 });
 
-test('a resume after the trust changed keeps the isolation pinned in flow.json', { timeout: 10_000 }, async () => {
+const CHANGED = `${RUN_DIR}: cannot resume: its project's isolation changed since it started, or its flow.json was edited; start the flow again`;
+
+/** A GATE run paused at its gate in a Normal project, in a box: Docker and the token faked. */
+async function pausedNormal(t: { after: (fn: () => void) => void }) {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
   const s = setup(GATE, { review: ['none'] });
-  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
-  registerProject(s.base, join(s.base, 'proj'), 'untrusted');
+  registerProject(s.base, join(s.base, 'proj'), 'normal');
   const fd = fakeDocker();
   s.deps.docker = fd.docker;
+  s.deps.dockerMemoryMb = () => 2048;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
   s.deps.answer = deciding('approve').answer;
+  return { ...s, fd, pin: join(s.runDir, 'flow.json') };
+}
+
+test('a boxed run resumes in the box it started in, with Docker checked again', { timeout: 10_000 }, async (t) => {
+  const s = await pausedNormal(t);
   assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.err.join('\n'));
-  assert.deepEqual(fd.calls, []);
-  assert.deepEqual(JSON.parse(readFileSync(join(s.runDir, 'flow.json'), 'utf8')).config.isolation, { projectId: 'p-1', trust: 'trusted', tier: 'host', approvals: true });
+  assert.deepEqual(s.fd.calls, ['notReady:flowboard-cli', 'notReady:flowboard-cli']);
+  assert.equal(s.script.specs.at(-1)?.exec?.profile?.tier, 'container');
+});
+
+test('a resume after the project\'s trust changed is refused', { timeout: 10_000 }, async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  registerProject(s.base, join(s.base, 'proj'), 'normal');
+  s.deps.docker = fakeDocker().docker;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+});
+
+test('a resume whose flow.json lost its isolation and sandbox is refused', { timeout: 10_000 }, async (t) => {
+  const s = await pausedNormal(t);
+  const pinned = JSON.parse(readFileSync(s.pin, 'utf8'));
+  delete pinned.config.isolation;
+  delete pinned.config.sandbox;
+  writeFileSync(s.pin, JSON.stringify(pinned));
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+  assert.ok(!s.script.timeline.includes('start:ship'));
+});
+
+test('a resume whose project no longer holds its folder is refused', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  registerProject(s.base, join(s.base, 'elsewhere'), 'trusted'); // the same project, p-1, moved to another repo
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: its folder is no longer in its project proj`]);
 });
 
 test('an untrusted sandbox runs its containers under gVisor', () => {

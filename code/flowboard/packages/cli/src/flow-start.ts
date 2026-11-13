@@ -1,7 +1,7 @@
 /**
  * Starting a run from the runs page: `run-flow --page` in the background, in the folder that holds `runs/`, with
  * the page's task text written to a file first. It resolves once run-flow names its run folder, or with what
- * run-flow said when it refused to start.
+ * run-flow said when it refused to start. `dataDir`: the app's data folder, where run-flow finds the projects.
  */
 import { spawn } from 'node:child_process';
 import { mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
@@ -16,7 +16,7 @@ export type Started = { ok: true; name: string } | { ok: false; error: string };
 const FLOW_MAIN = resolve(dirname(fileURLToPath(import.meta.url)), 'flow-main.ts');
 const WAIT_MS = 20_000;
 
-export async function startRun(runsDir: string, flowsDir: string, input: StartInput): Promise<Started> {
+export async function startRun(runsDir: string, flowsDir: string, dataDir: string, input: StartInput): Promise<Started> {
   if (!FLOW_NAME.test(input.flow)) return { ok: false, error: `"${input.flow}": not a flow name` };
   if (!input.task.trim()) return { ok: false, error: 'the task is empty' };
   const folder = input.folder.startsWith('~/') ? join(homedir(), input.folder.slice(2)) : input.folder;
@@ -34,8 +34,10 @@ export async function startRun(runsDir: string, flowsDir: string, input: StartIn
   if (input.workspace) args.push('--workspace', input.workspace);
   args.push(join(flowsDir, `${input.flow}.yaml`));
   const out = openSync(log, 'a');
-  // run-flow makes its run folder in FLOWBOARD_RUNS_DIR, which it inherits, else in runs/ where it starts.
-  const child = spawn(process.execPath, args, { cwd: dirname(runsDir), detached: true, stdio: ['ignore', out, out] });
+  // run-flow makes its run folder in FLOWBOARD_RUNS_DIR, which it inherits, else in runs/ where it starts; its data
+  // folder is the app's, given whole, as it does not start where the app does.
+  const env = { ...process.env, FLOWBOARD_DATA_DIR: dataDir };
+  const child = spawn(process.execPath, args, { cwd: dirname(runsDir), env, detached: true, stdio: ['ignore', out, out] });
   child.unref();
   let exited: number | null | undefined;
   child.on('exit', (code) => (exited = code));
