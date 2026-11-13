@@ -15,7 +15,7 @@ import { OpencodeModelSelect } from './openrouter.tsx';
 import { ErrorLine, Head } from './settings.tsx';
 
 const OWN = '-'; // Radix keeps '' for "nothing picked"
-const label = 'grid gap-1 text-[11px] text-muted-foreground';
+const label = 'grid content-start gap-1 text-[11px] text-muted-foreground'; // content-start: a note under one field leaves the others where they are
 const box = 'h-8 w-full font-mono text-[13px] text-foreground';
 
 function Step({ id, view }: { id: InternalStep; view: AppView }) {

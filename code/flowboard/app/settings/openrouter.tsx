@@ -271,8 +271,11 @@ export function OpencodeModelSelect({ value, onChange, none, className }: { valu
   return (
     <>
       <Select value={value === '' ? (none ? NONE : '') : value} onValueChange={(v) => onChange(v === NONE ? '' : v)}>
-        <SelectTrigger className={className} aria-invalid={value !== '' && !picked ? true : undefined}>
-          <SelectValue placeholder="pick an approved model" />
+        {/* min-w-0 and truncate: a long model id stays in its column instead of running over the next field */}
+        <SelectTrigger className={`${className ?? ''} min-w-0`} aria-invalid={value !== '' && !picked ? true : undefined}>
+          <span className="min-w-0 truncate">
+            <SelectValue placeholder="pick an approved model" />
+          </span>
         </SelectTrigger>
         <SelectContent className="font-mono">
           {none && <SelectItem value={NONE}>{none}</SelectItem>}
