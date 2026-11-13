@@ -29,6 +29,7 @@ import { listRuns } from './flow-logs.ts';
 import { owns, projectSpendUsd, readProjects, startOf } from './projects.ts';
 import type { Project } from './projects.ts';
 import { resolveSettings, TRUST } from './settings.ts';
+import type { Budget } from './settings.ts';
 import { alive, readLock } from './lock.ts';
 import { openWorkspace } from './workspace.ts';
 import { dataDirOf, defaultProvider, stamp } from './run.ts';
@@ -140,7 +141,8 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
       return 2;
     }
     isolated = r;
-    const c = projectCap(project!, dataDir, runsDirOf(deps), monthOf(now().getTime()), !!v['over-project-budget']);
+    const month = monthOf(now().getTime());
+    const c = projectCap(project!, dataDir, runsDirOf(deps), month, month, !!v['over-project-budget']);
     if ('refused' in c) {
       printErr(c.refused);
       return 2;
@@ -255,7 +257,10 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
       rmSync(runDir, { recursive: true, force: true });
       return 2;
     }
-    const denyRun = inFolder === undefined ? undefined : `${inFolder}/**`;
+    // The whole runs folder, other runs' too: their state.json is what a project's monthly cap adds up. A runs folder
+    // that is --folder itself would deny every file, so then only this run's.
+    const runsIn = inFolder === undefined ? undefined : dirname(inFolder) === '.' ? inFolder : dirname(inFolder);
+    const denyRun = runsIn === undefined ? undefined : `${runsIn}/**`;
     publish(lockPath, { pid: process.pid, runDir }, true);
     const artifactsDir = join(flowboardDir, name);
     try {
@@ -310,8 +315,11 @@ const runsDirOf = (deps: RunDeps) => (process.env.FLOWBOARD_RUNS_DIR ? resolve(d
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
 
-/** The project's monthly cap as a run goes: `others(run)` is what its runs that month other than `run` have spent so far. */
-interface ProjectCap { name: string; month: string; capUsd: number; onLimit: 'pause' | 'ask'; others: (run: string) => number }
+/**
+ * The project's monthly cap as a run goes. `budget()`: its budget setting as it is now, so a cap changed on the project
+ * page applies at the next check; `others(run)`: what its runs that month other than `run` have spent so far.
+ */
+interface ProjectCap { name: string; month: string; budget: () => Budget; others: (run: string) => number }
 /** What a run's start or resume prints about its project's cap, and the cap `drive` keeps it to; none when uncapped. */
 interface Capped { lines: string[]; cap?: ProjectCap }
 
@@ -320,8 +328,12 @@ interface Capped { lines: string[]; cap?: ProjectCap }
  * spent the cap. `over`: `--over-project-budget`, which lets an *ask me first* project's run go past it. `self`: a
  * resumed run, whose own spend counts and which is left out of the others.
  */
-function projectCap(project: Project, dataDir: string, runsDir: string, month: string, over: boolean, self?: { name: string; spentUsd: number }): Capped | { refused: string } {
-  const b = resolveSettings(readAppSettings(dataDir), project.type, project.overrides).budget.value;
+function projectCap(project: Project, dataDir: string, runsDir: string, month: string, thisMonth: string, over: boolean, self?: { name: string; spentUsd: number }): Capped | { refused: string } {
+  const budget = () => {
+    const p = readProjects(dataDir).find((x) => x.id === project.id) ?? project;
+    return resolveSettings(readAppSettings(dataDir), p.type, p.overrides).budget.value;
+  };
+  const b = budget();
   if (!b.capUsd) return { lines: [] };
   const capUsd = b.capUsd;
   // ponytail: every run's state.json is read at each check; cache by mtime if run folders reach the thousands
@@ -330,12 +342,14 @@ function projectCap(project: Project, dataDir: string, runsDir: string, month: s
   const of = `its ${usd(capUsd)} for ${monthName(month)}`;
   if (s.over) {
     if (b.onLimit === 'ask' && over) return { lines: [`-- project budget: over ${of}; running anyway (--over-project-budget)`] };
-    const why = `project ${project.name} has spent ${usd(s.spentUsd)} of ${of}; raise its monthly cap on the project page, or wait for ${nextMonthName(month)}`;
+    // A run counts in the month it started: once that month is over, waiting no longer helps.
+    const wait = month === thisMonth ? `, or wait for ${nextMonthName(month)}` : '';
+    const why = `project ${project.name} has spent ${usd(s.spentUsd)} of ${of}${month === thisMonth ? '' : ', the month this run started'}; raise its monthly cap on the project page${wait}`;
     return { refused: b.onLimit === 'ask' ? `${why}; to run it anyway, add --over-project-budget` : why };
   }
   const lines = [`-- project budget: ${usd(s.spentUsd)} of ${usd(capUsd)} spent in ${monthName(month)}`];
   if (s.alert) lines.push(`-- warning: project ${project.name} has spent ${s.pct}% of ${of}`);
-  return { lines, cap: { name: project.name, month, capUsd, onLimit: b.onLimit, others } };
+  return { lines, cap: { name: project.name, month, budget, others } };
 }
 
 /** A run's isolation, decided as it starts: the sandbox it gets and the line saying so; `repoPath`: its project's repo. */
@@ -618,8 +632,9 @@ async function resume(typed: string, given: { maxRuns?: number; budget?: number;
   }
   // A run's cost counts in the month it started; a run folder named without its time counts in this one.
   const self = { name: basename(runDir), spentUsd: spent };
-  const month = monthOf(startOf(self.name)) || monthOf((deps.now ?? (() => new Date()))().getTime());
-  const capped = projectCap(project, dataDir, dirname(runDir), month, !!given.over, self);
+  const thisMonth = monthOf((deps.now ?? (() => new Date()))().getTime());
+  const month = monthOf(startOf(self.name)) || thisMonth;
+  const capped = projectCap(project, dataDir, dirname(runDir), month, thisMonth, !!given.over, self);
   if ('refused' in capped) return refuse(capped.refused);
   // The YAML is not read again, and uncommitted changes are not checked: the tree holds the flow's own edits now.
   const lockPath = join(config.folder, '.flowboard', 'lock');
@@ -741,7 +756,11 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   const budget = config.budgetUsd ?? 0; // a flow.json from before budgets has none
   let overBudget = false;
   // The project's cap too: what is left of it, with other runs' spend read again each time.
-  const projectLeft = () => (d.project ? d.project.capUsd - d.project.others(basename(d.runDir)) - sumCost(state.runs) : Infinity);
+  const projectCapUsd = () => d.project?.budget().capUsd ?? null;
+  const projectLeft = () => {
+    const cap = projectCapUsd();
+    return cap ? cap - d.project!.others(basename(d.runDir)) - sumCost(state.runs) : Infinity;
+  };
   let overProject = false;
   const spentOut = () => {
     if (ended) return false;
@@ -1057,7 +1076,10 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   const waiting = config.flow.steps.map((s) => s.id).filter((id) => state.steps[id]?.state === 'awaiting_approval');
   if (status === 'paused' && waiting.length) print(`-- waiting for a decision: ${waiting.join(', ')}`);
   if (status === 'paused' && overBudget && !overProject) print(`-- the budget is spent: $${total(state.runs)} of $${budget.toFixed(2)}`);
-  if (status === 'paused' && overProject) print(`-- the project's budget for ${monthName(d.project!.month)} is spent: ${usd(d.project!.capUsd - projectLeft())} of ${usd(d.project!.capUsd)}`);
+  if (status === 'paused' && overProject) {
+    const cap = projectCapUsd() ?? 0;
+    print(`-- the project's budget for ${monthName(d.project!.month)} is spent: ${usd(cap - projectLeft())} of ${usd(cap)}`);
+  }
   if (d.box && (status === 'done' || status === 'failed')) {
     const patchPath = join(d.runDir, 'changes.patch');
     try {
@@ -1070,7 +1092,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
       print(`-- warning: sandbox ${d.box.id}: cannot bring the changes back, so it is kept: ${(e as Error).message}`);
     }
   } else if (d.box) print(`-- sandbox ${d.box.id} kept for --resume`);
-  const more = overProject ? (d.project!.onLimit === 'ask' ? ' --over-project-budget' : '') : overBudget ? ' --budget-usd <more>' : '';
+  const more = overProject ? (d.project!.budget().onLimit === 'ask' ? ' --over-project-budget' : '') : overBudget ? ' --budget-usd <more>' : '';
   if (status === 'paused' || status === 'stopped') print(`-- continue with: pnpm run-flow --resume ${d.shown}${more}`);
   return { done: 0, failed: 1, paused: 3, stopped: 130 }[status];
 }

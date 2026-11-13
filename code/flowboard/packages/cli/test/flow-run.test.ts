@@ -479,13 +479,14 @@ test('a run folder another run made in the same second is passed over', async ()
   assert.ok(out.includes(`-- run folder ${join('runs', `${STAMPED}-2`)}`), out.join('\n'));
 });
 
-test('agents may not write the run folder, whatever the flow file is called, nor discard uncommitted edits', async () => {
+test('agents may not write the runs folder, theirs or other runs\', whatever the flow file is called, nor discard uncommitted edits', async () => {
   const { base, deps, script } = setup(ONE_PLAN);
   registerProject(base, base, 'trusted'); // the base is the project here
   writeFileSync(join(base, 'a[1].yaml'), readFileSync(join(base, 'flow.yaml'), 'utf8'));
   assert.equal(await runFlow(['--folder', '.', '--task', 'task.md', 'a[1].yaml'], deps), 0);
   const guards = script.specs[0].guards!;
-  assert.deepEqual(guards.denyPaths, ['runs/2026-10-18T09-05-07-a_1_/**']);
+  // every run's state.json is what the project's monthly cap adds up, so other runs' folders are off limits too
+  assert.deepEqual(guards.denyPaths, ['runs/**']);
   for (const c of DISCARD_COMMANDS) assert.ok(guards.denyCommands?.includes(c));
   const denied = (cmd: string) => DISCARD_COMMANDS.some((c) => new RegExp(c).test(cmd));
   for (const cmd of [
@@ -1490,4 +1491,23 @@ test('no cap: no project budget lines, whatever other runs spent', async () => {
   spentRun(s, '2026-10-01T08-00-00-other', 500);
   assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.out.join('\n'));
   assert.equal(s.out.filter((l) => l.includes('project budget') || l.includes("project's budget")).length, 0, s.out.join('\n'));
+});
+
+test('a run the cap paused in one month, resumed in the next, is told its month and not to wait', { timeout: 10_000 }, async () => {
+  const s = setup(CHAIN('0'));
+  capProject(s, 1, 'pause');
+  spentRun(s, '2026-10-01T08-00-00-other', 0.85);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  s.deps.now = () => new Date(2026, 10, 2, 9);
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: project proj has spent $1.05 of its $1.00 for October 2026, the month this run started; raise its monthly cap on the project page`]);
+});
+
+test('a cap raised on the project page while a run goes applies at once', { timeout: 10_000 }, async () => {
+  const s = setup(CHAIN('0'), { plan: ['slow'] });
+  capProject(s, 1, 'pause');
+  spentRun(s, '2026-10-01T08-00-00-other', 0.85);
+  when(() => s.script.timeline.includes('start:plan'), () => capProject(s, 5, 'pause'));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.ok(Math.abs((s.script.specs[1].limits?.maxBudgetUsd ?? 0) - 4.05) < 1e-9, JSON.stringify(s.script.specs[1].limits));
 });
