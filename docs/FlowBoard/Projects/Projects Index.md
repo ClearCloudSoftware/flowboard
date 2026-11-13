@@ -37,6 +37,7 @@ This is a platform component. There is no projects mockup, so this set is archit
 - [[Project Default Flow]]: the recipe new tasks start on; *default*, *active* and *adopted*
 - [[Project Check Command]]: the command a shell check step runs when the step names none
 - [[What Belongs To A Project]]: every table, store and view scoped by project, and what stays global
+- [[Project Settings]]: what a project overrides, the order values come in, and repo-stored against FlowBoard-stored
 
 ## Behaviour and rules
 
