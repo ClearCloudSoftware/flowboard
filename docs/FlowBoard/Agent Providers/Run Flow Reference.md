@@ -42,9 +42,9 @@ Saved as `delivery.yaml`, it runs with `pnpm run-flow --folder proj --task task.
 ## Commands
 
 ```
-pnpm run-flow --folder <dir> --task <file> [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] <flow.yaml>
+pnpm run-flow --folder <dir> --task <file> [--workspace <task id>] [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] [--over-project-budget] <flow.yaml>
 pnpm run-flow --check | --mermaid [--folder <dir> --task <file>] <flow.yaml>
-pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page]
+pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page] [--over-project-budget]
 ```
 
 Any other mix of options prints these three lines, the first headed `usage:`, and exits 2: a run without both `--folder` and `--task`, for example, a check with only one of them, or a resume with either.
@@ -55,6 +55,7 @@ Any other mix of options prints these three lines, the first headed `usage:`, an
 | `--folder <dir>` | The existing folder where every step works. One folder per run; parallel steps share it. Pinned in `flow.json`, so `--resume` takes none |
 | `--task <file>` | A non-empty file. Its text starts every agent step's prompt |
 | `--budget-usd <n>` | The most this run may spend, in dollars, in place of the flow file's `budget_usd`; `0` for no ceiling (see *Stopping and resuming*). Anything else is `--budget-usd: must be a number of dollars, 0 or more; 0 means no ceiling`, exit 2 |
+| `--over-project-budget` | Starts or resumes a run although its project's monthly cap is spent, when the project's budget says *ask me first*; a *pause new runs* project is refused anyway. Not pinned: every start and resume asks again (see *Stopping and resuming*) |
 | `--check` | Checks only: prints each warning as `-- warning: …`, then `-- flow ok: <n> steps, starting at <entry>`. With `--folder` and `--task` it checks them too, as a run would. Without them it checks the recipe on its own: `run-agent`'s checks get the flow file's folder as a stand-in folder and the flow file itself as a stand-in task |
 | `--mermaid` | Prints the graph as a Mermaid `flowchart LR`. Approval steps read `<step> (approval)`; routes draw as `-->`, `-->\|pass\|` and `-->\|fail\|`; rework routes as dotted `-.->\|fail ↺\|` |
 | `--max-runs <n>` | At most `n` runs at once; with `1`, parallel branches take turns. No limit by default. Anything but a whole number above 0 is `--max-runs: must be a whole number above 0`. It is pinned in `flow.json`, so `--resume` keeps it unless `--max-runs` is given again |
@@ -219,6 +220,11 @@ Reject is offered only when the step has an `on_fail` edge.
   -- continue with: pnpm run-flow --resume <run folder> --budget-usd <more>
   ```
   When a step waits at a gate, `-- waiting for a decision: <steps>` comes before the budget line. `flow.json` pins the ceiling as `config.budgetUsd`. A `--budget-usd` given to `--resume` replaces it there, larger, smaller or `0` for none, so the next resume keeps it too. With room left under the ceiling, `--resume` reruns the runs the ceiling cut off, asks again any gate left open, and carries on.
+- **The project's monthly cap.** A project's *Budget* setting (`budget.capUsd`, `alertAt`, `onLimit`; [[Project Settings]]) caps what all its runs spend in a calendar month, local time. A run's whole cost counts in the month its run folder's name says it started, toward the innermost project whose repo holds its folder; a run folder named without a time counts in no month (`projectSpendUsd` in `cli/src/projects.ts`, `budget.ts`). With no cap nothing below happens. Otherwise, as the run starts or resumes:
+  - Spent at or past the cap, it is refused with exit 2: `project <name> has spent $<spent> of its $<cap> for <Month>; raise its monthly cap on the project page, or wait for <Next>`. For *ask me first* the line goes on `; to run it anyway, add --over-project-budget`, and with that flag the run goes ahead with `-- project budget: over its $<cap> for <Month>; running anyway (--over-project-budget)`, capped by the flow's own budget only.
+  - Otherwise it prints `-- project budget: $<spent> of $<cap> spent in <Month>` after the isolation line, and `-- warning: project <name> has spent <pct>% of its $<cap> for <Month>` past the alert percentage.
+
+  While it goes, each agent run's `limits.budget_usd` is also no more than what is left of the cap, read again from every run folder each time, so another run's spend counts as it is written. When the cap is spent the flow pauses as on its own ceiling, with `-- the project's budget for <Month> is spent: $<spent> of $<cap>` and `-- continue with: pnpm run-flow --resume <run folder>` (plus ` --over-project-budget` for *ask me first*). Two runs at once may each spend what was left, so the cap can be passed by up to one agent run each (`projectCap` in `cli/src/flow-run.ts`). The runs page shows the refusal with **Start anyway** or **Resume anyway**, which send the flag.
 - **`--resume <run folder>`** continues from the folder's `flow.json` and `state.json`, printing `-- resuming <run folder>` in place of the start lines. It takes no `--folder` or `--task`: `flow.json` pins the run's folder (`config.folder`). The YAML is not read again, so a fixed prompt takes a new run; skill and plugin folders are read at every launch, so they are not pinned. It keeps the `--max-runs` the flow started with, unless `--max-runs` is given again, and the ceiling, unless `--budget-usd` is given. Before it goes on, it stops what the last host left running in this run folder, as a stale lock does (see *Safety*), in case that lock was deleted by hand: `-- stopped 1 run the last run-flow left running`. Uncommitted changes are not checked, because the tree now holds the flow's own edits. A run that was cut off counts as wasted, and its step runs again at the same attempt. A run still waiting for a `--max-runs` slot was never launched: it is recorded as `not launched`, not wasted, has no log, and starts on resume. Open gates are asked again.
 - **It refuses**, with exit 2, as `<run folder>: cannot resume: …`:
   - `no state.json`;
@@ -227,6 +233,7 @@ Reject is offered only when the step has an `on_fail` edge.
   - `the flow already ended (done)`, or `(failed)`;
   - `folder not found: <path>`, when the run's folder has been moved or deleted (it is never made again);
   - `the budget is spent, $0.20 of $0.15; give a larger one, or 0 for none, with --budget-usd`, while what the runs have spent reaches the ceiling it would use, the pinned one or the `--budget-usd` given;
+  - the project's cap line above, while the project's runs that month, this one included, have spent its cap;
   - the lock line, when another `run-flow` holds the folder.
 
 ## The runs page
@@ -236,7 +243,7 @@ Reject is offered only when the step has an `on_fail` edge.
 - **Questions.** Every batch the terminal would ask, a gate's decision or an agent's question, is also written to `<run folder>/asks/<id>.json` as `{ id, heading, questions, at }`. The page answers by writing `<run folder>/answers/<id>.json`; the first answer, terminal or page, wins and the other is withdrawn. Both files go once it is settled.
 - **Stop.** A `<run folder>/stop` file stops the flow as one Ctrl+C does; `--resume` continues it. This works with or without `--page`: every host watches for the file. Another stop file while it stops is a repeat, never the quit-at-once second Ctrl+C.
 - **Host.** `<run folder>/host.json`, `{ pid, page }`, is there while a `run-flow` drives the run; the page reads a run with no live host as paused.
-- **Resume.** The page's *Resume* runs `run-flow --resume <run folder> --page` in the background, with `--budget-usd` when a new budget is given; its output goes to `<run folder>/resume.log`. A refusal comes back to the page with run-flow's words, as for a new run.
+- **Resume.** The page's *Resume* runs `run-flow --resume <run folder> --page` in the background, with `--budget-usd` when a new budget is given; its output goes to `<run folder>/resume.log`. A refusal comes back to the page with run-flow's words, as for a new run. A refusal for an *ask me first* project's cap also offers **Resume anyway**, which adds `--over-project-budget`; New run offers **Start anyway** the same way.
 - **Allow host & retry.** At a *run failed* or escalation gate of an OpenSandbox run, a third question, *Host to allow before the retry*, takes a host name. With Retry, the box is let reach it at once and the host is added to `sandbox.egress` in `flow.json`, so a resumed run's box allows it too.
 
 ## Safety
@@ -269,13 +276,13 @@ Reject is offered only when the step has an `on_fail` edge.
 `run-flow` never touches `.gitignore`. At start it adds `.flowboard/` to the repository's local exclude file (`.git/info/exclude`, found with `git rev-parse --git-path info/exclude`), as the design does for `.flowboard/skills/` ([[Execution Storage]]), so `git add -A` leaves the artifacts and the lock alone.
 
 The terminal shows, in order:
-- at start, any `-- warning: …` lines (the flow file's warnings, a stale lock and what was stopped, a folder outside git), then `-- flow <name>: <n> steps in <folder>, a budget of $<ceiling>`, or `…, no budget ceiling`, `-- run folder <run folder>`, `-- sandbox limits: …` for a sandboxed flow, and `-- shell steps run without: …` when the flow has a shell step and there are secrets to remove; `--resume` prints instead any stale-lock warning, `-- stopped <k> runs the last run-flow left running` when there were some, and `-- resuming <run folder>`;
+- at start, any `-- warning: …` lines (the flow file's warnings, a stale lock and what was stopped, a folder outside git), then `-- flow <name>: <n> steps in <folder>, a budget of $<ceiling>`, or `…, no budget ceiling`, `-- run folder <run folder>`, the project budget lines when the project has a cap, `-- sandbox limits: …` for a sandboxed flow, and `-- shell steps run without: …` when the flow has a shell step and there are secrets to remove; `--resume` prints instead any stale-lock warning, `-- stopped <k> runs the last run-flow left running` when there were some, and `-- resuming <run folder>`;
 - as each run starts, `-- <step> attempt <n> (<adapter> <model>)` or `(shell)`, then `-- <step>: missing input <type>; it runs without it` for each input not written;
 - while an agent step runs, its event lines and its questions, each batch headed `-- <step> asks:`; a question it withdraws prints `-- question withdrawn: the agent stopped waiting`, or `-- question withdrawn before it was shown: the agent stopped waiting`;
 - as an agent run ends, `-- <n> tool calls failed` and `-- last message: …` when there is something to say, and, for an OpenCode model with no price, `-- <step>: no price for <model>: its cost shows as $0, and limits.budget_usd cannot stop it`; as a shell run ends, `-- <step>: last output: <line>`;
 - then `-- <step> attempt <n>: <pass | fail | no outcome | failed: <error>>, $<cost>`, or `…, cost unknown` when the provider reported no price; a run cut off by Ctrl+C or a spent budget gets no end line;
 - `-- <step> needs a decision` at each gate;
-- at the end, `-- flow <done | failed | paused | stopped>: <n> runs, $<spent> spent, $<wasted> wasted` (`1 run` for one), with `$<spent> of $<ceiling> spent` when the flow has a ceiling, plus `, cost unknown for <k> runs` (`1 run`) when some runs reported no price. `<n>` counts launched runs only. A paused flow adds `-- waiting for a decision: <steps>` when a step waits at a gate, and `-- the budget is spent: $<spent> of $<ceiling>` when the ceiling paused it. A paused or stopped one ends with `-- continue with: pnpm run-flow --resume <run folder>`, plus ` --budget-usd <more>` after a spent budget.
+- at the end, `-- flow <done | failed | paused | stopped>: <n> runs, $<spent> spent, $<wasted> wasted` (`1 run` for one), with `$<spent> of $<ceiling> spent` when the flow has a ceiling, plus `, cost unknown for <k> runs` (`1 run`) when some runs reported no price. `<n>` counts launched runs only. A paused flow adds `-- waiting for a decision: <steps>` when a step waits at a gate, and `-- the budget is spent: $<spent> of $<ceiling>` when the ceiling paused it, or `-- the project's budget for <Month> is spent: $<spent> of $<cap>` when the project's cap did. A paused or stopped one ends with `-- continue with: pnpm run-flow --resume <run folder>`, plus ` --budget-usd <more>` after a spent budget, or ` --over-project-budget` after an *ask me first* project's spent cap.
 
 ## Rules this command settles
 
