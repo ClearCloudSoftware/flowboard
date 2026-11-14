@@ -9,6 +9,7 @@
     "@alibaba-group/opensandbox": "1.1.1",
     "@anthropic-ai/claude-agent-sdk": "0.3.302",
     "@lamproom/core": "workspace:*",
+    "@octokit/graphql": "8.1.1",
     "@opencode-ai/sdk": "1.19.3",
     "remark-parse": "11.0.0",
     "unified": "11.0.5"

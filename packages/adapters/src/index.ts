@@ -11,3 +11,5 @@ export type { Box, BoxOptions } from './exec/opensandbox/box.ts';
 export * from './credentials/env-file-resolver.ts';
 export * from './ticket/replay/replay-source.ts';
 export * from './ticket/markdown/provider.ts';
+export * from './ticket/github/provider.ts';
+export * from './ticket/github/auth.ts';
