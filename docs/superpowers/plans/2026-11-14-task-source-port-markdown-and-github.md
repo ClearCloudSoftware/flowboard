@@ -33,7 +33,7 @@ These settle Intake And Import Open Questions #1, #2, #22, #25 and parts of #4; 
 | `ParsedTask` gains `acceptanceCriteria?: string[]`, `nonGoals?: string[]`, `labels?: string[]`, `assignees?: string[]`, `extras?: Record<string, unknown>` and a kept `_hint: ImportKeyHint` | #2 |
 | `fetch()` returns `{ tasks, nextCursor?, usage }`; pagination is the caller's loop | — |
 | `ingest(event: Buffer, headers: Record<string, string>)` is the second entry point on the port interface; no adapter in this plan implements it | #25 (shape) |
-| `Capability` enum carries nine flags; a caller checks the set before using a knob | — |
+| `SourceCapability` enum carries nine flags; a caller checks the set before using a knob. Renamed from `Capability` to avoid collision with `AgentProvider.Capability`. | — |
 | `importKey` is always `deriveImportKey(sourceId, hint, policy, seen)`; adapters never set it directly | #1, #4 (partly), vault rule |
 | Per-source `UpstreamKeyPolicy` lives in each adapter's `provider.ts`; markdown + replay + webhook use `{ trust: 'never' }`, github uses `{ trust: 'numeric' }` | #22 (whose id counts) |
 | `slugify` is ASCII-only, lowercase `[a-z0-9-]+`, non-ASCII stripped, empty → `'untitled'`, within-batch collisions get `-2`, `-3` suffixes | observed-#10 edge case |
@@ -63,7 +63,7 @@ Five specific test cases that catch the hardest bugs. Each lands in a named test
 
 **Interfaces:**
 - Produces (all re-exported from `@lamproom/core`):
-  - `type SourceId`, `type Capability`
+  - `type SourceId`, `type SourceCapability`
   - `interface ParsedTask`, `interface ImportKeyHint`
   - `interface SourceInput`, `interface SourceResult`, `interface SourceUsage`
   - `interface TaskSource`
@@ -109,7 +109,7 @@ Expected: `ERR_MODULE_NOT_FOUND` for `../src/ports/ticket.ts`.
 
 - [ ] **Step 3: Implement the three port files**
 
-Write the three files per the spec's "The port" and "Credentials" sections. `task-source.ts` carries the interface, `SourceId`, `Capability`, `ParsedTask`, `ImportKeyHint`, `SourceInput`, `SourceResult`. `ticket.ts` carries `SourceUsage`, `ZERO_SOURCE_USAGE`, `addUsage`. `credentials.ts` carries `SourceCredentials` and `SourceCredentialResolver`. All types; no runtime side effects except the two exports in `ticket.ts`.
+Write the three files per the spec's "The port" and "Credentials" sections. `task-source.ts` carries the interface, `SourceId`, `SourceCapability`, `ParsedTask`, `ImportKeyHint`, `SourceInput`, `SourceResult`. `ticket.ts` carries `SourceUsage`, `ZERO_SOURCE_USAGE`, `addUsage`. `credentials.ts` carries `SourceCredentials` and `SourceCredentialResolver`. All types; no runtime side effects except the two exports in `ticket.ts`.
 
 `index.ts` re-exports: `./ports/task-source.ts`, `./ports/ticket.ts`, `./ports/credentials.ts`.
 
@@ -418,8 +418,8 @@ git commit -m "feat(adapters): EnvFileCredentialResolver with 0600 mode enforcem
 - Test: `packages/adapters/test/replay-source.test.ts`
 
 **Interfaces:**
-- Consumes: `TaskSource`, `SourceInput`, `SourceResult`, `ParsedTask`, `Capability`, `ZERO_SOURCE_USAGE` (from `@lamproom/core`)
-- Produces: `class ReplayTaskSource implements TaskSource` with constructor `({ script: SourceResult[]; capabilities?: Set<Capability> })`
+- Consumes: `TaskSource`, `SourceInput`, `SourceResult`, `ParsedTask`, `SourceCapability`, `ZERO_SOURCE_USAGE` (from `@lamproom/core`)
+- Produces: `class ReplayTaskSource implements TaskSource` with constructor `({ script: SourceResult[]; capabilities?: Set<SourceCapability> })`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -605,7 +605,7 @@ Pull `readFileSync` into `provider.ts` instead so `options.ts` stays pure — ad
 ```ts
 export class MarkdownTaskSource implements TaskSource {
   readonly id: SourceId = 'markdown';
-  readonly capabilities = new Set<Capability>(['pull', 'rich_body', 'acceptance_criteria']);
+  readonly capabilities = new Set<SourceCapability>(['pull', 'rich_body', 'acceptance_criteria']);
   async fetch(input: SourceInput): Promise<SourceResult> {
     const { content } = await readInput(input);
     const tasks = parseMarkdown(content, this.id);

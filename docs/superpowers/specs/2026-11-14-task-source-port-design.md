@@ -51,10 +51,10 @@ export type SourceId = 'markdown' | 'github' | 'linear' | 'jira' | 'webhook' | '
 
 Open string with well-knowns typed — same pattern as `ProviderId`. Adapters register themselves with an id; the registry maps id → constructor.
 
-### Capability
+### SourceCapability
 
 ```ts
-export type Capability =
+export type SourceCapability =
   | 'pull'                   // fetch(input) is supported
   | 'push'                   // ingest(event, headers) is supported
   | 'pagination'             // SourceInput.cursor and SourceResult.nextCursor are honoured
@@ -137,7 +137,7 @@ export function addUsage(a: SourceUsage, b: SourceUsage): SourceUsage;
 ```ts
 export interface TaskSource {
   readonly id: SourceId;
-  readonly capabilities: ReadonlySet<Capability>;
+  readonly capabilities: ReadonlySet<SourceCapability>;
 
   /** Pull. Required when 'pull' is in capabilities, forbidden otherwise. */
   fetch?(input: SourceInput): Promise<SourceResult>;
