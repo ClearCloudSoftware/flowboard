@@ -5,6 +5,7 @@ export * from './ports/workspace.ts';
 export * from './ports/task-source.ts';
 export * from './ports/ticket.ts';
 export * from './ports/credentials.ts';
+export * from './import-key.ts';
 export * from './prompt.ts';
 export * from './guard.ts';
 export * from './hitl/question.ts';
