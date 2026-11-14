@@ -9,3 +9,4 @@ export * from './exec/docker.ts';
 export { connectBox, openBox } from './exec/opensandbox/box.ts';
 export type { Box, BoxOptions } from './exec/opensandbox/box.ts';
 export * from './credentials/env-file-resolver.ts';
+export * from './ticket/replay/replay-source.ts';
