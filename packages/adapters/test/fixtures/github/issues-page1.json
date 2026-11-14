@@ -1,0 +1,46 @@
+{
+  "repository": {
+    "issues": {
+      "pageInfo": {
+        "hasNextPage": true,
+        "endCursor": "Y3Vyc29yOnYyOpK5MjAyNi0xMS0wMVQwOToxMjozNFoyMDAxMjM="
+      },
+      "nodes": [
+        {
+          "number": 42,
+          "title": "Fix the login bug",
+          "body": "Users are redirected to /login after signing in.\n\nSteps to reproduce in the ticket body.",
+          "url": "https://github.com/octokit/octokit.js/issues/42",
+          "createdAt": "2026-10-01T12:34:56Z",
+          "updatedAt": "2026-11-01T09:12:34Z",
+          "labels": { "nodes": [{ "name": "bug" }, { "name": "priority:high" }] },
+          "assignees": { "nodes": [{ "login": "alice" }] }
+        },
+        {
+          "number": 43,
+          "title": "Document the new auth flow",
+          "body": "After #42 lands, update the auth docs.",
+          "url": "https://github.com/octokit/octokit.js/issues/43",
+          "createdAt": "2026-10-15T08:00:00Z",
+          "updatedAt": "2026-11-05T14:22:10Z",
+          "labels": { "nodes": [{ "name": "docs" }] },
+          "assignees": { "nodes": [] }
+        },
+        {
+          "number": 44,
+          "title": "Empty body issue",
+          "body": null,
+          "url": "https://github.com/octokit/octokit.js/issues/44",
+          "createdAt": "2026-11-10T06:00:00Z",
+          "updatedAt": "2026-11-10T06:00:00Z",
+          "labels": { "nodes": [] },
+          "assignees": { "nodes": [{ "login": "bob" }, { "login": "carol" }] }
+        }
+      ]
+    }
+  },
+  "rateLimit": {
+    "remaining": 4987,
+    "resetAt": "2026-11-14T15:00:00Z"
+  }
+}
