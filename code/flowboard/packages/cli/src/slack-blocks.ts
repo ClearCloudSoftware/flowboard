@@ -132,7 +132,7 @@ export function answersFromView(ask: PageAsk, values: Record<string, Record<stri
   return Object.keys(errors).length ? { errors } : { answers };
 }
 
-const answerText = (q: Question, v: AnswerValue | undefined) => {
+export const answerText = (q: Question, v: AnswerValue | undefined) => {
   if (v == null) return 'skipped';
   const label = (x: string) => q.options?.find((o) => o.value === x)?.label ?? x;
   if (q.kind === 'yes_no') return v ? 'Yes' : 'No';

@@ -39,7 +39,7 @@ export const REGISTRY_HOSTS = new Set([
 ]);
 
 /** Text a person reads before approving it: no control, format (bidi, zero-width) or line/paragraph separator characters. */
-const VISIBLE = /^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+$/u;
+export const VISIBLE = /^[^\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+$/u;
 const INVISIBLE = 'only characters a person can see: no control, bidi or zero-width characters, and one line';
 
 const level = z.enum(['high', 'medium', 'low']).optional();
