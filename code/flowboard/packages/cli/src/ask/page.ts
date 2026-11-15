@@ -5,11 +5,26 @@
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { z } from 'zod';
+import { checkQuestions } from '../../../core/src/hitl/question.ts';
 import type { Answers, Question } from '../../../core/src/hitl/question.ts';
 
 const POLL_MS = 400;
 let next = 0;
 
+/** A batch of questions as run-flow asks it; the page and memory check what they read through it. */
+export const QuestionsSchema = z
+  .array(
+    z.object({
+      id: z.string(),
+      prompt: z.string(),
+      help: z.string().optional(),
+      kind: z.enum(['yes_no', 'single_select', 'multi_select', 'text', 'number']),
+      options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+      required: z.boolean().optional(),
+    }),
+  )
+  .refine((qs) => !qs.length || checkQuestions(qs) === undefined); // ids once, prompts set, selects with options
 /** An ask as the page reads it: `heading` says who asks (a step's gate, or a step's agent). */
 export interface PageAsk { id: string; heading: string; questions: Question[]; at: string }
 

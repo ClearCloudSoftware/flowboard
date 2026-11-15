@@ -12,7 +12,7 @@ import { z } from 'zod';
 import type { Answers, Question } from '../../core/src/hitl/question.ts';
 import { VISIBLE } from './analysis.ts';
 import { writeJsonFile } from './config.ts';
-import { QuestionsSchema } from './flow-logs.ts';
+import { QuestionsSchema } from './ask/page.ts';
 import { answerText } from './slack-blocks.ts';
 
 /** Where a memory came from: its run (the run folder's name), its step, and the artifact or the question. */
