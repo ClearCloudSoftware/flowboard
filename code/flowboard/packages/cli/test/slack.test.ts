@@ -4,8 +4,8 @@ import { existsSync, mkdtempSync, realpathSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { removeKey, saveKey, savedKey } from '../src/openrouter.ts';
-import { removeSlack, saveSlackTokens, slackTokens, testSlack } from '../src/slack.ts';
-import { fakeSlack } from './fake-slack.ts';
+import { connectSocket, removeSlack, saveSlackTokens, type SocketState, slackTokens, testSlack } from '../src/slack.ts';
+import { fakeSlack, until } from './fake-slack.ts';
 
 const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'fb-slack-')));
 const OR = `sk-or-v1-${'a'.repeat(60)}beef`;
@@ -55,4 +55,84 @@ test('testSlack asks auth.test with the bot token', async () => {
   const r = await testSlack(d, slack.base);
   assert.equal(r.ok, false);
   assert.match((r as { error: string }).error, /^Slack did not answer: /);
+});
+
+const HELLO = { type: 'hello', num_connections: 1, connection_info: { app_id: 'A1' } };
+const envelope = (id: string, payload: object) => ({ envelope_id: id, type: 'interactive', accepts_response_payload: true, payload });
+
+test('Socket Mode: an interactive envelope is acked with what the handler returns, through a real WebSocket', async () => {
+  const slack = await fakeSlack();
+  const states: SocketState[] = [];
+  const seen: any[] = [];
+  const sock = connectSocket({ bot: BOT, app: APP, base: slack.base, onState: (s) => states.push(s), onInteraction: async (p) => (seen.push(p), { response_action: 'clear' }) });
+  try {
+    const conn = await until(() => slack.conns[0], 5000, 'a socket');
+    assert.equal(slack.of('apps.connections.open')[0].token, APP);
+    conn.send(HELLO);
+    await until(() => states.some((s) => s.state === 'connected'), 5000, 'connected');
+    assert.deepEqual(states.at(-1), { state: 'connected', team: 'Acme', appId: 'A1' });
+    assert.equal(states[0].state, 'connecting');
+    conn.send(envelope('e1', { type: 'view_submission', api_app_id: 'A1', team: { id: 'T1' } }));
+    await until(() => conn.received.length, 5000, 'an ack');
+    assert.deepEqual(conn.received[0], { envelope_id: 'e1', payload: { response_action: 'clear' } });
+    assert.equal(seen.length, 1);
+  } finally {
+    sock.close();
+    await slack.close();
+  }
+});
+
+test('Socket Mode: an envelope from another app or team is acked and not handled; garbage is ignored; a handler that throws is acked', async () => {
+  const slack = await fakeSlack();
+  let handled = 0;
+  const sock = connectSocket({ bot: BOT, app: APP, base: slack.base, onState: () => {}, onInteraction: async (p) => {
+    handled++;
+    if (p.boom) throw new Error('boom');
+    return undefined;
+  } });
+  try {
+    const conn = await until(() => slack.conns[0]);
+    conn.send(HELLO);
+    conn.send('not json {');
+    conn.send(envelope('e1', { type: 'block_actions', api_app_id: 'A2', team: { id: 'T1' } }));
+    conn.send(envelope('e2', { type: 'block_actions', api_app_id: 'A1', team: { id: 'T9' } }));
+    conn.send(envelope('e3', { type: 'block_actions', api_app_id: 'A1', team: { id: 'T1' }, boom: true }));
+    await until(() => conn.received.length === 3, 5000, 'three acks');
+    assert.deepEqual(conn.received, [{ envelope_id: 'e1' }, { envelope_id: 'e2' }, { envelope_id: 'e3' }]);
+    assert.equal(handled, 1);
+  } finally {
+    sock.close();
+    await slack.close();
+  }
+});
+
+test('Socket Mode: a disconnect message or a dropped socket reconnects', async () => {
+  const slack = await fakeSlack();
+  const sock = connectSocket({ bot: BOT, app: APP, base: slack.base, onState: () => {}, onInteraction: async () => undefined, backoffMs: [10] });
+  try {
+    const first = await until(() => slack.conns[0]);
+    first.send(HELLO);
+    first.send({ type: 'disconnect', reason: 'refresh_requested' });
+    const second = await until(() => slack.conns[1], 5000, 'a second socket');
+    assert.equal(slack.of('apps.connections.open').length, 2);
+    second.close();
+    await until(() => slack.conns[2], 5000, 'a third socket');
+  } finally {
+    sock.close();
+    await slack.close();
+  }
+});
+
+test('Socket Mode: a refused app-level token is an error state, retried', async () => {
+  const slack = await fakeSlack();
+  slack.reply['apps.connections.open'] = () => ({ ok: false, error: 'invalid_auth' });
+  const states: SocketState[] = [];
+  const sock = connectSocket({ bot: BOT, app: APP, base: slack.base, onState: (s) => states.push(s), onInteraction: async () => undefined, backoffMs: [10] });
+  try {
+    await until(() => slack.of('apps.connections.open').length >= 2, 5000, 'a retry');
+    assert.deepEqual(states.find((s) => s.state === 'error'), { state: 'error', error: 'Slack refused the app-level token (invalid_auth)' });
+  } finally {
+    sock.close();
+    await slack.close();
+  }
 });
