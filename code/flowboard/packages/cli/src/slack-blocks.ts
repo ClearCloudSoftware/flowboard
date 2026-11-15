@@ -9,7 +9,9 @@ import type { PageAsk } from './ask/page.ts';
 
 /** Where an answer came from, as the repaint says it. */
 export type Where = 'Slack' | 'FlowBoard' | 'the terminal';
-export type Blocks = { text: string; blocks: object[] };
+/** Block Kit JSON is loose by nature; `any` keeps the tests and callers free to read into it. */
+export type Blocks = { text: string; blocks: any[] };
+export type View = Record<string, any>;
 
 export const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 export const escapeMrkdwn = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -73,7 +75,7 @@ function element(q: Question): object {
 }
 
 /** The `views.open` view answering the whole batch; `private_metadata` says which run and ask. */
-export function askModal(a: { run: string; ask: PageAsk }) {
+export function askModal(a: { run: string; ask: PageAsk }): View {
   return {
     type: 'modal',
     callback_id: 'fb_answer',
@@ -153,7 +155,7 @@ export function closedMessage(a: { project: string; run: string; ask: PageAsk; b
 }
 
 /** A modal that only says something, for an Answer clicked after the fact. */
-export const noticeModal = (text: string) => ({ type: 'modal', title: pt('FlowBoard', 24), close: pt('Close', 24), blocks: [{ type: 'section', text: pt(text) }] });
+export const noticeModal = (text: string): View => ({ type: 'modal', title: pt('FlowBoard', 24), close: pt('Close', 24), blocks: [{ type: 'section', text: pt(text) }] });
 
 /** A plain message, for the budget's: the text in a `plain_text` section, the fallback escaped. */
 export const noteMessage = (text: string): Blocks => ({ text: escapeMrkdwn(clip(text, 300)), blocks: [{ type: 'section', text: pt(text) }] });
