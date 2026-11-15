@@ -41,6 +41,9 @@ See [[Rendering Questions In Chat]] for the kind-to-block table and the content 
 
 ## Status
 
+> [!success] Built in the rebuild, 2026-11-15
+> Over Socket Mode, with a bot token and an app-level token kept in `secrets.json` (not `.env.local`), the channel per project, and no signing secret, as Socket Mode has no inbound HTTP. Checked against a fake Slack only. See [[Slack Escalation Handoff]].
+
 Backlog Story 6.3: *"Unit tests (signature, shapes, idempotency, modal) exist; **run once against a real workspace** — never done."* (**GAP**). The backlog preamble: *"keyboard nav, drag, React Flow canvas interactions and Slack were never exercised live."* Acceptance checklist (PRD §16): *"Leaving a question for 5 minutes posts it to Slack; answering in Slack updates the web UI live, and vice versa"*.
 
 ## Related
