@@ -110,3 +110,12 @@ test("a project's network hosts join an OpenSandbox box's egress, once each; a d
   const d = isolationFor('normal', undefined, [], false, ['pypi.org']);
   assert.ok(!('refused' in d) && d.sandbox?.runtime === 'docker' && !('egress' in d.sandbox));
 });
+
+test('the box image is FLOWBOARD_IMAGE when set, else flowboard-cli', (t) => {
+  const was = process.env.FLOWBOARD_IMAGE;
+  t.after(() => (was === undefined ? delete process.env.FLOWBOARD_IMAGE : (process.env.FLOWBOARD_IMAGE = was)));
+  delete process.env.FLOWBOARD_IMAGE;
+  assert.deepEqual(isolationFor('normal', undefined, [], false), { sandbox: { runtime: 'docker', image: 'flowboard-cli', env: [] }, tier: 'container', approvals: false });
+  process.env.FLOWBOARD_IMAGE = 'flowboard-cli:knowledge';
+  assert.equal((isolationFor('normal', undefined, [], false) as { sandbox: Sandbox }).sandbox.image, 'flowboard-cli:knowledge');
+});
