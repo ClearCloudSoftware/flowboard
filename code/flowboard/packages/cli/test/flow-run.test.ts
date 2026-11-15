@@ -1631,14 +1631,14 @@ function memorySetup(on: boolean, plays: Record<string, Play[]> = { plan: ['ask'
   return { ...s, data, memories: () => readMemories(data, 'p-1') };
 }
 
-test('memory: a done run of a project with memory on saves its review and answers, and the next run recalls them', { timeout: 10_000 }, async () => {
+test('memory: a done run of a project with memory on saves its review, not a typed answer, and the next run recalls it', { timeout: 10_000 }, async () => {
   const s = memorySetup(true);
   assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
   assert.ok(s.out.includes('-- memory: recalled 0 notes for plan'), s.out.join('\n'));
-  assert.ok(s.out.includes('-- memory: saved 2 notes from this run'), s.out.join('\n'));
+  assert.ok(s.out.includes('-- memory: saved 1 note from this run'), s.out.join('\n')); // the typed answer (teal) is never kept
   assert.equal(s.out.at(-1), '-- flow done: 2 runs, $0.20 spent, $0.00 wasted');
   const ms = s.memories();
-  assert.deepEqual(ms.map((m) => m.text).sort(), ['Q: Colour? A: teal', 'Tests use vitest, run with pnpm test']);
+  assert.deepEqual(ms.map((m) => m.text), ['Tests use vitest, run with pnpm test']);
   assert.ok(ms.every((m) => m.source.run === STAMPED && m.source.trust === 'trusted'), JSON.stringify(ms));
   // A note a contained run wrote never reaches this Trusted project's runs, whose agents run on this machine.
   addMemories(s.data, 'p-1', [{ text: 'Tests in vitest run in parallel by default', source: { run: 'boxed', trust: 'normal' } }]);

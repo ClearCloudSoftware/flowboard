@@ -1142,7 +1142,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
         const steps = config.flow.steps.map((s) => ({ id: s.id, ai: config.steps[s.id].kind === 'ai', produces: s.produces }));
         const { notes, refused } = runNotes({ run: basename(d.runDir), runDir: d.runDir, artifactsDir: d.artifactsDir, trust: m.trust, steps });
         const n = addMemories(d.dataDir, m.id, notes, now());
-        print(`-- memory: saved ${plural(n, 'note')} from this run${refused ? ` (${refused} left out: characters a person cannot see)` : ''}`);
+        print(`-- memory: saved ${plural(n, 'note')} from this run${refused ? ` (${refused} left out: invisible characters, or what looks like a secret)` : ''}`);
       }
     } catch (e) {
       print(`-- memory: not saved: ${why(e)}`);

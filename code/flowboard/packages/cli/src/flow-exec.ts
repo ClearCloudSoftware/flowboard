@@ -13,6 +13,7 @@ import { startBroker } from './ask/broker.ts';
 import { inside } from './flow-config.ts';
 import type { Answerer } from './ask/broker.ts';
 import type { Adapter, RunConfig } from './config.ts';
+import { SECRET_NAME } from './secrets.ts';
 import { openLog, streamRun, summaryLines, withAsking, WITHDRAWN, WITHDRAWN_QUEUED } from './run.ts';
 import type { Log } from './run.ts';
 
@@ -59,13 +60,12 @@ const FLOWBOARD_ROOT = resolve(SHIM_ENTRY, '../../../..');
 
 export const artifactPath = (artifactsDir: string, type: string): string => join(artifactsDir, `${type}.md`);
 
-const SECRET = /_(KEY|TOKEN|SECRET|PASSWORD)$/i;
 
 /** `env` without names ending in _KEY, _TOKEN, _SECRET or _PASSWORD (any case); `removed` lists them, sorted. */
 export function shellEnv(env: NodeJS.ProcessEnv): { env: NodeJS.ProcessEnv; removed: string[] } {
   return {
-    env: Object.fromEntries(Object.entries(env).filter(([k]) => !SECRET.test(k))),
-    removed: Object.keys(env).filter((k) => SECRET.test(k)).sort(),
+    env: Object.fromEntries(Object.entries(env).filter(([k]) => !SECRET_NAME.test(k))),
+    removed: Object.keys(env).filter((k) => SECRET_NAME.test(k)).sort(),
   };
 }
 

@@ -6,6 +6,24 @@ import { readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { isFile, writeJsonFile } from './config.ts';
 
+/** An environment variable name that holds a credential: shell steps run without these (`flow-exec.ts`). */
+export const SECRET_NAME = /_(KEY|TOKEN|SECRET|PASSWORD)$/i;
+/**
+ * Text that looks like it holds a credential: a name like SECRET_NAME's, a word like password followed by `:` or `=`,
+ * a known token's prefix (OpenAI and OpenRouter, Slack, GitHub, AWS, Google), or a private key's armour.
+ */
+// ponytail: a few known shapes, not entropy scanning; a secret of another shape still gets through
+const SECRET_TEXT = new RegExp(
+  [
+    `\\w${SECRET_NAME.source.replace('$', '\\b')}`,
+    '\\b(password|passwd|passphrase|token|secret|api[ _-]?key)\\s*[:=]',
+    '\\b(sk-[\\w-]{16,}|xox[abpr]-\\S+|xapp-\\S+|gh[pousr]_\\w{20,}|github_pat_\\w+|AKIA[0-9A-Z]{16}|AIza[\\w-]{30,})',
+    '-----BEGIN [A-Z ]*PRIVATE KEY',
+  ].join('|'),
+  'i',
+);
+export const looksSecret = (text: string) => SECRET_TEXT.test(text);
+
 /** `openrouter`: OpenCode's key; `slackBot` (`xoxb-`) and `slackApp` (`xapp-`, Socket Mode): Slack escalation's. */
 export type SecretName = 'openrouter' | 'slackBot' | 'slackApp';
 

@@ -13,6 +13,7 @@ import type { Answers, Question } from '../../core/src/hitl/question.ts';
 import { VISIBLE } from './analysis.ts';
 import { writeJsonFile } from './config.ts';
 import { QuestionsSchema } from './ask/page.ts';
+import { looksSecret } from './secrets.ts';
 import { answerText } from './slack-blocks.ts';
 import type { Trust } from './settings.ts';
 
@@ -141,6 +142,8 @@ const lines = (file: string): Record<string, any>[] =>
       }
     });
 
+const CHOICES = new Set(['yes_no', 'single_select', 'multi_select']);
+
 /** The questions a person answered in the run, from its step logs (the host deletes the asks files once answered). */
 function answered(o: { run: string; runDir: string; trust: Trust }): Note[] {
   return readdirSync(o.runDir)
@@ -156,15 +159,17 @@ function answered(o: { run: string; runDir: string; trust: Trust }): Note[] {
           const parsed = QuestionsSchema.safeParse(log.find((l) => l.kind === 'question' && l.batch === a.batch)?.questions);
           const qs: Question[] = parsed.success ? parsed.data : [];
           const answers = (a.answers ?? {}) as Answers;
-          return qs.filter((q) => answers[q.id] != null).map((q) => ({ text: `Q: ${q.prompt} A: ${answerText(q, answers[q.id])}`, source: { run: o.run, step: m[2], ask: q.id, trust: o.trust } }));
+          // Only choices: a typed answer can be anything an agent asked for (a token, a password) and would be sent to
+          // the AI service in every later run.
+          return qs.filter((q) => CHOICES.has(q.kind) && answers[q.id] != null).map((q) => ({ text: `Q: ${q.prompt} A: ${answerText(q, answers[q.id])}`, source: { run: o.run, step: m[2], ask: q.id, trust: o.trust } }));
         });
     });
 }
 
 /**
- * What a done run leaves in memory: the questions a person answered, then each agent step's summary and review
- * artifacts, in flow order; the first 50 that a person can see. `refused`: how many were left out for characters
- * a person cannot see (control, bidi, zero-width).
+ * What a done run leaves in memory: the choices a person made (never typed answers), then each agent step's summary
+ * and review artifacts, in flow order; the first 50 that a person can see. `refused`: how many were left out for
+ * characters a person cannot see (control, bidi, zero-width) or for looking like they hold a secret.
  */
 export function runNotes(o: { run: string; runDir: string; artifactsDir: string; trust: Trust; steps: { id: string; ai: boolean; produces: string[] }[] }): { notes: Note[]; refused: number } {
   const raw: Note[] = [
@@ -177,7 +182,7 @@ export function runNotes(o: { run: string; runDir: string; artifactsDir: string;
           .flatMap((type) => notesOf(readPlain(join(o.artifactsDir, `${type}.md`), ARTIFACT_MAX_BYTES) ?? '').map((text) => ({ text, source: { run: o.run, step: s.id, artifact: type, trust: o.trust } }))),
       ),
   ];
-  const notes = raw.filter((n) => VISIBLE.test(n.text));
+  const notes = raw.filter((n) => VISIBLE.test(n.text) && !looksSecret(n.text));
   return { notes: notes.slice(0, RUN_MAX), refused: raw.length - notes.length };
 }
 

@@ -99,7 +99,7 @@ const STEPS = [
   { id: 'wrap', ai: true, produces: ['summary'] },
 ];
 
-test('a run leaves its answers and its summary and review artifacts, nothing else', () => {
+test('a run leaves its chosen answers and its summary and review artifacts, nothing else: never typed answers', () => {
   const r = run(
     {
       plan: '- The plan says to rewrite everything from scratch',
@@ -118,7 +118,6 @@ test('a run leaves its answers and its summary and review artifacts, nothing els
   const { notes, refused } = runNotes({ ...r, steps: STEPS });
   assert.equal(refused, 0);
   assert.deepEqual(notes, [
-    { text: 'Q: Colour? A: teal', source: { run: 'r1', step: 'plan', ask: 'colour', trust: 'normal' } },
     { text: 'Tests use vitest, run with pnpm test', source: { run: 'r1', step: 'review', artifact: 'review_notes', trust: 'normal' } },
     { text: 'The login form posts to /api/login and sets a cookie.', source: { run: 'r1', step: 'wrap', artifact: 'summary', trust: 'normal' } },
   ]);
@@ -181,7 +180,7 @@ test('a question batch in the log that is not one run-flow would ask is left out
     { kind: 'answer', batch: 2, answers: { b: 'yes it is' } },
     { kind: 'question', batch: 3, questions: 'not a list' },
     { kind: 'answer', batch: 3, answers: { c: 'x' } },
-    { kind: 'question', batch: 4, questions: [{ id: 'd', prompt: 'Which branch do releases come from?', kind: 'text' }] },
+    { kind: 'question', batch: 4, questions: [{ id: 'd', prompt: 'Which branch do releases come from?', kind: 'single_select', options: [{ value: 'main', label: 'main' }] }] },
     { kind: 'answer', batch: 4, answers: { d: 'main' } },
   ]);
   assert.deepEqual(runNotes({ ...r, steps: STEPS }).notes.map((n) => n.text), ['Q: Which branch do releases come from? A: main']);
@@ -224,4 +223,26 @@ test('a note is recalled only into runs at its tier or a stricter one; a note wi
   assert.deepEqual(got('trusted'), ['- vitest note written at trusted tier']);
   assert.deepEqual(got('normal'), ['- vitest note written at normal tier', '- vitest note written at trusted tier']);
   assert.deepEqual(got('untrusted'), ['- vitest note written at no tier', '- vitest note written at untrusted tier', '- vitest note written at normal tier', '- vitest note written at trusted tier']);
+});
+
+test('a note that looks like it holds a secret is left out, an answer or an artifact chunk', () => {
+  const r = run(
+    {
+      review_notes: [
+        '- Set OPENAI_API_KEY before the integration tests run',
+        '- The staging password: hunter2-staging, ask ops to rotate it',
+        '- Deploys use the token ghp_abcdefghijklmnopqrstuvwxyz0123456789',
+        '- An OpenRouter key looks like sk-or-v1-0123456789abcdef0123',
+        '- -----BEGIN OPENSSH PRIVATE KEY----- was pasted here once',
+        '- Tests use vitest, run with pnpm test',
+      ].join('\n'),
+    },
+    [
+      { kind: 'question', batch: 1, questions: [{ id: 'k', prompt: 'Which key should deploys use?', kind: 'single_select', options: [{ value: 'a', label: 'xoxb-1234567890-abcdefghij' }] }, { id: 'n', prompt: 'How many retries are allowed?', kind: 'number' }] },
+      { kind: 'answer', batch: 1, answers: { k: 'a', n: 3 } },
+    ],
+  );
+  const got = runNotes({ ...r, steps: STEPS });
+  assert.deepEqual(got.notes.map((n) => n.text), ['Tests use vitest, run with pnpm test']);
+  assert.equal(got.refused, 6);
 });
