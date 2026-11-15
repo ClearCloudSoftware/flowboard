@@ -13,7 +13,7 @@ import { startRun } from './flow-start.ts';
 import { INTERNAL_DIR } from './internal-steps.ts';
 import { buildCommand, FAILED, type KnowledgeView } from './knowledge.ts';
 import { startAnalysis } from './analysis-run.ts';
-import { type Project, readProjects, setKnowledgeBuild } from './projects.ts';
+import { type Project, readProjects, setKnowledgeBuild, startOf } from './projects.ts';
 import { type Knowledge, resolveSettings } from './settings.ts';
 
 /** The task a build runs on; its shell step never reads it. */
@@ -111,4 +111,64 @@ export async function buildThenAnalyse(
     }
   }
   return analyse(dataDir, runsDir, project);
+}
+
+const DAY_MS = 24 * 3600 * 1000;
+
+/**
+ * Why a build of `p`'s maps is due now, or undefined. Never by hand-only, never while one builds. `daily`: a day after
+ * the last build started. `push`: the base branch (`git`: the branch checked out and the base's tip) has moved past the
+ * commit last mapped; only while it is checked out, as a build maps the working tree. A build that failed is not
+ * started again until the base moves, or a day passes.
+ */
+export function dueBuild(p: Project, kn: Knowledge, view: KnowledgeView, git: { branch?: string; tip?: string }, now: number): string | undefined {
+  if (kn.rebuild === 'manual' || view.status === 'off' || view.status === 'building') return undefined;
+  if (kn.rebuild === 'daily') return !p.knowledgeBuild ? 'never built' : now - startOf(p.knowledgeBuild.run) >= DAY_MS ? 'a day since the last build' : undefined;
+  if (!p.baseBranch || git.branch !== p.baseBranch || !git.tip) return undefined;
+  if (!p.knowledgeBuild) return 'never built';
+  return git.tip !== p.knowledgeBuild.commit ? `${p.baseBranch} moved to ${git.tip.slice(0, 7)}` : undefined;
+}
+
+/** The branch checked out in `repo`; undefined when HEAD is detached or git refuses. */
+const branchOf = (repo: string) => {
+  const r = hostGit(repo, repo, ['symbolic-ref', '--short', '-q', 'HEAD']);
+  return 'refused' in r || r.status !== 0 ? undefined : r.stdout.trim();
+};
+
+/** One pass over the projects: each due build started in turn. A refusal is reported and tried again next pass. */
+export async function knowledgeTick(dataDir: string, runsDir: string, now = Date.now(), start = startKnowledgeBuild): Promise<{ project: string; why: string; run?: string; error?: string }[]> {
+  const out: { project: string; why: string; run?: string; error?: string }[] = [];
+  for (const p of readProjects(dataDir)) {
+    if (!existsSync(p.repoPath)) continue;
+    const kn = knowledgeOf(dataDir, p);
+    const why = dueBuild(p, kn, knowledgeView(runsDir, p, kn), { branch: branchOf(p.repoPath), tip: p.baseBranch ? revParse(p.repoPath, `refs/heads/${p.baseBranch}`) : undefined }, now);
+    if (!why) continue;
+    const r = await start(dataDir, runsDir, p).catch((e: Error): Started => ({ ok: false, error: e.message }));
+    out.push({ project: p.name, why, ...(r.ok ? { run: r.run } : { error: r.error.split('\n')[0] }) });
+  }
+  return out;
+}
+
+/**
+ * Checks for due builds every `everyMs` (10 minutes) in this process, from the Next server's `instrumentation.ts`.
+ * Once per process: a second call (a dev reload) gets the first timer. A pass still going skips the next.
+ */
+export function startScheduler(dataDir: string, runsDir: string, everyMs = 600_000, tick = knowledgeTick): NodeJS.Timeout {
+  const g = globalThis as { __fbKnowledge?: NodeJS.Timeout };
+  if (g.__fbKnowledge) return g.__fbKnowledge;
+  let busy = false;
+  const pass = async () => {
+    if (busy) return;
+    busy = true;
+    try {
+      for (const r of await tick(dataDir, runsDir)) console.log(`-- knowledge: ${r.project}: ${r.why}; ${r.run ? `build started: run ${r.run}` : `build not started: ${r.error}`}`);
+    } catch (e) {
+      console.error(`-- knowledge: the scheduler's pass failed: ${(e as Error).message}`);
+    } finally {
+      busy = false;
+    }
+  };
+  g.__fbKnowledge = setInterval(pass, everyMs);
+  g.__fbKnowledge.unref();
+  return g.__fbKnowledge;
 }

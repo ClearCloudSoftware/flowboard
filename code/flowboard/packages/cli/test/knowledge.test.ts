@@ -5,13 +5,14 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildCommand, KNOWLEDGE_DIR } from '../src/knowledge.ts';
-import { buildThenAnalyse, KNOWLEDGE_TASK, knowledgeFlowText, knowledgeView, startKnowledgeBuild } from '../src/knowledge-run.ts';
+import { buildThenAnalyse, dueBuild, KNOWLEDGE_TASK, knowledgeTick, startScheduler, knowledgeFlowText, knowledgeView, startKnowledgeBuild } from '../src/knowledge-run.ts';
 import type { startRun } from '../src/flow-start.ts';
 import { loadFlow } from '../src/flow-config.ts';
 import { createProject, type Project, readProjects, setKnowledgeBuild } from '../src/projects.ts';
+import type { Knowledge } from '../src/settings.ts';
 
 const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'fb-knowledge-')));
-const BOTH = { graphify: true, serena: true, rebuild: 'push' as const };
+const BOTH: Knowledge = { graphify: true, serena: true, rebuild: 'push' };
 const git = (cwd: string, ...args: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd, encoding: 'utf8' });
 
 /** A git repo with one commit on main; its HEAD. */
@@ -204,4 +205,45 @@ test('after a clone the maps are built first, and the analyst starts once the bu
   const off = project('normal', { graphify: false, serena: false, rebuild: 'manual' });
   await buildThenAnalyse(off.data, runs, off.p, (l) => lines.push(l), { build, analyse, pollMs: 20 });
   assert.deepEqual([order, lines], [['analyse'], []]);
+});
+
+test('which builds are due: by hand never; daily a day after the last; push when the checked-out base has moved on', () => {
+  const base = { id: 'p', baseBranch: 'main', knowledgeBuild: { run: '2026-11-15T10-00-00-knowledge-build', commit: 'aaa' } } as Project;
+  const at = (h: number) => new Date(2026, 10, 15, 10 + h).getTime();
+  const built = { status: 'built' as const };
+  const on = (rebuild: 'push' | 'daily' | 'manual') => ({ graphify: true, serena: false, rebuild });
+  const here = { branch: 'main', tip: 'aaa' };
+  assert.equal(dueBuild(base, on('manual'), { status: 'never' }, here, at(48)), undefined);
+  assert.equal(dueBuild(base, { ...on('daily'), graphify: false }, { status: 'off' }, here, at(48)), undefined);
+  assert.equal(dueBuild({ ...base, knowledgeBuild: undefined }, on('daily'), { status: 'never' }, here, at(0)), 'never built');
+  assert.equal(dueBuild(base, on('daily'), built, here, at(23)), undefined);
+  assert.equal(dueBuild(base, on('daily'), built, here, at(24)), 'a day since the last build');
+  assert.equal(dueBuild(base, on('daily'), { status: 'building' }, here, at(48)), undefined);
+  assert.equal(dueBuild(base, on('push'), built, here, at(1)), undefined);
+  assert.equal(dueBuild(base, on('push'), { status: 'stale' }, { branch: 'main', tip: 'bbbbbbbbb' }, at(1)), 'main moved to bbbbbbb');
+  assert.equal(dueBuild(base, on('push'), { status: 'failed' }, here, at(1)), undefined); // failed at this commit: not again until it moves
+  assert.equal(dueBuild(base, on('push'), { status: 'stale' }, { branch: 'feature', tip: 'bbb' }, at(1)), undefined); // the working tree is not the base
+  assert.equal(dueBuild({ ...base, knowledgeBuild: undefined }, on('push'), { status: 'never' }, here, at(1)), 'never built');
+  assert.equal(dueBuild({ ...base, baseBranch: null }, on('push'), { status: 'never' }, here, at(1)), undefined);
+  assert.equal(dueBuild(base, on('push'), { status: 'building' }, { branch: 'main', tip: 'bbb' }, at(1)), undefined);
+});
+
+test('a tick starts each due build once; the scheduler starts once per process', async () => {
+  const runs = temp();
+  const push = project('normal');
+  const manual = project('normal', { graphify: true, serena: true, rebuild: 'manual' });
+  // one data folder holding both projects
+  const both = [...readProjects(push.data), ...readProjects(manual.data)];
+  writeFileSync(join(push.data, 'projects.json'), JSON.stringify(both));
+  const started: string[] = [];
+  const start = async (_d: string, _r: string, p: Project) => (started.push(p.repoPath), { ok: true as const, run: 'r' });
+  const done = await knowledgeTick(push.data, runs, Date.now(), start);
+  assert.deepEqual(started, [push.r.dir]);
+  assert.deepEqual(done, [{ project: push.p.name, why: 'never built', run: 'r' }]);
+  const tick = async () => [];
+  const a = startScheduler(push.data, runs, 60_000, tick);
+  const b = startScheduler(push.data, runs, 60_000, tick);
+  assert.equal(a, b);
+  clearInterval(a);
+  delete (globalThis as { __fbKnowledge?: unknown }).__fbKnowledge;
 });
