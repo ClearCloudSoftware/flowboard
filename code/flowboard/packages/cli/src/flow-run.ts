@@ -26,6 +26,7 @@ import type { Isolation } from './isolation.ts';
 import { approver } from './approvals.ts';
 import { budgetState, monthName, monthOf, nextMonthName } from './budget.ts';
 import { listRuns } from './flow-logs.ts';
+import { addMemories, readMemories, recall, runNotes } from './memory.ts';
 import { owns, projectSpendUsd, readProjects, startOf } from './projects.ts';
 import type { Project } from './projects.ts';
 import { resolveSettings, TRUST } from './settings.ts';
@@ -831,7 +832,33 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   const asker = term && page ? either(term.ask, page) : (term?.ask ?? page);
   const show = term ? (line: string) => term.show(line) : print;
   const temps = new Set<string>();
+  /**
+   * The run's project id while its memory is on, read again each time so a change applies to a run already going;
+   * none for FlowBoard's own runs (the repo analyst, knowledge builds), whose flows live in the data folder.
+   */
+  const internal = inside(join(d.dataDir, 'internal'), config.yamlPath);
+  const memoryOf = (): string | undefined => {
+    const id = config.isolation?.projectId;
+    if (internal || !id) return undefined;
+    const p = readProjects(d.dataDir).find((x) => x.id === id);
+    return p && resolveSettings(readAppSettings(d.dataDir), p.type, p.overrides).memory.value ? id : undefined;
+  };
+  const why = (e: unknown) => (e instanceof Error ? e.message : String(e)).split('\n')[0];
+  /** Memory is never on a run's critical path: a store that cannot be read leaves the attempt without it. */
+  const recallFor = (step: string, query: string): string | undefined => {
+    try {
+      const id = memoryOf();
+      if (!id) return undefined;
+      const r = recall(readMemories(d.dataDir, id), query);
+      show(`-- memory: recalled ${plural(r?.count ?? 0, 'note')} for ${step}`);
+      return r?.text;
+    } catch (e) {
+      show(`-- memory: not read: ${why(e)}; ${step} runs without it`);
+      return undefined;
+    }
+  };
   const ctx: ExecContext = {
+    recall: recallFor,
     artifactsDir: d.artifactsDir,
     logDir: d.runDir,
     show,
@@ -1106,6 +1133,20 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   }
 
   const status = ended ?? (stopAsked ? 'stopped' : 'paused');
+  // Only a run that ended done commits, on the host: from its declared artifacts and the answers it collected.
+  if (status === 'done') {
+    try {
+      const id = memoryOf();
+      if (id) {
+        const steps = config.flow.steps.map((s) => ({ id: s.id, ai: config.steps[s.id].kind === 'ai', produces: s.produces }));
+        const { notes, refused } = runNotes({ run: basename(d.runDir), runDir: d.runDir, artifactsDir: d.artifactsDir, steps });
+        const n = addMemories(d.dataDir, id, notes, now());
+        print(`-- memory: saved ${plural(n, 'note')} from this run${refused ? ` (${refused} left out: characters a person cannot see)` : ''}`);
+      }
+    } catch (e) {
+      print(`-- memory: not saved: ${why(e)}`);
+    }
+  }
   const launched = state.runs.filter((r) => r.error !== 'not launched');
   const total = (runs: FlowState['runs']) => sumCost(runs).toFixed(2);
   const unknown = launched.filter((r) => r.costUsd === null).length;

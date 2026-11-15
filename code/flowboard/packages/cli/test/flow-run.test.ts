@@ -17,6 +17,8 @@ import { DISCARD_COMMANDS, pushable, runFlow, sandboxFor } from '../src/flow-run
 import { cleanWorkspace } from '../src/workspace.ts';
 import { loadFlow } from '../src/flow-config.ts';
 import { KNOWLEDGE_TASK, knowledgeFlowText } from '../src/knowledge-run.ts';
+import { addMemories, memoryFile, readMemories, RECALL_HEAD } from '../src/memory.ts';
+import { renderPrompt } from '@flowboard/core';
 import type { RunDeps } from '../src/run.ts';
 import { DELIVERY, flowProject, registerProject, RUN } from './fixtures/flow.ts';
 
@@ -1601,4 +1603,100 @@ test("an agent step gets Serena and graphify's report once they are built, and o
   assert.equal(await runFlow([...RUN, 'flow.yaml'], unbuilt.deps), 0, unbuilt.err.join('\n'));
   assert.equal(unbuilt.script.specs[0].tools?.some((t) => t.name === 'serena'), false);
   assert.doesNotMatch(unbuilt.script.specs[0].prompt.preamble, /graphify/);
+});
+
+// --- project memory
+
+const VITEST = '- Tests use vitest, run with pnpm test';
+const MEMO = `${HEAD}steps:
+  plan: { prompt: prompts/plan.md }
+  review: { prompt: prompts/review.md, produces: [review_notes] }
+edges:
+  - { from: plan, to: review }
+`;
+/** A run of MEMO whose review writes VITEST, its project's memory `on` or not. */
+function memorySetup(on: boolean, plays: Record<string, Play[]> = { plan: ['ask'] }, yaml = MEMO, extra: Record<string, string> = {}) {
+  const s = setup(yaml, plays);
+  writeFileSync(join(s.base, 'prompts', 'review.md'), VITEST);
+  for (const [path, text] of Object.entries(extra)) {
+    mkdirSync(dirname(join(s.base, path)), { recursive: true });
+    writeFileSync(join(s.base, path), text);
+  }
+  const file = join(s.base, 'data', 'projects.json');
+  const projects = JSON.parse(readFileSync(file, 'utf8'));
+  projects[0].overrides.memory = on;
+  writeFileSync(file, JSON.stringify(projects));
+  s.deps.answer = async () => ({ colour: 'teal' });
+  const data = join(s.base, 'data');
+  return { ...s, data, memories: () => readMemories(data, 'p-1') };
+}
+
+test('memory: a done run of a project with memory on saves its review and answers, and the next run recalls them', { timeout: 10_000 }, async () => {
+  const s = memorySetup(true);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  assert.ok(s.out.includes('-- memory: recalled 0 notes for plan'), s.out.join('\n'));
+  assert.ok(s.out.includes('-- memory: saved 2 notes from this run'), s.out.join('\n'));
+  assert.equal(s.out.at(-1), '-- flow done: 2 runs, $0.20 spent, $0.00 wasted');
+  const ms = s.memories();
+  assert.deepEqual(ms.map((m) => m.text).sort(), ['Q: Colour? A: teal', 'Tests use vitest, run with pnpm test']);
+  assert.ok(ms.every((m) => m.source.run === STAMPED), JSON.stringify(ms));
+  assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt))); // nothing to recall in the first run
+
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  const review = s.script.specs[3];
+  assert.equal(review.prompt.template, VITEST);
+  assert.equal(review.prompt.memory, `${RECALL_HEAD}\n- Tests use vitest, run with pnpm test`);
+  const text = renderPrompt(review.prompt);
+  assert.ok(text.indexOf(VITEST) < text.indexOf(RECALL_HEAD) && text.indexOf(RECALL_HEAD) < text.indexOf(review.prompt.closing), text);
+  assert.ok(text.endsWith(review.prompt.closing));
+  assert.ok(s.out.includes('-- memory: recalled 1 note for review'), s.out.join('\n'));
+});
+
+test('memory: with memory off the prompt is what it was, and nothing is saved or said', { timeout: 10_000 }, async () => {
+  const s = memorySetup(false);
+  addMemories(s.data, 'p-1', [{ text: 'Tests use vitest, run with pnpm test', source: { run: 'old' } }]);
+  const before = readFileSync(memoryFile(s.data, 'p-1'), 'utf8');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  assert.equal(s.script.specs.length, 2);
+  assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt)));
+  assert.deepEqual(s.out.filter((l) => l.includes('memory')), []);
+  assert.equal(readFileSync(memoryFile(s.data, 'p-1'), 'utf8'), before);
+});
+
+test('memory: a failed or paused run saves nothing', { timeout: 10_000 }, async () => {
+  // review writes its notes, then build fails and the person fails the flow
+  const failed = memorySetup(true, { build: ['error'] }, `${HEAD}steps:\n  review: { prompt: prompts/review.md, produces: [review_notes] }\n  build: { prompt: prompts/build.md }\nedges:\n  - { from: review, to: build }\n`);
+  failed.deps.answer = deciding('fail').answer;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], failed.deps), 1, failed.out.join('\n'));
+  assert.ok(existsSync(join(failed.base, 'proj', '.flowboard', STAMPED, 'review_notes.md')));
+  assert.equal(existsSync(memoryFile(failed.data, 'p-1')), false);
+  assert.deepEqual(failed.out.filter((l) => l.startsWith('-- memory: saved')), []);
+
+  // review reports no outcome, so it waits at a gate nobody is there for
+  const paused = memorySetup(true, { [VITEST]: ['none'] }, GATE.replace('prompts/review.md }', 'prompts/review.md, produces: [review_notes] }'));
+  delete paused.deps.answer;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], paused.deps), 3, paused.out.join('\n'));
+  assert.equal(existsSync(memoryFile(paused.data, 'p-1')), false);
+});
+
+test('memory: an unreadable store: the run goes on without memory, and its file is left alone', { timeout: 10_000 }, async () => {
+  const s = memorySetup(true);
+  mkdirSync(join(s.data, 'memory'));
+  writeFileSync(memoryFile(s.data, 'p-1'), '{oops');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  assert.ok(s.out.some((l) => /^-- memory: not read: .+; plan runs without it$/.test(l)), s.out.join('\n'));
+  assert.ok(s.out.some((l) => /^-- memory: not saved: .+/.test(l)), s.out.join('\n'));
+  assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt)));
+  assert.equal(readFileSync(memoryFile(s.data, 'p-1'), 'utf8'), '{oops');
+});
+
+test("memory: FlowBoard's own runs neither recall nor save", { timeout: 10_000 }, async () => {
+  const s = memorySetup(true, {}, MEMO, { 'data/internal/x/flow.yaml': MEMO, 'data/internal/x/prompts/plan.md': 'plan', 'data/internal/x/prompts/review.md': VITEST });
+  addMemories(s.data, 'p-1', [{ text: 'Tests use vitest, run with pnpm test', source: { run: 'old' } }]);
+  const before = readFileSync(memoryFile(s.data, 'p-1'), 'utf8');
+  assert.equal(await runFlow([...RUN, 'data/internal/x/flow.yaml'], s.deps), 0, s.err.join('\n'));
+  assert.equal(s.script.specs.length, 2);
+  assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt)));
+  assert.deepEqual(s.out.filter((l) => l.includes('memory')), []);
+  assert.equal(readFileSync(memoryFile(s.data, 'p-1'), 'utf8'), before);
 });

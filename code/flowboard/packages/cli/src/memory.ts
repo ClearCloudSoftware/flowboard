@@ -44,7 +44,15 @@ export function memoryFile(dataDir: string, projectId: string): string {
 export function readMemories(dataDir: string, projectId: string): Memory[] {
   const file = memoryFile(dataDir, projectId);
   if (!existsSync(file)) return [];
-  return Store.parse(JSON.parse(readFileSync(file, 'utf8'))).memories.sort((a, b) => b.at.localeCompare(a.at));
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(file, 'utf8'));
+  } catch (e) {
+    throw new Error(`${file}: ${(e as Error).message}`);
+  }
+  const store = Store.safeParse(raw);
+  if (!store.success) throw new Error(`${file}: not a FlowBoard memory file`);
+  return store.data.memories.sort((a, b) => b.at.localeCompare(a.at));
 }
 
 const write = (dataDir: string, projectId: string, memories: Memory[]) => writeJsonFile(memoryFile(dataDir, projectId), { version: 1, memories });

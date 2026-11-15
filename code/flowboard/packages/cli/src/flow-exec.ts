@@ -50,6 +50,8 @@ export interface ExecContext {
   onInterrupt(): void;
   /** Live agent runs' temp folders, for a host that must exit before their runs end. */
   temps?: Set<string>;
+  /** The project's recalled memory for an attempt of `step` (prompt part 7), from its task and prompt; absent when memory is off. */
+  recall?(step: string, query: string): string | undefined;
 }
 
 /** code/flowboard: holds the shim and the adapters' plugins, and their node_modules. */
@@ -327,15 +329,13 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
       const ref = (type: string) => ({ type, path: artifactPath(ctx.artifactsDir, type) });
       const missing = missingInputs(run, ctx);
       // New objects: the config's own prompt and guards are shared by every attempt.
-      spec.prompt = {
-        ...spec.prompt,
-        preamble:
-          spec.prompt.preamble +
-          (run.note ? `\n\nA person's note for this attempt: ${run.note}` : '') +
-          (missing.length ? `\n\nMissing inputs (an earlier step did not write them): ${missing.join(', ')}` : ''),
-        inputs: run.inputs.filter((type) => !missing.includes(type)).map(ref),
-        outputs: produces.map(ref),
-      };
+      const preamble =
+        spec.prompt.preamble +
+        (run.note ? `\n\nA person's note for this attempt: ${run.note}` : '') +
+        (missing.length ? `\n\nMissing inputs (an earlier step did not write them): ${missing.join(', ')}` : '');
+      // Absent, not empty, when nothing is recalled: the prompt is then exactly the six parts.
+      const memory = ctx.recall?.(run.step, `${preamble}\n${spec.prompt.template ?? ''}`);
+      spec.prompt = { ...spec.prompt, preamble, inputs: run.inputs.filter((type) => !missing.includes(type)).map(ref), outputs: produces.map(ref), ...(memory && { memory }) };
       spec.guards = { ...spec.guards, writeRoots: [...(spec.guards?.writeRoots ?? []), ctx.artifactsDir] };
       if (ctx.approve) {
         const approve = ctx.approve;
