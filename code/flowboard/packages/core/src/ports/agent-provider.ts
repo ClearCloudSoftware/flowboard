@@ -92,6 +92,8 @@ export interface PromptParts {
   invocation?: string;
   /** 5. `prompt_template` with {{placeholders}} already substituted. */
   template?: string;
+  /** 7. Recalled memory: background from earlier runs, not instructions (Memory). Rendered just before the closing. */
+  memory?: string;
   /** 6. Closing headless instruction: no terminal, use ask_user for questions. */
   closing: string;
 }
