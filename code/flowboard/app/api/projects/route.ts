@@ -2,6 +2,7 @@ import { connection } from 'next/server';
 import { z } from 'zod';
 import { analysisView } from '../../../packages/cli/src/analysis-run.ts';
 import { listRuns } from '../../../packages/cli/src/flow-logs.ts';
+import { knowledgeView } from '../../../packages/cli/src/knowledge-run.ts';
 import { createProject, readProjects, seedOnce, viewProjects } from '../../../packages/cli/src/projects.ts';
 import { readAppSettings } from '../../../packages/cli/src/app-settings.ts';
 import type { Overrides } from '../../../packages/cli/src/settings.ts';
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
   if (no) return no;
   seedOnce(dataDir(), flowsDir());
   const runs = runsDir();
-  return Response.json(viewProjects(readProjects(dataDir()), listRuns(runs), flowsDir(), readAppSettings(dataDir()), Date.now(), (run) => analysisView(runs, run)));
+  return Response.json(viewProjects(readProjects(dataDir()), listRuns(runs), flowsDir(), readAppSettings(dataDir()), Date.now(), (run) => analysisView(runs, run), (p, kn) => knowledgeView(runs, p, kn)));
 }
 
 /** The shape only; `createProject` checks the values (overrides, limits) and says what is wrong with them. */

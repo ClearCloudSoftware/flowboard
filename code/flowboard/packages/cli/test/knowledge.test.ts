@@ -1,0 +1,169 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { buildCommand, KNOWLEDGE_DIR } from '../src/knowledge.ts';
+import { KNOWLEDGE_TASK, knowledgeFlowText, knowledgeView, startKnowledgeBuild } from '../src/knowledge-run.ts';
+import type { startRun } from '../src/flow-start.ts';
+import { loadFlow } from '../src/flow-config.ts';
+import { createProject, type Project, readProjects } from '../src/projects.ts';
+
+const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'fb-knowledge-')));
+const BOTH = { graphify: true, serena: true, rebuild: 'push' as const };
+const git = (cwd: string, ...args: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd, encoding: 'utf8' });
+
+/** A git repo with one commit on main; its HEAD. */
+function repo(): { dir: string; head: () => string } {
+  const dir = temp();
+  git(dir, 'init', '-q', '-b', 'main');
+  writeFileSync(join(dir, 'a.ts'), 'export const a = 1;\n');
+  git(dir, 'add', '.');
+  git(dir, 'commit', '-q', '-m', 'one');
+  return { dir, head: () => git(dir, 'rev-parse', 'HEAD').stdout.trim() };
+}
+
+/**
+ * Stand-ins for the box's `graphify` and `fb-serena`: graphify writes its report where GRAPHIFY_OUT says; Serena's
+ * index writes project.yml only into a folder that already exists, as Serena falls back to the repo's own `.serena/`
+ * otherwise. `fails` makes one exit 1 with a last line.
+ */
+function fakeTools(fails?: 'graphify' | 'serena'): string {
+  const bin = temp();
+  const tool = (name: string, body: string) => {
+    writeFileSync(join(bin, name), `#!/bin/sh\n${fails && name.endsWith(fails) ? 'echo "starting"; echo "no language server for go"; exit 1' : body}\n`);
+    chmodSync(join(bin, name), 0o755);
+  };
+  tool('graphify', '[ "$1" = update ] && [ "$GRAPHIFY_FORCE" = 1 ] && mkdir -p "$GRAPHIFY_OUT" && echo "# report" > "$GRAPHIFY_OUT/GRAPH_REPORT.md"');
+  tool('fb-serena', `[ "$1 $2" = "project index" ] && [ -d ${KNOWLEDGE_DIR}/serena ] && printf 'name: x\\nread_only: false\\n' > ${KNOWLEDGE_DIR}/serena/project.yml && mkdir -p .serena/logs && echo "a.ts failed" > .serena/logs/indexing.txt`);
+  return bin;
+}
+
+const sh = (command: string, cwd: string, bin: string) => spawnSync('sh', ['-c', command], { cwd, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+const stamp = (dir: string) => JSON.parse(readFileSync(join(dir, KNOWLEDGE_DIR, 'stamp.json'), 'utf8'));
+
+test('a box build maps the code, indexes it read-only, and stamps the commit', () => {
+  const r = repo();
+  const out = sh(buildCommand(BOTH, r.head()), r.dir, fakeTools());
+  assert.equal(out.status, 0, out.stdout + out.stderr);
+  assert.equal(readFileSync(join(r.dir, KNOWLEDGE_DIR, 'graphify-out', 'GRAPH_REPORT.md'), 'utf8'), '# report\n');
+  assert.match(readFileSync(join(r.dir, KNOWLEDGE_DIR, 'serena', 'project.yml'), 'utf8'), /^read_only: true$/m);
+  const s = stamp(r.dir);
+  assert.deepEqual([s.commit, s.graphify, s.serena], [r.head(), true, true]);
+  assert.match(s.builtAt, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+  // Serena's failure log goes beside its index, and the .serena/ it made in the repo goes away
+  assert.equal(readFileSync(join(r.dir, KNOWLEDGE_DIR, 'serena', 'indexing-failures.txt'), 'utf8'), 'a.ts failed\n');
+  assert.equal(existsSync(join(r.dir, '.serena')), false);
+  assert.equal(out.stdout.trim().split('\n').at(-1), `-- knowledge built at ${r.head().slice(0, 7)}`);
+});
+
+test('a build runs only what is on; one that fails says why on its last line and still stamps what it made', () => {
+  const r = repo();
+  const only = sh(buildCommand({ graphify: true, serena: false }, null), r.dir, fakeTools());
+  assert.equal(only.status, 0);
+  assert.deepEqual([stamp(r.dir).commit, stamp(r.dir).serena], [null, false]);
+  assert.equal(existsSync(join(r.dir, KNOWLEDGE_DIR, 'serena')), false);
+  const failed = sh(buildCommand(BOTH, r.head()), r.dir, fakeTools('serena'));
+  assert.equal(failed.status, 1);
+  assert.equal(failed.stdout.trim().split('\n').at(-1), '-- knowledge build failed: serena: no language server for go');
+  assert.deepEqual([stamp(r.dir).graphify, stamp(r.dir).serena], [true, false]);
+});
+
+test('on this machine the tools run through uvx, pinned, with FlowBoard’s Serena home', () => {
+  const cmd = buildCommand(BOTH, 'abc', { serenaHome: "/data/it's/serena" });
+  assert.match(cmd, /uvx -q --from graphifyy==0\.7\.5 graphify update \./);
+  assert.match(cmd, /SERENA_HOME='\/data\/it'\\''s\/serena' uvx -q --from git\+https:\/\/github\.com\/oraios\/serena@5e4f5cd173c7ff3eed37ee3f1de6c266b937c5dc serena project index \./);
+  assert.doesNotMatch(cmd, /fb-serena/);
+});
+
+test('the build flow is one shell step that costs nothing and leaves the sandbox to the project', () => {
+  const r = repo();
+  writeFileSync(join(r.dir, 'task.md'), KNOWLEDGE_TASK);
+  writeFileSync(join(r.dir, 'knowledge-build.yaml'), knowledgeFlowText(buildCommand(BOTH, 'abc')));
+  const loaded = loadFlow('knowledge-build.yaml', r.dir, { folder: r.dir, task: 'task.md' });
+  assert.ok(loaded.ok, loaded.ok ? '' : loaded.errors.join('\n'));
+  assert.equal(loaded.config.budgetUsd, 0);
+  assert.equal(loaded.config.sandbox, undefined);
+  assert.deepEqual(Object.keys(loaded.config.steps), ['build']);
+  assert.equal(loaded.config.steps.build.kind, 'shell');
+  assert.equal(loaded.config.flow.steps[0].produces[0], 'build');
+});
+
+function project(trust: 'trusted' | 'normal', knowledge = BOTH): { data: string; p: Project; r: ReturnType<typeof repo> } {
+  const data = temp();
+  const lib = temp();
+  const r = repo();
+  const made = createProject(data, lib, { name: 'p', repoPath: r.dir, type: 'software', overrides: { trust, knowledge } });
+  assert.ok(made.ok);
+  return { data, p: made.value, r };
+}
+
+test('starting a build: the flow is written for the project, run-flow starts in its repo, and the run and commit are kept', async () => {
+  const { data, p, r } = project('normal');
+  const runs = temp();
+  const calls: unknown[][] = [];
+  const ok: typeof startRun = async (...a) => (calls.push(a), { ok: true, name: '2026-11-15T10-00-00-knowledge-build' });
+  assert.deepEqual(await startKnowledgeBuild(data, runs, p, ok), { ok: true, run: '2026-11-15T10-00-00-knowledge-build' });
+  const [runsDir, flowsDir, input, dataDir] = calls[0] as [string, string, Record<string, unknown>, string];
+  assert.deepEqual([runsDir, dataDir], [runs, data]);
+  assert.deepEqual(input, { flow: 'knowledge-build', folder: r.dir, task: KNOWLEDGE_TASK, allowDirty: true });
+  assert.match(readFileSync(join(flowsDir, 'knowledge-build.yaml'), 'utf8'), /fb-serena project index/); // Normal: in a box
+  assert.deepEqual(readProjects(data)[0].knowledgeBuild, { run: '2026-11-15T10-00-00-knowledge-build', commit: r.head() });
+  // a refusal keeps nothing
+  const no: typeof startRun = async () => ({ ok: false, error: 'flow.yaml: --folder: another run-flow (pid 1) is working here' });
+  assert.deepEqual(await startKnowledgeBuild(data, runs, readProjects(data)[0], no), { ok: false, error: 'flow.yaml: --folder: another run-flow (pid 1) is working here' });
+  assert.equal(readProjects(data)[0].knowledgeBuild?.run, '2026-11-15T10-00-00-knowledge-build');
+});
+
+test('a Trusted build runs here through uvx with FlowBoard’s Serena config; with both maps off nothing starts', async () => {
+  const { data, p } = project('trusted');
+  let flows = '';
+  const ok: typeof startRun = async (_r, f) => ((flows = f), { ok: true, name: 'n' });
+  await startKnowledgeBuild(data, temp(), p, ok);
+  assert.match(readFileSync(join(flows, 'knowledge-build.yaml'), 'utf8'), /uvx -q --from graphifyy/);
+  assert.match(readFileSync(join(data, 'serena', 'serena_config.yml'), 'utf8'), /^project_serena_folder_location: "\$projectDir\/\.flowboard\/knowledge\/serena"$/m);
+  const off = project('normal', { graphify: false, serena: false, rebuild: 'manual' });
+  assert.deepEqual(await startKnowledgeBuild(off.data, temp(), off.p, ok), { ok: false, error: 'knowledge assets are off for this project' });
+});
+
+/** A knowledge-build run folder as run-flow leaves it: its pin, its state, its host, and the build step's output. */
+function buildRun(runsDir: string, name: string, status: string | null, output?: string, host?: number) {
+  const r = repo();
+  writeFileSync(join(r.dir, 'task.md'), KNOWLEDGE_TASK);
+  writeFileSync(join(r.dir, 'knowledge-build.yaml'), knowledgeFlowText('true'));
+  const loaded = loadFlow('knowledge-build.yaml', r.dir, { folder: r.dir, task: 'task.md' });
+  assert.ok(loaded.ok);
+  const dir = join(runsDir, name);
+  const artifactsDir = join(r.dir, '.flowboard', name);
+  mkdirSync(dir, { recursive: true });
+  mkdirSync(artifactsDir, { recursive: true });
+  writeFileSync(join(dir, 'flow.json'), JSON.stringify({ version: 1, config: loaded.config, artifactsDir }));
+  if (status) writeFileSync(join(dir, 'state.json'), JSON.stringify({ status, steps: {}, runs: [] }));
+  if (host !== undefined) writeFileSync(join(dir, 'host.json'), JSON.stringify({ pid: host, page: true }));
+  if (output !== undefined) writeFileSync(join(artifactsDir, 'build.md'), output);
+}
+
+test('a build is read from its run and the base branch: building, built, stale, failed with why, gone, off, never', () => {
+  const runs = temp();
+  const { p, r } = project('normal');
+  const name = (n: string) => `2026-11-15T10-00-0${n}-knowledge-build`;
+  const at = (n: string, commit = r.head()): Project => ({ ...p, baseBranch: 'main', knowledgeBuild: { run: name(n), commit } });
+  buildRun(runs, name('1'), 'running', undefined, process.pid);
+  buildRun(runs, name('2'), 'done', `-- knowledge built at ${r.head().slice(0, 7)}\n`);
+  buildRun(runs, name('3'), 'failed', 'indexing\n-- knowledge build failed: serena: no language server for go\n');
+  buildRun(runs, name('4'), 'running'); // its host is gone
+  assert.deepEqual(knowledgeView(runs, at('1'), BOTH), { status: 'building', run: name('1'), commit: r.head() });
+  assert.deepEqual(knowledgeView(runs, at('2'), BOTH), { status: 'built', run: name('2'), commit: r.head() });
+  assert.deepEqual(knowledgeView(runs, at('3'), BOTH), { status: 'failed', run: name('3'), commit: r.head(), error: 'serena: no language server for go' });
+  assert.deepEqual(knowledgeView(runs, at('4'), BOTH), { status: 'failed', run: name('4'), commit: r.head(), error: 'the run paused; see its page' });
+  assert.deepEqual(knowledgeView(runs, at('9'), BOTH), { status: 'failed', run: name('9'), commit: r.head(), error: 'the run is gone' });
+  // the base branch moved on: stale, with its tip
+  const was = r.head();
+  writeFileSync(join(r.dir, 'b.ts'), 'export const b = 2;\n');
+  git(r.dir, 'add', '.');
+  git(r.dir, 'commit', '-q', '-m', 'two');
+  assert.deepEqual(knowledgeView(runs, at('2', was), BOTH), { status: 'stale', run: name('2'), commit: was, tip: r.head() });
+  assert.deepEqual(knowledgeView(runs, at('2', was), { graphify: false, serena: false, rebuild: 'manual' }), { status: 'off' });
+  assert.deepEqual(knowledgeView(runs, p, BOTH), { status: 'never' });
+});

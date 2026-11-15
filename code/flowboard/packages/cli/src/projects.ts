@@ -18,9 +18,10 @@ import { isDir, isFile, writeJsonFile } from './config.ts';
 import { FLOW_NAME } from './flow-files.ts';
 import { projectSlug } from './slug.ts';
 import { type AnalysisView, HOST, MAX_HOSTS } from './analysis.ts';
+import type { KnowledgeView } from './knowledge.ts';
 import type { RunStatus, RunSummary } from './flow-logs.ts';
 import { type Limits, PROJECT_FILE, projectSettings, setCheckCommand, setLimits } from './project.ts';
-import { type AppSettings, type Overrides, OverridesSchema, PROJECT_TYPES, type ProjectTypeId, type Resolved, resolveSettings } from './settings.ts';
+import { type AppSettings, type Knowledge, type Overrides, OverridesSchema, PROJECT_TYPES, type ProjectTypeId, type Resolved, resolveSettings } from './settings.ts';
 
 /** Where the repo came from: cloned from GitHub as `owner/name`, or a folder already on this machine. */
 export type Source = { kind: 'github'; repo: string } | { kind: 'local' };
@@ -32,6 +33,8 @@ export type Source = { kind: 'github'; repo: string } | { kind: 'local' };
  * start from; `overrides`: the settings it sets over those (`settings.ts`); `approvals`: what its owner chose to
  * allow from now on (`approvals.ts`), absent on a record from before them. `analysis`: the repo analyst's latest run
  * (`analysis-run.ts`); `networkHosts`: the hosts its owner let its sandboxes reach, never set from the repo.
+ * `knowledgeBuild`: its maps' latest build, the run and the commit it mapped, null for a repo with no commits
+ * (`knowledge-run.ts`).
  */
 export interface Project {
   id: string;
@@ -47,6 +50,7 @@ export interface Project {
   approvals?: ApprovalRule[];
   analysis?: { run: string };
   networkHosts?: string[];
+  knowledgeBuild?: { run: string; commit: string | null };
 }
 export type Result<T> = { ok: true; value: T } | { ok: false; status: 400 | 404 | 409; error: string };
 
@@ -72,6 +76,15 @@ export function setAnalysisRun(dataDir: string, id: string, run: string): void {
   const p = all.find((x) => x.id === id);
   if (!p) return;
   p.analysis = { run };
+  writeProjects(dataDir, all);
+}
+
+/** Keeps `build` as the project's latest knowledge build; nothing when the project is gone. */
+export function setKnowledgeBuild(dataDir: string, id: string, build: { run: string; commit: string | null }): void {
+  const all = readProjects(dataDir);
+  const p = all.find((x) => x.id === id);
+  if (!p) return;
+  p.knowledgeBuild = build;
   writeProjects(dataDir, all);
 }
 
@@ -308,10 +321,14 @@ export interface ProjectView extends Project {
   monthSpendUsd: number;
   /** Its latest repo analysis as it stands, read from `analysis.run`, or null when it has none (`analysis.ts`). */
   analysed: AnalysisView | null;
+  /** Where its knowledge assets stand, read from `knowledgeBuild` and its base branch (`knowledge.ts`). */
+  knowledge: KnowledgeView;
 }
 
 /** Until a caller passes `analysisView`: `projects.ts` cannot import it, as it reads runs (see `viewProjects`). */
 const unread = (run: string): AnalysisView => ({ run, status: 'failed', spentUsd: 0, error: 'not read' });
+/** Until a caller passes `knowledgeView`, likewise. */
+const unbuilt = (p: Project, kn: Knowledge): KnowledgeView => (!kn.graphify && !kn.serena ? { status: 'off' } : p.knowledgeBuild ? { status: 'failed', error: 'not read' } : { status: 'never' });
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 /** A run folder's name starts with its local start time, `2026-11-12T13-32-04`. */
@@ -368,11 +385,12 @@ function projectCheckSteps(flowsDir: string, flow: string): string[] {
 }
 
 /**
- * The pages' view of each project. `analysisOf` reads a repo analysis from its run (`analysisView`): it is passed in,
- * because importing it here would loop back through `flow-logs.ts` and `isolation.ts` to this module.
+ * The pages' view of each project. `analysisOf` reads a repo analysis from its run (`analysisView`) and `knowledgeOf`
+ * a knowledge build (`knowledgeView`): they are passed in, because importing them here would loop back through
+ * `flow-logs.ts` and `isolation.ts` to this module.
  */
 // ponytail: "this week" is the last seven days, and a run's whole cost counts on the day it started (Projects OQ 11)
-export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: string, app: AppSettings, now = Date.now(), analysisOf: (run: string) => AnalysisView = unread): ProjectView[] {
+export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: string, app: AppSettings, now = Date.now(), analysisOf: (run: string) => AnalysisView = unread, knowledgeOf: (p: Project, kn: Knowledge) => KnowledgeView = unbuilt): ProjectView[] {
   return projects.map((p) => {
     const mine = runs.filter((r) => owns(p, r.folder));
     const counts: ProjectView['runs'] = {};
@@ -403,6 +421,7 @@ export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: 
       weekSpendUsd,
       monthSpendUsd,
       analysed: p.analysis ? analysisOf(p.analysis.run) : null,
+      knowledge: knowledgeOf(p, resolved.knowledge.value),
     };
   });
 }
