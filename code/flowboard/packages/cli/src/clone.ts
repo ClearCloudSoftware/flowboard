@@ -47,8 +47,11 @@ const fail = (status: 400 | 409, error: string) => ({ ok: false as const, status
  * Checks everything a clone needs before it starts, then starts it; the job is returned at once and fills as git goes.
  * `quietMs`: how long git may say nothing before the clone is stopped and failed (a stalled network, a prompt).
  */
-/** What starts the repo analyst on a new project (`startAnalysis`); its refusal is logged, never the clone's failure. */
-export type Analyse = (project: Project) => Promise<{ ok: true; run: string } | { ok: false; error: string }>;
+/**
+ * What starts the repo analyst on a new project (`buildThenAnalyse`, which builds the knowledge assets first); `say`
+ * adds a line to the clone's log. Its refusal is logged, never the clone's failure.
+ */
+export type Analyse = (project: Project, say: (line: string) => void) => Promise<{ ok: true; run: string } | { ok: false; error: string }>;
 
 /** `analyse`: run once the project is registered, before the job is done; none starts no analysis. */
 export function startClone(dataDir: string, flowsDir: string, input: CloneInput, gh = 'gh', quietMs = 5 * 60_000, analyse?: Analyse): Result<CloneJob> {
@@ -132,7 +135,7 @@ export function startClone(dataDir: string, flowsDir: string, input: CloneInput,
     );
     if (!analyse) return Object.assign(job, { phase: 'done', project: p });
     const said = (r: Awaited<ReturnType<Analyse>>) => (r.ok ? `-- analysis started: run ${r.run}` : `-- analysis not started: ${r.error.split('\n')[0]}`);
-    void analyse(p)
+    void analyse(p, (line) => job.lines.push(line))
       .catch((e: Error) => ({ ok: false as const, error: e.message }))
       .then((r) => {
         job.lines.push(said(r));

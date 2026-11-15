@@ -1,7 +1,7 @@
 import { connection } from 'next/server';
 import { z } from 'zod';
-import { startAnalysis } from '../../../../packages/cli/src/analysis-run.ts';
 import { cloneTarget, startClone } from '../../../../packages/cli/src/clone.ts';
+import { buildThenAnalyse } from '../../../../packages/cli/src/knowledge-run.ts';
 import type { Overrides } from '../../../../packages/cli/src/settings.ts';
 import { FOLDER, FOLDER_RE } from '../../../../packages/cli/src/settings.ts';
 import { body, dataDir, flowsDir, refused, runsDir } from '../../flows/local.ts';
@@ -35,6 +35,6 @@ export async function POST(request: Request) {
   if (no) return no;
   const input = Clone.safeParse(await body(request));
   if (!input.success) return Response.json({ error: 'send { repo, type, parent, makeDefault, overrides, limits }' }, { status: 400 });
-  const r = startClone(dataDir(), flowsDir(), { ...input.data, overrides: input.data.overrides as Overrides }, 'gh', undefined, (p) => startAnalysis(dataDir(), runsDir(), p));
+  const r = startClone(dataDir(), flowsDir(), { ...input.data, overrides: input.data.overrides as Overrides }, 'gh', undefined, (p, say) => buildThenAnalyse(dataDir(), runsDir(), p, say));
   return r.ok ? Response.json(r.value, { status: 201 }) : Response.json({ error: r.error }, { status: r.status });
 }

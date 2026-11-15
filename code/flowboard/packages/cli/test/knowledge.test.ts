@@ -5,10 +5,10 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildCommand, KNOWLEDGE_DIR } from '../src/knowledge.ts';
-import { KNOWLEDGE_TASK, knowledgeFlowText, knowledgeView, startKnowledgeBuild } from '../src/knowledge-run.ts';
+import { buildThenAnalyse, KNOWLEDGE_TASK, knowledgeFlowText, knowledgeView, startKnowledgeBuild } from '../src/knowledge-run.ts';
 import type { startRun } from '../src/flow-start.ts';
 import { loadFlow } from '../src/flow-config.ts';
-import { createProject, type Project, readProjects } from '../src/projects.ts';
+import { createProject, type Project, readProjects, setKnowledgeBuild } from '../src/projects.ts';
 
 const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'fb-knowledge-')));
 const BOTH = { graphify: true, serena: true, rebuild: 'push' as const };
@@ -166,4 +166,42 @@ test('a build is read from its run and the base branch: building, built, stale, 
   assert.deepEqual(knowledgeView(runs, at('2', was), BOTH), { status: 'stale', run: name('2'), commit: was, tip: r.head() });
   assert.deepEqual(knowledgeView(runs, at('2', was), { graphify: false, serena: false, rebuild: 'manual' }), { status: 'off' });
   assert.deepEqual(knowledgeView(runs, p, BOTH), { status: 'never' });
+});
+
+test('after a clone the maps are built first, and the analyst starts once the build has ended, built or not', async () => {
+  const runs = temp();
+  const { data, p, r } = project('normal');
+  const name = '2026-11-15T10-00-00-knowledge-build';
+  buildRun(runs, name, 'running', undefined, process.pid);
+  const lines: string[] = [];
+  const order: string[] = [];
+  const build = async () => {
+    order.push('build');
+    setKnowledgeBuild(data, p.id, { run: name, commit: r.head() });
+    setTimeout(() => writeFileSync(join(runs, name, 'state.json'), JSON.stringify({ status: 'done', steps: {}, runs: [] })), 150);
+    return { ok: true as const, run: name };
+  };
+  const analyse = async () => (order.push('analyse'), { ok: true as const, run: 'a-run' });
+  assert.deepEqual(await buildThenAnalyse(data, runs, p, (l) => lines.push(l), { build, analyse, pollMs: 20 }), { ok: true, run: 'a-run' });
+  assert.deepEqual(order, ['build', 'analyse']);
+  assert.deepEqual(lines, [`-- knowledge build started: run ${name}`, `-- knowledge built at ${r.head().slice(0, 7)}`]);
+
+  // a build that cannot start, or that fails, never stops the analyst
+  lines.length = 0;
+  const refused = async () => ({ ok: false as const, error: 'flow.yaml: CLAUDE_CODE_OAUTH_TOKEN is not set\nmore' });
+  assert.equal((await buildThenAnalyse(data, runs, p, (l) => lines.push(l), { build: refused, analyse, pollMs: 20 })).ok, true);
+  assert.deepEqual(lines, ['-- knowledge build not started: flow.yaml: CLAUDE_CODE_OAUTH_TOKEN is not set']);
+  lines.length = 0;
+  const failing = '2026-11-15T10-00-01-knowledge-build';
+  buildRun(runs, failing, 'failed', '-- knowledge build failed: serena: no language server for go\n');
+  const fails = async () => (setKnowledgeBuild(data, p.id, { run: failing, commit: r.head() }), { ok: true as const, run: failing });
+  await buildThenAnalyse(data, runs, p, (l) => lines.push(l), { build: fails, analyse, pollMs: 20 });
+  assert.deepEqual(lines, [`-- knowledge build started: run ${failing}`, '-- knowledge build failed: serena: no language server for go; the analysis starts anyway']);
+
+  // knowledge off: only the analyst
+  lines.length = 0;
+  order.length = 0;
+  const off = project('normal', { graphify: false, serena: false, rebuild: 'manual' });
+  await buildThenAnalyse(off.data, runs, off.p, (l) => lines.push(l), { build, analyse, pollMs: 20 });
+  assert.deepEqual([order, lines], [['analyse'], []]);
 });

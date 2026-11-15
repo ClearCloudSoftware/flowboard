@@ -3,7 +3,7 @@
  * they stand from that run and from git, so nothing lives in the server's memory. The record keeps only the build's
  * run and the commit it mapped; `stamp.json` in the repo is for agents and is never read back, as a run may write it.
  */
-import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { hostGit } from '@flowboard/adapters';
 import { stringify } from 'yaml';
@@ -12,7 +12,8 @@ import { readArtifact, readRun } from './flow-logs.ts';
 import { startRun } from './flow-start.ts';
 import { INTERNAL_DIR } from './internal-steps.ts';
 import { buildCommand, FAILED, type KnowledgeView } from './knowledge.ts';
-import { type Project, setKnowledgeBuild } from './projects.ts';
+import { startAnalysis } from './analysis-run.ts';
+import { type Project, readProjects, setKnowledgeBuild } from './projects.ts';
 import { type Knowledge, resolveSettings } from './settings.ts';
 
 /** The task a build runs on; its shell step never reads it. */
@@ -76,4 +77,38 @@ export function knowledgeView(runsDir: string, project: Project, kn: Knowledge):
   }
   const tip = project.baseBranch ? revParse(project.repoPath, `refs/heads/${project.baseBranch}`) : undefined;
   return tip && tip !== b.commit ? { ...base, status: 'stale', tip } : { ...base, status: 'built' };
+}
+
+type Started = { ok: true; run: string } | { ok: false; error: string };
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** How long a build's run-flow may still hold the folder after its run says it ended. */
+const LOCK_MS = 10_000;
+
+/**
+ * After a clone: the maps first, so the analyst can read them, then the analyst. Each line goes to `say` (the clone's
+ * log). A build that cannot start or fails never stops the analyst; the analyst's own start is returned.
+ */
+export async function buildThenAnalyse(
+  dataDir: string,
+  runsDir: string,
+  project: Project,
+  say: (line: string) => void,
+  deps: { build?: typeof startKnowledgeBuild; analyse?: typeof startAnalysis; pollMs?: number } = {},
+): Promise<Started> {
+  const { build = startKnowledgeBuild, analyse = startAnalysis, pollMs = 1000 } = deps;
+  const kn = knowledgeOf(dataDir, project);
+  if (kn.graphify || kn.serena) {
+    const b = await build(dataDir, runsDir, project).catch((e: Error): Started => ({ ok: false, error: e.message }));
+    if (!b.ok) say(`-- knowledge build not started: ${b.error.split('\n')[0]}`);
+    else {
+      say(`-- knowledge build started: run ${b.run}`);
+      // ponytail: polls the run folder; the shell step's 20-minute timeout bounds the wait
+      while (['starting', 'running', 'waiting'].includes(readRun(runsDir, b.run)?.status ?? '')) await sleep(pollMs);
+      const lock = join(project.repoPath, '.flowboard', 'lock');
+      for (const end = Date.now() + LOCK_MS; existsSync(lock) && Date.now() < end; ) await sleep(pollMs);
+      const v = knowledgeView(runsDir, readProjects(dataDir).find((p) => p.id === project.id) ?? project, kn);
+      say(v.status === 'built' || v.status === 'stale' ? `-- knowledge built at ${v.commit ? v.commit.slice(0, 7) : 'a repo with no commits'}` : `-- knowledge build failed: ${v.error}; the analysis starts anyway`);
+    }
+  }
+  return analyse(dataDir, runsDir, project);
 }
