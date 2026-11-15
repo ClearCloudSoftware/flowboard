@@ -90,6 +90,13 @@ test("the page's answer is written only when it fits the open question", () => {
   assert.equal(answerAsk(runs, 'r1', 'b', { decision: 'approve' }), 'that question is no longer open');
   assert.equal(answerAsk(runs, 'r1', 'a', { decision: 'approve', note: '', extra: 1 }), undefined);
   assert.deepEqual(JSON.parse(readFileSync(join(dir, 'answers', 'a.json'), 'utf8')), { decision: 'approve', note: null });
+  // an ask file that is not an ask (an agent outside a box can write its run folder) is left out, not thrown on
+  writeFileSync(join(dir, 'asks', '0-bad.json'), JSON.stringify({ id: '0-bad', heading: 5, questions: 'nope', at: '' }));
+  writeFileSync(join(dir, 'asks', '0-bad2.json'), JSON.stringify({ id: '0-bad2', heading: '', questions: [{ id: 'q', kind: 'single_select', prompt: { x: 1 } }], at: '' }));
+  writeFileSync(join(dir, 'asks', '0-bad3.json'), JSON.stringify({ id: '../x', heading: '', questions: [{ id: 'q', kind: 'text', prompt: 'p' }], at: '' }));
+  writeFileSync(join(dir, 'asks', '0-bad4.json'), JSON.stringify({ id: '0-bad4', heading: '', questions: [{ id: 'q', kind: 'single_select', prompt: 'p', options: [{ value: 1 }] }], at: '' }));
+  writeFileSync(join(dir, 'asks', '0-bad5.json'), JSON.stringify({ id: '0-bad5', heading: '', questions: [{ id: 'q', kind: 'shout', prompt: 'p' }], at: '' }));
+  assert.deepEqual(readRun(runs, 'r1')!.asks.map((a) => a.id), ['a']);
   // the first answer wins: a second before the host reads the first (Slack and the page at once) is refused
   assert.equal(answerAsk(runs, 'r1', 'a', { decision: 'approve', note: 'second' }), 'already answered');
   assert.deepEqual(JSON.parse(readFileSync(join(dir, 'answers', 'a.json'), 'utf8')), { decision: 'approve', note: null });

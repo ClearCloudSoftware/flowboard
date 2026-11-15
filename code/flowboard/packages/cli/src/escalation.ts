@@ -38,6 +38,9 @@ export interface Escalations { asks: Record<string, Escalated>; budget: Record<s
 export interface TickOptions { now?: number; base?: string; log?: (line: string) => void }
 
 const RETRY_MS = 60_000;
+/** Only a run's first asks escalate, and a pass posts only so many: a run that floods its asks folder can't flood Slack. */
+const MAX_ASKS_PER_RUN = 10;
+const MAX_POSTS_PER_PASS = 20;
 const KEEP_MS = 7 * 24 * 3600_000;
 const ID = /^[\w-]+$/;
 const iso = (ms: number) => new Date(ms).toISOString();
@@ -111,41 +114,54 @@ export async function escalationTick(dataDir: string, runsDir: string, o: TickOp
   const { bot } = slackTokens(dataDir);
   const runs = listRuns(runsDir);
   const open = new Set<string>();
+  let posts = 0;
+  // Each ask and each repaint fails on its own: one bad file never stops the rest of the pass.
+  const guard = async (what: string, fn: () => Promise<void>) => {
+    try {
+      await fn();
+    } catch (e) {
+      log(`-- escalation: ${what}: ${(e as Error).message}`);
+    }
+  };
 
+  const escalate = async (r: (typeof runs)[number], ask: PageAsk, ctx: ReturnType<typeof contextOf>) => {
+    const key = `${r.name}/${ask.id}`;
+    if (!(now - Date.parse(ask.at) >= ctx.escalation.nudgeMin * 60_000)) return;
+    const seen = readEscalations(dataDir).asks[key];
+    if (seen?.ts || seen?.closed || (seen && now - Date.parse(seen.triedAt) < RETRY_MS)) return;
+    const entry = { project: ctx.project, channel: ctx.escalation.channel, ask, triedAt: iso(now) };
+    if (!bot) {
+      if (!seen) {
+        log(`-- escalation: ${ctx.project}: ${r.name} asks "${clip(ask.questions[0]?.prompt ?? '', 80)}"; Slack is not connected, so it waits in FlowBoard`);
+        update(dataDir, (s) => void (s.asks[key] = entry));
+      }
+      return;
+    }
+    posts++;
+    const res = await post(bot, ctx.escalation.channel, askMessage({ project: ctx.project, run: r.name, ask, address: ctx.address }), o.base);
+    if (!res.ok) log(`-- escalation: ${ctx.project}: could not post to ${ctx.escalation.channel}: ${res.error}`);
+    update(dataDir, (s) => {
+      s.asks[key] = { ...entry, ...(res.ok ? { slackChannel: String(res.channel), ts: String(res.ts) } : { error: res.error }) };
+      noteProblem(s, ctx.escalation.channel, res.ok ? undefined : res.error);
+    });
+  };
   for (const r of runs) {
     if (r.status !== 'waiting') continue;
     const detail = readRun(runsDir, r.name);
     if (!detail?.page) continue;
+    for (const ask of detail.asks) open.add(`${r.name}/${ask.id}`); // every one is open, escalated or not
     const ctx = contextOf(dataDir, r.folder, r.flow);
-    for (const ask of detail.asks) {
-      const key = `${r.name}/${ask.id}`;
-      open.add(key);
-      if (!(now - Date.parse(ask.at) >= ctx.escalation.nudgeMin * 60_000)) continue;
-      const seen = readEscalations(dataDir).asks[key];
-      if (seen?.ts || seen?.closed || (seen && now - Date.parse(seen.triedAt) < RETRY_MS)) continue;
-      const entry = { project: ctx.project, channel: ctx.escalation.channel, ask, triedAt: iso(now) };
-      if (!bot) {
-        if (!seen) {
-          log(`-- escalation: ${ctx.project}: ${r.name} asks "${clip(ask.questions[0]?.prompt ?? '', 80)}"; Slack is not connected, so it waits in FlowBoard`);
-          update(dataDir, (s) => void (s.asks[key] = entry));
-        }
-        continue;
-      }
-      const res = await post(bot, ctx.escalation.channel, askMessage({ project: ctx.project, run: r.name, ask, address: ctx.address }), o.base);
-      if (!res.ok) log(`-- escalation: ${ctx.project}: could not post to ${ctx.escalation.channel}: ${res.error}`);
-      update(dataDir, (s) => {
-        s.asks[key] = { ...entry, ...(res.ok ? { slackChannel: String(res.channel), ts: String(res.ts) } : { error: res.error }) };
-        noteProblem(s, ctx.escalation.channel, res.ok ? undefined : res.error);
-      });
+    for (const ask of detail.asks.slice(0, MAX_ASKS_PER_RUN)) {
+      if (posts >= MAX_POSTS_PER_PASS) break;
+      await guard(`${r.name}/${ask.id}`, () => escalate(r, ask, ctx));
     }
   }
 
   // What stopped waiting: answered in the terminal while the run lives, else the run ended.
   const status = new Map(runs.map((r) => [r.name, r.status]));
-  for (const [key, e] of Object.entries(readEscalations(dataDir).asks)) {
-    if (e.closed?.painted) continue;
+  const close = async (key: string, e: Escalated) => {
     if (!e.closed) {
-      if (open.has(key)) continue;
+      if (open.has(key)) return;
       const st = status.get(key.slice(0, key.indexOf('/')));
       const by: Where | null = st === 'running' || st === 'waiting' || st === 'starting' ? 'the terminal' : null;
       let closed: Escalated | undefined;
@@ -155,16 +171,17 @@ export async function escalationTick(dataDir: string, runsDir: string, o: TickOp
         x.closed = { by, at: iso(now), painted: !x.ts };
         closed = x;
       });
-      if (!closed?.ts) continue;
+      if (!closed?.ts) return;
       e.closed = closed.closed;
     }
     if (e.ts) await paint(dataDir, key, e, o.base);
-  }
+  };
+  for (const [key, e] of Object.entries(readEscalations(dataDir).asks)) if (!e.closed?.painted) await guard(key, () => close(key, e));
   update(dataDir, (s) => {
     for (const [key, e] of Object.entries(s.asks)) if (e.closed?.painted && now - Date.parse(e.closed.at) > KEEP_MS) delete s.asks[key];
   });
 
-  await budgetTick(dataDir, runs, now, bot, log, o.base);
+  await guard('budget', () => budgetTick(dataDir, runs, now, bot, log, o.base));
 }
 
 /** Each capped project's alert, then its cap, once per month; the cap alone when both cross between two passes. */
