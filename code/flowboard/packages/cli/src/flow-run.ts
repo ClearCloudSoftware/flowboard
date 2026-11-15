@@ -32,8 +32,8 @@ import { resolveSettings, TRUST } from './settings.ts';
 import type { Budget, Knowledge } from './settings.ts';
 import { alive, readLock } from './lock.ts';
 import { openWorkspace } from './workspace.ts';
-import { GRAPH_REPORT, graphifyLine, SERENA_PROJECT, serenaTool } from './knowledge.ts';
-import { writeSerenaConfig } from './knowledge-run.ts';
+import { GRAPH_REPORT, graphifyLine, KNOWLEDGE_DIR, SERENA_PROJECT, serenaTool } from './knowledge.ts';
+import { knowledgeView, writeSerenaConfig } from './knowledge-run.ts';
 import { dataDirOf, defaultProvider, stamp } from './run.ts';
 import type { RunDeps } from './run.ts';
 import { prepareRun, applySavedKey } from './openrouter.ts';
@@ -320,14 +320,22 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
  * The project's built maps for its agents: Serena as an MCP server and a line pointing at graphify's report. Only for a
  * run in the repo's own folder (a task worktree or a subfolder has no index of its own, and a box sees only its folder)
  * on this machine or in a Docker box; an OpenSandbox box holds the last commit, which never has `.flowboard/`.
+ * Only what FlowBoard's last build made counts: none when that build failed, or when git tracks anything under
+ * `.flowboard/` (the repo shipped it). Serena not when a `project.local.yml` would override FlowBoard's project file,
+ * which could hand agents its shell and editing tools, pre-approved as every injected server is.
  */
 function knowledgeFor(iso: Isolated, config: FlowConfig, dataDir: string): { serena?: ReturnType<typeof serenaTool>; line?: string } {
   const { kn, commit } = iso.knowledge;
   const tier = iso.isolation.tier;
-  if (config.folder !== iso.repoPath || tier === 'opensandbox') return {};
+  if (config.folder !== iso.repoPath || tier === 'opensandbox' || !iso.knowledge.built) return {};
+  const tracked = hostGit(iso.repoPath, iso.repoPath, ['ls-files', '--', '.flowboard']);
+  // Not a git repo: nothing can be tracked. A git FlowBoard refuses to run in, or that fails: nothing is trusted.
+  if ('refused' in tracked ? existsSync(join(iso.repoPath, '.git')) : tracked.status !== 0 || tracked.stdout.trim()) return {};
   const where = tier === 'host' ? 'host' : 'box';
+  const yml = join(iso.repoPath, SERENA_PROJECT);
+  const serenaOk = isFile(yml) && /^read_only: true$/m.test(readFileSync(yml, 'utf8')) && !existsSync(join(iso.repoPath, KNOWLEDGE_DIR, 'serena', 'project.local.yml'));
   return {
-    ...(kn.serena && isFile(join(iso.repoPath, SERENA_PROJECT)) && { serena: serenaTool(where, iso.repoPath, where === 'host' ? writeSerenaConfig(dataDir) : '', process.env) }),
+    ...(kn.serena && serenaOk && { serena: serenaTool(where, iso.repoPath, where === 'host' ? writeSerenaConfig(dataDir) : '', process.env) }),
     ...(kn.graphify && isFile(join(iso.repoPath, GRAPH_REPORT)) && { line: graphifyLine(iso.repoPath, commit) }),
   };
 }
@@ -381,9 +389,9 @@ function projectCap(project: Project, dataDir: string, runsDir: string, month: s
 
 /**
  * A run's isolation, decided as it starts: the sandbox it gets and the line saying so; `repoPath`: its project's repo;
- * `knowledge`: its knowledge setting and the commit its maps were last built from.
+ * `knowledge`: its knowledge setting, the commit its maps were last built from, and whether that build made them.
  */
-interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string; repoPath: string; knowledge: { kn: Knowledge; commit?: string | null } }
+interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string; repoPath: string; knowledge: { kn: Knowledge; commit?: string | null; built: boolean } }
 
 /**
  * The isolation `project` gives a run of a flow whose own sandbox is `flowSandbox` (`isolation.ts`); or why it may not
@@ -407,7 +415,7 @@ function isolate(project: Project, flowSandbox: Sandbox | undefined, steps: Flow
   const asks = r.approvals ? '; agents ask before edits and shell commands' : '';
   // A copy: the run's sandbox may be this very object, and gets the project's limits.
   const isolation: Isolation = { projectId: project.id, trust, tier: r.tier, approvals: r.approvals, ...(flowSandbox && { flowSandbox: structuredClone(flowSandbox) }) };
-  return { sandbox: r.sandbox, isolation, line: `-- isolation: ${TRUST[trust].label} (${r.tier}), from project ${project.name}${asks}`, repoPath: project.repoPath, knowledge: { kn: resolved.knowledge.value, commit: project.knowledgeBuild?.commit } };
+  return { sandbox: r.sandbox, isolation, line: `-- isolation: ${TRUST[trust].label} (${r.tier}), from project ${project.name}${asks}`, repoPath: project.repoPath, knowledge: { kn: resolved.knowledge.value, commit: project.knowledgeBuild?.commit, built: ['built', 'stale'].includes(knowledgeView(runsDirOf(deps), project, resolved.knowledge.value).status) } };
 }
 
 /** Makes `dir`; false when it already exists. */

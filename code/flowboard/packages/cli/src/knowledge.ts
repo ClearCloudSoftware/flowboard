@@ -16,6 +16,12 @@ export const GRAPH_REPORT = `${KNOWLEDGE_DIR}/graphify-out/GRAPH_REPORT.md`;
 /** Serena's project file for the repo, which exists once an index is built (FlowBoard's config puts it here). */
 export const SERENA_PROJECT = `${KNOWLEDGE_DIR}/serena/project.yml`;
 
+/**
+ * The project file FlowBoard gives Serena, whole: read-only (no editing, shell or memory-writing tool), the two
+ * languages the image has servers for, and no tool, mode or prompt keys, which a repo could use to put tools back.
+ */
+export const SERENA_PROJECT_YML = 'language_servers: [typescript, python]\nread_only: true\nignore_all_files_in_gitignore: true\n';
+
 /** What the pages say about a project's maps. `commit`: the one its last build mapped; `tip`: the base branch's now. */
 export interface KnowledgeView { status: 'off' | 'never' | 'building' | 'built' | 'stale' | 'failed'; run?: string; commit?: string | null; tip?: string; error?: string }
 
@@ -28,7 +34,10 @@ const q = (s: string) => `'${s.replaceAll("'", "'\\''")}'`;
  * The build's shell script, run in the repo's top folder. `host`: on this machine, with FlowBoard's Serena home;
  * absent: in a box, where the tools are on PATH. Each map's output is kept and shown; `stamp.json` records the commit
  * and what was made, for agents to read. A map asked for that failed is said on the last line, not by the exit code.
- * Serena's folder is made before it indexes: with no such folder, Serena would use a `.serena/` the repo ships.
+ * The folder is deleted first, so nothing a repo or an earlier run left there survives a build: a `project.local.yml`
+ * that hands agents Serena's shell and editing tools, or a `GRAPH_REPORT.md` agents would take for FlowBoard's map.
+ * Serena's `project.yml` is FlowBoard's (`SERENA_PROJECT_YML`), written before Serena indexes: with none, Serena would
+ * write its own, or use a `.serena/` the repo ships.
  */
 export function buildCommand(kn: { graphify: boolean; serena: boolean }, commit: string | null, host?: { serenaHome: string }): string {
   const graphify = host ? `uvx -q --from ${GRAPHIFY_FROM} graphify` : 'graphify';
@@ -39,9 +48,9 @@ export function buildCommand(kn: { graphify: boolean; serena: boolean }, commit:
     `if ${cmd} > "${K}/${id}.log" 2>&1; then ${then}; else failed="$failed; ${id}: $(tail -n 1 "${K}/${id}.log")"; fi`,
     `cat "${K}/${id}.log"`,
   ];
-  const yml = `${K}/serena/project.yml`;
   return [
     'set -u',
+    `rm -rf "${K}"`,
     `mkdir -p "${K}"`,
     'failed=""; graphify=false; serena=false',
     // From inside the knowledge folder: graphify writes its manifest into ./graphify-out whatever GRAPHIFY_OUT says
@@ -49,8 +58,8 @@ export function buildCommand(kn: { graphify: boolean; serena: boolean }, commit:
     ...(kn.serena
       ? [
           `mkdir -p "${K}/serena"`,
-          // read_only: Serena offers agents no editing tool for this project
-          ...step('serena', `${serena} project index . --language typescript --language python --log-level WARNING`, `sed 's/^read_only:.*/read_only: true/' "${yml}" > "${yml}.tmp" && mv "${yml}.tmp" "${yml}" && serena=true`),
+          `printf '%s' ${q(SERENA_PROJECT_YML)} > "${K}/serena/project.yml"`,
+          ...step('serena', `${serena} project index . --log-level WARNING`, 'serena=true'),
           // Serena writes its list of files it could not index into the repo's .serena/; it belongs beside the index
           `if [ -f .serena/logs/indexing.txt ]; then mv .serena/logs/indexing.txt "${K}/serena/indexing-failures.txt"; rmdir .serena/logs .serena 2>/dev/null; fi`,
         ]
