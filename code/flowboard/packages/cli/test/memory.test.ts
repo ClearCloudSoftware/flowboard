@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { addMemories, forgetAll, forgetMemory, memoryFile, notesOf, readMemories, recall, RECALL_HEAD, RECALL_MAX_CHARS, runNotes } from '../src/memory.ts';
 import type { Memory } from '../src/memory.ts';
@@ -184,4 +185,34 @@ test('a question batch in the log that is not one run-flow would ask is left out
     { kind: 'answer', batch: 4, answers: { d: 'main' } },
   ]);
   assert.deepEqual(runNotes({ ...r, steps: STEPS }).notes.map((n) => n.text), ['Q: Which branch do releases come from? A: main']);
+});
+
+/** runNotes in a child process: a read that blocks the host blocks the child, which the timeout then kills. */
+const notesInChild = (r: { run: string; runDir: string; artifactsDir: string }) => {
+  const code = `import { runNotes } from ${JSON.stringify(new URL('../src/memory.ts', import.meta.url).href)};
+const r = runNotes({ ...${JSON.stringify(r)}, steps: ${JSON.stringify(STEPS)} });
+console.log(JSON.stringify(r.notes.map((n) => n.text)));`;
+  return spawnSync(process.execPath, ['--input-type=module', '-e', code], { encoding: 'utf8', timeout: 5000 });
+};
+
+test('a FIFO in place of an artifact or a log never blocks the commit', () => {
+  const r = run({ summary: 'The login form posts to /api/login and sets a cookie.' });
+  execFileSync('mkfifo', [join(r.artifactsDir, 'review_notes.md')]);
+  execFileSync('mkfifo', [join(r.runDir, '002-review.jsonl')]);
+  const child = notesInChild(r);
+  assert.equal(child.signal, null, 'runNotes blocked on a FIFO');
+  assert.equal(child.status, 0, child.stderr);
+  assert.deepEqual(JSON.parse(child.stdout), ['The login form posts to /api/login and sets a cookie.']);
+});
+
+test('a step log that cannot be read loses only itself, not the commit', () => {
+  const r = run({ summary: 'The login form posts to /api/login and sets a cookie.' }, [
+    { kind: 'question', batch: 1, questions: [{ id: 'db', prompt: 'Which database to use?', kind: 'single_select', options: [{ value: 'pg', label: 'Postgres' }] }] },
+    { kind: 'answer', batch: 1, answers: { db: 'pg' } },
+  ]);
+  mkdirSync(join(r.base, 'elsewhere'));
+  symlinkSync(join(r.base, 'elsewhere'), join(r.runDir, '002-review.jsonl')); // a link, and to a folder
+  writeFileSync(join(r.base, 'big.jsonl'), '');
+  symlinkSync(join(r.base, 'big.jsonl'), join(r.runDir, '003-wrap.jsonl'));
+  assert.deepEqual(runNotes({ ...r, steps: STEPS }).notes.map((n) => n.text), ['Q: Which database to use? A: Postgres', 'The login form posts to /api/login and sets a cookie.']);
 });
