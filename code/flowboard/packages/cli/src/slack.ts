@@ -79,21 +79,32 @@ export interface SocketOptions {
   onState(s: SocketState): void;
   /** Waits before each reconnect; the last repeats, and a `hello` starts it over. */
   backoffMs?: number[];
+  /** How often the watchdog looks at the socket (10 s), and its clock; for tests. */
+  watchMs?: number;
+  now?: () => number;
 }
+
+/** A watchdog tick this long after the last means the machine slept, and the socket may be dead without a close. */
+const SLEPT_MS = 60_000;
+/** A socket this old is replaced anyway: a dead one nobody noticed lasts an hour at most. */
+const MAX_AGE_MS = 3600_000;
 
 /**
  * Keeps a Socket Mode connection open: `auth.test` for the workspace, `apps.connections.open` for the URL, then
  * Node's `WebSocket`. Every envelope is acked by its `envelope_id`; one whose `api_app_id` is not the app's (from
  * `hello`) or whose team is not the bot's is acked and dropped. A `disconnect` message, a close or an error
- * reconnects after the backoff. Never throws.
+ * reconnects after the backoff. A socket can also die with no event (a sleep, a network change), and FlowBoard only
+ * ever sends acks, so a watchdog replaces it after a sleep and once it is an hour old. Never throws.
  */
 export function connectSocket(o: SocketOptions): { close(): void } {
   const base = o.base ?? slackBase();
+  const now = o.now ?? Date.now;
   const backoff = o.backoffMs ?? [1000, 2000, 5000, 15_000, 60_000];
   let stopped = false;
   let tries = 0;
   let ws: WebSocket | undefined;
   let timer: NodeJS.Timeout | undefined;
+  let watch: NodeJS.Timeout | undefined;
   const again = () => {
     if (stopped) return;
     timer = setTimeout(() => void open().catch((e) => fail(`could not connect to Slack: ${(e as Error).message}`)), backoff[Math.min(tries++, backoff.length - 1)]);
@@ -119,12 +130,25 @@ export function connectSocket(o: SocketOptions): { close(): void } {
       return fail(`Slack sent a socket address that does not work: ${(e as Error).message}`);
     }
     ws = sock;
+    const born = now();
+    let last = born;
+    // ponytail: Node's WebSocket sends no pings; a sleep gap and an age limit stand in for a ping timeout
+    clearInterval(watch);
+    watch = setInterval(() => {
+      const t = now();
+      const slept = t - last > SLEPT_MS;
+      last = t;
+      if (slept) gone('the machine slept; reconnecting to Slack');
+      else if (t - born > MAX_AGE_MS) gone('the connection to Slack is an hour old; reconnecting');
+    }, o.watchMs ?? 10_000);
+    watch.unref?.();
     const teamId = String(auth.team_id ?? '');
     let appId: string | undefined;
     let lost = false;
     const gone = (why: string) => {
       if (lost) return;
       lost = true;
+      clearInterval(watch);
       if (ws === sock) ws = undefined;
       try {
         sock.close();
@@ -167,6 +191,7 @@ export function connectSocket(o: SocketOptions): { close(): void } {
     close() {
       stopped = true;
       clearTimeout(timer);
+      clearInterval(watch);
       try {
         ws?.close();
       } catch {
