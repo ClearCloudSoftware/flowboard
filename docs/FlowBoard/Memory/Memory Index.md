@@ -5,6 +5,9 @@ module: Memory
 
 # Memory Index
 
+> [!done] Built (2026-11-15), project scope only
+> The `local` adapter is built for the `project` scope: one JSON file per project in the data folder, keyword recall, commit after a done run from summary and review artifacts and answers, and a Memory card on the project page. The user, agent and task scopes, Mem0 and the `MemoryStore` port itself are not built. See [[Project Memory Handoff]].
+
 Memory is what FlowBoard carries from one task to the next, so agents stop starting from scratch. Before a run, the runner **recalls** what earlier runs learned and adds it to the prompt as background. After a run succeeds, it **commits** (distils) the run's declared artifacts and answers back to the store. Memory has four scopes (user, project, agent, task), sits behind the `MemoryStore` port, and is **off by default**.
 
 > [!important] The one idea to get right first
