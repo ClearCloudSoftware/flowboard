@@ -5,6 +5,10 @@ import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fullPath } from './path.js';
+
+// Before anything spawns: the server, and every run it starts, inherit this PATH.
+process.env.PATH = fullPath();
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const mode = process.argv.includes('--dev') ? 'dev' : 'start';
