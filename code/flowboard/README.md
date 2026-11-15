@@ -19,6 +19,17 @@ Save writes the file in place and changes only the lines whose meaning changed, 
 
 The flows API answers only on `localhost`. Notes: `docs/FlowBoard/Flow Design/Flow Design Screen.md`.
 
+## The desktop app
+
+```bash
+pnpm electron:dev        # the app in a window, on `next dev`
+pnpm build && pnpm electron   # the same, on the production build
+```
+
+`electron/main.js` starts the Next server with the `node` on your PATH, bound to `127.0.0.1` on port 3210 (`FLOWBOARD_PORT`; a free port when it is taken), and opens a window onto it. Links to other sites open in your browser. Closing the window quits the app and stops the server. Electron downloads its binary the first time it runs.
+
+Opened from Finder or Explorer, an app does not get your terminal's PATH, so `electron/path.js` rebuilds it before the server starts: on macOS and Linux from a login shell (`$SHELL -ilc`, so nvm and Homebrew are found), on Windows from the registry, then the usual install folders that exist. `node --test electron/path.test.js` checks it.
+
 ## Tests and checks
 
 ```bash
