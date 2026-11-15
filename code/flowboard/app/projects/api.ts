@@ -7,6 +7,7 @@ import type { AppSettings, ApprovedModel, Catalogue, Harness } from '../../packa
 import type { KeyTest, KeyView } from '../../packages/cli/src/openrouter.ts';
 import type { HarnessStatus } from '../../packages/cli/src/harnesses.ts';
 import type { SocketState } from '../../packages/cli/src/slack.ts';
+import type { Memory } from '../../packages/cli/src/memory.ts';
 import { ApiError, call } from '../flows/api.ts';
 
 export type { AppSettings, CloneJob, GhRepo, GhStatus, Project, ProjectView };
@@ -20,6 +21,10 @@ export const updateProject = (id: string, edit: ProjectEdit) => call<Project>(`/
 export const startAnalysis = (id: string) => call<{ run: string }>(`/api/projects/${id}/analysis`, { method: 'POST', body: '{}' });
 /** Builds the project's knowledge assets now; 422 with run-flow's words when it refuses. */
 export const startKnowledgeBuild = (id: string) => call<{ run: string }>(`/api/projects/${id}/knowledge`, { method: 'POST', body: '{}' });
+/** A project's memories, newest first (Memory); what each run saved, to forget one or all. */
+export const memoryQuery = (id: string) => queryOptions({ queryKey: ['memory', id], queryFn: () => call<Memory[]>(`/api/projects/${id}/memory`), refetchInterval: 10_000 });
+export const forgetMemory = (id: string, memoryId: string) => call<{ ok: true }>(`/api/projects/${id}/memory/${encodeURIComponent(memoryId)}`, { method: 'DELETE', body: '{}' });
+export const forgetAllMemory = (id: string) => call<{ ok: true }>(`/api/projects/${id}/memory`, { method: 'DELETE', body: '{}' });
 export const removeProject = (id: string) => call<{ ok: true }>(`/api/projects/${id}`, { method: 'DELETE', body: '{}' });
 
 /** The run's folder is the project's repo or inside it (`owns` on the server, which this page cannot import). */

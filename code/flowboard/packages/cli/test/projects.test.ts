@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import type { RunSummary } from '../src/flow-logs.ts';
 import { projectLimits, projectSettings, setCheckCommand, setLimits } from '../src/project.ts';
 import { APP_DEFAULTS } from '../src/settings.ts';
+import { addMemories, memoryFile } from '../src/memory.ts';
 import { addApproval, createProject, ownerOf, type Project, projectSlug, projectSpendUsd, readProjects, removeProject, repoProblems, repoRoot, seedOnce, slugify, updateProject, viewProjects } from '../src/projects.ts';
 
 const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'fb-projects-'))); // macOS's temp folder is a link
@@ -79,7 +80,9 @@ test("the check command lives in the repo's .flowboard.yaml, beside what is ther
   value(updateProject(data, lib, q.id, { checkCommand: '' }));
   assert.equal(existsSync(join(fresh, '.flowboard.yaml')), false); // made for the command, gone with it
 
+  addMemories(data, p.id, [{ text: 'Tests use vitest, run with pnpm test', source: { run: 'r1' } }]);
   assert.equal(removeProject(data, p.id), true);
+  assert.equal(existsSync(memoryFile(data, p.id)), false); // a re-added repo is a new project: its memory would be an orphan
   assert.equal(removeProject(data, p.id), false);
 });
 

@@ -16,6 +16,7 @@ import { type ApprovalRule, ApprovalRuleSchema } from './approvals.ts';
 import { budgetState, monthName, monthOf } from './budget.ts';
 import { isDir, isFile, writeJsonFile } from './config.ts';
 import { FLOW_NAME } from './flow-files.ts';
+import { forgetAll } from './memory.ts';
 import { projectSlug } from './slug.ts';
 import { type AnalysisView, HOST, MAX_HOSTS } from './analysis.ts';
 import type { KnowledgeView } from './knowledge.ts';
@@ -270,12 +271,13 @@ export function addApproval(dataDir: string, id: string, rule: ApprovalRule): Re
   return { ok: true, value: projects[at] };
 }
 
-/** Forgets the project; its repo, runs and `.flowboard.yaml` stay where they are. */
+/** Forgets the project and its memory; its repo, runs and `.flowboard.yaml` stay where they are. */
 export function removeProject(dataDir: string, id: string): boolean {
   const projects = readProjects(dataDir);
   const kept = projects.filter((p) => p.id !== id);
   if (kept.length === projects.length) return false;
   writeProjects(dataDir, kept);
+  forgetAll(dataDir, id);
   return true;
 }
 
