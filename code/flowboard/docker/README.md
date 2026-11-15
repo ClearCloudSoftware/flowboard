@@ -66,7 +66,8 @@ run-flow stays on this machine. One OpenSandbox sandbox per run holds the folder
 folder's own path, and every step runs there as uid 1000. Nothing an agent does touches the folder here:
 
 - **Network:** deny by default. `sandbox.egress` lists the hosts allowed; by default, the API hosts of the
-  steps' adapters (`api.anthropic.com` for claude-code, `openrouter.ai` for `openrouter/` models). Host
+  steps' adapters (`api.anthropic.com` for claude-code, `openrouter.ai` for `openrouter/` models,
+  `host.docker.internal` for `ollama/` models, which run in Ollama on this machine). Host
   names or `*.domain` only; IP addresses are not supported. Add `registry.npmjs.org` if a step installs.
 - **Keys:** `sandbox.credentials` (by default the same adapters' keys: `CLAUDE_CODE_OAUTH_TOKEN`,
   `OPENROUTER_API_KEY`) are read from this machine's env. The box gets fakes; the server's credential vault

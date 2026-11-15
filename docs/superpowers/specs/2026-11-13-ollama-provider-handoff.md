@@ -226,3 +226,18 @@ Also for Part 2: the provider block's `limit.context` should be the same window,
 4. Else → **unknown** (source `default`): the page says "Ollama's default" and **no warning** is shown.
 
 Only a known window (1–3) below **32,768** warns. For OpenCode's `limit.context`, an unknown window uses `details.context_length` (the model's maximum). **Revisit** if a machine with less memory gets false "fine" readings: Ollama then picks a small default (for example 4,096) that FlowBoard can't see, and an agent may lose its prompt without a warning. The fix then is to set `num_ctx` on the model, which rule 1 reads. The Part 2 docs (`Ollama Models.md` or its successor, and `Running Agent Work.md`) repeat this rule.
+
+## Part 2: built 2026-11-15
+
+On `feature/ollama-models`, not merged. The whole feature is documented in `docs/FlowBoard/Agent Providers/OpenCode Models.md` (renamed from *OpenRouter Models And Key*). Departures from the design above:
+
+- **No `models/` folder or source interface.** `openrouter.ts` keeps the key and OpenRouter's list, `ollama.ts` is new, and `models.ts` builds both sources' rules and `prepareRun`. The source is the id's prefix. Two modules didn't need a shared shape.
+- **`ModelRules.free` became `ModelRules.warning`**, one sentence per model: the free-model privacy warning, or the context warning.
+- **`/api/openrouter` (GET) became `/api/models`**, since it now carries both sources; `/api/openrouter/key` stays. `app/settings/openrouter.tsx` became `app/settings/models.tsx`.
+- **`ExecHost.hostName`** (core) is how a sandboxed process reaches this machine: `host.docker.internal` from `dockerExecHost` and from an OpenSandbox box's `exec`. The native pack is added in `execAi` once `spec.exec` is set (`ExecContext.opencodeConfig`), and in `run.ts` for run-agent.
+- **The pack is read from the saved list** (`opencodeConfigFor(dataDir)`), so a resumed run, which skips the model check, still gets the provider.
+- **Live test** `packages/cli/test/ollama-live.test.ts`: opt-in with `FLOWBOARD_LIVE=1`, skips when Ollama does not answer. Passed on gemma4 (25 s). **Not added to `test:live`**: Alex to decide.
+
+Verified 2026-11-15: package tests, the app's typecheck, and the touched files' lint all pass. The app ran on port 3117 with a scratch data folder, and headless Chrome checked Connections → Ollama, the Ollama tab of OpenCode models (window `64k / num_ctx` for gemma4, `default / unknown` for qwen3-coder, and a Remove banner for an approved model no longer in Ollama), and the designer's picker (`ollama/gemma4:26b-64k · local`). One real one-step flow on `ollama/gemma4:26b-64k` ran on the host, in Docker (`flowboard-cli`) and in OpenSandbox (`flowboard-sandbox`, egress `host.docker.internal` only). Each wrote its artifact at $0 and printed the "runs locally at $0" line.
+
+Found on the way, not fixed: **neither sandbox image has ripgrep**, so OpenCode's `glob` and `grep` tools fail in a box (`ripgrep execution failed`) whatever the model. A first Docker run that searched before writing ran out of turns. Adding `ripgrep` to `docker/Dockerfile` would fix it.

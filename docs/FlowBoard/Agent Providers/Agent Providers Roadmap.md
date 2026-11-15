@@ -31,7 +31,8 @@ The plan, with what exists on `dev` as of 2026-10-22.
 | 2026-10-18 | `pnpm run-agent <task.yaml>`: one YAML file runs either provider, prints the events and logs them to `runs/`. It stands in for the runner, which is not built | [[Run Config Reference]], [[Run Agent CLI Decisions]] |
 | 2026-10-18 | ask_user: the `ask-user` MCP shim forwards the agent's questions to `run-agent`, which asks them in the terminal | [[Run Agent CLI Decisions]], [[Testing The Run Agent CLI]] |
 | 2026-10-22 | Fixes after the [[Agent Providers Docs Audit]], listed below | [[Provider Implementation Decisions]], [[Run Agent CLI Decisions]] |
-| 2026-11-13 | Approved OpenCode models and a saved OpenRouter key: an OpenCode step runs only on a model approved app-wide, free ones with a privacy warning; the key lives in the data folder's `secrets.json`. A model-provider service for direct calls was left out of scope | [[OpenRouter Models And Key]] |
+| 2026-11-13 | Approved OpenCode models and a saved OpenRouter key: an OpenCode step runs only on a model approved app-wide, free ones with a privacy warning; the key lives in the data folder's `secrets.json`. A model-provider service for direct calls was left out of scope | [[OpenCode Models]] |
+| 2026-11-15 | Ollama on this machine as a second OpenCode model source: local, tool-capable models approved like OpenRouter's, a warning on a small known window, runs on the host, in Docker and in OpenSandbox through `host.docker.internal`. Cloud models and Ollama elsewhere are left out | [[OpenCode Models]] |
 
 The 2026-10-22 fixes. The decisions behind them were taken that day and are open to the owner's review.
 
