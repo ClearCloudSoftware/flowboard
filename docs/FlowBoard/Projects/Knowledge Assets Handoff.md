@@ -22,13 +22,13 @@ The plan is `docs/superpowers/plans/2026-11-15-knowledge-assets.md`.
   - **Trusted:** on this machine, through `uvx`, pinned to `graphifyy==0.7.5` and Serena v2.1.0 (`5e4f5cd`), with FlowBoard's Serena home in `<data>/serena`.
   - **Normal and Untrusted:** in a shell step's box (`--network none`) from the sandbox image, which now carries uv, graphify, Serena and Serena's TypeScript/JavaScript and Python language servers (`docker/Dockerfile`, `docker/fb-serena.sh`).
   - **OpenSandbox:** never; the box would hold only the last commit.
-- **What a build makes:** `graphify-out/` (`graphify update`: parsed from the code, no AI calls, free), Serena's index in `serena/` with its `project.yml` set to `read_only: true`, and `stamp.json` (`{ commit, builtAt, graphify, serena }`) for agents. FlowBoard never reads the stamp back: an agent in a box could write it. The record keeps `knowledgeBuild: { run, commit }`.
+- **What a build makes:** it first deletes `.flowboard/knowledge/`, so nothing a repo or an earlier run left there survives. Then `graphify-out/` (`graphify update`: parsed from the code, no AI calls, free), Serena's index in `serena/` under a `project.yml` FlowBoard writes whole (`SERENA_PROJECT_YML`: `read_only: true`, the two languages, no tool, mode or prompt keys), and `stamp.json` (`{ commit, builtAt, graphify, serena }`) for agents. FlowBoard never reads the stamp back: an agent in a box could write it. The record keeps `knowledgeBuild: { run, commit }`.
 - **When a build starts:**
   - After a GitHub clone, first: `buildThenAnalyse` starts the build, waits until its run ends and the folder lock is free, then starts the repo analyst, which already reads both maps. The clone log says `-- knowledge build started: run …` and `-- knowledge built at <commit>` or `-- knowledge build failed: …; the analysis starts anyway`. A build that can't start never stops the analyst, and nothing fails the clone.
   - **Build** / **Rebuild** on the project page's knowledge card (`POST /api/projects/:id/knowledge`).
   - The scheduler: `instrumentation.ts` starts `startScheduler` once per server process (a `globalThis` guard), and every 10 minutes `knowledgeTick` starts each due build in turn (`dueBuild`). *When the base branch moves*: the base branch is checked out and its local tip isn't the commit last mapped. *Once a day*: 24 hours after the last build started. Never while a build runs; a build that failed isn't retried until the base moves (or a day passes).
 - **The card** reads `knowledgeView`: *off*, *never built*, *building…* with a link to its run, *built at <commit> · <time>*, *stale: main is at <commit> now*, or *build failed: <why>*, the why being the build's last line.
-- **In runs** (`knowledgeFor` in `flow-run.ts`): a run in the repo's own folder, on this machine or in a Docker box, gets Serena as an MCP server on every agent step once `serena/project.yml` exists, and a line in each agent's prompt pointing at `GRAPH_REPORT.md` once it exists. Serena runs with context `ide` and modes `planning`, `no-onboarding` and `no-memories`. Checked for real on this machine, it offers only `find_declaration`, `find_implementations`, `find_referencing_symbols`, `find_symbol`, `get_diagnostics_for_file`, `get_symbols_overview`, `initial_instructions` and `search_for_pattern`: no editing, shell or memory tool.
+- **In runs** (`knowledgeFor` in `flow-run.ts`): a run in the repo's own folder, on this machine or in a Docker box, gets Serena as an MCP server on every agent step and a line in each agent's prompt pointing at `GRAPH_REPORT.md`, but only when the project's last build ended *built* (or *stale*) and git tracks nothing under `.flowboard/`. Serena also needs `read_only: true` in its project file and no `project.local.yml` beside it. Serena runs with context `ide` and modes `planning`, `no-onboarding` and `no-memories`. Checked for real on this machine, it offers only `find_declaration`, `find_implementations`, `find_referencing_symbols`, `find_symbol`, `get_diagnostics_for_file`, `get_symbols_overview`, `initial_instructions` and `search_for_pattern`: no editing, shell or memory tool.
 - **The settings page** no longer says *not acted on*. graphify reads *local, no AI calls, free*, its cost warning is gone, and so is the wizard's size-based cost estimate (`graphifyCost`).
 
 ## What was checked for real
@@ -60,8 +60,8 @@ Each was taken to keep the first version small; none is hard to change.
 | 2 | The build's flow is generated per project in the data folder, not a file in `internal/` | Its script depends on the project's settings and tier; one file per project means two starts can't race | A flow you can't read in the repo; it's in `<data>/internal/knowledge/<id>/` |
 | 3 | The record keeps the build's run and commit; `stamp.json` is for agents only | An agent in a box can write the repo, so the stamp can't decide what FlowBoard does | None |
 | 4 | Serena gets FlowBoard's own config (`internal/knowledge/serena_config.yml`): index under `.flowboard/knowledge/serena`, no dashboard, no trusted project | A repo's own `.serena/project.yml` must never run its `activation_command` | None |
-| 5 | The build makes `.flowboard/knowledge/serena/` before Serena indexes | Without it, Serena uses a `.serena/` the repo ships | None |
-| 6 | Serena indexes only TypeScript/JavaScript and Python (`--language typescript --language python`) | With several languages, Serena asks on stdin which to index, and a shell step's stdin is empty; only those servers are in the image | Other languages get no symbols; graphify still maps them |
+| 5 | The build deletes `.flowboard/knowledge/`, then writes Serena's `project.yml` before Serena indexes | Without it, Serena writes its own, or uses a `.serena/` the repo ships; after review, also so no repo file survives (I1, I3) | None |
+| 6 | Serena indexes only TypeScript/JavaScript and Python (`language_servers` in FlowBoard's project file) | With several languages, Serena asks on stdin which to index, and a shell step's stdin is empty; only those servers are in the image | Other languages get no symbols; graphify still maps them |
 | 7 | The script exits 0 even when a map fails; its last line says so, and the card reads it | A failed shell step with no fail edge waits at a gate for a person, holding the folder lock (found by a real build) | The runs list shows such a build as *done*; the card says *build failed* |
 | 8 | graphify runs from inside `.flowboard/knowledge/` | graphify 0.7.5 writes `graphify-out/manifest.json` into its working folder whatever `GRAPHIFY_OUT` says (found by a real build) | None |
 | 9 | `GRAPHIFY_FORCE=1` | A rebuild after code was deleted has fewer nodes, which graphify otherwise refuses to save | None |
@@ -75,7 +75,25 @@ Each was taken to keep the first version small; none is hard to change.
 | 17 | The card shows when the build started (from its run's name), not when it ended | The record keeps no time, and the stamp isn't read back | The time is a few seconds early |
 | 18 | The knowledge card is its own card on the project page, below the analysis card, not inside the *Knowledge* settings page | That page edits a draft shared with the wizard and the app settings page | Status is one card further down |
 | 19 | The graphify cost estimate is deleted with its warning | It only priced graphify | None; the wizard still shows the repo's size |
-| 20 | Serena's tools are made read-only twice: the `planning` and `no-memories` modes, and `read_only: true` in the project file | Serena applies `read_only` only in a single-project context such as `ide`; the modes hold whatever the context | None |
+| 20 | Serena's tools are read-only because FlowBoard owns the project file, not because of the modes. Corrected after review: the project file applies after the modes, so a repo's `project.local.yml` (`read_only: false`, `included_optional_tools`) put the shell and editing tools back. The build now deletes the folder and writes the file whole, and runs refuse Serena when a `project.local.yml` exists or git tracks anything under `.flowboard/` | Every injected MCP server is pre-approved, so on a Trusted project those tools would run with no approval. Serena has no global setting that ignores a project's tool keys | A file a run writes into `.flowboard/knowledge/serena/` between builds still reaches the next run; a box agent can already do anything in its box, and a Trusted agent asks before writing |
+| 21 | After review: a build at a gate reads *failed*, and whoever reads it next stops it (`stopStuck`, from the scheduler and the clone's wait); the clone's wait also has its own 25-minute deadline | The engine opens a `run_failed` gate for any step error (a timeout, a box that won't start), and the run held the folder, kept the wizard on *setting up* and blocked the scheduler for good | A stopped build reads *the run paused* on its run page |
+| 22 | After review: agents get the maps only when the recorded build ended *built* or *stale* | A failed build's leftovers, or a repo's own `GRAPH_REPORT.md`, were presented as FlowBoard's map | None |
+
+## Review
+
+A fresh reviewer read `098340e..87f0f70`. No critical findings; three important ones, all fixed with a test that failed first:
+
+1. **A repo could turn the read-only Serena into a shell and editor on a Trusted project** through `.flowboard/knowledge/serena/project.local.yml`. Rulings 5 and 20.
+2. **A build that timed out or couldn't start held the wizard and the folder lock for good**, at a `run_failed` gate. Ruling 21.
+3. **Agents were pointed at any `GRAPH_REPORT.md` as FlowBoard's map**, including a repo's own or a failed build's. Rulings 5 and 22.
+
+Its five minor findings are in [[#Known problems]]. It declined to judge:
+
+- Trusted builds running repo code on this machine (allowed by design: Trusted means that).
+- Whether Serena's read-only tools can read files outside the repo (not tested).
+- Decisions 1–6, as product calls.
+- The image's size.
+- graphify's report repeating the repo's own text, which reaches the agents' context.
 
 ## Known problems
 
@@ -85,6 +103,11 @@ Each was taken to keep the first version small; none is hard to change.
 - **The analysis card offers *Analyse*** while a clone is still building its maps, though the analyst will start on its own; clicking it is refused by the folder lock.
 - **A repo with no code reads as *build failed*:** graphify says *"No code files found"* (seen cloning `octocat/Hello-World`).
 - **The seeded *Scratch* project gets built on its own.** It is a Trusted Software project, so the scheduler's first pass builds its maps on this machine, which downloads graphify, Serena and its language servers through `uvx` once. Free, but it uses the network.
+- **A committed symlink at `.flowboard/knowledge`, `stamp.json` or a `.log` could steer a Trusted build's writes** (review m1), a scheduled one included, to a file such as `~/.zshrc`. Deleting the folder first covers a symlink at `.flowboard/knowledge` itself and anything inside it. Left: a symlink at `.flowboard` (the build writes through it) and any file a run makes appear between the delete and the write. Runs also refuse the maps when git tracks anything under `.flowboard/`, but the build itself doesn't check.
+- **The repo's `uv.toml` or `pyproject.toml` `[tool.uv]` steers a Trusted build's `uvx`** (m2), since it runs in the repo's folder. Fix: `--no-config`, run from the data folder.
+- **A flow with its own Docker image gets `/usr/local/bin/fb-serena`**, which that image doesn't have (m3); its agents then lack Serena's tools.
+- **The scheduler retries refused starts every 10 minutes forever** (m4): an Untrusted project on macOS, or a spent budget.
+- **A committed `project.yml` naming other languages** (m5) is covered: the build deletes the folder and writes its own, and runs refuse the maps while git tracks anything under `.flowboard/`.
 - **A Serena index outlives turning Serena off.** The files stay in `.flowboard/knowledge/` until removed by hand; runs stop getting Serena at once.
 
 ## Related

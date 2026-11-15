@@ -15,6 +15,8 @@ import { askBroker } from '@flowboard/ask-user';
 import { processStart } from '../src/flow-exec.ts';
 import { DISCARD_COMMANDS, pushable, runFlow, sandboxFor } from '../src/flow-run.ts';
 import { cleanWorkspace } from '../src/workspace.ts';
+import { loadFlow } from '../src/flow-config.ts';
+import { KNOWLEDGE_TASK, knowledgeFlowText } from '../src/knowledge-run.ts';
 import type { RunDeps } from '../src/run.ts';
 import { DELIVERY, flowProject, registerProject, RUN } from './fixtures/flow.ts';
 
@@ -1520,18 +1522,63 @@ test('a cap raised on the project page while a run goes applies at once', { time
 
 // --- knowledge assets
 
-/** The project's built maps, as a knowledge build leaves them in its repo. */
-function builtMaps(proj: string) {
+/**
+ * The project's maps as a knowledge build leaves them in its repo, and the build's run on its record: `done` and its
+ * last line `built`, or one of the ways a build does not count.
+ */
+function builtMaps(base: string, ended: 'built' | 'failed' | 'none' = 'built') {
+  const proj = join(base, 'proj');
   mkdirSync(join(proj, '.flowboard', 'knowledge', 'serena'), { recursive: true });
   mkdirSync(join(proj, '.flowboard', 'knowledge', 'graphify-out'), { recursive: true });
   writeFileSync(join(proj, '.flowboard', 'knowledge', 'serena', 'project.yml'), 'read_only: true\n');
   writeFileSync(join(proj, '.flowboard', 'knowledge', 'graphify-out', 'GRAPH_REPORT.md'), '# report\n');
+  if (ended === 'none') return;
+  const name = '2026-10-18T09-00-00-knowledge-build';
+  const scratch = mkdtempSync(join(tmpdir(), 'fb-kb-'));
+  writeFileSync(join(scratch, 'task.md'), KNOWLEDGE_TASK);
+  writeFileSync(join(scratch, 'knowledge-build.yaml'), knowledgeFlowText('true'));
+  const loaded = loadFlow('knowledge-build.yaml', scratch, { folder: scratch, task: 'task.md' });
+  assert.ok(loaded.ok);
+  const dir = join(base, 'runs', name);
+  const artifactsDir = join(scratch, '.flowboard', name);
+  mkdirSync(dir, { recursive: true });
+  mkdirSync(artifactsDir, { recursive: true });
+  writeFileSync(join(dir, 'flow.json'), JSON.stringify({ version: 1, config: loaded.config, artifactsDir }));
+  writeFileSync(join(dir, 'state.json'), JSON.stringify({ status: 'done', steps: {}, runs: [] }));
+  writeFileSync(join(artifactsDir, 'build.md'), ended === 'built' ? '-- knowledge built at abc1234\n' : '-- knowledge build failed: serena: boom\n');
+  const file = join(base, 'data', 'projects.json');
+  const projects = JSON.parse(readFileSync(file, 'utf8'));
+  projects[0].knowledgeBuild = { run: name, commit: 'abc1234def' };
+  writeFileSync(file, JSON.stringify(projects));
 }
+
+const hasSerena = (spec: RunSpec) => !!spec.tools?.some((t) => t.name === 'serena');
+const hasMap = (spec: RunSpec) => /graphify/.test(spec.prompt.preamble);
+
+test("a repo's own files never reach the agents as FlowBoard's maps: not a failed build's, not a planted project.local.yml, not tracked ones", async () => {
+  for (const ended of ['failed', 'none'] as const) {
+    const s = setup(ONE_BUILD);
+    builtMaps(s.base, ended);
+    assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+    assert.deepEqual([hasSerena(s.script.specs[0]), hasMap(s.script.specs[0])], [false, false], ended);
+  }
+  const local = setup(ONE_BUILD);
+  builtMaps(local.base);
+  writeFileSync(join(local.base, 'proj', '.flowboard', 'knowledge', 'serena', 'project.local.yml'), 'read_only: false\n');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], local.deps), 0, local.err.join('\n'));
+  assert.deepEqual([hasSerena(local.script.specs[0]), hasMap(local.script.specs[0])], [false, true]);
+  const tracked = setup(ONE_BUILD);
+  builtMaps(tracked.base);
+  const proj = join(tracked.base, 'proj');
+  for (const args of [['init', '-q', '-b', 'main'], ['add', '-f', '.flowboard/knowledge/graphify-out/GRAPH_REPORT.md'], ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'planted']]) spawnSync('git', args, { cwd: proj });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], tracked.deps), 0, tracked.err.join('\n'));
+  assert.deepEqual([hasSerena(tracked.script.specs[0]), hasMap(tracked.script.specs[0])], [false, false]);
+});
 
 test("an agent step gets Serena and graphify's report once they are built, and only while the project has them on", async () => {
   const s = setup(ONE_BUILD);
   const proj = join(s.base, 'proj');
-  builtMaps(proj);
+  builtMaps(s.base);
   assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
   const spec = s.script.specs[0];
   const serena = spec.tools?.find((t) => t.name === 'serena');
@@ -1539,10 +1586,10 @@ test("an agent step gets Serena and graphify's report once they are built, and o
   assert.deepEqual(serena?.args?.slice(0, 7), ['-q', '--from', 'git+https://github.com/oraios/serena@5e4f5cd173c7ff3eed37ee3f1de6c266b937c5dc', 'serena', 'start-mcp-server', '--project', proj]);
   assert.equal(serena?.env?.SERENA_HOME, join(s.base, 'data', 'serena'));
   assert.match(readFileSync(join(s.base, 'data', 'serena', 'serena_config.yml'), 'utf8'), /\.flowboard\/knowledge\/serena/);
-  assert.match(spec.prompt.preamble, new RegExp(`graphify, built at an unknown commit; it may be older than the code\\): ${proj}/\\.flowboard/knowledge/graphify-out/GRAPH_REPORT\\.md`));
+  assert.match(spec.prompt.preamble, new RegExp(`graphify, built at abc1234; it may be older than the code\\): ${proj}/\\.flowboard/knowledge/graphify-out/GRAPH_REPORT\\.md`));
 
   const off = setup(ONE_BUILD);
-  builtMaps(join(off.base, 'proj'));
+  builtMaps(off.base);
   const projects = JSON.parse(readFileSync(join(off.base, 'data', 'projects.json'), 'utf8'));
   projects[0].overrides.knowledge = { serena: false, graphify: false, rebuild: 'manual' };
   writeFileSync(join(off.base, 'data', 'projects.json'), JSON.stringify(projects));

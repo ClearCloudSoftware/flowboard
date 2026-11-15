@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { hostGit } from '@flowboard/adapters';
 import { stringify } from 'yaml';
 import { readAppSettings } from './app-settings.ts';
-import { readArtifact, readRun } from './flow-logs.ts';
+import { readArtifact, readRun, stopRun } from './flow-logs.ts';
 import { startRun } from './flow-start.ts';
 import { INTERNAL_DIR } from './internal-steps.ts';
 import { buildCommand, FAILED, type KnowledgeView } from './knowledge.ts';
@@ -69,7 +69,10 @@ export function knowledgeView(runsDir: string, project: Project, kn: Knowledge):
   const base = { run: b.run, commit: b.commit };
   const r = readRun(runsDir, b.run);
   if (!r) return { ...base, status: 'failed', error: 'the run is gone' };
-  if (r.status === 'starting' || r.status === 'running' || r.status === 'waiting') return { ...base, status: 'building' };
+  if (r.status === 'starting' || r.status === 'running') return { ...base, status: 'building' };
+  // A build has no person to ask: a step that timed out or whose box would not start opens a gate (`run_failed`) that
+  // would hold the folder for good. Whoever reads it next stops it (`stopStuck`).
+  if (r.status === 'waiting') return { ...base, status: 'failed', error: GATED };
   if (r.status === 'paused') return { ...base, status: 'failed', error: 'the run paused; see its page' };
   if (r.status === 'failed') return { ...base, status: 'failed', error: 'the run failed; see its page' };
   // The script ends 0 either way; its last line says whether a map failed.
@@ -82,7 +85,16 @@ export function knowledgeView(runsDir: string, project: Project, kn: Knowledge):
 type Started = { ok: true; run: string } | { ok: false; error: string };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** How long a build's run-flow may still hold the folder after its run says it ended. */
-const LOCK_MS = 10_000;
+const LOCK_MS = 30_000;
+/** How long a clone waits for its build: past the shell step's own 20 minutes, it is stopped. */
+const DEADLINE_MS = 25 * 60_000;
+const GATED = 'the build stopped at a gate; FlowBoard stops it';
+
+/** Stops `project`'s build run when it waits at a gate, so it releases the folder; a stop already asked for is asked again, harmlessly. */
+export function stopStuck(runsDir: string, project: Project): void {
+  const run = project.knowledgeBuild?.run;
+  if (run && readRun(runsDir, run)?.status === 'waiting') stopRun(runsDir, run);
+}
 
 /**
  * After a clone: the maps first, so the analyst can read them, then the analyst. Each line goes to `say` (the clone's
@@ -93,21 +105,23 @@ export async function buildThenAnalyse(
   runsDir: string,
   project: Project,
   say: (line: string) => void,
-  deps: { build?: typeof startKnowledgeBuild; analyse?: typeof startAnalysis; pollMs?: number } = {},
+  deps: { build?: typeof startKnowledgeBuild; analyse?: typeof startAnalysis; pollMs?: number; deadlineMs?: number } = {},
 ): Promise<Started> {
-  const { build = startKnowledgeBuild, analyse = startAnalysis, pollMs = 1000 } = deps;
+  const { build = startKnowledgeBuild, analyse = startAnalysis, pollMs = 1000, deadlineMs = DEADLINE_MS } = deps;
   const kn = knowledgeOf(dataDir, project);
   if (kn.graphify || kn.serena) {
     const b = await build(dataDir, runsDir, project).catch((e: Error): Started => ({ ok: false, error: e.message }));
     if (!b.ok) say(`-- knowledge build not started: ${b.error.split('\n')[0]}`);
     else {
       say(`-- knowledge build started: run ${b.run}`);
-      // ponytail: polls the run folder; the shell step's 20-minute timeout bounds the wait
-      while (['starting', 'running', 'waiting'].includes(readRun(runsDir, b.run)?.status ?? '')) await sleep(pollMs);
+      // ponytail: polls the run folder. A gate ends the wait, and so does the deadline; either way the run is stopped.
+      const end = Date.now() + deadlineMs;
+      while (['starting', 'running'].includes(readRun(runsDir, b.run)?.status ?? '') && Date.now() < end) await sleep(pollMs);
+      if (['starting', 'running', 'waiting'].includes(readRun(runsDir, b.run)?.status ?? '')) stopRun(runsDir, b.run);
       const lock = join(project.repoPath, '.flowboard', 'lock');
-      for (const end = Date.now() + LOCK_MS; existsSync(lock) && Date.now() < end; ) await sleep(pollMs);
+      for (const until = Date.now() + LOCK_MS; existsSync(lock) && Date.now() < until; ) await sleep(pollMs);
       const v = knowledgeView(runsDir, readProjects(dataDir).find((p) => p.id === project.id) ?? project, kn);
-      say(v.status === 'built' || v.status === 'stale' ? `-- knowledge built at ${v.commit ? v.commit.slice(0, 7) : 'a repo with no commits'}` : `-- knowledge build failed: ${v.error}; the analysis starts anyway`);
+      say(v.status === 'built' || v.status === 'stale' ? `-- knowledge built at ${v.commit ? v.commit.slice(0, 7) : 'a repo with no commits'}` : `-- knowledge build failed: ${v.error ?? `it ran past ${Math.round(deadlineMs / 60_000)} min and was stopped`}; the analysis starts anyway`);
     }
   }
   return analyse(dataDir, runsDir, project);
@@ -140,6 +154,7 @@ export async function knowledgeTick(dataDir: string, runsDir: string, now = Date
   const out: { project: string; why: string; run?: string; error?: string }[] = [];
   for (const p of readProjects(dataDir)) {
     if (!existsSync(p.repoPath)) continue;
+    stopStuck(runsDir, p);
     const kn = knowledgeOf(dataDir, p);
     const why = dueBuild(p, kn, knowledgeView(runsDir, p, kn), { branch: branchOf(p.repoPath), tip: p.baseBranch ? revParse(p.repoPath, `refs/heads/${p.baseBranch}`) : undefined }, now);
     if (!why) continue;
