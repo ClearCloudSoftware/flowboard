@@ -14,6 +14,7 @@ This note is the state of branch `feature/slack-escalation` on 2026-11-15: cut f
 - [[#Decisions open to your review]]: the choices that shape the feature.
 - [[#Rulings made on your behalf]]: the smaller decisions taken while building, with what each costs if wrong.
 - [[#Known problems]]: what is left unfixed.
+- [[#Review]]: what the whole-branch review found, what was fixed, and what it left to judgement.
 
 The plan is `docs/superpowers/plans/2026-11-15-slack-escalation.md`.
 
@@ -92,13 +93,16 @@ All against a **fake Slack**; Alex has no tokens yet, so nothing has run against
 | 3 | An escalated question keeps a copy of its text in `escalations.json` | The repaint needs the prompts after run-flow deletes the ask file | The data folder holds question text for a week after it closes |
 | 4 | A Slack refusal of `chat.update` (the message deleted) counts as repainted; only a network failure is retried | Otherwise a deleted message is retried forever | A repaint lost to a passing Slack-side error |
 | 5 | A budget line Slack refused is retried a minute later; only a sent one is recorded | The bot may be invited later | Up to one call a minute per refused project |
-| 6 | A question that vanishes from a live run reads *Answered in the terminal*, a gate asked again in the same run too | run-flow leaves no record of terminal answers | A misleading repaint for a re-asked gate |
+| 6 | A question that vanishes from a live run reads *Answered in the terminal*, a gate asked again in the same run too | run-flow leaves no record of terminal answers | A misleading repaint for a re-asked gate. **The review did not accept this one as it stands:** an answer from the page or Slack that lands while the post is still awaiting Slack is overwritten and credited to the terminal (minor m2 below) |
 | 7 | The **Answer** click is acked before `views.open` returns | Slack wants the ack within 3 seconds and the `trigger_id` lasts 3 | A failed modal is only logged on the server |
 | 8 | When the cap is crossed between two checks, only the cap is posted, and the alert counts as sent | One line says it all | None |
 | 9 | Options travel as their index; a select shows the first 100 options and a modal the first 99 questions | Block Kit caps an option value at 150 characters, a select at 100 options, a view at 100 blocks | An agent's 101st option cannot be picked in Slack; the page still can |
 | 10 | The escalation channels page moved to `app/settings/slack.tsx` | `settings.tsx` would otherwise grow by the Slack row | None |
 | 11 | The FlowBoard address is stored without a trailing slash | Links are built as `<address>/runs` | None |
 | 12 | `answerAsk` refuses a second answer (*already answered*) for the page too | First write wins is one rule, wherever the answer comes from | A double-click on the page now gets a 409 for the second click |
+| 13 | A run's first 10 asks escalate, and a pass posts at most 20 | A run writes a handful of asks at once; a flood written by an agent outside a box must not flood Slack or block the server with whole-file writes | A run with more than 10 open questions has the rest only in FlowBoard; a burst of more than 20 due questions takes several passes (15 s each) |
+| 14 | An ask file must pass a shape check (string ids, heading, prompt, help and option labels; known kinds; selects with options; ids once) to be shown or escalated; a missing `at` reads as `''` and never escalates; an empty batch still counts | An agent on this machine can write its run folder; phase 5's stuck-gate check reads asks without `at` | A malformed ask is invisible on the page too, and its run reads *running*, not *waiting* |
+| 15 | The Socket Mode watchdog looks every 10 s, takes a gap over 60 s as a sleep, and replaces a socket once it is an hour old | Node's `WebSocket` sends no pings, and FlowBoard only writes acks, so a dead socket raises no event | A reconnect each hour; a click in the second it takes is redelivered by Slack |
 
 ## Known problems
 
@@ -108,6 +112,24 @@ All against a **fake Slack**; Alex has no tokens yet, so nothing has run against
 - **A question asked before the server started** is posted on the first check after it, however long it waited.
 - **Answers from Slack need the server's socket.** While it reconnects, a click or a submission is delivered again by Slack on the next connection, or lost after Slack's retries.
 - **Agents' questions in runs started without `--page`** (a terminal-only `pnpm run-flow`) have no asks file and never escalate.
+
+- **Minors from the review, not fixed:**
+  - **m1:** a paused run with a leftover ask file can still open the modal before the repaint: `closedText` treats `closed.by === null` as open, so the answer is written to a dead run. Fix: `if (closed) return by ? … : 'No longer waiting.'`.
+  - **m2:** an answer that arrives while `chat.postMessage` is awaiting is credited to the terminal, because the post's update overwrites `closed` (against ruling 6).
+  - **m3:** `void noteAnswered(...)` in `onInteraction` has no `.catch`, so a full disk (ENOSPC) can surface as an unhandled rejection.
+  - **m4:** an ask with more than 99 questions dead-ends in the modal when a question past the 99th is required.
+  - **m5:** a select with no options makes Slack refuse `views.open`, which is only logged.
+  - **m6:** a bad bot token (`invalid_auth`, `token_revoked`) is filed as a channel problem and retried each minute per ask, not shown as a connection problem.
+  - **m7:** the page's 409 says only *already answered*, not by whom; PRD §10 wants *"already answered by <channel>"*.
+
+## Review
+
+A fresh reviewer read the branch (`a9fd234..38e972a`): no critical findings, two important ones, both fixed test-first, and the seven minors above.
+
+- **I1, a silently dead socket never reconnected** (fixed in `c6ada49`): after a sleep or a network change the TCP connection can die with no `close` or `error`, so the page kept saying *Connected* and every **Answer** click failed in Slack. A watchdog now replaces the socket when a tick comes over 60 s after the last, and once it is an hour old (ruling 15). Test: *a socket that went quiet through a sleep, or is an hour old, is recycled* (`slack.test.ts`, an injected clock against the fake socket server).
+- **I2, one malformed ask stopped all escalation** (fixed in `c273cf3`, `93e0bbc`): an ask file whose `questions` or a `prompt` had the wrong type threw inside the pass, so no later run was escalated or repainted and budget lines stopped; a flood of forged asks would each have been posted. Ask files are now checked by shape (ruling 14), each ask, repaint and the budget fail on their own, and the pass is capped (ruling 13). Tests: *a malformed ask neither stops the pass nor the asks behind it*, *a flood of asks is posted at most 10 per run and 20 per pass*, *a pass that throws on one ask still repaints and posts the budget* (`escalation.test.ts`), and the shape check in `flow-logs.test.ts`.
+- **The reviewer accepted the rulings except ruling 6** (see m2).
+- **Left to judgement by the reviewer:** whether real Slack accepts these payloads, total message size included; Slack turning bare URLs in `plain_text` into links; `clip` splitting a surrogate pair (an emoji cut in half); stale asks left by a crashed run; what Next does with an unhandled rejection; agents outside a box reading `secrets.json` (the isolation layer's job, not this one's); two servers on one data folder both posting.
 
 ## Related
 
