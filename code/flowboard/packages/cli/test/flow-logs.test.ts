@@ -90,6 +90,9 @@ test("the page's answer is written only when it fits the open question", () => {
   assert.equal(answerAsk(runs, 'r1', 'b', { decision: 'approve' }), 'that question is no longer open');
   assert.equal(answerAsk(runs, 'r1', 'a', { decision: 'approve', note: '', extra: 1 }), undefined);
   assert.deepEqual(JSON.parse(readFileSync(join(dir, 'answers', 'a.json'), 'utf8')), { decision: 'approve', note: null });
+  // the first answer wins: a second before the host reads the first (Slack and the page at once) is refused
+  assert.equal(answerAsk(runs, 'r1', 'a', { decision: 'approve', note: 'second' }), 'already answered');
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, 'answers', 'a.json'), 'utf8')), { decision: 'approve', note: null });
 
   assert.equal(stopRun(runs, 'r1'), undefined);
   assert.ok(existsSync(join(dir, 'stop')));

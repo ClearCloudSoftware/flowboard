@@ -235,7 +235,8 @@ export function readArtifact(runsDir: string, name: string, type: string): strin
 
 /**
  * Writes the page's answer to the open ask `id` of run `name`, once each answer fits its question: a select's
- * value is one of its options, a required question is answered. Returns why not, or undefined when written.
+ * value is one of its options, a required question is answered. Returns why not, or undefined when written; a second
+ * answer before the host reads the first is `'already answered'`.
  */
 export function answerAsk(runsDir: string, name: string, id: string, answers: Record<string, unknown>): string | undefined {
   const run = readRun(runsDir, name);
@@ -257,7 +258,13 @@ export function answerAsk(runsDir: string, name: string, id: string, answers: Re
     if (q.kind === 'text' && typeof v !== 'string') return `${q.prompt}: text`;
   }
   const picked = Object.fromEntries(ask.questions.map((q) => [q.id, answers[q.id] === '' ? null : (answers[q.id] ?? null)]));
-  writeFileSync(join(runsDir, name, 'answers', `${id}.json`), JSON.stringify(picked));
+  try {
+    // Exclusive: the first answer wins, whether from the page or from Slack, until the host takes it away.
+    writeFileSync(join(runsDir, name, 'answers', `${id}.json`), JSON.stringify(picked), { flag: 'wx' });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'EEXIST') return 'already answered';
+    throw e;
+  }
   return undefined;
 }
 
