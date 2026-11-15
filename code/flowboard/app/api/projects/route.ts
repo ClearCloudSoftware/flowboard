@@ -1,6 +1,7 @@
 import { connection } from 'next/server';
 import { z } from 'zod';
 import { analysisView } from '../../../packages/cli/src/analysis-run.ts';
+import { slackProblems } from '../../../packages/cli/src/escalation.ts';
 import { listRuns } from '../../../packages/cli/src/flow-logs.ts';
 import { knowledgeView } from '../../../packages/cli/src/knowledge-run.ts';
 import { createProject, readProjects, seedOnce, viewProjects } from '../../../packages/cli/src/projects.ts';
@@ -15,7 +16,9 @@ export async function GET(request: Request) {
   if (no) return no;
   seedOnce(dataDir(), flowsDir());
   const runs = runsDir();
-  return Response.json(viewProjects(readProjects(dataDir()), listRuns(runs), flowsDir(), readAppSettings(dataDir()), Date.now(), (run) => analysisView(runs, run), (p, kn) => knowledgeView(runs, p, kn)));
+  const views = viewProjects(readProjects(dataDir()), listRuns(runs), flowsDir(), readAppSettings(dataDir()), Date.now(), (run) => analysisView(runs, run), (p, kn) => knowledgeView(runs, p, kn));
+  // Slack's refusal of the channel a project escalates to (not_in_channel, …), as a problem line.
+  return Response.json(views.map((v) => ({ ...v, problems: [...v.problems, ...slackProblems(dataDir(), v.settings.escalation.value.channel)] })));
 }
 
 /** The shape only; `createProject` checks the values (overrides, limits) and says what is wrong with them. */

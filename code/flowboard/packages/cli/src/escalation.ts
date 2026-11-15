@@ -19,7 +19,7 @@ import { findProject } from './isolation.ts';
 import { projectSpendUsd, readProjects } from './projects.ts';
 import { resolveSettings } from './settings.ts';
 import { answersFromView, askMessage, askModal, type Blocks, clip, closedMessage, noteMessage, noticeModal, type Where } from './slack-blocks.ts';
-import { slackCall, slackTokens } from './slack.ts';
+import { connectSocket, slackCall, type SocketState, slackTokens } from './slack.ts';
 
 /** One escalated ask, keyed `<run>/<id>`: where it went (`slackChannel`, `ts` once posted) and how it ended (`closed`). */
 export interface Escalated {
@@ -269,4 +269,73 @@ export async function onInteraction(dataDir: string, runsDir: string, payload: a
     return undefined;
   }
   return undefined;
+}
+
+// --- the host: the Next server keeps it running ------------------------------------------------------------------
+
+export interface EscalationHost {
+  /** Reconnects with the tokens saved now; none, and it stays off. */
+  refresh(): void;
+  state(): SocketState | { state: 'off' };
+  /** For tests: stops the pass and the socket, and forgets the host. */
+  stop(): void;
+}
+const G = globalThis as { __fbEscalation?: EscalationHost };
+export const escalationHost = (): EscalationHost | undefined => G.__fbEscalation;
+
+/**
+ * Once per server process (a dev server's reloads import this again): a Socket Mode connection while both tokens are
+ * saved, and an `escalationTick` every `everyMs`, one at a time. Nothing in it throws into the server.
+ */
+// ponytail: a pass every 15 s reads every run folder; a file watcher on the runs folder if there get to be thousands
+export function startEscalation(dataDir: string, runsDir: string, o: { everyMs?: number; base?: string } = {}): EscalationHost {
+  if (G.__fbEscalation) return G.__fbEscalation;
+  let state: SocketState | { state: 'off' } = { state: 'off' };
+  let sock: { close(): void } | undefined;
+  let gen = 0; // a closed socket's late state never overwrites the new one's
+  const connect = () => {
+    sock?.close();
+    sock = undefined;
+    const mine = ++gen;
+    const t = slackTokens(dataDir);
+    if (!t.bot || !t.app) {
+      state = { state: 'off' };
+      return;
+    }
+    sock = connectSocket({
+      bot: t.bot,
+      app: t.app,
+      ...(o.base && { base: o.base }),
+      onState: (s) => void (gen === mine && (state = s)),
+      onInteraction: (p) => onInteraction(dataDir, runsDir, p, o.base),
+    });
+  };
+  let busy = false;
+  const pass = async () => {
+    if (busy) return;
+    busy = true;
+    try {
+      await escalationTick(dataDir, runsDir, { ...(o.base && { base: o.base }) });
+    } catch (e) {
+      console.error(`-- escalation: the pass failed: ${(e as Error).message}`);
+    } finally {
+      busy = false;
+    }
+  };
+  const timer = setInterval(() => void pass(), o.everyMs ?? 15_000);
+  timer.unref();
+  const host: EscalationHost = {
+    refresh: connect,
+    state: () => state,
+    stop() {
+      gen++;
+      clearInterval(timer);
+      sock?.close();
+      sock = undefined;
+      if (G.__fbEscalation === host) delete G.__fbEscalation;
+    },
+  };
+  G.__fbEscalation = host;
+  connect();
+  return host;
 }

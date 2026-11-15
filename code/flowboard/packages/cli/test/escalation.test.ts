@@ -4,8 +4,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync,
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { PageAsk } from '../src/ask/page.ts';
-import { escalationTick, noteAnswered, onInteraction, readEscalations, slackProblems } from '../src/escalation.ts';
-import { saveSlackTokens } from '../src/slack.ts';
+import { escalationHost, escalationTick, noteAnswered, onInteraction, readEscalations, slackProblems, startEscalation } from '../src/escalation.ts';
+import { removeSlack, saveSlackTokens } from '../src/slack.ts';
 import { fakeSlack, type FakeSlack, until } from './fake-slack.ts';
 
 const BOT = 'xoxb-1-2-abcdefghijkl';
@@ -228,4 +228,31 @@ test('the budget is posted once at the alert and once at the cap, each month', (
     await escalationTick(data, runs, { now: new Date(2026, 11, 1, 12).getTime(), base: slack.base, log });
     assert.equal(posts(slack).length, 3);
     assert.match(texts(posts(slack)[2].body.blocks), /90% of its \$10\.00 for December 2026/);
+  }));
+
+test('startEscalation connects, takes a modal submission through the socket end to end, and starts once', () =>
+  withSlack(async (slack) => {
+    const { data, runs } = setup({ asks: [{ ...GATE, at: new Date(Date.now() - 10 * MIN).toISOString() }] });
+    saveSlackTokens(data, { bot: BOT, app: 'xapp-1-A1-3-abcdefghijkl' });
+    const host = startEscalation(data, runs, { everyMs: 50, base: slack.base });
+    try {
+      assert.equal(startEscalation(data, runs, { everyMs: 50, base: slack.base }), host);
+      assert.equal(escalationHost(), host);
+      const conn = await until(() => slack.conns[0], 5000, 'a socket');
+      conn.send({ type: 'hello', connection_info: { app_id: 'A1' } });
+      await until(() => host.state().state === 'connected', 5000, 'connected');
+      await until(() => posts(slack).length, 5000, 'the post');
+      conn.send({ envelope_id: 'e1', type: 'interactive', payload: { ...submission(RUN, '1700-0', APPROVE), api_app_id: 'A1', team: { id: 'T1' } } });
+      await until(() => conn.received.length, 5000, 'the ack');
+      assert.deepEqual(conn.received[0], { envelope_id: 'e1' });
+      assert.ok(existsSync(join(runs, RUN, 'answers', '1700-0.json')));
+      await until(() => slack.of('chat.update').length, 5000, 'the repaint');
+      assert.equal(slack.conns.length, 1);
+      removeSlack(data);
+      host.refresh();
+      assert.deepEqual(host.state(), { state: 'off' });
+    } finally {
+      host.stop();
+    }
+    assert.equal(escalationHost(), undefined);
   }));
