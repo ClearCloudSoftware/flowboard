@@ -256,3 +256,47 @@ test('startEscalation connects, takes a modal submission through the socket end 
     }
     assert.equal(escalationHost(), undefined);
   }));
+
+test('a malformed ask neither stops the pass nor the asks behind it', () =>
+  withSlack(async (slack) => {
+    const { data, runs } = setup();
+    const dir = join(runs, RUN, 'asks');
+    writeFileSync(join(dir, '0-bad.json'), JSON.stringify({ id: '0-bad', heading: 5, questions: 'nope', at: GATE.at }));
+    writeFileSync(join(dir, '0-bad2.json'), JSON.stringify({ id: '0-bad2', heading: '', questions: [{ id: 'q', kind: 'text', prompt: { toString: 1 } }], at: GATE.at }));
+    writeFileSync(join(dir, '0-bad3.json'), '{ not json');
+    saveSlackTokens(data, { bot: BOT });
+    await escalationTick(data, runs, { now: AT + 5 * MIN, base: slack.base, log });
+    assert.equal(posts(slack).length, 1);
+    assert.match(texts(posts(slack)[0].body.blocks), /review: changes are needed/);
+  }));
+
+test('a flood of asks is posted at most 10 per run and 20 per pass', () =>
+  withSlack(async (slack) => {
+    const many = (n: number, from: number) => Array.from({ length: n }, (_, i) => ({ ...GATE, id: `${from + i}-0` }));
+    const { data, runs, repo } = setup({ asks: many(30, 1000) });
+    makeRun(runs, '2026-11-15T10-01-00-delivery', repo, { asks: many(10, 2000) });
+    makeRun(runs, '2026-11-15T10-02-00-delivery', repo, { asks: many(10, 3000) });
+    saveSlackTokens(data, { bot: BOT });
+    await escalationTick(data, runs, { now: AT + 5 * MIN, base: slack.base, log });
+    assert.equal(posts(slack).length, 20);
+    await escalationTick(data, runs, { now: AT + 6 * MIN, base: slack.base, log });
+    assert.equal(posts(slack).length, 30); // 10 from each run; the flooding run's other 20 never go
+    await escalationTick(data, runs, { now: AT + 7 * MIN, base: slack.base, log });
+    assert.equal(posts(slack).length, 30);
+    assert.equal(slack.of('chat.update').length, 0); // asks past the cap still count as open
+  }));
+
+test('a pass that throws on one ask still repaints and posts the budget', () =>
+  withSlack(async (slack) => {
+    const { data, runs } = setup();
+    saveSlackTokens(data, { bot: BOT });
+    await escalationTick(data, runs, { now: AT + 5 * MIN, base: slack.base, log });
+    // a stored entry whose copy of the ask is broken (hand-edited) must not stop the repaint of the others
+    const file = join(data, 'escalations.json');
+    const s = JSON.parse(readFileSync(file, 'utf8'));
+    s.asks['2026-11-15T09-00-00-delivery/1-0'] = { project: 'S', channel: '#flowboard', ask: { id: '1-0', heading: '', questions: 'x', at: '' }, triedAt: '', slackChannel: 'C1', ts: '1.1' };
+    writeFileSync(file, JSON.stringify(s));
+    rmSync(join(runs, RUN, 'asks', '1700-0.json'));
+    await escalationTick(data, runs, { now: AT + 6 * MIN, base: slack.base, log });
+    assert.ok(slack.of('chat.update').some((u) => texts(u.body.blocks).includes('Answered in the terminal')));
+  }));

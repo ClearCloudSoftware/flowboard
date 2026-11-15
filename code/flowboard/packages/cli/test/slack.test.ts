@@ -136,3 +136,28 @@ test('Socket Mode: a refused app-level token is an error state, retried', async 
     await slack.close();
   }
 });
+
+test('Socket Mode: a socket that went quiet through a sleep, or is an hour old, is recycled', async () => {
+  const slack = await fakeSlack();
+  let clock = 1_000_000;
+  const sock = connectSocket({ bot: BOT, app: APP, base: slack.base, onState: () => {}, onInteraction: async () => undefined, backoffMs: [10], watchMs: 20, now: () => clock });
+  try {
+    const first = await until(() => slack.conns[0], 5000, 'a socket');
+    first.send(HELLO);
+    await new Promise((r) => setTimeout(r, 100)); // watchdog ticks with the clock still: nothing happens
+    assert.equal(slack.conns.length, 1);
+    clock += 5 * 60_000; // the laptop slept: the next tick comes five minutes after the last
+    const second = await until(() => slack.conns[1], 5000, 'a socket after the sleep');
+    await until(() => first.closed, 5000, 'the old socket closed');
+    second.send(HELLO);
+    for (let i = 0; i < 70; i++) {
+      clock += 55_000; // awake, ticking under the sleep gap, for over an hour
+      await new Promise((r) => setTimeout(r, 25));
+      if (slack.conns[2]) break;
+    }
+    await until(() => slack.conns[2], 5000, 'a socket after an hour');
+  } finally {
+    sock.close();
+    await slack.close();
+  }
+});

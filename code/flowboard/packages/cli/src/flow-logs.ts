@@ -6,6 +6,8 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FlowState, Gate, RunRecord } from '../../core/src/flow/engine.ts';
 import { hostGit } from '@flowboard/adapters';
+import { z } from 'zod';
+import { checkQuestions } from '../../core/src/hitl/question.ts';
 import type { PageAsk } from './ask/page.ts';
 import { isDir, isFile } from './config.ts';
 import type { FlowConfig } from './flow-config.ts';
@@ -79,12 +81,36 @@ const alive = (pid: unknown) => {
     return (e as NodeJS.ErrnoException).code === 'EPERM';
   }
 };
+/**
+ * An ask as run-flow writes it. The run folder is FlowBoard's, but an agent on this machine (Trusted) can write
+ * there, so a file is checked before the page or Slack renders it; one that does not pass is left out.
+ */
+const AskSchema = z.object({
+  id: z.string().regex(/^[\w-]+$/),
+  heading: z.string(),
+  at: z.string().default(''), // missing: never escalates (Date.parse('') is NaN)
+  questions: z
+    .array(
+      z.object({
+        id: z.string(),
+        prompt: z.string(),
+        help: z.string().optional(),
+        kind: z.enum(['yes_no', 'single_select', 'multi_select', 'text', 'number']),
+        options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+        required: z.boolean().optional(),
+      }),
+    )
+    .refine((qs) => !qs.length || checkQuestions(qs) === undefined), // ids once, prompts set, selects with options
+});
 const asksOf = (dir: string): PageAsk[] =>
   isDir(join(dir, 'asks'))
     ? readdirSync(join(dir, 'asks'))
         .filter((f) => f.endsWith('.json'))
         .sort()
-        .flatMap((f) => (json(join(dir, 'asks', f)) as PageAsk | undefined) ?? [])
+        .flatMap((f) => {
+          const a = AskSchema.safeParse(json(join(dir, 'asks', f)));
+          return a.success ? [a.data] : [];
+        })
     : [];
 const hostOf = (dir: string) => json(join(dir, 'host.json')) as { pid?: number; page?: boolean } | undefined;
 
