@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { forgetAllMemory, forgetMemory, memoryQuery } from './api.ts';
 import type { ProjectView } from './api.ts';
+import { TRUST } from '../../packages/cli/src/settings.ts';
 
 const small = 'text-[11px] text-muted-foreground';
 const head = 'text-[10px] tracking-[0.12em] text-muted-foreground uppercase';
@@ -83,7 +84,9 @@ export function Memory({ p }: { p: ProjectView }) {
                   </Link>
                   {m.source.step && <> · {m.source.step}</>}
                   {m.source.artifact && <> · {m.source.artifact}</>}
-                  {m.source.ask && <> · your answer</>} · {when(m.at)}
+                  {m.source.ask && <> · your answer</>} · {when(m.at)} ·{' '}
+                  {/* Recalled only into runs as contained as this one, or more; one from before tiers were kept, only into Untrusted runs. */}
+                  {m.source.trust ? `${TRUST[m.source.trust].label} run` : 'trust not recorded: Untrusted runs only'}
                 </span>
               </div>
               <Button size="sm" variant="ghost" aria-label={`Forget: ${m.text.slice(0, 60)}`} disabled={forget.isPending} onClick={() => forget.mutate(m.id)}>

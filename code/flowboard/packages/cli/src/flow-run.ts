@@ -30,7 +30,7 @@ import { addMemories, readMemories, recall, runNotes } from './memory.ts';
 import { owns, projectSpendUsd, readProjects, startOf } from './projects.ts';
 import type { Project } from './projects.ts';
 import { resolveSettings, TRUST } from './settings.ts';
-import type { Budget, Knowledge } from './settings.ts';
+import type { Budget, Knowledge, Trust } from './settings.ts';
 import { alive, readLock } from './lock.ts';
 import { openWorkspace } from './workspace.ts';
 import { GRAPH_REPORT, graphifyLine, KNOWLEDGE_DIR, SERENA_PROJECT, serenaTool } from './knowledge.ts';
@@ -837,19 +837,20 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
    * none for FlowBoard's own runs (the repo analyst, knowledge builds), whose flows live in the data folder.
    */
   const internal = inside(join(d.dataDir, 'internal'), config.yamlPath);
-  const memoryOf = (): string | undefined => {
-    const id = config.isolation?.projectId;
-    if (internal || !id) return undefined;
-    const p = readProjects(d.dataDir).find((x) => x.id === id);
-    return p && resolveSettings(readAppSettings(d.dataDir), p.type, p.overrides).memory.value ? id : undefined;
+  const memoryOf = (): { id: string; trust: Trust } | undefined => {
+    const iso = config.isolation;
+    if (internal || !iso) return undefined;
+    const p = readProjects(d.dataDir).find((x) => x.id === iso.projectId);
+    // The trust the run was isolated at, not the project's now: a note keeps how contained its writer was.
+    return p && resolveSettings(readAppSettings(d.dataDir), p.type, p.overrides).memory.value ? { id: iso.projectId, trust: iso.trust } : undefined;
   };
   const why = (e: unknown) => (e instanceof Error ? e.message : String(e)).split('\n')[0];
   /** Memory is never on a run's critical path: a store that cannot be read leaves the attempt without it. */
   const recallFor = (step: string, query: string): string | undefined => {
     try {
-      const id = memoryOf();
-      if (!id) return undefined;
-      const r = recall(readMemories(d.dataDir, id), query);
+      const m = memoryOf();
+      if (!m) return undefined;
+      const r = recall(readMemories(d.dataDir, m.id), query, m.trust);
       show(`-- memory: recalled ${plural(r?.count ?? 0, 'note')} for ${step}`);
       return r?.text;
     } catch (e) {
@@ -1136,11 +1137,11 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   // Only a run that ended done commits, on the host: from its declared artifacts and the answers it collected.
   if (status === 'done') {
     try {
-      const id = memoryOf();
-      if (id) {
+      const m = memoryOf();
+      if (m) {
         const steps = config.flow.steps.map((s) => ({ id: s.id, ai: config.steps[s.id].kind === 'ai', produces: s.produces }));
-        const { notes, refused } = runNotes({ run: basename(d.runDir), runDir: d.runDir, artifactsDir: d.artifactsDir, steps });
-        const n = addMemories(d.dataDir, id, notes, now());
+        const { notes, refused } = runNotes({ run: basename(d.runDir), runDir: d.runDir, artifactsDir: d.artifactsDir, trust: m.trust, steps });
+        const n = addMemories(d.dataDir, m.id, notes, now());
         print(`-- memory: saved ${plural(n, 'note')} from this run${refused ? ` (${refused} left out: characters a person cannot see)` : ''}`);
       }
     } catch (e) {

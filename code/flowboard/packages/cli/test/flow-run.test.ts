@@ -1639,7 +1639,9 @@ test('memory: a done run of a project with memory on saves its review and answer
   assert.equal(s.out.at(-1), '-- flow done: 2 runs, $0.20 spent, $0.00 wasted');
   const ms = s.memories();
   assert.deepEqual(ms.map((m) => m.text).sort(), ['Q: Colour? A: teal', 'Tests use vitest, run with pnpm test']);
-  assert.ok(ms.every((m) => m.source.run === STAMPED), JSON.stringify(ms));
+  assert.ok(ms.every((m) => m.source.run === STAMPED && m.source.trust === 'trusted'), JSON.stringify(ms));
+  // A note a contained run wrote never reaches this Trusted project's runs, whose agents run on this machine.
+  addMemories(s.data, 'p-1', [{ text: 'Tests in vitest run in parallel by default', source: { run: 'boxed', trust: 'normal' } }]);
   assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt))); // nothing to recall in the first run
 
   assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));

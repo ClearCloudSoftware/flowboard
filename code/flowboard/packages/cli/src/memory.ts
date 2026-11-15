@@ -14,9 +14,13 @@ import { VISIBLE } from './analysis.ts';
 import { writeJsonFile } from './config.ts';
 import { QuestionsSchema } from './ask/page.ts';
 import { answerText } from './slack-blocks.ts';
+import type { Trust } from './settings.ts';
 
-/** Where a memory came from: its run (the run folder's name), its step, and the artifact or the question. */
-export interface Source { run: string; step?: string; artifact?: string; ask?: string }
+/**
+ * Where a memory came from: its run (the run folder's name), its step, the artifact or the question, and the trust
+ * its project had when the run ran. A memory from before trust was kept has none, and counts as untrusted.
+ */
+export interface Source { run: string; step?: string; artifact?: string; ask?: string; trust?: Trust }
 export interface Memory { id: string; text: string; source: Source; at: string }
 export type Note = { text: string; source: Source };
 
@@ -34,7 +38,7 @@ export const MEMORY_ARTIFACT = /(^|_)(summary|review)(_|$)/;
 
 const Store = z.strictObject({
   version: z.literal(1),
-  memories: z.array(z.strictObject({ id: z.string(), text: z.string(), source: z.strictObject({ run: z.string(), step: z.string().optional(), artifact: z.string().optional(), ask: z.string().optional() }), at: z.string() })),
+  memories: z.array(z.strictObject({ id: z.string(), text: z.string(), source: z.strictObject({ run: z.string(), step: z.string().optional(), artifact: z.string().optional(), ask: z.string().optional(), trust: z.enum(['trusted', 'normal', 'untrusted']).optional() }), at: z.string() })),
 });
 
 export function memoryFile(dataDir: string, projectId: string): string {
@@ -138,7 +142,7 @@ const lines = (file: string): Record<string, any>[] =>
     });
 
 /** The questions a person answered in the run, from its step logs (the host deletes the asks files once answered). */
-function answered(o: { run: string; runDir: string }): Note[] {
+function answered(o: { run: string; runDir: string; trust: Trust }): Note[] {
   return readdirSync(o.runDir)
     .map((f) => LOG.exec(f))
     .filter((m) => m !== null)
@@ -152,7 +156,7 @@ function answered(o: { run: string; runDir: string }): Note[] {
           const parsed = QuestionsSchema.safeParse(log.find((l) => l.kind === 'question' && l.batch === a.batch)?.questions);
           const qs: Question[] = parsed.success ? parsed.data : [];
           const answers = (a.answers ?? {}) as Answers;
-          return qs.filter((q) => answers[q.id] != null).map((q) => ({ text: `Q: ${q.prompt} A: ${answerText(q, answers[q.id])}`, source: { run: o.run, step: m[2], ask: q.id } }));
+          return qs.filter((q) => answers[q.id] != null).map((q) => ({ text: `Q: ${q.prompt} A: ${answerText(q, answers[q.id])}`, source: { run: o.run, step: m[2], ask: q.id, trust: o.trust } }));
         });
     });
 }
@@ -162,7 +166,7 @@ function answered(o: { run: string; runDir: string }): Note[] {
  * artifacts, in flow order; the first 50 that a person can see. `refused`: how many were left out for characters
  * a person cannot see (control, bidi, zero-width).
  */
-export function runNotes(o: { run: string; runDir: string; artifactsDir: string; steps: { id: string; ai: boolean; produces: string[] }[] }): { notes: Note[]; refused: number } {
+export function runNotes(o: { run: string; runDir: string; artifactsDir: string; trust: Trust; steps: { id: string; ai: boolean; produces: string[] }[] }): { notes: Note[]; refused: number } {
   const raw: Note[] = [
     ...answered(o).map((n) => ({ ...n, text: cut(n.text.replace(/\s+/g, ' ').trim()) })),
     ...o.steps
@@ -170,7 +174,7 @@ export function runNotes(o: { run: string; runDir: string; artifactsDir: string;
       .flatMap((s) =>
         s.produces
           .filter((type) => MEMORY_ARTIFACT.test(type))
-          .flatMap((type) => notesOf(readPlain(join(o.artifactsDir, `${type}.md`), ARTIFACT_MAX_BYTES) ?? '').map((text) => ({ text, source: { run: o.run, step: s.id, artifact: type } }))),
+          .flatMap((type) => notesOf(readPlain(join(o.artifactsDir, `${type}.md`), ARTIFACT_MAX_BYTES) ?? '').map((text) => ({ text, source: { run: o.run, step: s.id, artifact: type, trust: o.trust } }))),
       ),
   ];
   const notes = raw.filter((n) => VISIBLE.test(n.text));
@@ -182,14 +186,19 @@ const STOP = new Set(
 );
 const words = (s: string) => new Set((s.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []).filter((w) => !STOP.has(w)));
 
+/** How contained a run was: a note goes only into runs as contained as the one that wrote it, or more. */
+const CONTAINED: Record<Trust, number> = { trusted: 0, normal: 1, untrusted: 2 };
+
 /**
  * The memories sharing words with `query`, most shared first, then the newest, under the background label, while
- * they fit in 6,000 characters; undefined when none shares a word.
+ * they fit in 6,000 characters; undefined when none shares a word. Only memories written at `trust` or a less
+ * contained tier: what a boxed run's agent wrote never reaches an agent on this machine (Trusted).
  */
 // ponytail: scans every memory per attempt; 500 short notes is nothing, an index (FTS5) if the cap ever grows
-export function recall(memories: Memory[], query: string): { text: string; count: number } | undefined {
+export function recall(memories: Memory[], query: string, trust: Trust): { text: string; count: number } | undefined {
   const q = words(query);
   const hits = memories
+    .filter((m) => CONTAINED[m.source.trust ?? 'untrusted'] <= CONTAINED[trust])
     .map((m) => ({ m, score: [...words(m.text)].filter((w) => q.has(w)).length }))
     .filter((h) => h.score > 0)
     .sort((a, b) => b.score - a.score || b.m.at.localeCompare(a.m.at));
