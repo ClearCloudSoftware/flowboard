@@ -184,7 +184,7 @@ Like every FlowBoard route, they answer only on localhost, and refuse a change f
 - **Ollama on this machine only**, local models only: no Ollama on another host, no Ollama cloud models, no per-project model lists (Alex, 2026-11-13).
 - **The window of a model without `num_ctx` is unknown** until it is loaded, and is then not warned of. See above.
 - **`limit.output` is fixed at 8,192 tokens** for a local model: a reply longer than that, such as one huge file write, is cut off. Derive it from the window if that happens.
-- **Sandboxed OpenCode runs have no ripgrep.** Neither `flowboard-cli` nor `flowboard-sandbox` contains `rg`, so OpenCode's `glob` and `grep` tools fail in a box (`ripgrep execution failed`), whatever the model. Seen in the Ollama flow runs on 2026-11-15; not specific to Ollama.
+- **Images built before 2026-11-15 have no ripgrep**, so OpenCode's `glob` and `grep` tools fail in a box (`ripgrep execution failed`), whatever the model. Seen in the Ollama flow runs; fixed on `fix/sandbox-ripgrep` (`76c5c92`), which adds `ripgrep` to `docker/Dockerfile`. Rebuild `flowboard-cli`, then `flowboard-sandbox`, to get it.
 - **Which key wins inside OpenCode** when its own `auth.json` also holds an OpenRouter key is OpenCode's rule; not checked.
 - **A price rise is seen only once the list is fetched again**, within the hour, or at the next run.
 - **No direct model calls.** FlowBoard calls OpenRouter only for the model list and the key test, and Ollama only for its list; every model call is OpenCode's. A model-provider service of FlowBoard's own (for tool-less steps such as the backlog importer) was analysed and left out of scope (Alex, 2026-11-13).
