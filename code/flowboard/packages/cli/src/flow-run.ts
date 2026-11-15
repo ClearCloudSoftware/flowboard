@@ -14,7 +14,7 @@ import type { Answers, Decision, FlowCommand, FlowEvent, FlowState, Gate, Questi
 import type { Answerer } from './ask/broker.ts';
 import { either, pageAnswerer, watchStop } from './ask/page.ts';
 import { noTerminal, terminalAnswerer } from './ask/terminal.ts';
-import { isDir } from './config.ts';
+import { isDir, isFile } from './config.ts';
 import { agentNeeds, inside, loadFlow, NEEDS, toMermaid } from './flow-config.ts';
 import type { FlowConfig, Sandbox } from './flow-config.ts';
 import { artifactPath, execAi, execShell, processStart, shellEnv } from './flow-exec.ts';
@@ -29,9 +29,11 @@ import { listRuns } from './flow-logs.ts';
 import { owns, projectSpendUsd, readProjects, startOf } from './projects.ts';
 import type { Project } from './projects.ts';
 import { resolveSettings, TRUST } from './settings.ts';
-import type { Budget } from './settings.ts';
+import type { Budget, Knowledge } from './settings.ts';
 import { alive, readLock } from './lock.ts';
 import { openWorkspace } from './workspace.ts';
+import { GRAPH_REPORT, graphifyLine, SERENA_PROJECT, serenaTool } from './knowledge.ts';
+import { writeSerenaConfig } from './knowledge-run.ts';
 import { dataDirOf, defaultProvider, stamp } from './run.ts';
 import type { RunDeps } from './run.ts';
 import { prepareRun, applySavedKey } from './openrouter.ts';
@@ -275,10 +277,13 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
       printErr(`${yaml}: runs: cannot create the artifacts folder: ${(e as Error).message}`);
       return 2;
     }
+    const maps = knowledgeFor(isolated!, config, dataDir);
     for (const s of Object.values(config.steps)) {
       if (s.kind !== 'ai') continue;
       const guards = s.run.spec.guards!;
       s.run.spec.guards = { ...guards, denyPaths: [...(guards.denyPaths ?? []), ...(denyRun ? [denyRun] : [])], denyCommands: [...(guards.denyCommands ?? []), ...DISCARD_COMMANDS] };
+      if (maps.serena) s.run.spec.tools = [...(s.run.spec.tools ?? []), maps.serena];
+      if (maps.line) s.run.spec.prompt = { ...s.run.spec.prompt, preamble: `${s.run.spec.prompt.preamble}\n\n${maps.line}` };
     }
     const pinned = JSON.stringify({ version: 1, config, artifactsDir, maxRuns: maxRuns ?? null }, null, 2) + '\n';
     writeFileSync(join(runDir, 'flow.json'), pinned);
@@ -309,6 +314,22 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
   } finally {
     releaseLock(lockPath);
   }
+}
+
+/**
+ * The project's built maps for its agents: Serena as an MCP server and a line pointing at graphify's report. Only for a
+ * run in the repo's own folder (a task worktree or a subfolder has no index of its own, and a box sees only its folder)
+ * on this machine or in a Docker box; an OpenSandbox box holds the last commit, which never has `.flowboard/`.
+ */
+function knowledgeFor(iso: Isolated, config: FlowConfig, dataDir: string): { serena?: ReturnType<typeof serenaTool>; line?: string } {
+  const { kn, commit } = iso.knowledge;
+  const tier = iso.isolation.tier;
+  if (config.folder !== iso.repoPath || tier === 'opensandbox') return {};
+  const where = tier === 'host' ? 'host' : 'box';
+  return {
+    ...(kn.serena && isFile(join(iso.repoPath, SERENA_PROJECT)) && { serena: serenaTool(where, iso.repoPath, where === 'host' ? writeSerenaConfig(dataDir) : '', process.env) }),
+    ...(kn.graphify && isFile(join(iso.repoPath, GRAPH_REPORT)) && { line: graphifyLine(iso.repoPath, commit) }),
+  };
 }
 
 const NO_ONE = 'this project is Trusted, so agents ask before edits and shell commands, and no one can answer here; run it in a terminal or from the runs page';
@@ -358,15 +379,19 @@ function projectCap(project: Project, dataDir: string, runsDir: string, month: s
   return { lines, cap: { name: project.name, month, budget, others } };
 }
 
-/** A run's isolation, decided as it starts: the sandbox it gets and the line saying so; `repoPath`: its project's repo. */
-interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string; repoPath: string }
+/**
+ * A run's isolation, decided as it starts: the sandbox it gets and the line saying so; `repoPath`: its project's repo;
+ * `knowledge`: its knowledge setting and the commit its maps were last built from.
+ */
+interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string; repoPath: string; knowledge: { kn: Knowledge; commit?: string | null } }
 
 /**
  * The isolation `project` gives a run of a flow whose own sandbox is `flowSandbox` (`isolation.ts`); or why it may not
  * run, a line each: a tier this machine cannot give, or a box that cannot start or log in.
  */
 function isolate(project: Project, flowSandbox: Sandbox | undefined, steps: FlowConfig['steps'], dataDir: string, deps: RunDeps): Isolated | { refused: string[] } {
-  const trust = resolveSettings(readAppSettings(dataDir), project.type, project.overrides).trust.value;
+  const resolved = resolveSettings(readAppSettings(dataDir), project.type, project.overrides);
+  const trust = resolved.trust.value;
   const docker = deps.docker ?? { gvisor: () => dockerHasGvisor(), notReady: (image: string) => dockerNotReady(image) };
   const needs = agentNeeds(steps).map((n) => n.credential);
   const r = isolationFor(trust, flowSandbox, needs, trust === 'untrusted' && docker.gvisor(), project.networkHosts ?? []);
@@ -382,7 +407,7 @@ function isolate(project: Project, flowSandbox: Sandbox | undefined, steps: Flow
   const asks = r.approvals ? '; agents ask before edits and shell commands' : '';
   // A copy: the run's sandbox may be this very object, and gets the project's limits.
   const isolation: Isolation = { projectId: project.id, trust, tier: r.tier, approvals: r.approvals, ...(flowSandbox && { flowSandbox: structuredClone(flowSandbox) }) };
-  return { sandbox: r.sandbox, isolation, line: `-- isolation: ${TRUST[trust].label} (${r.tier}), from project ${project.name}${asks}`, repoPath: project.repoPath };
+  return { sandbox: r.sandbox, isolation, line: `-- isolation: ${TRUST[trust].label} (${r.tier}), from project ${project.name}${asks}`, repoPath: project.repoPath, knowledge: { kn: resolved.knowledge.value, commit: project.knowledgeBuild?.commit } };
 }
 
 /** Makes `dir`; false when it already exists. */

@@ -1517,3 +1517,41 @@ test('a cap raised on the project page while a run goes applies at once', { time
   assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.out.join('\n'));
   assert.ok(Math.abs((s.script.specs[1].limits?.maxBudgetUsd ?? 0) - 4.05) < 1e-9, JSON.stringify(s.script.specs[1].limits));
 });
+
+// --- knowledge assets
+
+/** The project's built maps, as a knowledge build leaves them in its repo. */
+function builtMaps(proj: string) {
+  mkdirSync(join(proj, '.flowboard', 'knowledge', 'serena'), { recursive: true });
+  mkdirSync(join(proj, '.flowboard', 'knowledge', 'graphify-out'), { recursive: true });
+  writeFileSync(join(proj, '.flowboard', 'knowledge', 'serena', 'project.yml'), 'read_only: true\n');
+  writeFileSync(join(proj, '.flowboard', 'knowledge', 'graphify-out', 'GRAPH_REPORT.md'), '# report\n');
+}
+
+test("an agent step gets Serena and graphify's report once they are built, and only while the project has them on", async () => {
+  const s = setup(ONE_BUILD);
+  const proj = join(s.base, 'proj');
+  builtMaps(proj);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  const spec = s.script.specs[0];
+  const serena = spec.tools?.find((t) => t.name === 'serena');
+  assert.equal(serena?.command, 'uvx'); // Trusted: on this machine
+  assert.deepEqual(serena?.args?.slice(0, 7), ['-q', '--from', 'git+https://github.com/oraios/serena@5e4f5cd173c7ff3eed37ee3f1de6c266b937c5dc', 'serena', 'start-mcp-server', '--project', proj]);
+  assert.equal(serena?.env?.SERENA_HOME, join(s.base, 'data', 'serena'));
+  assert.match(readFileSync(join(s.base, 'data', 'serena', 'serena_config.yml'), 'utf8'), /\.flowboard\/knowledge\/serena/);
+  assert.match(spec.prompt.preamble, new RegExp(`graphify, built at an unknown commit; it may be older than the code\\): ${proj}/\\.flowboard/knowledge/graphify-out/GRAPH_REPORT\\.md`));
+
+  const off = setup(ONE_BUILD);
+  builtMaps(join(off.base, 'proj'));
+  const projects = JSON.parse(readFileSync(join(off.base, 'data', 'projects.json'), 'utf8'));
+  projects[0].overrides.knowledge = { serena: false, graphify: false, rebuild: 'manual' };
+  writeFileSync(join(off.base, 'data', 'projects.json'), JSON.stringify(projects));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], off.deps), 0, off.err.join('\n'));
+  assert.equal(off.script.specs[0].tools?.some((t) => t.name === 'serena'), false);
+  assert.doesNotMatch(off.script.specs[0].prompt.preamble, /graphify/);
+
+  const unbuilt = setup(ONE_BUILD);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], unbuilt.deps), 0, unbuilt.err.join('\n'));
+  assert.equal(unbuilt.script.specs[0].tools?.some((t) => t.name === 'serena'), false);
+  assert.doesNotMatch(unbuilt.script.specs[0].prompt.preamble, /graphify/);
+});
