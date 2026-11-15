@@ -12,6 +12,7 @@ import { z } from 'zod';
 import type { Answers, Question } from '../../core/src/hitl/question.ts';
 import { VISIBLE } from './analysis.ts';
 import { writeJsonFile } from './config.ts';
+import { QuestionsSchema } from './flow-logs.ts';
 import { answerText } from './slack-blocks.ts';
 
 /** Where a memory came from: its run (the run folder's name), its step, and the artifact or the question. */
@@ -142,7 +143,9 @@ function answered(o: { run: string; runDir: string }): Note[] {
       return log
         .filter((l) => l.kind === 'answer')
         .flatMap((a) => {
-          const qs = (log.find((l) => l.kind === 'question' && l.batch === a.batch)?.questions ?? []) as Question[];
+          // The run folder is FlowBoard's, but a Trusted agent can write there: a batch is checked as the page checks an ask.
+          const parsed = QuestionsSchema.safeParse(log.find((l) => l.kind === 'question' && l.batch === a.batch)?.questions);
+          const qs: Question[] = parsed.success ? parsed.data : [];
           const answers = (a.answers ?? {}) as Answers;
           return qs.filter((q) => answers[q.id] != null).map((q) => ({ text: `Q: ${q.prompt} A: ${answerText(q, answers[q.id])}`, source: { run: o.run, step: m[2], ask: q.id } }));
         });

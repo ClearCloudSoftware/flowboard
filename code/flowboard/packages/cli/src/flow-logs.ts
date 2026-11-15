@@ -85,22 +85,24 @@ const alive = (pid: unknown) => {
  * An ask as run-flow writes it. The run folder is FlowBoard's, but an agent on this machine (Trusted) can write
  * there, so a file is checked before the page or Slack renders it; one that does not pass is left out.
  */
+/** A batch of questions as run-flow asks it; memory reads the run logs' batches through it too. */
+export const QuestionsSchema = z
+  .array(
+    z.object({
+      id: z.string(),
+      prompt: z.string(),
+      help: z.string().optional(),
+      kind: z.enum(['yes_no', 'single_select', 'multi_select', 'text', 'number']),
+      options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+      required: z.boolean().optional(),
+    }),
+  )
+  .refine((qs) => !qs.length || checkQuestions(qs) === undefined); // ids once, prompts set, selects with options
 const AskSchema = z.object({
   id: z.string().regex(/^[\w-]+$/),
   heading: z.string(),
   at: z.string().default(''), // missing: never escalates (Date.parse('') is NaN)
-  questions: z
-    .array(
-      z.object({
-        id: z.string(),
-        prompt: z.string(),
-        help: z.string().optional(),
-        kind: z.enum(['yes_no', 'single_select', 'multi_select', 'text', 'number']),
-        options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-        required: z.boolean().optional(),
-      }),
-    )
-    .refine((qs) => !qs.length || checkQuestions(qs) === undefined), // ids once, prompts set, selects with options
+  questions: QuestionsSchema,
 });
 const asksOf = (dir: string): PageAsk[] =>
   isDir(join(dir, 'asks'))

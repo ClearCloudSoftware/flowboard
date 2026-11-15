@@ -171,3 +171,17 @@ test('recall ranks by shared words, then the newest, under a label and within 6,
   assert.equal(recall(ms, 'the and for with of'), undefined);
   assert.equal(recall([], 'vitest'), undefined);
 });
+
+test('a question batch in the log that is not one run-flow would ask is left out, as the page leaves out a bad ask', () => {
+  const r = run({}, [
+    { kind: 'question', batch: 1, questions: [{ id: 'a', prompt: { evil: true }, kind: 'text' }] },
+    { kind: 'answer', batch: 1, answers: { a: 'x' } },
+    { kind: 'question', batch: 2, questions: [{ id: 'b', prompt: 'Same id twice?', kind: 'text' }, { id: 'b', prompt: 'Same id twice?', kind: 'text' }] },
+    { kind: 'answer', batch: 2, answers: { b: 'yes it is' } },
+    { kind: 'question', batch: 3, questions: 'not a list' },
+    { kind: 'answer', batch: 3, answers: { c: 'x' } },
+    { kind: 'question', batch: 4, questions: [{ id: 'd', prompt: 'Which branch do releases come from?', kind: 'text' }] },
+    { kind: 'answer', batch: 4, answers: { d: 'main' } },
+  ]);
+  assert.deepEqual(runNotes({ ...r, steps: STEPS }).notes.map((n) => n.text), ['Q: Which branch do releases come from? A: main']);
+});
