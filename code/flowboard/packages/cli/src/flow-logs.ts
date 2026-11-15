@@ -88,7 +88,7 @@ const alive = (pid: unknown) => {
 const AskSchema = z.object({
   id: z.string().regex(/^[\w-]+$/),
   heading: z.string(),
-  at: z.string(),
+  at: z.string().default(''), // missing: never escalates (Date.parse('') is NaN)
   questions: z
     .array(
       z.object({
