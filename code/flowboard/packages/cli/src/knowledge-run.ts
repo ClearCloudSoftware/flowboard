@@ -71,10 +71,10 @@ export function knowledgeView(runsDir: string, project: Project, kn: Knowledge):
   if (!r) return { ...base, status: 'failed', error: 'the run is gone' };
   if (r.status === 'starting' || r.status === 'running' || r.status === 'waiting') return { ...base, status: 'building' };
   if (r.status === 'paused') return { ...base, status: 'failed', error: 'the run paused; see its page' };
-  if (r.status === 'failed') {
-    const last = (readArtifact(runsDir, b.run, 'build') ?? '').trim().split('\n').at(-1) ?? '';
-    return { ...base, status: 'failed', error: last.startsWith(FAILED) ? last.slice(FAILED.length) : 'the run failed; see its page' };
-  }
+  if (r.status === 'failed') return { ...base, status: 'failed', error: 'the run failed; see its page' };
+  // The script ends 0 either way; its last line says whether a map failed.
+  const last = (readArtifact(runsDir, b.run, 'build') ?? '').trim().split('\n').at(-1) ?? '';
+  if (last.startsWith(FAILED)) return { ...base, status: 'failed', error: last.slice(FAILED.length) };
   const tip = project.baseBranch ? revParse(project.repoPath, `refs/heads/${project.baseBranch}`) : undefined;
   return tip && tip !== b.commit ? { ...base, status: 'stale', tip } : { ...base, status: 'built' };
 }

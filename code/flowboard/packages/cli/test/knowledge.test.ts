@@ -36,7 +36,7 @@ function fakeTools(fails?: 'graphify' | 'serena'): string {
     writeFileSync(join(bin, name), `#!/bin/sh\n${fails && name.endsWith(fails) ? 'echo "starting"; echo "no language server for go"; exit 1' : body}\n`);
     chmodSync(join(bin, name), 0o755);
   };
-  tool('graphify', '[ "$1" = update ] && [ "$GRAPHIFY_FORCE" = 1 ] && mkdir -p "$GRAPHIFY_OUT" && echo "# report" > "$GRAPHIFY_OUT/GRAPH_REPORT.md"');
+  tool('graphify', '[ "$1" = update ] && [ "$GRAPHIFY_FORCE" = 1 ] && mkdir -p "$GRAPHIFY_OUT" graphify-out && echo "# report" > "$GRAPHIFY_OUT/GRAPH_REPORT.md" && echo "{}" > graphify-out/manifest.json');
   tool('fb-serena', `[ "$1 $2" = "project index" ] && [ -d ${KNOWLEDGE_DIR}/serena ] && printf 'name: x\\nread_only: false\\n' > ${KNOWLEDGE_DIR}/serena/project.yml && mkdir -p .serena/logs && echo "a.ts failed" > .serena/logs/indexing.txt`);
   return bin;
 }
@@ -56,6 +56,7 @@ test('a box build maps the code, indexes it read-only, and stamps the commit', (
   // Serena's failure log goes beside its index, and the .serena/ it made in the repo goes away
   assert.equal(readFileSync(join(r.dir, KNOWLEDGE_DIR, 'serena', 'indexing-failures.txt'), 'utf8'), 'a.ts failed\n');
   assert.equal(existsSync(join(r.dir, '.serena')), false);
+  assert.equal(existsSync(join(r.dir, 'graphify-out')), false); // graphify's manifest stays out of the repo's top folder
   assert.equal(out.stdout.trim().split('\n').at(-1), `-- knowledge built at ${r.head().slice(0, 7)}`);
 });
 
@@ -66,15 +67,15 @@ test('a build runs only what is on; one that fails says why on its last line and
   assert.deepEqual([stamp(r.dir).commit, stamp(r.dir).serena], [null, false]);
   assert.equal(existsSync(join(r.dir, KNOWLEDGE_DIR, 'serena')), false);
   const failed = sh(buildCommand(BOTH, r.head()), r.dir, fakeTools('serena'));
-  assert.equal(failed.status, 1);
+  assert.equal(failed.status, 0); // a failed step would wait at a gate for a person; the last line says it failed
   assert.equal(failed.stdout.trim().split('\n').at(-1), '-- knowledge build failed: serena: no language server for go');
   assert.deepEqual([stamp(r.dir).graphify, stamp(r.dir).serena], [true, false]);
 });
 
 test('on this machine the tools run through uvx, pinned, with FlowBoard’s Serena home', () => {
   const cmd = buildCommand(BOTH, 'abc', { serenaHome: "/data/it's/serena" });
-  assert.match(cmd, /uvx -q --from graphifyy==0\.7\.5 graphify update \./);
-  assert.match(cmd, /SERENA_HOME='\/data\/it'\\''s\/serena' uvx -q --from git\+https:\/\/github\.com\/oraios\/serena@5e4f5cd173c7ff3eed37ee3f1de6c266b937c5dc serena project index \./);
+  assert.match(cmd, /uvx -q --from graphifyy==0\.7\.5 graphify update "\$repo"/);
+  assert.match(cmd, /SERENA_HOME='\/data\/it'\\''s\/serena' uvx -q --from git\+https:\/\/github\.com\/oraios\/serena@5e4f5cd173c7ff3eed37ee3f1de6c266b937c5dc serena project index \. --language typescript --language python/);
   assert.doesNotMatch(cmd, /fb-serena/);
 });
 
@@ -152,12 +153,14 @@ test('a build is read from its run and the base branch: building, built, stale, 
   const at = (n: string, commit = r.head()): Project => ({ ...p, baseBranch: 'main', knowledgeBuild: { run: name(n), commit } });
   buildRun(runs, name('1'), 'running', undefined, process.pid);
   buildRun(runs, name('2'), 'done', `-- knowledge built at ${r.head().slice(0, 7)}\n`);
-  buildRun(runs, name('3'), 'failed', 'indexing\n-- knowledge build failed: serena: no language server for go\n');
+  buildRun(runs, name('3'), 'done', 'indexing\n-- knowledge build failed: serena: no language server for go\n');
+  buildRun(runs, name('5'), 'failed', 'killed\n');
   buildRun(runs, name('4'), 'running'); // its host is gone
   assert.deepEqual(knowledgeView(runs, at('1'), BOTH), { status: 'building', run: name('1'), commit: r.head() });
   assert.deepEqual(knowledgeView(runs, at('2'), BOTH), { status: 'built', run: name('2'), commit: r.head() });
   assert.deepEqual(knowledgeView(runs, at('3'), BOTH), { status: 'failed', run: name('3'), commit: r.head(), error: 'serena: no language server for go' });
   assert.deepEqual(knowledgeView(runs, at('4'), BOTH), { status: 'failed', run: name('4'), commit: r.head(), error: 'the run paused; see its page' });
+  assert.deepEqual(knowledgeView(runs, at('5'), BOTH), { status: 'failed', run: name('5'), commit: r.head(), error: 'the run failed; see its page' });
   assert.deepEqual(knowledgeView(runs, at('9'), BOTH), { status: 'failed', run: name('9'), commit: r.head(), error: 'the run is gone' });
   // the base branch moved on: stale, with its tip
   const was = r.head();
@@ -194,7 +197,7 @@ test('after a clone the maps are built first, and the analyst starts once the bu
   assert.deepEqual(lines, ['-- knowledge build not started: flow.yaml: CLAUDE_CODE_OAUTH_TOKEN is not set']);
   lines.length = 0;
   const failing = '2026-11-15T10-00-01-knowledge-build';
-  buildRun(runs, failing, 'failed', '-- knowledge build failed: serena: no language server for go\n');
+  buildRun(runs, failing, 'done', '-- knowledge build failed: serena: no language server for go\n');
   const fails = async () => (setKnowledgeBuild(data, p.id, { run: failing, commit: r.head() }), { ok: true as const, run: failing });
   await buildThenAnalyse(data, runs, p, (l) => lines.push(l), { build: fails, analyse, pollMs: 20 });
   assert.deepEqual(lines, [`-- knowledge build started: run ${failing}`, '-- knowledge build failed: serena: no language server for go; the analysis starts anyway']);

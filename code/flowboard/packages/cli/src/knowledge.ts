@@ -27,7 +27,7 @@ const q = (s: string) => `'${s.replaceAll("'", "'\\''")}'`;
 /**
  * The build's shell script, run in the repo's top folder. `host`: on this machine, with FlowBoard's Serena home;
  * absent: in a box, where the tools are on PATH. Each map's output is kept and shown; `stamp.json` records the commit
- * and what was made, for agents to read; the script exits 1 when a map asked for failed, its last line saying why.
+ * and what was made, for agents to read. A map asked for that failed is said on the last line, not by the exit code.
  * Serena's folder is made before it indexes: with no such folder, Serena would use a `.serena/` the repo ships.
  */
 export function buildCommand(kn: { graphify: boolean; serena: boolean }, commit: string | null, host?: { serenaHome: string }): string {
@@ -44,19 +44,20 @@ export function buildCommand(kn: { graphify: boolean; serena: boolean }, commit:
     'set -u',
     `mkdir -p "${K}"`,
     'failed=""; graphify=false; serena=false',
-    ...(kn.graphify ? step('graphify', `GRAPHIFY_OUT="$PWD/${K}/graphify-out" GRAPHIFY_FORCE=1 ${graphify} update .`, 'graphify=true') : []),
+    // From inside the knowledge folder: graphify writes its manifest into ./graphify-out whatever GRAPHIFY_OUT says
+    ...(kn.graphify ? step('graphify', `(repo="$PWD"; cd "${K}" && GRAPHIFY_OUT="$repo/${K}/graphify-out" GRAPHIFY_FORCE=1 ${graphify} update "$repo")`, 'graphify=true') : []),
     ...(kn.serena
       ? [
           `mkdir -p "${K}/serena"`,
           // read_only: Serena offers agents no editing tool for this project
-          ...step('serena', `${serena} project index . --log-level WARNING`, `sed 's/^read_only:.*/read_only: true/' "${yml}" > "${yml}.tmp" && mv "${yml}.tmp" "${yml}" && serena=true`),
+          ...step('serena', `${serena} project index . --language typescript --language python --log-level WARNING`, `sed 's/^read_only:.*/read_only: true/' "${yml}" > "${yml}.tmp" && mv "${yml}.tmp" "${yml}" && serena=true`),
           // Serena writes its list of files it could not index into the repo's .serena/; it belongs beside the index
           `if [ -f .serena/logs/indexing.txt ]; then mv .serena/logs/indexing.txt "${K}/serena/indexing-failures.txt"; rmdir .serena/logs .serena 2>/dev/null; fi`,
         ]
       : []),
     `printf '{"commit":%s,"builtAt":"%s","graphify":%s,"serena":%s}\\n' ${q(JSON.stringify(commit))} "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$graphify" "$serena" > "${K}/stamp.json"`,
-    `if [ -n "$failed" ]; then echo "${FAILED}\${failed#; }"; exit 1; fi`,
-    `echo "-- knowledge built at ${commit ? commit.slice(0, 7) : 'a repo with no commits'}"`,
+    // Exit 0 either way: a failed shell step with nowhere to go waits at a gate for a person, holding the folder.
+    `if [ -n "$failed" ]; then echo "${FAILED}\${failed#; }"; else echo "-- knowledge built at ${commit ? commit.slice(0, 7) : 'a repo with no commits'}"; fi`,
   ].join('\n');
 }
 
