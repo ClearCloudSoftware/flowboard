@@ -6,6 +6,7 @@
 import type { ReactNode } from 'react';
 import { Input } from '@/components/ui/input';
 import type { SettingKey } from '../../packages/cli/src/settings.ts';
+import { SlackNote } from '../settings/slack.tsx';
 import { TRUST } from '../../packages/cli/src/settings.ts';
 import {
   type Ctx,
@@ -177,7 +178,7 @@ const PAGES: Record<Exclude<PageId, 'overview'>, (p: PageProps) => ReactNode> = 
   ),
   escalation: (p) => (
     <Sets>
-      <Setting k="escalation" title="Chat" p={p} footnote={NOT_YET}>
+      <Setting k="escalation" title="Chat" p={p} footnote={<SlackNote />}>
         <div className="flex flex-wrap items-end gap-3">
           <NumField field="channel" label="Slack channel" p={p} />
           <NumField field="nudge" label="after, minutes" p={p} inputMode="numeric" />

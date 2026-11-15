@@ -6,6 +6,7 @@ import type { NewProject, Project, ProjectEdit, ProjectView } from '../../packag
 import type { AppSettings, ApprovedModel, Catalogue, Harness } from '../../packages/cli/src/settings.ts';
 import type { KeyTest, KeyView } from '../../packages/cli/src/openrouter.ts';
 import type { HarnessStatus } from '../../packages/cli/src/harnesses.ts';
+import type { SocketState } from '../../packages/cli/src/slack.ts';
 import { ApiError, call } from '../flows/api.ts';
 
 export type { AppSettings, CloneJob, GhRepo, GhStatus, Project, ProjectView };
@@ -67,3 +68,11 @@ export const refreshOpenRouter = () => call<OpenRouterView>('/api/openrouter?ref
 export const saveOpenRouterKey = (key: string) => call<KeyView>('/api/openrouter/key', { method: 'PUT', body: JSON.stringify({ key }) });
 export const removeOpenRouterKey = () => call<KeyView>('/api/openrouter/key', { method: 'DELETE', body: '{}' });
 export const testOpenRouterKey = () => call<KeyTest>('/api/openrouter/key', { method: 'POST', body: '{}' });
+
+/** Slack for escalation (`/api/slack`): which tokens are saved (never the tokens), the socket, the refused channels. */
+export interface SlackView { bot: boolean; app: boolean; socket: SocketState | { state: 'off' }; problems: string[]; address: string }
+export type SlackTest = { ok: true; team: string; teamId: string; bot: string } | { ok: false; error: string };
+export const slackQuery = queryOptions({ queryKey: ['slack'], queryFn: () => call<SlackView>('/api/slack'), refetchInterval: 5000 });
+export const saveSlackTokens = (t: { bot?: string; app?: string }) => call<SlackView>('/api/slack', { method: 'PUT', body: JSON.stringify(t) });
+export const removeSlackTokens = () => call<SlackView>('/api/slack', { method: 'DELETE', body: '{}' });
+export const testSlackTokens = () => call<SlackTest>('/api/slack', { method: 'POST', body: '{}' });

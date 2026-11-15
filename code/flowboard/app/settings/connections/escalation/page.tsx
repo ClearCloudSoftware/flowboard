@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { EscalationChannelsPage } from '../../settings.tsx';
+import { EscalationChannelsPage } from '../../slack.tsx';
 
 export const metadata: Metadata = { title: 'Escalation channels · Settings · FlowBoard' };
 
