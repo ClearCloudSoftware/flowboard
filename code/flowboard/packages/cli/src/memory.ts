@@ -1,7 +1,7 @@
 /**
  * Project memory, the `local` adapter (Memory): one JSON file per project in FlowBoard's data folder, which agents
  * cannot write. run-flow commits after a run ends done, from the run's declared summary and review artifacts and the
- * questions a person answered, never from raw agent output; it recalls before each agent attempt, by keyword, into
+ * choices a person made (never typed answers), never from raw agent output; it recalls before each agent attempt, by keyword, into
  * the prompt's 7th part, labelled background. No AI anywhere: notes are a document's bullets and paragraphs.
  * Notes come from agents that read untrusted repos, so each must be text a person can see, and capped.
  */
@@ -144,7 +144,7 @@ const lines = (file: string): Record<string, any>[] =>
 
 const CHOICES = new Set(['yes_no', 'single_select', 'multi_select']);
 
-/** The questions a person answered in the run, from its step logs (the host deletes the asks files once answered). */
+/** The choices a person made in the run, from its step logs (the host deletes the asks files once answered). */
 function answered(o: { run: string; runDir: string; trust: Trust }): Note[] {
   return readdirSync(o.runDir)
     .map((f) => LOG.exec(f))

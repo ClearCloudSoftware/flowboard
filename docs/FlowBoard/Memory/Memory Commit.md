@@ -6,7 +6,7 @@ module: Memory
 # Memory Commit
 
 > [!done] Built (2026-11-15), project scope only
-> run-flow commits once a run ends done (not after each step; `failed`, `paused` and `stopped` commit nothing), from its agent steps' artifacts whose type is `summary` or `review` (alone or as a `_` part) and the questions a person answered, read from the run's step logs. Shell steps and gate decisions are not committed (#14, #12). At most 50 notes a run. See [[Project Memory Handoff]].
+> run-flow commits once a run ends done (not after each step; `failed`, `paused` and `stopped` commit nothing), from its agent steps' artifacts whose type is `summary` or `review` (alone or as a `_` part) and the choices a person made (never typed answers), read from the run's step logs. Shell steps and gate decisions are not committed (#14, #12). At most 50 notes a run. See [[Project Memory Handoff]].
 
 The second call. After a run succeeds, the runner hands its salient, structured output to `write()`. The drawio calls it *"Distil after a step"*.
 

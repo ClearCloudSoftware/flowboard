@@ -189,7 +189,7 @@ const PAGES: Record<Exclude<PageId, 'overview'>, (p: PageProps) => ReactNode> = 
   ),
   memory: (p) => (
     <Sets>
-      <Setting k="memory" title="Project memory" p={p} footnote="After a run of the project ends done, FlowBoard keeps facts from its summary and review artifacts and the questions you answered, and hands the matching ones to later runs as background. See and forget them on the project page.">
+      <Setting k="memory" title="Project memory" p={p} footnote="After a run of the project ends done, FlowBoard keeps facts from its summary and review artifacts and the choices you made, and hands the matching ones to later runs as background. See and forget them on the project page.">
         <Seg label="Project memory" value={String(p.draft.v.memory) as 'true' | 'false'} options={onOff} onPick={(v) => set(p, { memory: v === 'true' })} />
       </Setting>
     </Sets>
