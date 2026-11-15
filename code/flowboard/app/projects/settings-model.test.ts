@@ -4,7 +4,7 @@ import { APP_DEFAULTS, resolveSettings } from '../../packages/cli/src/settings.t
 import { draftFrom, problems, summary, toggle, toLimits, toOverrides, type Ctx } from './settings-model.ts';
 
 const base = resolveSettings(APP_DEFAULTS, 'software', {});
-const ctx = (over: Partial<Ctx> = {}): Ctx => ({ base, os: 'darwin', typeName: 'Software', flows: ['delivery', 'review-loop'], repo: { name: 'api', branch: 'main', sizeKb: 48000 }, ...over });
+const ctx = (over: Partial<Ctx> = {}): Ctx => ({ base, os: 'darwin', typeName: 'Software', flows: ['delivery', 'review-loop'], repo: { name: 'api', branch: 'main' }, ...over });
 const fresh = () => draftFrom(base, {});
 
 test('a draft starts from the resolved settings: overridden where the project sets them, limits as text', () => {
@@ -40,7 +40,7 @@ test('errors: every field rule, in the words the mockup uses', () => {
   assert.deepEqual(problems({ ...fresh(), ov: { ...fresh().ov, budget: true } }, ctx(), 'app').errors, {}); // the app may have no cap
 });
 
-test('warnings: no sandbox, gVisor off Linux, graphify’s cost, no maps', () => {
+test('warnings: no sandbox, gVisor off Linux, no maps; graphify’s code map costs nothing, so no warning', () => {
   const texts = (d: ReturnType<typeof fresh>, c = ctx()) => problems(d, c).warns.map((w) => w.text);
   const untrusted = toggle(fresh(), 'trust', true, base);
   untrusted.v.trust = 'untrusted';
@@ -48,9 +48,7 @@ test('warnings: no sandbox, gVisor off Linux, graphify’s cost, no maps', () =>
   assert.ok(!texts(untrusted, ctx({ os: 'linux' })).some((t) => t.startsWith('gVisor')));
   const trusted = { ...untrusted, v: { ...untrusted.v, trust: 'trusted' as const } };
   assert.ok(texts(trusted).includes('With no sandbox, agents in delivery and review-loop stop before each file edit and shell command until you allow it.'));
-  const graphify = problems(fresh(), ctx()).warns.find((w) => w.page === 'knowledge');
-  assert.equal(graphify?.caution, true);
-  assert.match(graphify!.text, /about \$0\.38 a rebuild, on every move of main, and the project has no budget cap to stop it/);
+  assert.deepEqual(problems(fresh(), ctx()).warns.filter((w) => w.page === 'knowledge'), []); // both maps on, as the type has them
   const none = toggle(fresh(), 'knowledge', true, base);
   none.v.knowledge = { serena: false, graphify: false, rebuild: 'manual' };
   assert.ok(texts(none).includes('With no maps, agents find their way by reading files, which costs more tokens on a large repo.'));

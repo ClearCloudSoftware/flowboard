@@ -13,7 +13,6 @@ import {
   type Draft,
   type Field,
   fromLabel,
-  graphifyCost,
   KNOWLEDGE,
   limitsText,
   type Mode,
@@ -203,7 +202,7 @@ const PAGES: Record<Exclude<PageId, 'overview'>, (p: PageProps) => ReactNode> = 
           <b>{KNOWLEDGE[id].name}</b>
           <small className="font-sans text-xs text-muted-foreground">{KNOWLEDGE[id].what}</small>
           <small className="font-sans text-xs text-muted-foreground">
-            {id === 'graphify' && r?.sizeKb !== undefined ? `${KNOWLEDGE[id].cost}: about $${graphifyCost(r.sizeKb)} a rebuild for ${r.name}` : KNOWLEDGE[id].cost} · {KNOWLEDGE[id].via}
+            {KNOWLEDGE[id].cost} · {KNOWLEDGE[id].via}
           </small>
         </div>
         <Seg label={KNOWLEDGE[id].name} value={String(kn[id]) as 'true' | 'false'} options={{ true: 'On', false: 'Off' }} onPick={(v) => set(p, { knowledge: { ...kn, [id]: v === 'true' } })} />
@@ -212,13 +211,13 @@ const PAGES: Record<Exclude<PageId, 'overview'>, (p: PageProps) => ReactNode> = 
     return (
       <>
         <Sets>
-          <Setting k="knowledge" title="Knowledge assets" p={p} footnote={`Kept in .flowboard/knowledge/ in the clone, out of commits, and built first right after cloning. Serena never leaves this machine; graphify does, to the AI service. ${NOT_YET}`}>
+          <Setting k="knowledge" title="Knowledge assets" p={p} footnote="Kept in .flowboard/knowledge/ in the repo, out of commits. Built in the project’s sandbox, first right after cloning, then as set here or with Rebuild on the project page. Neither map calls an AI service.">
             {asset('serena')}
             {asset('graphify')}
             <div className="flex flex-wrap items-center justify-between gap-3.5 border-t border-border py-2">
               <div className="grid min-w-0 flex-1 gap-0.5">
                 <b>Rebuild</b>
-                <small className="font-sans text-xs text-muted-foreground">a map built from an older commit is marked stale, so agents know not to trust it</small>
+                <small className="font-sans text-xs text-muted-foreground">each build is stamped with the commit it mapped; agents are told the map may be older than the code</small>
               </div>
               <Seg label="Rebuild" value={kn.rebuild} options={{ ...REBUILD, push: r?.branch ? `on ${r.branch} moving` : REBUILD.push }} onPick={(rebuild) => set(p, { knowledge: { ...kn, rebuild } })} />
             </div>
