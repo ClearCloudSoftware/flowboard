@@ -33,7 +33,7 @@ The narrowest level that sets a value wins. Every setting shows where its value 
 | Isolation | container | none (on the machine) | container |
 | Internet from the sandbox | the AI service and package registries | the AI service only | the AI service and the open web (deferred: open-web egress has no design yet) |
 | Flows | `delivery`, `review-loop` | its own | its own |
-| Knowledge assets | Serena and graphify on, rebuilt on push | — | — |
+| Knowledge assets | Serena and graphify on, rebuilt when the base branch moves | — | — |
 
 Steps run without permission prompts by default, and that is allowed only inside a sandbox ([[Repository Trust And Sandboxing]]). So a project or type with no sandbox runs its steps either asking before each tool use or without shell tools, and the settings page says so.
 
@@ -48,7 +48,7 @@ Steps run without permission prompts by default, and that is allowed only inside
 | **Check command** | `projects.check_command` | The repo's `.flowboard.yaml` | Built. The repo analyst proposes it after a clone, and **Accept** writes it to `.flowboard.yaml` (`setCheckCommand`); the wizard doesn't ask for it ([[Project Check Command]]). |
 | **Escalation**: Slack channel and minutes before a question goes there | The data model records a channel per question (`questions.slack_channel`), so a channel per project fits. PRD §10 fixes the wait at 5 minutes; elsewhere it's a setting. | Project record | Stored; no notifier yet. |
 | **Memory**: whether to remember facts about this codebase (the `project` scope) | *"Recall `user` into every run; `project` … per step"*. The adapter and endpoint stay app-wide. | Project record | Stored; no memory store yet. |
-| **Knowledge assets**: Serena, graphify, and when to rebuild (on push, daily, by hand) | No source; Alex's direction. Serena is free; graphify sends code to the AI service and costs money, so it carries a standing warning. | Project record; the builds go in `.flowboard/knowledge/`. | Stored; builds wait for their phase. |
+| **Knowledge assets**: Serena, graphify, and when to rebuild (on push, daily, by hand) | No source; Alex's direction. Both are free: graphify's code map is parsed, with no AI calls (`graphify update`); its paid document extraction is not used. | Project record; the maps go in the repo's `.flowboard/knowledge/`, out of commits; the record keeps the last build's run and commit (`knowledgeBuild`). | Built, 2026-11-15. A build is a run of the project, one shell step (`startKnowledgeBuild` in `knowledge-run.ts`), so it runs in the project's sandbox: on this machine through `uvx` when Trusted, else in a box from the image, offline. It starts after a clone (before the repo analyst), from **Build**/**Rebuild** on the project page, and from the server's scheduler (`instrumentation.ts`, every 10 minutes): *on push* when the checked-out base branch has moved past the commit last mapped, *daily* a day after the last build. Agent steps in the repo's own folder get Serena as a read-only MCP server and a line pointing at graphify's report ([[Knowledge Assets Handoff]]). |
 | **Draft mode**: the cheapest model for every step | A global setting (PRD §11.1). | Project record | Stored; not acted on. Useful for keeping a scratch project cheap. |
 | **Base branch** | — | Not a setting | Follows GitHub's default branch. |
 
