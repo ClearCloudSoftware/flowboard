@@ -34,7 +34,8 @@ import { alive, readLock } from './lock.ts';
 import { openWorkspace } from './workspace.ts';
 import { dataDirOf, defaultProvider, stamp } from './run.ts';
 import type { RunDeps } from './run.ts';
-import { prepareRun, applySavedKey } from './openrouter.ts';
+import { opencodeConfigFor, prepareRun } from './models.ts';
+import { applySavedKey } from './openrouter.ts';
 
 const USAGE = [
   'usage: pnpm run-flow --folder <dir> --task <file> [--workspace <task id>] [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] [--over-project-budget] <flow.yaml>',
@@ -368,7 +369,7 @@ interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string; repo
 function isolate(project: Project, flowSandbox: Sandbox | undefined, steps: FlowConfig['steps'], dataDir: string, deps: RunDeps): Isolated | { refused: string[] } {
   const trust = resolveSettings(readAppSettings(dataDir), project.type, project.overrides).trust.value;
   const docker = deps.docker ?? { gvisor: () => dockerHasGvisor(), notReady: (image: string) => dockerNotReady(image) };
-  const needs = agentNeeds(steps).map((n) => n.credential);
+  const needs = agentNeeds(steps).flatMap((n) => n.credential ?? []);
   const r = isolationFor(trust, flowSandbox, needs, trust === 'untrusted' && docker.gvisor());
   if ('refused' in r) return { refused: [r.refused] };
   if (r.sandbox?.runtime === 'docker') {
@@ -807,6 +808,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     answer: noTerminal,
     onInterrupt: () => interrupt(), // Ctrl+C at an agent's question
     temps,
+    opencodeConfig: opencodeConfigFor(d.dataDir),
     ...(config.sandbox?.runtime === 'docker' && { sandbox: sandboxFor(config.sandbox, d.artifactsDir, d.repoPath) }),
     ...(d.box && {
       sandbox: ({ tmpDir, mounts }) => d.box!.exec({ ...(tmpDir && { tmpDir }), ...(mounts && { mounts }), push: () => pushable(d.artifactsDir, producing) }),

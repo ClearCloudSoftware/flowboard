@@ -5,6 +5,7 @@ import type { CloneInput, CloneJob } from '../../packages/cli/src/clone.ts';
 import type { NewProject, Project, ProjectEdit, ProjectView } from '../../packages/cli/src/projects.ts';
 import type { AppSettings, ApprovedModel, Catalogue, Harness } from '../../packages/cli/src/settings.ts';
 import type { KeyTest, KeyView } from '../../packages/cli/src/openrouter.ts';
+import type { OllamaState } from '../../packages/cli/src/ollama.ts';
 import type { HarnessStatus } from '../../packages/cli/src/harnesses.ts';
 import { ApiError, call } from '../flows/api.ts';
 
@@ -55,11 +56,14 @@ export const cloneJobQuery = (id: string) =>
 /** Each agent CLI on this machine (`/api/agents`); slow-ish, as it runs each CLI. */
 export const agentsQuery = queryOptions({ queryKey: ['agents'], queryFn: () => call<Record<Harness, HarnessStatus>>('/api/agents') });
 
-/** OpenRouter for OpenCode's steps (`/api/openrouter`): the key runs would use (never the key), the model list, the approved models. */
-export interface ApprovedView extends ApprovedModel { problem: string | null }
-export interface OpenRouterView { key: KeyView; catalogue: Catalogue | null; error?: string; approved: ApprovedView[] }
-export const openrouterQuery = queryOptions({ queryKey: ['openrouter'], queryFn: () => call<OpenRouterView>('/api/openrouter') });
-export const refreshOpenRouter = () => call<OpenRouterView>('/api/openrouter?refresh=1');
+/**
+ * OpenCode's models (`/api/models`): the OpenRouter key runs would use (never the key) and OpenRouter's list, Ollama
+ * on this machine and its list, and the approved models with what refuses or warns of each.
+ */
+export interface ApprovedView extends ApprovedModel { problem: string | null; warning: string | null }
+export interface ModelsView { key: KeyView; catalogue: Catalogue | null; error?: string; ollama: OllamaState; approved: ApprovedView[] }
+export const modelsQuery = queryOptions({ queryKey: ['models'], queryFn: () => call<ModelsView>('/api/models') });
+export const refreshModels = () => call<ModelsView>('/api/models?refresh=1');
 export const saveOpenRouterKey = (key: string) => call<KeyView>('/api/openrouter/key', { method: 'PUT', body: JSON.stringify({ key }) });
 export const removeOpenRouterKey = () => call<KeyView>('/api/openrouter/key', { method: 'DELETE', body: '{}' });
 export const testOpenRouterKey = () => call<KeyTest>('/api/openrouter/key', { method: 'POST', body: '{}' });

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { OpencodeModelsPage } from '../../openrouter.tsx';
+import { OpencodeModelsPage } from '../../models.tsx';
 
 export const metadata: Metadata = { title: 'OpenCode models · Settings · FlowBoard' };
 

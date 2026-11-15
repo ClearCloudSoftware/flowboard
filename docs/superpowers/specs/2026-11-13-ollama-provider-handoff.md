@@ -217,3 +217,12 @@ All of V1–V5 passed. Part 2 can go ahead as designed, with one question first.
 - (c) Load the model briefly to measure it. That costs memory and seconds on every page open, so not recommended.
 
 Also for Part 2: the provider block's `limit.context` should be the same window, or `details.context_length` when the window is unknown, so OpenCode's compaction matches what Ollama really holds.
+
+**Decided 2026-11-15: option (a).** Alex: "yes with a, make sure to document this for later". The rule Part 2 builds, in order:
+
+1. `num_ctx` in `/api/show`'s `parameters` → that is the window (source `num_ctx`).
+2. Else `OLLAMA_CONTEXT_LENGTH` in FlowBoard's own environment → that number (source `OLLAMA_CONTEXT_LENGTH`). FlowBoard only sees it if it runs with the same environment as the Ollama server; the Ollama app on macOS doesn't share it, so this is best effort.
+3. Else, if `/api/ps` lists the model as loaded → its `context_length` (source `loaded`). That is what Ollama really picked, but it is a snapshot: it changes if Ollama reloads the model with other settings.
+4. Else → **unknown** (source `default`): the page says "Ollama's default" and **no warning** is shown.
+
+Only a known window (1–3) below **32,768** warns. For OpenCode's `limit.context`, an unknown window uses `details.context_length` (the model's maximum). **Revisit** if a machine with less memory gets false "fine" readings: Ollama then picks a small default (for example 4,096) that FlowBoard can't see, and an agent may lose its prompt without a warning. The fix then is to set `num_ctx` on the model, which rule 1 reads. The Part 2 docs (`Ollama Models.md` or its successor, and `Running Agent Work.md`) repeat this rule.

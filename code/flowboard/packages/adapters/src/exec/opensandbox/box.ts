@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { DEFAULT_RESOURCE_LIMITS, Sandbox } from '@alibaba-group/opensandbox';
 import type { ExecHost } from '@flowboard/core';
 import { hostGit } from '../../workspace/host-git.ts';
+import { DOCKER_HOST_NAME } from '../docker.ts';
 import { relayExecHost } from './relay-host.ts';
 
 export interface BoxOptions {
@@ -169,6 +170,8 @@ function boxOf(sb: Sandbox, folder: string, token: string, missing: string[]): B
       });
       return {
         ...host,
+        // The box is a container on this machine's Docker; its egress must allow the name (flow-config.ts NEEDS).
+        hostName: DOCKER_HOST_NAME,
         exists: async (path) => {
           const info = await sb.files.getFileInfo([path]).catch(() => undefined);
           return !!info?.[path];

@@ -15,6 +15,7 @@ export const SECTIONS: { href: string; title: string; icon: LucideIcon; pages?: 
       { href: '/settings/connections/tasks', title: 'Task providers' },
       { href: '/settings/connections/escalation', title: 'Escalation channels' },
       { href: '/settings/connections/openrouter', title: 'OpenRouter' },
+      { href: '/settings/connections/ollama', title: 'Ollama' },
     ],
   },
   {

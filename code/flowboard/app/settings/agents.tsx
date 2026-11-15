@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { HarnessStatus } from '../../packages/cli/src/harnesses.ts';
 import { EFFORTS, type Effort, HARNESS_SCHEMAS, HARNESSES, type Harness, type HarnessConfig } from '../../packages/cli/src/settings.ts';
 import { agentsQuery, type AppView, appSettingsQuery, updateAppSettings } from '../projects/api.ts';
-import { OpencodeModelSelect } from './openrouter.tsx';
+import { OpencodeModelSelect } from './models.tsx';
 import { ErrorLine, Head } from './settings.tsx';
 
 const OWN = '-'; // Radix keeps '' for "nothing picked"

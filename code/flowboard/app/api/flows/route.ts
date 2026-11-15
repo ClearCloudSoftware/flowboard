@@ -2,7 +2,7 @@ import { relative } from 'node:path';
 import { connection } from 'next/server';
 import { z } from 'zod';
 import { createFlow, FLOW_NAME, listFlows } from '../../../packages/cli/src/flow-files.ts';
-import { modelRules } from '../../../packages/cli/src/openrouter.ts';
+import { modelRules } from '../../../packages/cli/src/models.ts';
 import { body, dataDir, flowsDir, refused } from './local.ts';
 
 /** The library: every recipe in the flows folder. */

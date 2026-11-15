@@ -297,6 +297,41 @@ test('an OpenCode model with no price is said aloud: budget_usd cannot stop it',
   assert.ok(shown.includes('-- plan: no price for sonnet: its cost shows as $0, and limits.budget_usd cannot stop it'), JSON.stringify(shown));
 });
 
+/** An OpenCode config of the plan step, on `model`. */
+const opencodeOn = (folder: string, model: string): RunConfig => {
+  const c = aiConfig(folder);
+  return { ...c, adapter: 'opencode', spec: { ...c.spec, model } };
+};
+
+test('a local model really costs $0: said once, with what can stop it, instead of "no price"', async () => {
+  const { provider } = agent({ write: ['plan'] });
+  const launch = provider.launch.bind(provider);
+  provider.launch = (spec) => ({ ...launch(spec), result: Promise.resolve({ usage: { ...ZERO_USAGE, input: 900, costUsd: 0 }, exitCode: 0 }) });
+  const shown: string[] = [];
+  const s = stepSetup({ makeProvider: () => provider, show: (l) => shown.push(l) });
+  await execAi(opencodeOn(s.folder, 'ollama/gemma4:26b-64k'), PLAN, ['plan'], s.ctx).ended;
+  assert.deepEqual(shown.filter((l) => l.includes('$0')), ['-- plan: ollama/gemma4:26b-64k runs locally at $0, so only limits.max_turns or a timeout stops it']);
+});
+
+test("a step's model gets the OpenCode config it needs, for where the step runs: the sandbox's name for this machine", async () => {
+  const { provider, specs } = agent({ write: ['plan'] });
+  const asked: [string, string | undefined][] = [];
+  const box: ExecHost = { id: 'container', hostName: 'box.test', spawn: () => assert.fail('the fake agent spawns nothing') };
+  const s = stepSetup({
+    makeProvider: () => provider,
+    sandbox: () => box,
+    opencodeConfig: (model, hostName) => (asked.push([model, hostName]), model.startsWith('ollama/') ? { provider: { ollama: { hostName } } } : undefined),
+  });
+  await execAi(opencodeOn(s.folder, 'ollama/gemma4:26b-64k'), PLAN, ['plan'], s.ctx).ended;
+  assert.deepEqual(asked, [['ollama/gemma4:26b-64k', 'box.test']]);
+  assert.deepEqual(specs[0].capabilities?.at(-1), { id: 'ollama', provider: 'opencode', mount: { kind: 'native', config: { provider: { ollama: { hostName: 'box.test' } } } } });
+
+  await execAi(opencodeOn(s.folder, 'openrouter/x/y'), PLAN, ['plan'], s.ctx).ended;
+  assert.ok(!specs[1].capabilities?.some((c) => c.id === 'ollama'));
+  await execAi(aiConfig(s.folder), PLAN, ['plan'], s.ctx).ended; // Claude: never asked
+  assert.equal(asked.length, 2);
+});
+
 test('an agent run stopped for a reason ends, and logs, with that reason', async () => {
   let stop!: () => void;
   const stopped = new Promise<void>((r) => (stop = r));

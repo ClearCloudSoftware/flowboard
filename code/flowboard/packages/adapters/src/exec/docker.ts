@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
 import type { ExecHost, SandboxProfile } from '@flowboard/core';
 
+/** How a container reaches this machine: Docker Desktop forwards it to the host's loopback too, so a server there need not listen wider. */
+export const DOCKER_HOST_NAME = 'host.docker.internal';
 /** The uid:gid a non-root container runs as. */
 export const SANDBOX_USER = '1000:1000';
 
@@ -47,6 +49,7 @@ export function dockerExecHost(profile: SandboxProfile, opts: { tmpDir?: string;
   return {
     id: 'container',
     profile,
+    hostName: DOCKER_HOST_NAME,
     ...(tmpDir && { tmpDir }),
     spawn(command, args, { cwd, env = process.env, ports }) {
       const extra = { ...Object.fromEntries(Object.entries(env).filter(([k, v]) => process.env[k] !== v)), ...profile.env };

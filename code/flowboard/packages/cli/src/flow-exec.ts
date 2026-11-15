@@ -15,6 +15,7 @@ import type { Answerer } from './ask/broker.ts';
 import type { Adapter, RunConfig } from './config.ts';
 import { openLog, streamRun, summaryLines, withAsking, WITHDRAWN, WITHDRAWN_QUEUED } from './run.ts';
 import type { Log } from './run.ts';
+import { isLocal } from './settings.ts';
 
 /** How much of a shell step's output its artifact keeps: the end, where failures are. */
 export const OUTPUT_TAIL = 20_000;
@@ -50,6 +51,8 @@ export interface ExecContext {
   onInterrupt(): void;
   /** Live agent runs' temp folders, for a host that must exit before their runs end. */
   temps?: Set<string>;
+  /** OpenCode config a step's model needs beyond the step's own (`models.ts`), for where the step runs; absent: none. */
+  opencodeConfig?(model: string, hostName?: string): Record<string, unknown> | undefined;
 }
 
 /** code/flowboard: holds the shim and the adapters' plugins, and their node_modules. */
@@ -321,6 +324,9 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
           const plugins = (spec.capabilities ?? []).flatMap((c) => (c.mount.kind === 'plugin_dir' && !inside(tmp!, c.mount.path) ? [c.mount.path] : []));
           spec.exec = ctx.sandbox({ online: true, tmpDir: tmp, mounts: [FLOWBOARD_ROOT, ctx.logDir, ...plugins] });
         }
+        // A local model's provider, pointed at Ollama from where the step runs, known only now that spec.exec is.
+        const native = config.adapter === 'opencode' && ctx.opencodeConfig?.(spec.model, spec.exec?.hostName);
+        if (native) spec.capabilities = [...(spec.capabilities ?? []), { id: 'ollama', provider: 'opencode', mount: { kind: 'native', config: native } }];
       } catch (e) {
         return noRun(`cannot set up the run: ${(e as Error).message}`);
       }
@@ -372,8 +378,9 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
       const { usage } = result;
       const tokens = usage.input + usage.output + usage.cacheRead + usage.cacheWrite;
       const costUsd = usage.costUsd ?? (tokens ? null : 0);
-      // OpenCode reports 0 for a model it has no price for, so limits.budget_usd can never stop it.
-      if (config.adapter === 'opencode' && costUsd === 0 && tokens) ctx.show(`-- ${run.step}: no price for ${config.spec.model}: its cost shows as $0, and limits.budget_usd cannot stop it`);
+      // OpenCode reports 0 for a model it has no price for, so limits.budget_usd can never stop it. A local model is really free.
+      if (config.adapter === 'opencode' && costUsd === 0 && tokens)
+        ctx.show(isLocal(config.spec.model) ? `-- ${run.step}: ${config.spec.model} runs locally at $0, so only limits.max_turns or a timeout stops it` : `-- ${run.step}: no price for ${config.spec.model}: its cost shows as $0, and limits.budget_usd cannot stop it`);
       const error = stopReason ?? result.error ?? (result.exitCode !== 0 ? `exit code ${result.exitCode}` : undefined);
       if (error) return { costUsd, error };
       const end: RunEnd = { costUsd };
