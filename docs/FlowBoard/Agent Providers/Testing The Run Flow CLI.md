@@ -54,7 +54,7 @@ One flow runs across both providers, under a $1 ceiling:
 - a shell step checks it;
 - an OpenCode judge (DeepSeek V4.1 Flash on OpenRouter) reports `pass` through `set_outcome`.
 
-Expect `pass 1` in 15 to 40 seconds. A run costs about $0.002, from Claude quota and OpenRouter credit. `pnpm test:live` runs it together with nine other live tests, or twelve with `FLOWBOARD_OPENCODE_MODEL=providerID/modelID` set: that variable picks another judge model, and also turns on the OpenCode adapter's three live tests. Two more, which keep a question waiting six minutes, also need `FLOWBOARD_LIVE_SLOW=1`.
+Expect `pass 1` in 15 to 40 seconds. A run costs about $0.002, from Claude quota and OpenRouter credit. `pnpm test:live` runs it together with nine other live tests, or twelve with `FLOWBOARD_OPENCODE_MODEL=providerID/modelID` set: that variable picks another judge model, and also turns on the OpenCode adapter's three live tests. Two more, which keep a question waiting six minutes, also need `FLOWBOARD_LIVE_SLOW=1`. Since 2026-11-16 it also runs `ollama-live.test.ts`: one OpenCode step on Ollama's first local tool-capable model, free, which skips when Ollama does not answer.
 
 When a model wanders off and runs out of turns, the flow stops at a gate and the test fails; it never passes by accident. Read the judge's log to see why (see *Reading a run*).
 

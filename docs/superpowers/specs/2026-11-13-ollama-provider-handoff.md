@@ -236,7 +236,7 @@ On `feature/ollama-models`, not merged. The whole feature is documented in `docs
 - **`/api/openrouter` (GET) became `/api/models`**, since it now carries both sources; `/api/openrouter/key` stays. `app/settings/openrouter.tsx` became `app/settings/models.tsx`.
 - **`ExecHost.hostName`** (core) is how a sandboxed process reaches this machine: `host.docker.internal` from `dockerExecHost` and from an OpenSandbox box's `exec`. The native pack is added in `execAi` once `spec.exec` is set (`ExecContext.opencodeConfig`), and in `run.ts` for run-agent.
 - **The pack is read from the saved list** (`opencodeConfigFor(dataDir)`), so a resumed run, which skips the model check, still gets the provider.
-- **Live test** `packages/cli/test/ollama-live.test.ts`: opt-in with `FLOWBOARD_LIVE=1`, skips when Ollama does not answer. Passed on gemma4 (25 s). **Not added to `test:live`**: Alex to decide.
+- **Live test** `packages/cli/test/ollama-live.test.ts`: opt-in with `FLOWBOARD_LIVE=1`, skips when Ollama does not answer. Passed on gemma4 (25 s). Added to `test:live` on 2026-11-16 at Alex's word.
 
 Verified 2026-11-15: package tests, the app's typecheck, and the touched files' lint all pass. The app ran on port 3117 with a scratch data folder, and headless Chrome checked Connections → Ollama, the Ollama tab of OpenCode models (window `64k / num_ctx` for gemma4, `default / unknown` for qwen3-coder, and a Remove banner for an approved model no longer in Ollama), and the designer's picker (`ollama/gemma4:26b-64k · local`). One real one-step flow on `ollama/gemma4:26b-64k` ran on the host, in Docker (`flowboard-cli`) and in OpenSandbox (`flowboard-sandbox`, egress `host.docker.internal` only). Each wrote its artifact at $0 and printed the "runs locally at $0" line.
 

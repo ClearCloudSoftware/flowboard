@@ -1,6 +1,6 @@
 /**
  * Live check against Ollama on this machine: free, as the model runs here. Runs only with FLOWBOARD_LIVE=1, and
- * skips when Ollama does not answer or has no tool-capable model. Not in `test:live` (yet).
+ * skips when Ollama does not answer or has no tool-capable model. Part of `pnpm test:live` (Alex, 2026-11-16).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
