@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256" role="img" aria-label="Lamproom">
+  <title>Lamproom</title>
+  <!-- the lamp room alone: roof, window, lamp, gallery. The window is a real hole, so the mark sits on any light background -->
+  <clipPath id="outside"><path clip-rule="evenodd" d="M0 0h64v64H0zM16 23h32v32H16z"/></clipPath>
+  <g clip-path="url(#outside)"><g fill="#B8792F" fill-opacity="0.3" transform="rotate(-10 32 39)"><polygon points="32,39 70,31 70,47"/><polygon points="32,39 -6,31 -6,47"/></g></g>
+  <path fill="#141414" fill-rule="evenodd" d="M32 3L54 23h-6v32h8v6H8v-6h8V23h-6zM20 27v24h24V27z"/>
+  <rect x="26" y="33" width="12" height="12" fill="#B8792F"/>
+</svg>

@@ -16,6 +16,7 @@ import type { KeyTest } from '../../packages/cli/src/openrouter.ts';
 import { type ApprovedModel, type CatalogueModel, CONTEXT_FLOOR, FREE_WARNING, isLocal, type OllamaModel } from '../../packages/cli/src/settings.ts';
 import { modelsQuery, type ModelsView, refreshModels, removeOpenRouterKey, saveOpenRouterKey, testOpenRouterKey, updateAppSettings } from '../projects/api.ts';
 import { ErrorLine, Field, Head } from './settings.tsx';
+import { Loader } from '@/components/loader';
 
 const note = 'm-0 font-sans text-xs text-[var(--ink-2)]';
 const warn = 'm-0 flex items-start gap-2 border-l-[3px] border-wait bg-[var(--wait-soft)] px-2.5 py-1.5 font-sans text-xs text-wait';
@@ -65,7 +66,7 @@ export function OpenRouterPage() {
   return (
     <>
       <Head title="OpenRouter">The key OpenCode&rsquo;s steps run on, for models named openrouter/…. Which models they may use is under Agents → OpenCode models.</Head>
-      {view.isPending && <p className="m-0 text-muted-foreground">Loading…</p>}
+      {view.isPending && <Loader />}
       <ErrorLine error={view.error} />
       {view.data && (
         <>
@@ -123,7 +124,7 @@ export function OllamaPage() {
   return (
     <>
       <Head title="Ollama">Models on this machine for OpenCode&rsquo;s steps, named ollama/…. Which of them steps may use is under Agents → OpenCode models.</Head>
-      {view.isPending && <p className="m-0 text-muted-foreground">Loading…</p>}
+      {view.isPending && <Loader />}
       <ErrorLine error={view.error} />
       {o && (
         <>
@@ -167,7 +168,7 @@ export function OpencodeModelsPage() {
     onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ['models'] }), queryClient.invalidateQueries({ queryKey: ['settings'] })]),
   });
   const refresh = useMutation({ mutationFn: refreshModels, onSuccess: (v) => queryClient.setQueryData(['models'], v) });
-  if (view.isPending) return <p className="m-0 text-muted-foreground">Loading…</p>;
+  if (view.isPending) return <Loader />;
   if (!view.data) return <ErrorLine error={view.error} />;
   const { catalogue, approved, ollama } = view.data;
   const kept: ApprovedModel[] = approved.map(({ id, free, price, approvedAt, local }) => ({ id, free, price, approvedAt, ...(local && { local }) }));

@@ -9,6 +9,7 @@ import type { RunDetail, StepLog } from './api.ts';
 import type { ApiError } from '../flows/api.ts';
 import { entriesOf, estimateUsd, totalsOf, usd as dollars } from './log-lines.ts';
 import type { Entry, Filter, ToolEntry } from './log-lines.ts';
+import { Loader } from '@/components/loader';
 
 const usd = (n: number | null | undefined) => (typeof n === 'number' ? dollars(n) : '—');
 const span = (from?: string, to?: string) => {
@@ -53,7 +54,7 @@ export function RunView({ name }: { name: string }) {
     if (last) setTab(last.run);
   };
 
-  if (runs.isPending) return <div className="in-empty">Loading…</div>;
+  if (runs.isPending) return <div className="in-empty"><Loader /></div>;
   if (!run) return <div className="in-empty">{runs.error?.message ?? 'No such run.'}</div>;
   const asks = run.asks;
   const gates = asks.filter(isGate);
@@ -284,7 +285,7 @@ function Log({ run, logs, shown, setTab, questions, live }: { run: RunDetail; lo
       )}
       <div className="lg-b" ref={body} onWheel={(e) => e.deltaY < 0 && setFollow(false)}>
         {!shown ? (
-          <div className="in-empty">{logs ? 'This run has no step logs yet.' : 'Loading…'}</div>
+          <div className="in-empty">{logs ? 'This run has no step logs yet.' : <Loader />}</div>
         ) : on.has('raw') ? (
           <pre className="rv-raw">{lines.map((l) => JSON.stringify(l)).join('\n')}</pre>
         ) : (
@@ -481,7 +482,7 @@ function Side({ run, onCompare }: { run: RunDetail; onCompare: () => void }) {
           </button>
         )}
         {open === 'patch' && run.patch && <Diff text={run.patch.text} cut={run.patch.cut} />}
-        {open && open !== 'patch' && <pre className="rv-file">{artifact.data?.text ?? (artifact.isError ? artifact.error.message : 'Loading…')}</pre>}
+        {open && open !== 'patch' && <pre className="rv-file">{artifact.data?.text ?? (artifact.isError ? artifact.error.message : <Loader />)}</pre>}
       </div>
       <div className="rv-sec">
         <h3>spend</h3>
@@ -630,11 +631,11 @@ export function Compare({ run, onClose }: { run: RunDetail; onClose: () => void 
       <div className="rv-cmp-b">
         <section>
           <h3>plan{plan ? ` · ${plan}` : ''}</h3>
-          <pre className="rv-file">{!plan ? 'This run has no plan artifact.' : (planText.data?.text ?? (planText.isError ? planText.error.message : 'Loading…'))}</pre>
+          <pre className="rv-file">{!plan ? 'This run has no plan artifact.' : (planText.data?.text ?? (planText.isError ? planText.error.message : <Loader />))}</pre>
         </section>
         <section>
           <h3>built · {built.data?.from === 'patch' ? 'changes.patch' : built.data?.from === 'folder' ? `${run.folder} against its last commit` : 'no changes'}</h3>
-          {built.data?.text ? <Diff text={built.data.text} cut={built.data.cut} /> : <pre className="rv-file">{built.isPending ? 'Loading…' : built.error?.message ?? 'Nothing changed.'}</pre>}
+          {built.data?.text ? <Diff text={built.data.text} cut={built.data.cut} /> : <pre className="rv-file">{built.isPending ? <Loader /> : built.error?.message ?? 'Nothing changed.'}</pre>}
         </section>
       </div>
     </dialog>

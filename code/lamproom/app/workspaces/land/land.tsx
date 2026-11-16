@@ -11,6 +11,7 @@ import { useEffect, useEffectEvent, useState } from 'react';
 import { cleanUp, cli, diffQuery, dryRun, landBranch, reviewQuery, updateFromBase } from '../api.ts';
 import type { ActResult, Commit, DryRun, Review, Strategy } from '../api.ts';
 import { Diff } from '../diff.tsx';
+import { Loader } from '@/components/loader';
 
 const STRATS: Record<Strategy, { name: string; says: (base: string) => string; cmd: (root: string, base: string, branch: string, path: string) => string }> = {
   merge: {
@@ -88,7 +89,7 @@ export function Land() {
       </header>
       <main className="ln-body">
         {rv.isError && <div className="in-empty">{rv.error.message}</div>}
-        {rv.isPending && folder && <div className="in-empty">Reading {id}…</div>}
+        {rv.isPending && folder && <div className="in-empty"><Loader label={`Reading ${id}…`} /></div>}
         {r && stage === 1 && (
           <ReviewStage
             r={r}

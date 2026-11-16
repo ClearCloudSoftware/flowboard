@@ -13,6 +13,7 @@ import { EFFORTS, type Effort, HARNESS_SCHEMAS, HARNESSES, type Harness, type Ha
 import { agentsQuery, type AppView, appSettingsQuery, updateAppSettings } from '../projects/api.ts';
 import { OpencodeModelSelect } from './models.tsx';
 import { ErrorLine, Head } from './settings.tsx';
+import { Loader } from '@/components/loader';
 
 const OWN = '-'; // Radix keeps '' for "nothing picked"
 const blank = (s: string) => s.trim() || null;
@@ -112,7 +113,7 @@ export function AgentsPage() {
   return (
     <>
       <Head title="Agents">The agent CLIs Lamproom drives. Each runs on its own login on this machine; OpenCode runs on the OpenRouter key under Connections, when one is saved. Which models OpenCode may use is under OpenCode models.</Head>
-      {view.isPending && <p className="m-0 text-muted-foreground">Loading…</p>}
+      {view.isPending && <Loader />}
       <ErrorLine error={view.error ?? agents.error} />
       {view.data && (
         <>
