@@ -20,7 +20,7 @@ Built 2026-10-24. It delivers the [[Egress Allowlist]], the [[Credential Injecti
 
 ```yaml
 budget_usd: 1
-sandbox: { runtime: opensandbox, image: lamproom-sandbox }
+sandbox: { runtime: opensandbox, image: lamproom:sandbox }
 steps:
   implement: { adapter: claude-code, model: sonnet, prompt: implement.md, produces: [notes] }
   check: { shell: pnpm test, produces: [check_output] }
@@ -43,7 +43,7 @@ Setup (server config, images): `code/lamproom/docker/README.md`, section 3.
 | Key | Default | Meaning |
 |---|---|---|
 | `runtime` | `docker` | `opensandbox` selects this runtime |
-| `image` | required | Must leave its user root (see [Image](#the-image)); normally `lamproom-sandbox` |
+| `image` | required | Must leave its user root (see [Image](#the-image)); normally `lamproom:sandbox` |
 | `egress` | API hosts of the steps' adapters | Hosts the box may reach. Host names or `*.domain`; IP addresses are an error |
 | `credentials` | keys of the steps' adapters | Host env variables injected on the way out. Only `CLAUDE_CODE_OAUTH_TOKEN` and `OPENROUTER_API_KEY`; others are an error |
 | `env` | — | An error: it belongs to `runtime: docker` |
@@ -145,7 +145,7 @@ The host's run folder is the record. The box keeps a mirror at the same path, in
 
 ## The image
 
-`lamproom-sandbox` (`docker/Dockerfile.opensandbox`) is `lamproom-cli` with `USER root`. OpenSandbox runs execd as the image's user, and setup needs root to create the host's paths (such as `/private/var/...`) and hand them to uid 1000. Every step still runs as uid 1000, because the relay starts as that user. Lamproom's own code comes from the image's `/opt/lamproom`, so **rebuild `lamproom-cli`, then `lamproom-sandbox`, after changing Lamproom**.
+`lamproom:sandbox` (`docker/Dockerfile.opensandbox`) is `lamproom:cli` with `USER root`. OpenSandbox runs execd as the image's user, and setup needs root to create the host's paths (such as `/private/var/...`) and hand them to uid 1000. Every step still runs as uid 1000, because the relay starts as that user. Lamproom's own code comes from the image's `/opt/lamproom`, so **rebuild `lamproom:cli`, then `lamproom:sandbox`, after changing Lamproom**.
 
 ## Limits
 

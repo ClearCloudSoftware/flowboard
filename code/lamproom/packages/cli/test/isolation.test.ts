@@ -23,13 +23,13 @@ test('dockerHasGvisor: true when docker lists the runsc runtime', () => {
 });
 
 test('dockerNotReady: undefined when the image is there; else says what is missing', () => {
-  assert.equal(dockerNotReady('lamproom-cli', fakeDocker({})), undefined);
+  assert.equal(dockerNotReady('lamproom:cli', fakeDocker({})), undefined);
   assert.equal(
-    dockerNotReady('lamproom-cli', fakeDocker({ inspect: 1 })),
-    'no image lamproom-cli; build it from code/lamproom: docker build -f docker/Dockerfile -t lamproom-cli .',
+    dockerNotReady('lamproom:cli', fakeDocker({ inspect: 1 })),
+    'no image lamproom:cli; build it from code/lamproom: docker build -f docker/Dockerfile -t lamproom:cli .',
   );
-  assert.equal(dockerNotReady('lamproom-cli', fakeDocker({ info: 1, inspect: 1 })), 'Docker is not running');
-  assert.equal(dockerNotReady('lamproom-cli', '/no/such/docker'), 'Docker is not running');
+  assert.equal(dockerNotReady('lamproom:cli', fakeDocker({ info: 1, inspect: 1 })), 'Docker is not running');
+  assert.equal(dockerNotReady('lamproom:cli', '/no/such/docker'), 'Docker is not running');
 });
 
 const NO_GVISOR = 'Untrusted runs need gVisor, and this machine\'s Docker has no runsc runtime; set the project to Normal, or run it on a Linux host with gVisor';
@@ -43,8 +43,8 @@ test('isolationFor: trusted runs on this machine with approvals, or in the flow\
   assert.deepEqual(isolationFor('trusted', OPEN, NEEDS, false), { sandbox: OPEN, tier: 'opensandbox', approvals: false });
 });
 
-test('isolationFor: normal boxes a flow with no sandbox in lamproom-cli, with the credentials its agents need', () => {
-  assert.deepEqual(isolationFor('normal', undefined, NEEDS, false), { sandbox: { runtime: 'docker', image: 'lamproom-cli', env: NEEDS }, tier: 'container', approvals: false });
+test('isolationFor: normal boxes a flow with no sandbox in lamproom:cli, with the credentials its agents need', () => {
+  assert.deepEqual(isolationFor('normal', undefined, NEEDS, false), { sandbox: { runtime: 'docker', image: 'lamproom:cli', env: NEEDS }, tier: 'container', approvals: false });
 });
 
 test("isolationFor: normal keeps the flow's own sandbox", () => {
@@ -52,8 +52,8 @@ test("isolationFor: normal keeps the flow's own sandbox", () => {
   assert.deepEqual(isolationFor('normal', OPEN, NEEDS, false), { sandbox: OPEN, tier: 'opensandbox', approvals: false });
 });
 
-test("isolationFor: untrusted runs under gVisor, in the flow's image or lamproom-cli", () => {
-  assert.deepEqual(isolationFor('untrusted', undefined, NEEDS, true), { sandbox: { runtime: 'docker', image: 'lamproom-cli', env: NEEDS, gvisor: true }, tier: 'gvisor', approvals: false });
+test("isolationFor: untrusted runs under gVisor, in the flow's image or lamproom:cli", () => {
+  assert.deepEqual(isolationFor('untrusted', undefined, NEEDS, true), { sandbox: { runtime: 'docker', image: 'lamproom:cli', env: NEEDS, gvisor: true }, tier: 'gvisor', approvals: false });
   // the flow's image, but never its sandbox.env: only what the agents need
   assert.deepEqual(isolationFor('untrusted', DOCKER, NEEDS, true), { sandbox: { ...DOCKER, env: NEEDS, gvisor: true }, tier: 'gvisor', approvals: false });
 });
@@ -111,11 +111,11 @@ test("a project's network hosts join an OpenSandbox box's egress, once each; a d
   assert.ok(!('refused' in d) && d.sandbox?.runtime === 'docker' && !('egress' in d.sandbox));
 });
 
-test('the box image is LAMPROOM_IMAGE when set, else lamproom-cli', (t) => {
+test('the box image is LAMPROOM_IMAGE when set, else lamproom:cli', (t) => {
   const was = process.env.LAMPROOM_IMAGE;
   t.after(() => (was === undefined ? delete process.env.LAMPROOM_IMAGE : (process.env.LAMPROOM_IMAGE = was)));
   delete process.env.LAMPROOM_IMAGE;
-  assert.deepEqual(isolationFor('normal', undefined, [], false), { sandbox: { runtime: 'docker', image: 'lamproom-cli', env: [] }, tier: 'container', approvals: false });
-  process.env.LAMPROOM_IMAGE = 'lamproom-cli:knowledge';
-  assert.equal((isolationFor('normal', undefined, [], false) as { sandbox: Sandbox }).sandbox.image, 'lamproom-cli:knowledge');
+  assert.deepEqual(isolationFor('normal', undefined, [], false), { sandbox: { runtime: 'docker', image: 'lamproom:cli', env: [] }, tier: 'container', approvals: false });
+  process.env.LAMPROOM_IMAGE = 'lamproom:cli-knowledge';
+  assert.equal((isolationFor('normal', undefined, [], false) as { sandbox: Sandbox }).sandbox.image, 'lamproom:cli-knowledge');
 });

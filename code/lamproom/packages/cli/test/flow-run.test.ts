@@ -944,7 +944,7 @@ edges:
 
 
 // --- runtime: opensandbox, with a fake box: processes run on this machine, every box call is recorded.
-const BOXED = (flow: string) => flow.replace(HEAD, `${HEAD}sandbox: { runtime: opensandbox, image: lamproom-sandbox }\n`);
+const BOXED = (flow: string) => flow.replace(HEAD, `${HEAD}sandbox: { runtime: opensandbox, image: lamproom:sandbox }\n`);
 
 function fakeBox(o: { missing?: string[]; gone?: boolean } = {}) {
   const calls: string[] = [];
@@ -1194,9 +1194,9 @@ test('normal boxes a flow with no sandbox', async (t) => {
   deps.docker = fd.docker;
   deps.dockerMemoryMb = () => undefined;
   assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
-  assert.deepEqual(fd.calls, ['notReady:lamproom-cli']);
+  assert.deepEqual(fd.calls, ['notReady:lamproom:cli']);
   const { config } = JSON.parse(readFileSync(join(runDir, 'flow.json'), 'utf8'));
-  assert.deepEqual(config.sandbox, { runtime: 'docker', image: 'lamproom-cli', env: ['CLAUDE_CODE_OAUTH_TOKEN'], limits: {} });
+  assert.deepEqual(config.sandbox, { runtime: 'docker', image: 'lamproom:cli', env: ['CLAUDE_CODE_OAUTH_TOKEN'], limits: {} });
   assert.deepEqual(config.isolation, { projectId: 'p-1', trust: 'normal', tier: 'container', approvals: false });
   const i = out.indexOf('-- isolation: Normal (container), from project proj');
   assert.ok(i !== -1 && out[i + 1].startsWith('-- sandbox limits: '), out.join('\n'));
@@ -1303,7 +1303,7 @@ async function pausedNormal(t: { after: (fn: () => void) => void }) {
 test('a boxed run resumes in the box it started in, with Docker checked again', { timeout: 10_000 }, async (t) => {
   const s = await pausedNormal(t);
   assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.err.join('\n'));
-  assert.deepEqual(s.fd.calls, ['notReady:lamproom-cli', 'notReady:lamproom-cli']);
+  assert.deepEqual(s.fd.calls, ['notReady:lamproom:cli', 'notReady:lamproom:cli']);
   assert.equal(s.script.specs.at(-1)?.exec?.profile?.tier, 'container');
 });
 

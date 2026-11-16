@@ -5,7 +5,7 @@ first two have no egress proxy, so agents' keys are inside their box.
 
 Which one a run gets starts with its project's isolation setting (Trusted, Normal, Untrusted): a flow's `sandbox:`
 may only keep it or make it stronger. A **Normal** project's flow with no `sandbox:` runs as in way 1 with the
-image `lamproom-cli` and `env` the agents' credentials; **Untrusted** is the same under gVisor (`--runtime runsc`;
+image `lamproom:cli` and `env` the agents' credentials; **Untrusted** is the same under gVisor (`--runtime runsc`;
 refused where Docker has no `runsc`, macOS included) and passes only the agents' credentials, never a flow's
 `sandbox.env`. Build the image first (below); lr-run-flow refuses a Normal or Untrusted run until it exists, Docker is
 up, and the agents' tokens are set (`CLAUDE_CODE_OAUTH_TOKEN`, see Auth) in the environment Lamproom runs in.
@@ -16,12 +16,12 @@ owns is refused. Ways 2 and 3 are not chosen by a project.
 
 ```yaml
 budget_usd: 1
-sandbox: { image: lamproom-cli, env: [CLAUDE_CODE_OAUTH_TOKEN, OPENROUTER_API_KEY] }
+sandbox: { image: lamproom:cli, env: [CLAUDE_CODE_OAUTH_TOKEN, OPENROUTER_API_KEY] }
 steps: …
 ```
 
 lr-run-flow stays on this machine; each step runs in a throwaway `docker run --rm` container from `image`
-(`lamproom-cli` has sh, git, node, ripgrep and both agent CLIs): uid 1000, no capabilities, read-only root with a
+(`lamproom:cli` has sh, git, node, ripgrep and both agent CLIs): uid 1000, no capabilities, read-only root with a
 `/tmp` tmpfs, at most 512 processes. The run's `folder` and artifacts folder are mounted read-write at the
 same paths. `sandbox.env` names the variables passed in; nothing else from this machine's env goes in.
 
@@ -45,21 +45,21 @@ and Python language servers, in `/opt/serena`. `lr-serena` runs Serena with Lamp
 project's build runs `graphify` and `lr-serena` in a shell step's box (`--network none`); its agents get
 `lr-serena start-mcp-server` as an MCP server inside their own box.
 
-To try an image built from a branch without replacing the shared `lamproom-cli`, build it under another tag and
+To try an image built from a branch without replacing the shared `lamproom:cli`, build it under another tag and
 point runs at it:
 
 ```sh
-docker build -f docker/Dockerfile -t lamproom-cli:knowledge .     # from code/lamproom
-LAMPROOM_IMAGE=lamproom-cli:knowledge pnpm dev                   # or lr-run-flow; the box image is boxImage() in isolation.ts
+docker build -f docker/Dockerfile -t lamproom:cli-knowledge .     # from code/lamproom
+LAMPROOM_IMAGE=lamproom:cli-knowledge pnpm dev                   # or lr-run-flow; the box image is boxImage() in isolation.ts
 ```
 
 ## 2. The whole CLI in one container
 
 ```sh
-docker build -f docker/Dockerfile -t lamproom-cli .          # from code/lamproom
+docker build -f docker/Dockerfile -t lamproom:cli .          # from code/lamproom
 docker run --rm -it -v "$PWD/my-flow:/work" \
   -e CLAUDE_CODE_OAUTH_TOKEN -e OPENROUTER_API_KEY \
-  lamproom-cli flow.yaml
+  lamproom:cli flow.yaml
 ```
 
 Everything runs inside the container: lr-run-flow, the agents, and the socket between them. Gates and agents'
@@ -75,7 +75,7 @@ questions come to your terminal through `-it`. Limits:
 
 ```yaml
 budget_usd: 1
-sandbox: { runtime: opensandbox, image: lamproom-sandbox }
+sandbox: { runtime: opensandbox, image: lamproom:sandbox }
 steps: …
 ```
 
@@ -109,13 +109,13 @@ docker pull opensandbox/execd:v1.1.0 && docker pull opensandbox/egress:v1.1.7   
 export OPENSANDBOX_DOMAIN=127.0.0.1:8080 OPENSANDBOX_API_KEY=<the api_key>
 ```
 
-**The image.** OpenSandbox runs its execd as the image's user, so `lamproom-sandbox` leaves the user root;
+**The image.** OpenSandbox runs its execd as the image's user, so `lamproom:sandbox` leaves the user root;
 lr-run-flow lays out the host paths as root and starts every step as uid 1000. Lamproom's own code (the
 `ask_user` shim, OpenCode's guard plugin) comes from the image's `/opt/lamproom`, so rebuild both images
 after changing Lamproom:
 
 ```sh
-docker build -f docker/Dockerfile -t lamproom-cli . && docker build -f docker/Dockerfile.opensandbox -t lamproom-sandbox docker
+docker build -f docker/Dockerfile -t lamproom:cli . && docker build -f docker/Dockerfile.opensandbox -t lamproom:sandbox docker
 ```
 
 Background and measurements: `docs/Lamproom/Sandboxing/OpenSandbox Spike.md`.

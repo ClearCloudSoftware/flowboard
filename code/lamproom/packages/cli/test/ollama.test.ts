@@ -164,7 +164,7 @@ test("a flow's local step: warned of a small window in the check; in OpenSandbox
   assert.ok(r.ok, JSON.stringify(r));
   assert.deepEqual(r.config.warnings, [`steps.tests.model: ${contextWarning('ollama/small:4k', 4096)}`]);
 
-  const boxed = loadFlow('flow.yaml', flowProject(`sandbox: { runtime: opensandbox, image: lamproom-sandbox }\n${yaml}`));
+  const boxed = loadFlow('flow.yaml', flowProject(`sandbox: { runtime: opensandbox, image: lamproom:sandbox }\n${yaml}`));
   assert.ok(boxed.ok, JSON.stringify(boxed));
-  assert.deepEqual(boxed.config.sandbox, { runtime: 'opensandbox', image: 'lamproom-sandbox', egress: ['api.anthropic.com', 'host.docker.internal'], credentials: ['CLAUDE_CODE_OAUTH_TOKEN'] });
+  assert.deepEqual(boxed.config.sandbox, { runtime: 'opensandbox', image: 'lamproom:sandbox', egress: ['api.anthropic.com', 'host.docker.internal'], credentials: ['CLAUDE_CODE_OAUTH_TOKEN'] });
 });

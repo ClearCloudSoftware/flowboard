@@ -33,9 +33,9 @@ export const IsolationSchema = z.strictObject({
 
 /**
  * The image `docker/Dockerfile` builds: a flow without its own `sandbox:` runs in it. `LAMPROOM_IMAGE` names another
- * tag of it, such as one built from a branch, so a shared `lamproom-cli` need not be rebuilt to try it.
+ * tag of it, such as one built from a branch, so a shared `lamproom:cli` need not be rebuilt to try it.
  */
-export const boxImage = () => process.env.LAMPROOM_IMAGE || 'lamproom-cli';
+export const boxImage = () => process.env.LAMPROOM_IMAGE || 'lamproom:cli';
 
 /**
  * The project whose repo holds `folder`, a link or a task worktree under it included. A repo inside another

@@ -50,11 +50,11 @@ Since 2026-11-13 a project's trust (*Trusted*, *Normal*, *Untrusted*; [[Project 
 | Trust | Flow has no `sandbox:` | Flow has `sandbox:` |
 |---|---|---|
 | Trusted | The machine (`host`); agents ask before edits and shell commands | The flow's box, no asking |
-| Normal | Docker `lamproom-cli`, `env` the credentials the agents need | The flow's box |
-| Untrusted | Docker under gVisor (`--runtime runsc`), `lamproom-cli` | A `docker` flow: its image under gVisor. `opensandbox`: refused, *"Untrusted runs need gVisor; this flow's OpenSandbox box is not gVisor"* |
+| Normal | Docker `lamproom:cli`, `env` the credentials the agents need | The flow's box |
+| Untrusted | Docker under gVisor (`--runtime runsc`), `lamproom:cli` | A `docker` flow: its image under gVisor. `opensandbox`: refused, *"Untrusted runs need gVisor; this flow's OpenSandbox box is not gVisor"* |
 
 - **Untrusted without gVisor is refused**, macOS included, with no container fallback: *"Untrusted runs need gVisor, and this machine's Docker has no runsc runtime; set the project to Normal, or run it on a Linux host with gVisor"*. An Untrusted box gets only the agents' credentials, never the flow's `sandbox.env`.
-- **Normal is refused until its credentials are set.** A container cannot read the macOS keychain, where the `claude` login is, so `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) must be set where Lamproom runs, and `OPENROUTER_API_KEY` for an OpenCode step on OpenRouter. The image must exist (`docker build -f docker/Dockerfile -t lamproom-cli .`) and Docker be up, or the run is refused with the command. The same holds for any Docker box.
+- **Normal is refused until its credentials are set.** A container cannot read the macOS keychain, where the `claude` login is, so `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`) must be set where Lamproom runs, and `OPENROUTER_API_KEY` for an OpenCode step on OpenRouter. The image must exist (`docker build -f docker/Dockerfile -t lamproom:cli .`) and Docker be up, or the run is refused with the command. The same holds for any Docker box.
 - **Refusals** are `lr-run-flow` error lines with exit code 2, shown as written by the runs page's New run form. Every run prints `-- isolation: Normal (container), from project <name>`.
 - **Normal's network is open**: agent containers reach the internet and hold real keys, because the egress proxy is not built.
 - **The repo's git dir is read-only in a box, and the only one Lamproom's git uses.** A Docker box mounts the folder read-write, and the project's git dir (`<repo>/.git`, its worktrees' included) read-only over it. Flows commit on the machine, never in a box. Every git call Lamproom makes on the machine goes through `hostGit`: the git dir is found without running git, only the repo's own or a worktree git made in it is accepted, and git runs with `GIT_DIR` and `GIT_WORK_TREE` set, `core.fsmonitor` off and `--ignore-submodules=all` on `status` and `diff`. A `.git` a box planted or rewrote in the folder is refused by Lamproom, never read by it. It stays on disk, though: your own git in that folder (a shell prompt, an IDE, a `git commit` you type) still uses it, and a scan that warns after a run is not built. A git-lfs filter in your global config runs on a box-written `.gitattributes`; it is your own tool. See [[Isolation Enforcement Handoff#Fixed: the .git escape]].
@@ -72,7 +72,7 @@ An agent's file edit or shell command is held until you answer: **Allow**, **All
 
 ### Decisions open to Alex's review (2026-11-13)
 
-1. Normal with no `sandbox:` runs in `lamproom-cli`, which needs the token above, so a Normal project's runs are refused until it is set.
+1. Normal with no `sandbox:` runs in `lamproom:cli`, which needs the token above, so a Normal project's runs are refused until it is set.
 2. Untrusted with an OpenSandbox flow is refused: its box is not gVisor.
 3. Shell steps never ask, even in Trusted.
 4. An approval gates only what the tool policy allows; a command the Claude allow list refuses is still asked first (ceiling: match `toolPolicy.allow` before asking).

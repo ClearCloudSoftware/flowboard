@@ -3,6 +3,8 @@ import type { ExecHost, SandboxProfile } from '@lamproom/core';
 
 /** How a container reaches this machine: Docker Desktop forwards it to the host's loopback too, so a server there need not listen wider. */
 export const DOCKER_HOST_NAME = 'host.docker.internal';
+/** The label Docker Desktop groups containers by; Lamproom's boxes all carry `lamproom`. */
+export const COMPOSE_PROJECT_LABEL = 'com.docker.compose.project';
 /** The uid:gid a non-root container runs as. */
 export const SANDBOX_USER = '1000:1000';
 
@@ -18,6 +20,8 @@ export function dockerArgs(profile: SandboxProfile, command: string, args: strin
   const l = profile.limits ?? {};
   return [
     'run', '--rm', '-i', '--init', '--label', 'lamproom=sandbox',
+    // ponytail: Docker Desktop groups containers by compose project, so every box sits under one "lamproom" entry
+    '--label', `${COMPOSE_PROJECT_LABEL}=lamproom`,
     ...(open ? [] : ['--network', 'none']),
     ...ports.flatMap((p) => ['-p', `127.0.0.1:${p}:${p}`]),
     ...(profile.tier === 'gvisor' ? ['--runtime', 'runsc'] : []),
