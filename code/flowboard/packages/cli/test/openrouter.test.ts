@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { updateAppSettings } from '../src/app-settings.ts';
 import { loadFlow } from '../src/flow-config.ts';
-import { keyView, modelRules, readCatalogue, refreshCatalogue, removeKey, saveKey, savedKey, toCatalogue, applySavedKey } from '../src/openrouter.ts';
+import { modelRules } from '../src/models.ts';
+import { keyView, readCatalogue, refreshCatalogue, removeKey, saveKey, savedKey, toCatalogue, applySavedKey } from '../src/openrouter.ts';
 import { type ApprovedModel, type Catalogue, FREE_WARNING, modelProblem } from '../src/settings.ts';
 import { DELIVERY, flowProject, RUN_IN } from './fixtures/flow.ts';
 

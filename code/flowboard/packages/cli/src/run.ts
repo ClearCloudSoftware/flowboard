@@ -15,8 +15,7 @@ import { startBroker } from './ask/broker.ts';
 import type { Answerer } from './ask/broker.ts';
 import { noTerminal, terminalAnswerer } from './ask/terminal.ts';
 import { loadConfig, SKILLS_PLUGIN } from './config.ts';
-import { prepareRun } from './openrouter.ts';
-import { FREE_WARNING } from './settings.ts';
+import { opencodeConfigFor, prepareRun } from './models.ts';
 import type { Adapter, RunConfig } from './config.ts';
 
 export interface RunDeps {
@@ -219,6 +218,9 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
         onInterrupt,
       });
       spec = await withAsking(loaded.config, join(tmp, 'ask.sock'), tmp);
+      // run-agent runs on this machine: a local model's provider points at Ollama's own address.
+      const native = adapter === 'opencode' && deps.dataDir !== undefined && opencodeConfigFor(deps.dataDir)(spec.model);
+      if (native) spec.capabilities = [...(spec.capabilities ?? []), { id: 'ollama', provider: 'opencode', mount: { kind: 'native', config: native } }];
     } catch (e) {
       // Nothing launched yet; still end the log, and the output, with a result.
       const result: RunResult = { usage: ZERO_USAGE, exitCode: 1, error: `cannot set up the run: ${(e as Error).message}` };
@@ -230,7 +232,8 @@ export async function runAgent(args: string[], deps: RunDeps): Promise<number> {
     print(`-- ${adapter} ${spec.model} in ${spec.cwd}`);
     print(`-- log ${path}`);
     if (unrestrictedShell) print(`-- warning: unrestricted shell: commands can write outside ${spec.cwd}`);
-    if (adapter === 'opencode' && models?.free(spec.model)) print(`-- warning: ${spec.model} is ${FREE_WARNING}`);
+    const warning = adapter === 'opencode' && models?.warning(spec.model);
+    if (warning) print(`-- warning: ${warning}`);
 
     // `run` is set as it launches, so Ctrl+C can stop it.
     const { result, failedTools, last } = await streamRun(() => (run = (deps.makeProvider ?? defaultProvider)(adapter).launch(spec)), log, show);

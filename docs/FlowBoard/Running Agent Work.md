@@ -333,15 +333,25 @@ To run one agent with either provider, use `run-agent`:
 
 3. Run `pnpm run-agent task.yaml`. The command prints each event, asks the agent's questions in the terminal, and logs the run to `runs/<YYYY-MM-DDTHH-MM-SS>-<adapter>.jsonl`. It exits `0` on success, `1` on failure, `2` on a config error (before anything launches), and `130` when stopped.
 
-If you set `adapter: opencode`, write `model` as `providerID/modelID`, for example `openrouter/deepseek/deepseek-v4.1-flash`. A Claude alias such as `sonnet` fails there.
+If you set `adapter: opencode`, write `model` as `providerID/modelID`, for example `openrouter/deepseek/deepseek-v4.1-flash` or `ollama/gemma4:26b-64k`. A Claude alias such as `sonnet` fails there.
 
-An OpenCode step also needs an **approved** model, and the OpenRouter key it runs on can be saved in FlowBoard:
+An OpenCode step also needs an **approved** model. Its models come from OpenRouter, whose key can be saved in FlowBoard, or from Ollama on this machine:
 
-1. Go to **Settings → Connections → OpenRouter**, paste your key, and click **Save**. Click **Test** to see its credit limit and spend. Without a saved key, OpenCode uses its own login (`opencode auth login`); a key in `OPENROUTER_API_KEY` wins over the saved one.
-2. Go to **Settings → Agents → OpenCode models** and tick each model a step may use. Free models need ticking too. Ticking one first warns you that its provider may keep your prompts, which include the project's code.
-3. Pick the model from the dropdown in the flow designer, or name it in the YAML.
+1. For OpenRouter, go to **Settings → Connections → OpenRouter**, paste your key, and click **Save**. Click **Test** to see its credit limit and spend. Without a saved key, OpenCode uses its own login (`opencode auth login`); a key in `OPENROUTER_API_KEY` wins over the saved one.
+2. Go to **Settings → Agents → OpenCode models** and tick each model a step may use, on the **OpenRouter** or **Ollama** tab. Free models need ticking too. Ticking a free OpenRouter model first warns you that its provider may keep your prompts, which include the project's code.
+3. Pick the model from the dropdown in the flow designer, or name it in the YAML. The dropdown marks free models `· free` and local ones `· local`.
 
-A run on a model that is not approved, no longer listed, or dearer than when you approved it is refused before anything launches: `model: <model> is not an approved model; approve it in Settings → Agents → OpenCode models`. A free model runs with a warning. See [[OpenRouter Models And Key]]. On OpenCode, an allow entry that globs to any shell command (`*`, `b*`, `Bash(?*)`) needs `permissions.allow_unrestricted_shell: true`.
+A run on a model that is not approved, no longer listed, or dearer than when you approved it is refused before anything launches: `model: <model> is not an approved model; approve it in Settings → Agents → OpenCode models`. A free OpenRouter model runs with a warning. See [[OpenCode Models]].
+
+To run a step on **Ollama** (local and free):
+
+1. Start Ollama on this machine and pull a model that takes tools, such as `ollama pull qwen3-coder:30b`. **Settings → Connections → Ollama** shows whether FlowBoard reaches it.
+2. On the **Ollama** tab of **Settings → Agents → OpenCode models**, tick the model. Only local models that take tools are offered: embedding models, and Ollama's cloud models (which run on ollama.com), are left out.
+3. Name it `ollama/<name:tag>`, exactly as `ollama list` shows it.
+
+FlowBoard uses only Ollama on this machine, at `OLLAMA_HOST` (default `127.0.0.1:11434`); an address elsewhere is refused. Sandboxed steps reach it as `host.docker.internal`, so Ollama can stay on 127.0.0.1. If Ollama does not answer when a run starts, its local steps are refused: `Ollama does not answer on …; start it, then run again`. A local run costs $0, so only `limits.max_turns` or a timeout stops it.
+
+A small context window **warns** but never refuses: below 32,768 tokens, `<model> runs with a <n>-token window, which an agent can outgrow; set num_ctx on the model, or OLLAMA_CONTEXT_LENGTH`. FlowBoard reads the window from the model's `num_ctx`, else `OLLAMA_CONTEXT_LENGTH`, else from Ollama while the model is loaded. When none of those says, Ollama picks a default from the machine's memory that FlowBoard cannot see: the page shows *default*, and nothing warns. On a machine with little memory that default can be 4,096 tokens, so set `num_ctx` on the model there. On OpenCode, an allow entry that globs to any shell command (`*`, `b*`, `Bash(?*)`) needs `permissions.allow_unrestricted_shell: true`.
 
 To mix providers in one flow, set `adapter` per step in a `run-flow` recipe. Each agent step is one `run-agent` run, and `defaults` supplies the shared keys:
 
@@ -371,7 +381,7 @@ To add a provider, follow the acceptance test from the design:
 - **Built (2026-10-23):** `run-flow`, which runs several agent and shell steps as one flow. It is a terminal stand-in for the runner.
 - **Not built:** the runner, job queue, database (`runs`, `run_events`), the designed run routes over `run_events` (the app's `app/api/runs/` routes read `run-flow`'s run folders instead), `PricingService`, `SpecTransform` and draft mode, and context-replay for resume.
 - **Capability negotiation is design only.** No code reads `provider.capabilities`. Claude Code and OpenCode both declare all eleven flags, although OpenCode honours several in part: `plugins` mounts only `<dir>/skills`, `partial_stream` emits one `usage` event per step, and the adapter enforces `budget_cap` itself and never trips on an unpriced model.
-- **Built (2026-11-13):** approved OpenCode models and a saved OpenRouter key. Only OpenRouter models can be approved, so an OpenCode step on another provider is refused.
+- **Built (2026-11-13):** approved OpenCode models and a saved OpenRouter key. **Built (2026-11-15):** Ollama on this machine as a second source, local models only. Only OpenRouter and Ollama models can be approved, so an OpenCode step on another provider is refused.
 - **No shared logical model vocabulary.** The Claude adapter passes aliases through as written. `run-agent` builds OpenCode with an empty `models` table, so OpenCode needs `providerID/modelID`.
 - **The neutral vocabulary is Claude Code's.** `toolPolicy` entries and the six `PermissionMode` values are Claude's; OpenCode emulates them, and a pattern can match on one provider and not the other.
 - **Guards have gaps.** Only file-edit tools and recursive `rm` are checked against paths. Any other permitted shell command can write anywhere, and a script, `eval`, or `git clean` gets around the `rm` rule.
@@ -388,7 +398,7 @@ To add a provider, follow the acceptance test from the design:
 - [[Normalized Event Envelope|The eight event kinds and where each comes from]]
 - [[Capability Negotiation|Designed graceful degradation per missing capability]]
 - [[Run Config Reference|Every field of the run-agent YAML file]]
-- [[OpenRouter Models And Key|Approved OpenCode models, the free-model warning, and the saved key]]
+- [[OpenCode Models|Approved OpenCode models from OpenRouter and Ollama, their warnings, and the saved key]]
 - [[Run Flow Reference|Every field of a run-flow recipe and how a flow runs]]
 - [[Adding A Provider|The acceptance test for a new adapter]]
 - [[Agent Providers Open Questions|Where the sources disagree or leave a gap]]
@@ -578,7 +588,7 @@ To run a flow in OpenSandbox, follow these steps:
 
    Replace `<server api_key>` with the server's `api_key`, and `<run>` with the run folder's name. Run the last command from the folder you started `run-flow` in; at the end of the run, `run-flow` prints the exact `git apply` command with the patch's absolute path.
 
-To control what the box can reach, set `sandbox.egress`. It defaults to the API hosts of the steps' adapters: `api.anthropic.com` for a `claude-code` step, and `openrouter.ai` for an `opencode` step whose model starts with `openrouter/`. An explicit list replaces the defaults, so add `registry.npmjs.org` if a step installs packages. Entries are host names or `*.domain`; an IP address is an error.
+To control what the box can reach, set `sandbox.egress`. It defaults to the API hosts of the steps' adapters: `api.anthropic.com` for a `claude-code` step, `openrouter.ai` for an `opencode` step whose model starts with `openrouter/`, and `host.docker.internal` (this machine, where Ollama runs) for one whose model starts with `ollama/`. An explicit list replaces the defaults, so add `registry.npmjs.org` if a step installs packages. Entries are host names or `*.domain`; an IP address is an error.
 
 To choose which keys are injected, set `sandbox.credentials`. Only `CLAUDE_CODE_OAUTH_TOKEN` and `OPENROUTER_API_KEY` are accepted.
 

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { readFlow, saveFlow } from '../../../../packages/cli/src/flow-files.ts';
-import { modelRules } from '../../../../packages/cli/src/openrouter.ts';
+import { modelRules } from '../../../../packages/cli/src/models.ts';
 import { badName, body, dataDir, flowsDir, refused } from '../local.ts';
 
 type Params = { params: Promise<{ name: string }> };

@@ -118,7 +118,7 @@ function setup(yaml = DELIVERY, plays: Record<string, Play[]> = {}) {
 
 test('--check validates the flow and prints its size', async () => {
   const { out, err, deps } = setup();
-  delete deps.dataDir; // a check needs no project; with a data folder the app's OpenCode model rules apply (openrouter.ts)
+  delete deps.dataDir; // a check needs no project; with a data folder the app's OpenCode model rules apply (models.ts)
   assert.equal(await runFlow(['--check', 'flow.yaml'], deps), 0);
   assert.deepEqual([out, err], [['-- flow ok: 5 steps, starting at plan'], []]);
 });

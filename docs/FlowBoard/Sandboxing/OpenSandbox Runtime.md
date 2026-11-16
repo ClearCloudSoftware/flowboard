@@ -48,7 +48,7 @@ Setup (server config, images): `code/flowboard/docker/README.md`, section 3.
 | `credentials` | keys of the steps' adapters | Host env variables injected on the way out. Only `CLAUDE_CODE_OAUTH_TOKEN` and `OPENROUTER_API_KEY`; others are an error |
 | `env` | — | An error: it belongs to `runtime: docker` |
 
-Defaults come from the steps (`flow-config.ts`, `NEEDS`). A `claude-code` step adds `api.anthropic.com` and `CLAUDE_CODE_OAUTH_TOKEN`. An `opencode` step whose model starts with `openrouter/` adds `openrouter.ai` and `OPENROUTER_API_KEY`. An explicit list replaces the defaults; add `registry.npmjs.org` when a step installs packages.
+Defaults come from the steps (`flow-config.ts`, `NEEDS`). A `claude-code` step adds `api.anthropic.com` and `CLAUDE_CODE_OAUTH_TOKEN`. An `opencode` step whose model starts with `openrouter/` adds `openrouter.ai` and `OPENROUTER_API_KEY`. One whose model starts with `ollama/` adds `host.docker.internal`, how the box reaches Ollama on this machine, and no credential (2026-11-15; the egress filter lets it through on Ollama's port 11434, [[OpenCode Models#How a run reaches Ollama]]). An explicit list replaces the defaults; add `registry.npmjs.org` when a step installs packages.
 
 ## How it fits together
 

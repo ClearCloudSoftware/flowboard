@@ -12,10 +12,10 @@ import { DEFAULT_MAX_ATTEMPTS, isRework, validateFlow } from '@flowboard/core';
 import type { FlowDef } from '@flowboard/core';
 import { CLOSING, configFromObject, isDir, isFile, issueLines, readPlugin, readYaml, RunSchema, toAbs } from './config.ts';
 import type { ModelRules, RunConfig } from './config.ts';
-import { FREE_WARNING } from './settings.ts';
 import { PROJECT_FILE, projectSettings } from './project.ts';
 import type { Limits } from './project.ts';
 import type { Isolation } from './isolation.ts';
+import { isLocal } from './settings.ts';
 
 export const OUTCOME_CLOSING =
   'Before you stop, report your verdict with the set_outcome tool: "pass" if the work meets the task, "fail" if it does not, with a one-line reason.';
@@ -71,8 +71,15 @@ const StepName = z.string({
       : 'one step name; write one edge per pair of steps',
 });
 const VAR = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'must be a variable name');
-/** What an agent needs to reach, by adapter: its API host and the credential sent there. */
-export const NEEDS = { claude: { host: 'api.anthropic.com', credential: 'CLAUDE_CODE_OAUTH_TOKEN' }, openrouter: { host: 'openrouter.ai', credential: 'OPENROUTER_API_KEY' } };
+/**
+ * What an agent needs to reach, by adapter: its API host and the credential sent there. A local model needs this
+ * machine, as a box names it (`DOCKER_HOST_NAME`), and no credential.
+ */
+export const NEEDS: Record<'claude' | 'openrouter' | 'ollama', { host: string; credential?: string }> = {
+  claude: { host: 'api.anthropic.com', credential: 'CLAUDE_CODE_OAUTH_TOKEN' },
+  openrouter: { host: 'openrouter.ai', credential: 'OPENROUTER_API_KEY' },
+  ollama: { host: 'host.docker.internal' },
+};
 const RECIPE = 'not in a flow file: a flow is a reusable recipe, and each run gives its';
 const FlowSchema = z.strictObject({
   budget_usd: z.number({ error: 'must be a number of dollars' }).min(0, { error: 'must be 0 or more; 0 means no ceiling' }),
@@ -246,7 +253,8 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
     // The verdict is asked for, and set_outcome offered, where a route or the approval gate reads it.
     const verdict = st.gate === 'approval' || y.edges.some((e) => e.from === name && e.condition !== 'always');
     if (verdict) spec.prompt.closing = `${CLOSING} ${OUTCOME_CLOSING}`;
-    if (r.config.adapter === 'opencode' && models?.free(spec.model)) warnings.push(`${at}.model: ${spec.model} is ${FREE_WARNING}`);
+    const warning = r.config.adapter === 'opencode' && models?.warning(spec.model);
+    if (warning) warnings.push(`${at}.model: ${warning}`);
     if (r.config.unrestrictedShell) warnings.push(`${at}: unrestricted shell: commands can write outside ${run ? folder : 'the folder'}`);
     if (st.write_roots) spec.guards = { ...spec.guards, writeRoots: roots }; // [] leaves only the artifacts folder
     steps[name] = {
@@ -261,11 +269,11 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
   let sandbox: Sandbox | undefined;
   if (y.sandbox?.runtime === 'opensandbox') {
     if (y.sandbox.env) return fail(['sandbox.env: only for runtime docker']);
-    const known = Object.values(NEEDS).map((n) => n.credential);
+    const known = Object.values(NEEDS).flatMap((n) => n.credential ?? []);
     const unknown = (y.sandbox.credentials ?? []).findIndex((c) => !known.includes(c));
     if (unknown !== -1) return fail([`sandbox.credentials.${unknown}: OpenSandbox injects only ${known.join(' and ')}`]);
     const needs = agentNeeds(steps);
-    sandbox = { runtime: 'opensandbox', image: y.sandbox.image, egress: y.sandbox.egress ?? needs.map((n) => n.host), credentials: y.sandbox.credentials ?? needs.map((n) => n.credential) };
+    sandbox = { runtime: 'opensandbox', image: y.sandbox.image, egress: y.sandbox.egress ?? needs.map((n) => n.host), credentials: y.sandbox.credentials ?? needs.flatMap((n) => n.credential ?? []) };
     warnings.push("sandbox: agents' edits stay in the sandbox; the run ends with changes.patch to review");
   } else if (y.sandbox) {
     for (const key of ['egress', 'credentials'] as const) if (y.sandbox[key]) return fail([`sandbox.${key}: only for runtime opensandbox`]);
@@ -276,11 +284,11 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
   return { ok: true, config: { yamlPath: read.abs, name: basename(read.abs, extname(read.abs)), folder, budgetUsd, flow, steps, warnings, ...(sandbox && { sandbox }) } };
 }
 
-/** What the flow's agents need to reach, each once: an agent on neither Claude nor OpenRouter (a local model) needs nothing. */
+/** What the flow's agents need to reach, each once: an agent on another provider (OpenCode's own login) needs nothing known. */
 export const agentNeeds = (steps: FlowConfig['steps']) => [
   ...new Set(
     Object.values(steps).flatMap((st) =>
-      st.kind !== 'ai' ? [] : st.run.adapter === 'claude-code' ? [NEEDS.claude] : st.run.spec.model.startsWith('openrouter/') ? [NEEDS.openrouter] : [],
+      st.kind !== 'ai' ? [] : st.run.adapter === 'claude-code' ? [NEEDS.claude] : st.run.spec.model.startsWith('openrouter/') ? [NEEDS.openrouter] : isLocal(st.run.spec.model) ? [NEEDS.ollama] : [],
     ),
   ),
 ];

@@ -7,10 +7,8 @@
  */
 import { readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { readAppSettings } from './app-settings.ts';
 import { isFile, writeJsonFile } from './config.ts';
-import type { ModelRules } from './config.ts';
-import { type Catalogue, type CatalogueModel, isFree, modelProblem } from './settings.ts';
+import type { Catalogue, CatalogueModel } from './settings.ts';
 
 export const KEY_VAR = 'OPENROUTER_API_KEY';
 const API = 'https://openrouter.ai/api/v1';
@@ -115,25 +113,4 @@ export async function refreshCatalogue(dataDir: string, maxAgeMs = CATALOGUE_MAX
   } catch (e) {
     return { catalogue: saved, error: `could not fetch OpenRouter's models: ${(e as Error).message}` };
   }
-}
-
-/** The approved list's rules as the checks take them, against the saved list (never fetched here: checks are sync). */
-export function modelRules(dataDir: string): ModelRules {
-  const approved = readAppSettings(dataDir).opencodeModels;
-  const catalogue = readCatalogue(dataDir);
-  return { problem: (id) => modelProblem(id, approved, catalogue), free: (id) => isFree(id, approved, catalogue) };
-}
-
-/**
- * What run-agent and run-flow do first: put the saved key where OpenCode finds it, fetch the model list when it is
- * stale (so a price rise is seen), and hand back the rules to check the steps' models against.
- */
-export async function prepareRun(dataDir: string, warn: (line: string) => void): Promise<ModelRules> {
-  applySavedKey(dataDir);
-  // With nothing approved every OpenCode step is refused anyway: no fetch, and no warning on an offline Claude run.
-  if (readAppSettings(dataDir).opencodeModels.length) {
-    const { error } = await refreshCatalogue(dataDir);
-    if (error) warn(`-- warning: ${error}; checking models against the list saved earlier`);
-  }
-  return modelRules(dataDir);
 }

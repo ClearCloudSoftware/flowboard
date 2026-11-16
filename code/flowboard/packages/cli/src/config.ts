@@ -34,10 +34,11 @@ export interface RunConfig {
 export type LoadResult = { ok: true; config: RunConfig } | { ok: false; errors: string[] };
 
 /**
- * The app's rules for OpenCode's models (`openrouter.ts` builds them from the approved list): `problem` says why a
- * model may not run, `free` whether it is a free one. Absent, as in tests, no model is checked.
+ * The app's rules for OpenCode's models (`models.ts` builds them from the approved list): `problem` says why a model
+ * may not run, `warning` what a step on it should be warned of (a free model's privacy, a local one's small window).
+ * Absent, as in tests, no model is checked.
  */
-export interface ModelRules { problem(model: string): string | undefined; free(model: string): boolean }
+export interface ModelRules { problem(model: string): string | undefined; warning(model: string): string | undefined }
 
 export const RunSchema = z.strictObject({
   adapter: z.enum(['claude-code', 'opencode']),

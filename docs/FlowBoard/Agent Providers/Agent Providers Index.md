@@ -47,7 +47,7 @@ There is no mockup for this component. It is documented as architecture referenc
 
 - [[Claude Code Adapter]] — the first real provider, on the Claude Agent SDK driving the installed `claude` CLI; also the PRD's flags and Claude-specific fixes
 - [[OpenCode Adapter]] — the second real provider: a per-run opencode server, non-Claude models
-- [[OpenRouter Models And Key]] — which models an OpenCode step may run on (approved app-wide, free ones with a privacy warning) and the OpenRouter key FlowBoard keeps for them
+- [[OpenCode Models]] — which models an OpenCode step may run on, from OpenRouter or from Ollama on this machine (approved app-wide; free ones with a privacy warning, local ones with a small window with a context warning), and the OpenRouter key FlowBoard keeps
 - [[Codex Adapter]] — design, not built: the planned second provider, and the spike that validates the port
 - [[Replay Provider]] — the reference implementation and zero-spend test double
 - [[Agent Client Protocol Option]] — could the port *be* ACP? (design)
