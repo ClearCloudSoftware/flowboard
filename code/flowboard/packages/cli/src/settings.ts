@@ -40,13 +40,31 @@ export interface AppSettings extends Settings {
 }
 
 /**
- * A model approved for OpenCode, free or paid: `id` as a step names it (`openrouter/<OpenRouter's id>`); `free` and
- * `price` (dollars per million input and output tokens) as OpenRouter listed it when it was ticked.
+ * A model approved for OpenCode, free or paid: `id` as a step names it (`openrouter/<OpenRouter's id>`, or
+ * `ollama/<name:tag>`); `free` and `price` (dollars per million input and output tokens) as its source listed it when
+ * it was ticked. `local`: it runs in Ollama on this machine, free and private; absent on every OpenRouter model.
  */
-export interface ApprovedModel { id: string; free: boolean; price: { in: number; out: number }; approvedAt: string }
+export interface ApprovedModel { id: string; free: boolean; price: { in: number; out: number }; approvedAt: string; local?: true }
 /** One model as OpenRouter lists it, prices in dollars per million tokens; `id` is OpenCode's, with `openrouter/`. */
 export interface CatalogueModel { id: string; name: string; free: boolean; price: { in: number; out: number }; context: number | null }
 export interface Catalogue { fetchedAt: string; models: CatalogueModel[] }
+
+/** Where a local model's window was read from (`ollama.ts`); null: Ollama picks its own default, which FlowBoard cannot see. */
+export type ContextFrom = 'num_ctx' | 'OLLAMA_CONTEXT_LENGTH' | 'loaded';
+/**
+ * One model in Ollama on this machine: free, local, tool-capable. `context` is the window it actually runs with, null
+ * when unknown (`contextFrom` null); `maxContext` the most the model takes; `size` bytes on disk.
+ */
+export interface OllamaModel extends CatalogueModel { local: true; contextFrom: ContextFrom | null; maxContext: number | null; size: number }
+/**
+ * Ollama as a check sees it: `models` as last listed (null before the first list), `down` why a run may not use it
+ * now (set only at run start, which asks Ollama; the designer's check never does).
+ */
+export interface LocalModels { models: OllamaModel[] | null; down?: string }
+/** Below this window an agent can outgrow its prompt: OpenCode's own takes about 7,000 tokens (handoff spec, V2.5). */
+export const CONTEXT_FLOOR = 32_768;
+export const contextWarning = (id: string, n: number) => `${id} runs with a ${n.toLocaleString('en-US')}-token window, which an agent can outgrow; set num_ctx on the model, or OLLAMA_CONTEXT_LENGTH`;
+export const isLocal = (id: string) => id.startsWith('ollama/');
 
 export const MODELS_PAGE = 'Settings → Agents → OpenCode models';
 /** What a free model costs instead of money, as the pages and the flow check say it. */
@@ -55,11 +73,16 @@ export const FREE_WARNING = 'a free model: its provider may keep your prompts an
 const perM = (n: number) => `$${Number(n.toFixed(4))}`;
 /**
  * Why an OpenCode step may not run on `id`, or undefined when it may: it must be approved, still be listed, and
- * cost no more than when it was approved. Without a catalogue only the approval is checked.
+ * cost no more than when it was approved. Without a catalogue only the approval is checked. A local model must still
+ * be in Ollama, and Ollama must answer (`local.down`).
  */
-export function modelProblem(id: string, approved: ApprovedModel[], catalogue: Catalogue | null): string | undefined {
+export function modelProblem(id: string, approved: ApprovedModel[], catalogue: Catalogue | null, local?: LocalModels): string | undefined {
   const a = approved.find((m) => m.id === id);
   if (!a) return `${id} is not an approved model; approve it in ${MODELS_PAGE}`;
+  if (isLocal(id)) {
+    if (local?.down) return local.down;
+    return local?.models && !local.models.some((m) => m.id === id) ? `${id} is no longer in Ollama; pick another model` : undefined;
+  }
   if (!catalogue || !id.startsWith('openrouter/')) return undefined;
   const now = catalogue.models.find((m) => m.id === id);
   if (!now) return `${id} is no longer listed by OpenRouter; pick another model`;
@@ -74,6 +97,18 @@ export function modelProblem(id: string, approved: ApprovedModel[], catalogue: C
 /** Free as OpenRouter lists it now, else as it was when approved. */
 export const isFree = (id: string, approved: ApprovedModel[], catalogue: Catalogue | null) =>
   catalogue?.models.find((m) => m.id === id)?.free ?? approved.find((m) => m.id === id)?.free ?? false;
+
+/**
+ * What a step on `id` should be warned of, as one sentence: a free OpenRouter model's privacy, or a local model's
+ * small window. A local model whose window is unknown is not warned of (decided 2026-11-15; see `ollama.ts`).
+ */
+export function modelWarning(id: string, approved: ApprovedModel[], catalogue: Catalogue | null, local?: LocalModels): string | undefined {
+  if (isLocal(id)) {
+    const n = local?.models?.find((m) => m.id === id)?.context;
+    return n && n < CONTEXT_FLOOR ? contextWarning(id, n) : undefined;
+  }
+  return isFree(id, approved, catalogue) ? `${id} is ${FREE_WARNING}` : undefined;
+}
 /** The steps FlowBoard runs for itself, outside any flow (`internal/<id>/`, `internal-steps.ts`). */
 export type InternalStep = 'repo-analyst' | 'backlog-importer';
 /** How one internal step runs, for every project: `effort` null for the model's own; `budgetUsd` the most one run may spend. */
@@ -121,7 +156,7 @@ export const HARNESSES: Record<Harness, { name: string; bin: string; text: strin
     name: 'OpenCode',
     bin: 'opencode',
     text: 'An open-source CLI that runs other providers’ models, one local server per run.',
-    login: 'Runs on the OpenRouter key saved in Settings → Connections → OpenRouter, else on the credentials OpenCode stores itself (opencode auth login). It has no Claude subscription login, so its runs are billed by that provider.',
+    login: 'Runs on the OpenRouter key saved in Settings → Connections → OpenRouter, else on the credentials OpenCode stores itself (opencode auth login). It has no Claude subscription login, so its runs are billed by that provider. Models named ollama/… run in Ollama on this machine and need no key.',
     model: 'providerID/modelID, like openrouter/deepseek/deepseek-v4.1-flash',
   },
 };
@@ -208,7 +243,15 @@ export const INTERNAL_STEP_SCHEMA = z.discriminatedUnion('adapter', [internalOn(
 const usd = z.number().nonnegative();
 /** The approved models, each id once. */
 export const APPROVED_MODELS_SCHEMA = z
-  .array(z.strictObject({ id: z.string().regex(/^openrouter\/\S+$/, { error: 'an OpenRouter model, like openrouter/deepseek/deepseek-v4.1-flash' }), free: z.boolean(), price: z.strictObject({ in: usd, out: usd }), approvedAt: z.string() }))
+  .array(
+    z.strictObject({
+      id: z.string().regex(/^(openrouter|ollama)\/\S+$/, { error: 'an OpenRouter or Ollama model, like openrouter/deepseek/deepseek-v4.1-flash or ollama/gemma4:26b-64k' }),
+      free: z.boolean(),
+      price: z.strictObject({ in: usd, out: usd }),
+      approvedAt: z.string(),
+      local: z.literal(true).optional(),
+    }),
+  )
   .refine((ms) => new Set(ms.map((m) => m.id)).size === ms.length, { error: 'each model once' });
 
 export const OverridesSchema: z.ZodType<Overrides> = z.strictObject({ ...shape, budget: budget(cap) }).partial();

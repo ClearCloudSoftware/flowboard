@@ -28,7 +28,7 @@ import { editor, selectedStep } from './editor.ts';
 import { Pencil } from 'lucide-react';
 import { WarnIcon } from './icons.tsx';
 import { PromptFileEditor, SystemPromptEditor } from './prompt-editor.tsx';
-import { openrouterQuery } from '../projects/api.ts';
+import { modelsQuery } from '../projects/api.ts';
 
 const ADAPTERS = ['claude-code', 'opencode'];
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
@@ -118,7 +118,7 @@ function AddChip({ id, placeholder, options, check, onAdd }: { id: string; place
  * check refuses any other. A value the list lacks, as written in the file, stays shown and marked until it is changed.
  */
 function OpencodeModel({ id, value, unset, onChange }: { id: string; value: string; unset: string; onChange: (v: string) => void }) {
-  const q = useQuery(openrouterQuery);
+  const q = useQuery(modelsQuery);
   const approved = q.data?.approved ?? [];
   const picked = approved.find((m) => m.id === value);
   return (
@@ -129,7 +129,7 @@ function OpencodeModel({ id, value, unset, onChange }: { id: string; value: stri
         {approved.map((m) => (
           <option key={m.id} value={m.id}>
             {m.id}
-            {m.free ? ' · free' : ''}
+            {m.local ? ' · local' : m.free ? ' · free' : ''}
             {m.problem ? ' (refused)' : ''}
           </option>
         ))}
@@ -141,7 +141,8 @@ function OpencodeModel({ id, value, unset, onChange }: { id: string; value: stri
       )}
       {value !== '' && !picked && q.data && <em className="in-err">not an approved model; pick one</em>}
       {picked?.problem && <em className="in-err">{picked.problem}</em>}
-      {picked?.free && <em className="in-err">free: its provider may keep your prompts, which include the project&rsquo;s code</em>}
+      {picked?.free && !picked.local && <em className="in-err">free: its provider may keep your prompts, which include the project&rsquo;s code</em>}
+      {picked?.local && picked.warning && <em className="in-err">{picked.warning}</em>}
     </>
   );
 }

@@ -1,13 +1,23 @@
 'use client';
 /** The app's one navigation: a side rail grouped like the feature map (docs/mockups/nav-options.html, option B). */
 import { queryOptions, useQuery } from '@tanstack/react-query';
-import { Activity, BookOpen, ChevronsUpDown, FolderGit2, GitBranch, LayoutDashboard, LayoutGrid, SlidersHorizontal, Workflow } from 'lucide-react';
+import { Activity, Blocks, BookOpen, ChevronsUpDown, Settings, Coins, Database, FileText, FolderGit2, GitBranch, Inbox, Kanban, LayoutDashboard, LayoutGrid, ListChecks, SlidersHorizontal, Workflow } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Suspense, useEffect, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Sidebar,
   SidebarContent,
@@ -20,8 +30,10 @@ import {
   SidebarMenuItem,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import type { Doc } from './docs/render.ts';
 import { projectsQuery } from './projects/api.ts';
 import { runsQuery } from './runs/api.ts';
+import { SECTIONS } from './settings/nav.tsx';
 
 const LAST = 'flowboard.project'; // the project the rail shows when the page isn't one project's own
 const never = () => () => {};
@@ -35,16 +47,89 @@ const onStorage = (change: () => void) => {
 };
 
 /** `usePathname` suspends under `/p/[slug]`, so the rail renders once with nothing marked, then with the page marked. */
-export function AppSidebar() {
+export function AppSidebar({ docs }: { docs: Doc['toc'] }) {
   return (
-    <Suspense fallback={<Rail path="" />}>
-      <Marked />
+    <Suspense fallback={<Rail path="" docs={docs} />}>
+      <Marked docs={docs} />
     </Suspense>
   );
 }
 
-function Marked() {
-  return <Rail path={usePathname()} />;
+function Marked({ docs }: { docs: Doc['toc'] }) {
+  return <Rail path={usePathname()} docs={docs} />;
+}
+
+const menuLabel = 'text-[10px] tracking-[0.12em] text-muted-foreground uppercase';
+
+/** App-wide settings and the docs, out of the way at the foot of the rail: a menu, a submenu each, settings' sections nested. */
+function AppMenu({ path, docs }: { path: string; docs: Doc['toc'] }) {
+  return (
+    <SidebarMenuItem>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <SidebarMenuButton tooltip="Settings & docs" isActive={path.startsWith('/settings') || path.startsWith('/docs')} className="data-active:shadow-[inset_2px_0_0_var(--run)]">
+            <Settings aria-hidden />
+            <span>Settings &amp; docs</span>
+            <ChevronsUpDown className="ml-auto" aria-hidden />
+          </SidebarMenuButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="right" align="end" className="min-w-56 font-mono text-[13px]">
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <SlidersHorizontal aria-hidden />
+              Settings
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="min-w-52 font-mono text-[13px]">
+              <DropdownMenuLabel className={menuLabel}>FlowBoard on this machine</DropdownMenuLabel>
+              {SECTIONS.map(({ href, title, icon: Icon, pages }) =>
+                pages ? (
+                  <DropdownMenuSub key={href}>
+                    <DropdownMenuSubTrigger>
+                      <Icon aria-hidden />
+                      {title}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="min-w-48 font-mono text-[13px]">
+                      {pages.map((pg) => (
+                        <DropdownMenuItem key={pg.href} asChild>
+                          <Link href={pg.href}>{pg.title}</Link>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                ) : (
+                  <DropdownMenuItem key={href} asChild>
+                    <Link href={href}>
+                      <Icon aria-hidden />
+                      {title}
+                    </Link>
+                  </DropdownMenuItem>
+                ),
+              )}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <BookOpen aria-hidden />
+              Docs
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="min-w-56 font-mono text-[13px]">
+              <DropdownMenuItem asChild>
+                <Link href="/docs">Running agent work</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className={menuLabel}>Jump to</DropdownMenuLabel>
+              {docs.map((t) => (
+                <DropdownMenuItem key={t.id} asChild>
+                  {/* the titles are rendered inline markdown; the menu wants the words */}
+                  <Link href={`/docs#${t.id}`}>{t.title.replace(/<[^>]+>/g, '')}</Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </SidebarMenuItem>
+  );
 }
 
 function Item({ href, icon: Icon, label, active, children }: { href: string; icon: LucideIcon; label: string; active: boolean; children?: ReactNode }) {
@@ -61,7 +146,20 @@ function Item({ href, icon: Icon, label, active, children }: { href: string; ico
   );
 }
 
-function Rail({ path }: { path: string }) {
+/** A screen the feature map plans but nobody has built: its slot is held so the rail doesn't reshuffle when it lands. */
+function Soon({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton aria-disabled tooltip={`${label} · coming soon`} className="text-muted-foreground aria-disabled:opacity-100">
+        <Icon aria-hidden />
+        <span>{label}</span>
+        <span className="ml-auto border border-dashed border-input px-1 text-[9px] leading-[14px] tracking-[0.1em] uppercase">soon</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+function Rail({ path, docs }: { path: string; docs: Doc['toc'] }) {
   // The rail hydrates twice (fallback, then marked); both passes must render what the server did: no data yet.
   const hydrated = useSyncExternalStore(never, () => true, () => false);
   const projects = useQuery(railProjects);
@@ -91,6 +189,7 @@ function Rail({ path }: { path: string }) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
+            <Soon icon={Inbox} label="Inbox" />
             <Item href="/runs" icon={Activity} label="Runs" active={path.startsWith('/runs')}>
               <span className="ml-auto flex gap-1">
                 {waiting > 0 && (
@@ -145,29 +244,36 @@ function Rail({ path }: { path: string }) {
                 </DropdownMenu>
               </SidebarMenuItem>
               <Item href={`/p/${encodeURIComponent(p.slug)}`} icon={LayoutDashboard} label="Overview" active={here === p.slug} />
+              <Soon icon={Kanban} label="Board" />
+              <Soon icon={ListChecks} label="Tasks" />
+              {/* ponytail: Runs and Settings are sections of the project page until they get routes of their own */}
+              <Item href={`/p/${encodeURIComponent(p.slug)}#runs-h`} icon={Activity} label="Runs" active={false} />
               <Item href={`/workspaces?folder=${encodeURIComponent(p.repoPath)}`} icon={GitBranch} label="Workspaces" active={path.startsWith('/workspaces')} />
+              <Soon icon={FileText} label="Artifacts" />
+              <Soon icon={Database} label="Memory" />
+              <Item href={`/p/${encodeURIComponent(p.slug)}#project-settings`} icon={SlidersHorizontal} label="Settings" active={false} />
             </SidebarMenu>
           </SidebarGroup>
         )}
 
-        {/* Library joins Build, and Cost joins Steer, when they're built. */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] tracking-[0.12em] uppercase">Build</SidebarGroupLabel>
           <SidebarMenu>
             <Item href="/flows" icon={Workflow} label="Flows" active={path.startsWith('/flows')} />
+            <Soon icon={Blocks} label="Library" />
           </SidebarMenu>
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] tracking-[0.12em] uppercase">Steer</SidebarGroupLabel>
           <SidebarMenu>
-            <Item href="/settings" icon={SlidersHorizontal} label="Settings" active={path.startsWith('/settings')} />
+            <Soon icon={Coins} label="Cost" />
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-border">
         <SidebarMenu>
-          <Item href="/docs" icon={BookOpen} label="Docs" active={path.startsWith('/docs')} />
+          <AppMenu path={path} docs={docs} />
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>

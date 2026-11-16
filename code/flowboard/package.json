@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,7 +15,9 @@
     "run-agent": "node packages/cli/src/main.ts",
     "run-flow": "node packages/cli/src/flow-main.ts",
     "clean-workspace": "node packages/cli/src/workspace-main.ts",
-    "test:app": "node --test \"app/**/*.test.ts\""
+    "test:app": "node --test \"app/**/*.test.ts\"",
+    "electron": "electron .",
+    "electron:dev": "electron . --dev"
   },
   "dependencies": {
     "@tanstack/react-form": "1.33.5",
@@ -39,6 +42,7 @@
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "electron": "45.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.4.1",
     "shadcn": "4.23.0",

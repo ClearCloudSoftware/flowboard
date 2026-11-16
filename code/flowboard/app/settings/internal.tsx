@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { APP_DEFAULTS, EFFORTS, type Effort, HARNESSES, type Harness, INTERNAL_STEP_SCHEMA, INTERNAL_STEPS, type InternalStep, type InternalStepConfig } from '../../packages/cli/src/settings.ts';
 import { type AppView, appSettingsQuery, updateAppSettings } from '../projects/api.ts';
-import { OpencodeModelSelect } from './openrouter.tsx';
+import { OpencodeModelSelect } from './models.tsx';
 import { ErrorLine, Head } from './settings.tsx';
 
 const OWN = '-'; // Radix keeps '' for "nothing picked"

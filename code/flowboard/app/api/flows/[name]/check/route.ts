@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { draftFlow } from '../../../../../packages/cli/src/flow-files.ts';
-import { modelRules } from '../../../../../packages/cli/src/openrouter.ts';
+import { modelRules } from '../../../../../packages/cli/src/models.ts';
 import { badName, body, dataDir, flowsDir, refused } from '../../local.ts';
 
 /** The live check: what saving the posted draft would write, and what `--check` says of it. Writes nothing. */

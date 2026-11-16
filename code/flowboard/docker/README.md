@@ -21,7 +21,7 @@ steps: …
 ```
 
 run-flow stays on this machine; each step runs in a throwaway `docker run --rm` container from `image`
-(`flowboard-cli` has sh, git, node and both agent CLIs): uid 1000, no capabilities, read-only root with a
+(`flowboard-cli` has sh, git, node, ripgrep and both agent CLIs): uid 1000, no capabilities, read-only root with a
 `/tmp` tmpfs, at most 512 processes. The run's `folder` and artifacts folder are mounted read-write at the
 same paths. `sandbox.env` names the variables passed in; nothing else from this machine's env goes in.
 
@@ -83,7 +83,8 @@ run-flow stays on this machine. One OpenSandbox sandbox per run holds the folder
 folder's own path, and every step runs there as uid 1000. Nothing an agent does touches the folder here:
 
 - **Network:** deny by default. `sandbox.egress` lists the hosts allowed; by default, the API hosts of the
-  steps' adapters (`api.anthropic.com` for claude-code, `openrouter.ai` for `openrouter/` models). Host
+  steps' adapters (`api.anthropic.com` for claude-code, `openrouter.ai` for `openrouter/` models,
+  `host.docker.internal` for `ollama/` models, which run in Ollama on this machine). Host
   names or `*.domain` only; IP addresses are not supported. Add `registry.npmjs.org` if a step installs.
 - **Keys:** `sandbox.credentials` (by default the same adapters' keys: `CLAUDE_CODE_OAUTH_TOKEN`,
   `OPENROUTER_API_KEY`) are read from this machine's env. The box gets fakes; the server's credential vault

@@ -38,6 +38,8 @@ export interface ExecHost {
   readonly profile?: SandboxProfile;
   /** A host folder the process sees at the same path: where a provider puts files the process must read. Absent: the host's temp folder. */
   readonly tmpDir?: string;
+  /** The name the process reaches this machine by, for a server here such as Ollama. Absent: the process runs here, and uses the server's own address. */
+  readonly hostName?: string;
   /**
    * Every tier spawns a local process (the CLI itself, or `docker exec -i …`),
    * so a Node child process with piped stdio is the handle. Providers need
