@@ -21,7 +21,7 @@ steps: …
 ```
 
 run-flow stays on this machine; each step runs in a throwaway `docker run --rm` container from `image`
-(`flowboard-cli` has sh, git, node and both agent CLIs): uid 1000, no capabilities, read-only root with a
+(`flowboard-cli` has sh, git, node, ripgrep and both agent CLIs): uid 1000, no capabilities, read-only root with a
 `/tmp` tmpfs, at most 512 processes. The run's `folder` and artifacts folder are mounted read-write at the
 same paths. `sandbox.env` names the variables passed in; nothing else from this machine's env goes in.
 

@@ -1,8 +1,9 @@
 # run-flow and run-agent in one container: the CLI, its agents and their questions all inside the box.
 # Build from code/flowboard:  docker build -f docker/Dockerfile -t flowboard-cli .
-# Also the `sandbox: { image: flowboard-cli }` image for per-step boxes: it has sh, git, node, pnpm and both agent CLIs.
+# Also the `sandbox: { image: flowboard-cli }` image for per-step boxes: it has sh, git, node, pnpm and both agent CLIs,
+# and ripgrep, which OpenCode's glob and grep tools run (without it they fail with "ripgrep execution failed").
 FROM node:24.11.1-slim
-RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates ripgrep && rm -rf /var/lib/apt/lists/* \
  && npm install -g pnpm@10.23.0 @anthropic-ai/claude-code@2.1.302 opencode-ai@1.19.3 && npm cache clean --force
 WORKDIR /opt/flowboard
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
