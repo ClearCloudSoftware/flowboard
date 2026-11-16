@@ -20,8 +20,13 @@ RUN uv tool install --python 3.12 graphifyy==0.7.5 \
 WORKDIR /opt/lamproom
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages ./packages
-# ponytail: the CLI and its packages only; the Next app is not needed to run flows
-RUN pnpm install --frozen-lockfile --filter @lamproom/cli... && chown -R node:node /opt/lamproom
+# ponytail: the CLI and its packages only, ~50 MB instead of ~1.4 GB. pnpm installs the workspace root's dependencies
+# (the Next app's) whatever --filter says, so they are dropped from the root manifest and the lockfile is re-fitted
+# (no --frozen-lockfile; its pinned versions are kept). The Agent SDK's bundled Claude binaries (glibc and musl, ~270 MB
+# each) are skipped: the Claude provider always passes pathToClaudeCodeExecutable, the `claude` installed above.
+RUN npm pkg delete dependencies devDependencies \
+ && printf 'ignoredOptionalDependencies:\n  - "@anthropic-ai/claude-agent-sdk-*"\nsupportedArchitectures:\n  libc: [glibc]\n' >> pnpm-workspace.yaml \
+ && pnpm install --prod && rm -rf "$(pnpm store path)" /root/.cache && chown -R node:node /opt/lamproom
 # Serena would run pyright through uvx, which writes into the read-only /opt/uv/tools: it runs the installed one.
 RUN sed -i 's|^ls_specific_settings: {}|ls_specific_settings: { python: { ls_path: /usr/local/bin/pyright-langserver } }|' /opt/serena/serena_config.yml \
  && grep -q pyright-langserver /opt/serena/serena_config.yml
