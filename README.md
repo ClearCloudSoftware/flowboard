@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="docs/branding/lamproom/lamproom-tower-animated.svg" alt="Lamproom" width="128" height="128">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/branding/lamproom/lamproom-tower-animated-on-dark.svg">
+  <img src="docs/branding/lamproom/lamproom-tower-animated.svg" alt="Lamproom" width="128" height="128">
+</picture>
 
 # Lamproom
 
