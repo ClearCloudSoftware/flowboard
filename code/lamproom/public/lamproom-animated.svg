@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256" role="img" aria-label="Lamproom">
+  <title>Lamproom</title>
+  <style>
+    /* one beam turning around the lamp room, seen from the side: its length is sin(angle), so it sweeps
+       right, passes behind the lantern, comes round on the left, and the lamp flares when it faces you.
+       The cubic-beziers are quarter sine waves. */
+    .beam { animation: sweep 3s infinite, dim 3s infinite cubic-bezier(.37,0,.63,1) }
+    .glow { opacity: 0; animation: glow 3s infinite ease-in-out }
+    .lamp { animation: flare 3s infinite ease-in-out }
+    @keyframes sweep {
+      0%, 50%, 100% { transform: scaleX(0); animation-timing-function: cubic-bezier(.333,.524,.667,1) }
+      25% { transform: scaleX(1); animation-timing-function: cubic-bezier(.333,0,.667,.476) }
+      75% { transform: scaleX(-1); animation-timing-function: cubic-bezier(.333,0,.667,.476) }
+    }
+    @keyframes dim { 0%, 100% { fill-opacity: .38 } 50% { fill-opacity: .16 } }
+    @keyframes glow { 0%, 100% { opacity: .3 } 14%, 86% { opacity: 0 } }
+    @keyframes flare { 0%, 100% { transform: scale(2) } 14%, 86% { transform: scale(1) } }
+    /* reduced motion: a still beam pointing right */
+    @media (prefers-reduced-motion: reduce) { .beam, .glow, .lamp { animation: none } }
+  </style>
+  <clipPath id="outside"><path clip-rule="evenodd" d="M0 0h64v64H0zM16 23h32v32H16z"/></clipPath>
+  <rect class="glow" x="8" y="7" width="48" height="48" fill="#B8792F"/>
+  <g clip-path="url(#outside)"><g transform="translate(32 39)"><polygon class="beam" points="0,0 48,-10 48,10" fill="#B8792F" fill-opacity="0.3"/></g></g>
+  <path fill="#141414" fill-rule="evenodd" d="M32 3L54 23h-6v32h8v6H8v-6h8V23h-6zM20 27v24h24V27z"/>
+  <g transform="translate(32 39)"><rect class="lamp" x="-6" y="-6" width="12" height="12" fill="#B8792F"/></g>
+</svg>

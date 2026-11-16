@@ -11,6 +11,7 @@ import { type Draft, draftFrom, type PageId, problems, toSettings } from '../pro
 import { SettingsPanel } from '../projects/settings-pages.tsx';
 import { SOURCES } from '../projects/wizard/wizard.tsx';
 import { GhFix } from './github.tsx';
+import { Loader } from '@/components/loader';
 
 export const ErrorLine = ({ error }: { error: Error | null }) =>
   error && (
@@ -45,7 +46,7 @@ export function Field({ title, htmlFor, text, children }: { title: string; htmlF
 /** `children` once /api/settings has answered. */
 function WithView({ children }: { children: (view: AppView) => ReactNode }) {
   const view = useQuery(appSettingsQuery);
-  if (view.isPending) return <p className="m-0 text-muted-foreground">Loading…</p>;
+  if (view.isPending) return <Loader />;
   if (view.isError)
     return (
       <p role="alert" className="m-0 text-fail">

@@ -111,7 +111,9 @@ function Rail({ path }: { path: string }) {
     <Sidebar collapsible="icon" className="font-mono text-[13px]">
       <SidebarHeader className="gap-1 border-b border-border">
         <div className="flex items-center justify-between">
-          <Link href="/" className="px-2 font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+          <Link href="/" className="flex items-center gap-2 px-2 font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a static SVG mark */}
+            <img src="/lamproom-mark.svg" width={22} height={22} alt="" aria-hidden />
             lamproom
           </Link>
           <SidebarTrigger title="Collapse or expand (⌘B)" />

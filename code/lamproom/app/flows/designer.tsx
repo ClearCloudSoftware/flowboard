@@ -18,6 +18,7 @@ import { editor, selectedStep } from './editor.ts';
 import { Inspector } from './inspector.tsx';
 import { Library } from './library.tsx';
 import { Strip } from './strip.tsx';
+import { Loader } from '@/components/loader';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const isField = (t: EventTarget | null) => t instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName);
@@ -225,7 +226,7 @@ export function Designer() {
               </span>
             </div>
             {!file ? (
-              <div className="in-empty">{library.isError ? library.error.message : library.data ? 'Pick a flow from the library, or name a new one.' : 'Loading…'}</div>
+              <div className="in-empty">{library.isError ? library.error.message : library.data ? 'Pick a flow from the library, or name a new one.' : <Loader />}</div>
             ) : view === 'yaml' || !draft ? (
               <>
                 {unreadable && <div className="notice">This file cannot be drawn: {unreadable}. Fix it by hand; the strip below says what is wrong.</div>}

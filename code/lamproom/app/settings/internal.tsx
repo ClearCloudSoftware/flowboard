@@ -13,6 +13,7 @@ import { APP_DEFAULTS, EFFORTS, type Effort, HARNESSES, type Harness, INTERNAL_S
 import { type AppView, appSettingsQuery, updateAppSettings } from '../projects/api.ts';
 import { OpencodeModelSelect } from './models.tsx';
 import { ErrorLine, Head } from './settings.tsx';
+import { Loader } from '@/components/loader';
 
 const OWN = '-'; // Radix keeps '' for "nothing picked"
 const label = 'grid content-start gap-1 text-[11px] text-muted-foreground'; // content-start: a note under one field leaves the others where they are
@@ -111,7 +112,7 @@ export function InternalPage() {
   return (
     <>
       <Head title="Internal steps">Steps Lamproom runs for itself, outside any flow and for every project. Choose what each runs on here; what it may read and write is fixed, and it never appears in a project’s library.</Head>
-      {view.isPending && <p className="m-0 text-muted-foreground">Loading…</p>}
+      {view.isPending && <Loader />}
       <ErrorLine error={view.error} />
       {view.data &&
         (Object.keys(INTERNAL_STEPS) as InternalStep[]).map((id) => <Step key={`${id}:${JSON.stringify(view.data.app.internal[id])}`} id={id} view={view.data} />)}

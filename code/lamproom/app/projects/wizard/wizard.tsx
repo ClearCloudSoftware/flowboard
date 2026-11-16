@@ -16,6 +16,7 @@ import { type Ctx, type Draft, draftFrom, note, problems, SETTING_PAGES } from '
 import { MARK, pageState, SettingPage } from '../settings-pages.tsx';
 import { Finish } from './finish.tsx';
 import { ConnectBox, RepoStep } from './repo-step.tsx';
+import { Loader } from '@/components/loader';
 
 const ICON = { software: Code, research: BookOpen, writing: PenLine, data: Database };
 export const SOURCES = [
@@ -171,7 +172,7 @@ export function Wizard({ onClose }: { onClose: () => void }) {
     head = <h2>{connected ? 'Pick the repository' : state === 'rejected' ? 'Reconnect GitHub' : 'Connect your GitHub account'}</h2>;
     const owner = st.owner ?? (gh.data?.status.state === 'connected' ? gh.data.status.login : '');
     body = gh.isPending ? (
-      <p className="text-muted-foreground">Asking the GitHub CLI who is logged in…</p>
+      <Loader label="Asking the GitHub CLI who is logged in…" />
     ) : gh.isError ? (
       <p className="text-fail">{gh.error.message}</p>
     ) : connected ? (

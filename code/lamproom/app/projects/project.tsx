@@ -36,6 +36,7 @@ import { Figures } from './list.tsx';
 import { type Draft, draftFrom, type PageId, problems, toLimits, toOverrides } from './settings-model.ts';
 import { lbl, SettingsPanel } from './settings-pages.tsx';
 import { Topbar } from './topbar.tsx';
+import { Loader } from '@/components/loader';
 
 const DOT: Record<RunStatus, string> = { starting: 'bg-run', running: 'bg-run', waiting: 'bg-wait', paused: 'bg-wait', done: 'bg-[var(--done)]', failed: 'bg-fail' };
 /** `2026-11-12T13-32-04-delivery` -> `2026-11-12 13:32:04`. */
@@ -304,7 +305,7 @@ export function ProjectPage() {
         )}
       </Topbar>
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-6">
-        {projects.isPending && <p className="text-muted-foreground">Loading…</p>}
+        {projects.isPending && <Loader />}
         {projects.isError && (
           <p role="alert" className="text-fail">
             {projects.error.message}
