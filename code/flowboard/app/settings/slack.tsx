@@ -16,13 +16,13 @@ import { ErrorLine, Head, icon, Row, Soon, ul } from './settings.tsx';
 const warn = 'm-0 flex items-start gap-2 border-l-[3px] border-wait bg-[var(--wait-soft)] px-2.5 py-1.5 font-sans text-xs text-wait';
 const small = 'text-[11px] text-muted-foreground';
 
-// The Slack app FlowBoard needs: a bot that may post (chat:write), buttons and modals (interactivity), over Socket Mode.
+// The Slack app Lamproom needs: a bot that may post (chat:write), buttons and modals (interactivity), over Socket Mode.
 const MANIFEST = `display_information:
-  name: FlowBoard
-  description: Questions from FlowBoard runs that waited too long, answered in place.
+  name: Lamproom
+  description: Questions from Lamproom runs that waited too long, answered in place.
 features:
   bot_user:
-    display_name: FlowBoard
+    display_name: Lamproom
     always_online: false
 oauth_config:
   scopes:
@@ -67,7 +67,7 @@ function SlackHelp() {
         <DialogHeader>
           <DialogTitle className="font-sans">Set up Slack</DialogTitle>
           <DialogDescription>
-            About ten minutes, once. You make a small Slack app in your workspace, paste its two tokens here, and invite its bot to the channels your projects escalate to. FlowBoard connects out to Slack over Socket Mode, so this machine needs no public address.
+            About ten minutes, once. You make a small Slack app in your workspace, paste its two tokens here, and invite its bot to the channels your projects escalate to. Lamproom connects out to Slack over Socket Mode, so this machine needs no public address.
           </DialogDescription>
         </DialogHeader>
         <ol className="m-0 grid list-decimal gap-3 pl-5 text-[13px] leading-relaxed">
@@ -96,21 +96,21 @@ function SlackHelp() {
           </li>
           <li>
             <p className={h}>Paste both here</p>
-            Paste the <code className={k}>xoxb-</code> token in <b>Bot token</b> and the <code className={k}>xapp-</code> token in <b>App-level token</b>, then <b>Save</b> and <b>Test</b>. Test names the workspace and the bot, and within a few seconds the line above reads <i>Connected to &lt;workspace&gt;</i>. The tokens are kept in <code>secrets.json</code> in FlowBoard&rsquo;s data folder; no page shows them again.
+            Paste the <code className={k}>xoxb-</code> token in <b>Bot token</b> and the <code className={k}>xapp-</code> token in <b>App-level token</b>, then <b>Save</b> and <b>Test</b>. Test names the workspace and the bot, and within a few seconds the line above reads <i>Connected to &lt;workspace&gt;</i>. The tokens are kept in <code>secrets.json</code> in Lamproom&rsquo;s data folder; no page shows them again.
           </li>
           <li>
             <p className={h}>Invite the bot to your channels</p>
-            In Slack, in each channel a project escalates to, type <code className={k}>/invite @FlowBoard</code>. The default channel is <code className={k}>#flowboard</code>; change it, and how many minutes a question waits first, under <b>Settings → Defaults</b> or in a project&rsquo;s own settings. A channel the bot is not in shows as a problem on this page.
+            In Slack, in each channel a project escalates to, type <code className={k}>/invite @Lamproom</code>. The default channel is <code className={k}>#lamproom</code>; change it, and how many minutes a question waits first, under <b>Settings → Defaults</b> or in a project&rsquo;s own settings. A channel the bot is not in shows as a problem on this page.
           </li>
           <li>
-            <p className={h}>Check the FlowBoard address</p>
-            Each Slack message has an <b>Open in FlowBoard</b> link. If you reach FlowBoard on anything other than <code className={k}>http://localhost:3000</code>, set <b>FlowBoard address</b> below so the link works.
+            <p className={h}>Check the Lamproom address</p>
+            Each Slack message has an <b>Open in Lamproom</b> link. If you reach Lamproom on anything other than <code className={k}>http://localhost:3000</code>, set <b>Lamproom address</b> below so the link works.
           </li>
         </ol>
         <div className="grid gap-1 border-t border-border pt-3 text-[13px] leading-relaxed">
           <p className={h}>What happens then</p>
           <p className="m-0">
-            A question a run asks that nobody answers in FlowBoard within the project&rsquo;s wait is posted to its channel. <b>Answer</b> opens a modal in Slack; the first answer, in Slack or in FlowBoard, wins, and the message is updated either way. A project&rsquo;s budget alert and cap are posted to the same channel, once each a month. Answers from Slack need FlowBoard running: it holds the connection.
+            A question a run asks that nobody answers in Lamproom within the project&rsquo;s wait is posted to its channel. <b>Answer</b> opens a modal in Slack; the first answer, in Slack or in Lamproom, wins, and the message is updated either way. A project&rsquo;s budget alert and cap are posted to the same channel, once each a month. Answers from Slack need Lamproom running: it holds the connection.
           </p>
           <p className={h}>If it does not connect</p>
           <ul className="m-0 grid list-disc gap-0.5 pl-5">
