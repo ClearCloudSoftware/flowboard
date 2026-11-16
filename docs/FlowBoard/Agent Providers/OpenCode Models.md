@@ -10,7 +10,7 @@ OpenCode's steps run on models from two sources: **OpenRouter**, paid or free, a
 Was *OpenRouter Models And Key* until Ollama joined it on 2026-11-15.
 
 > [!check] Built 2026-11-13 (OpenRouter), 2026-11-15 (Ollama)
-> OpenRouter on `feature/opencode-models`, merged into `dev` as `0839946`. Ollama on `feature/ollama-models`, verified first (the handoff spec's Part 1, `docs/superpowers/specs/2026-11-13-ollama-provider-handoff.md`). Code: `packages/cli/src/models.ts` (both sources' rules, `prepareRun`), `openrouter.ts` (the key, OpenRouter's list), `ollama.ts` (Ollama's address, list, window and OpenCode config), `settings.ts` (`ApprovedModel`, `modelProblem`, `modelWarning`), the check in `config.ts`, the pages in `app/settings/models.tsx`, the routes `app/api/models/` and `app/api/openrouter/key/`. Tests: `packages/cli/test/openrouter.test.ts`, `ollama.test.ts`, and `ollama-live.test.ts` (opt-in, free).
+> OpenRouter on `feature/opencode-models`, merged into `dev` as `0839946`. Ollama on `feature/ollama-models`, merged into `dev` as `9d2f082` (2026-11-16), verified first (the handoff spec's Part 1, `docs/superpowers/specs/2026-11-13-ollama-provider-handoff.md`). Code: `packages/cli/src/models.ts` (both sources' rules, `prepareRun`), `openrouter.ts` (the key, OpenRouter's list), `ollama.ts` (Ollama's address, list, window and OpenCode config), `settings.ts` (`ApprovedModel`, `modelProblem`, `modelWarning`), the check in `config.ts`, the pages in `app/settings/models.tsx`, the routes `app/api/models/` and `app/api/openrouter/key/`. Tests: `packages/cli/test/openrouter.test.ts`, `ollama.test.ts`, and `ollama-live.test.ts` (opt-in, free).
 
 ## The rule
 
