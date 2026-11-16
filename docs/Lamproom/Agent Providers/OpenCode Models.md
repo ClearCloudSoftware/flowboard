@@ -38,8 +38,8 @@ A model that got cheaper still runs. Without a saved list (before the first fetc
 
 | Page | What it does |
 |---|---|
-| **Settings → Connections → OpenRouter** (`/settings/connections/openrouter`) | Save, replace or remove the key. Shows which key runs would use, by its last four characters, never the key. **Test** asks OpenRouter for the key's name, credit limit, spend and what is left |
-| **Settings → Connections → Ollama** (`/settings/connections/ollama`) | Ollama's address, whether it answers and its version, how many local tool-capable models it has, and how the address, the list and the window are decided |
+| **Settings → LLM Provider → OpenRouter** (`/settings/llm-providers/openrouter`) | Save, replace or remove the key. Shows which key runs would use, by its last four characters, never the key. **Test** asks OpenRouter for the key's name, credit limit, spend and what is left |
+| **Settings → LLM Provider → Ollama** (`/settings/llm-providers/ollama`) | Ollama's address, whether it answers and its version, how many local tool-capable models it has, and how the address, the list and the window are decided |
 | **Settings → Agents → OpenCode models** (`/settings/agents/models`) | One tab per source. **OpenRouter**: the models with their prices per million input and output tokens and context size, filtered by text or by *all / free / approved*; **Fetch again** reloads the list. **Ollama**: the local models with their size, the window they run with (with where it was read from, or *default*, and a warning mark below 32,768) and their maximum; **Ask again** asks Ollama. A checkbox approves a model; a free OpenRouter one asks first, with the privacy warning; a local one does not. Above the tabs, a banner lists each approved model that is refused now, with **Approve again** (a price rise) or **Remove** |
 
 The model is then **picked, never typed**, from the approved models:

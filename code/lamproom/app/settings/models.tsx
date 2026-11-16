@@ -226,7 +226,7 @@ export function OpencodeModelsPage() {
           {view.data.key.source === null && (
             <p className={warn}>
               No OpenRouter key saved; runs use OpenCode&rsquo;s own login.{' '}
-              <Link href="/settings/connections/openrouter" className="underline">
+              <Link href="/settings/llm-providers/openrouter" className="underline">
                 Save one
               </Link>
               .
@@ -300,7 +300,7 @@ export function OpencodeModelsPage() {
           {ollama.error && (
             <p className={warn}>
               {ollama.error}{' '}
-              <Link href="/settings/connections/ollama" className="underline">
+              <Link href="/settings/llm-providers/ollama" className="underline">
                 Ollama
               </Link>
             </p>
