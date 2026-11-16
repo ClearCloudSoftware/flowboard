@@ -10,6 +10,7 @@ import { projectsQuery, usd } from './api.ts';
 import type { ProjectView } from './api.ts';
 import { Topbar } from './topbar.tsx';
 import { Wizard } from './wizard/wizard.tsx';
+import { Loader } from '@/components/loader';
 
 /** The run statuses a card counts, in a run's order; `starting` is counted as running. */
 const FIGURES = [
@@ -91,7 +92,7 @@ export function Projects() {
           <span className="flex-1" />
           <span className="text-xs text-muted-foreground">Each one is a git repo on this machine. Runs in it are counted on its card.</span>
         </div>
-        {projects.isPending && <p className="text-muted-foreground">Loading projects…</p>}
+        {projects.isPending && <Loader label="Loading projects…" />}
         {projects.isError && (
           <p role="alert" className="border-l-2 border-fail px-3 py-2 text-fail">
             {projects.error.message}

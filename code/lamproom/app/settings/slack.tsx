@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { ADDRESS, ADDRESS_RE } from '../../packages/cli/src/settings.ts';
 import { removeSlackTokens, saveSlackTokens, type SlackView, slackQuery, testSlackTokens, updateAppSettings } from '../projects/api.ts';
 import { ErrorLine, Head, icon, Row, Soon, ul } from './settings.tsx';
+import { Loader } from '@/components/loader';
 
 const warn = 'm-0 flex items-start gap-2 border-l-[3px] border-wait bg-[var(--wait-soft)] px-2.5 py-1.5 font-sans text-xs text-wait';
 const small = 'text-[11px] text-muted-foreground';
@@ -195,7 +196,7 @@ function Slack() {
   return (
     <Row icon={icon(MessageSquare)} name="Slack" help={<SlackHelp />} text="A question nobody answered in Lamproom is posted to the channel a project's escalation names, after its wait, and can be answered there; the first answer, here or there, wins. A project's budget alert and cap are posted too.">
       {!v ? (
-        view.isError ? <ErrorLine error={view.error} /> : <p className="m-0 text-xs text-muted-foreground">Loading…</p>
+        view.isError ? <ErrorLine error={view.error} /> : <Loader inline className="text-xs" />
       ) : (
         <div className="grid gap-2 font-sans text-[13px]">
           <Status v={v} />
