@@ -1,6 +1,6 @@
 'use client';
 /** The settings sidebar: one entry per section, the one shown marked; a section with pages lists them under it while open. */
-import { Bot, Cog, type LucideIcon, Plug, Settings, SlidersHorizontal, Workflow } from 'lucide-react';
+import { Bot, BrainCircuit, Cog, type LucideIcon, Plug, Settings, SlidersHorizontal, Workflow } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -14,8 +14,15 @@ export const SECTIONS: { href: string; title: string; icon: LucideIcon; pages?: 
       { href: '/settings/connections/repositories', title: 'Source repositories' },
       { href: '/settings/connections/tasks', title: 'Task providers' },
       { href: '/settings/connections/escalation', title: 'Escalation channels' },
-      { href: '/settings/connections/openrouter', title: 'OpenRouter' },
-      { href: '/settings/connections/ollama', title: 'Ollama' },
+    ],
+  },
+  {
+    href: '/settings/llm-providers',
+    title: 'LLM Provider',
+    icon: BrainCircuit,
+    pages: [
+      { href: '/settings/llm-providers/openrouter', title: 'OpenRouter' },
+      { href: '/settings/llm-providers/ollama', title: 'Ollama' },
     ],
   },
   {
