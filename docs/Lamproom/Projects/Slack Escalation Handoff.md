@@ -35,6 +35,8 @@ The plan is `docs/superpowers/plans/2026-11-15-slack-escalation.md`.
 
 ## Setting up Slack
 
+The same steps are in the app: the round **?** beside Slack on Settings → Connections → Escalation channels opens them in a modal, with a **Copy** button for the manifest (`app/settings/slack.tsx`, `MANIFEST`). Change both together.
+
 1. On [api.slack.com/apps](https://api.slack.com/apps), **Create New App** → **From a manifest**, pick the workspace, and paste:
 
    ```yaml
