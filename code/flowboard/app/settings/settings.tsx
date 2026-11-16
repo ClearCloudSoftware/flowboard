@@ -85,13 +85,14 @@ export function GeneralPage() {
 }
 
 /** A connection's row: its icon, name, what it is for, and what it says now. */
-export function Row({ icon, name, text, soon, children }: { icon: ReactNode; name: string; text: string; soon?: boolean; children?: ReactNode }) {
+export function Row({ icon, name, text, soon, help, children }: { icon: ReactNode; name: string; text: string; soon?: boolean; help?: ReactNode; children?: ReactNode }) {
   return (
     <li className="grid grid-cols-[20px_minmax(0,1fr)] gap-x-3 gap-y-2 border-b border-border px-4 py-3 last:border-b-0">
       <span className="pt-0.5 text-muted-foreground">{icon}</span>
       <div className="grid gap-1">
         <div className="flex flex-wrap items-center gap-2">
           <b className="font-sans text-sm font-semibold">{name}</b>
+          {help}
           {soon && <span className="border border-border px-1.5 text-[11px] text-muted-foreground">coming soon</span>}
         </div>
         <p className="m-0 font-sans text-xs text-[var(--ink-2)]">{text}</p>
