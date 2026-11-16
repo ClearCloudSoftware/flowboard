@@ -5,6 +5,9 @@ module: Memory
 
 # Local Memory Adapter
 
+> [!done] Built (2026-11-15), project scope only
+> Not SQLite: a JSON file per project, `<data>/memory/<project id>.json` (`packages/cli/src/memory.ts`), at most 500 notes of 500 characters, a repeat replacing the older copy. Recall ranks by the words a note shares with the attempt's task and prompt, then by recency (Open Questions #5, #7). See [[Project Memory Handoff]].
+
 The first real adapter. *"A `memories` table with an FTS5 index in the same `flowboard.db`. Keyword recall, ranked by scope and recency. No embeddings, no extraction model, no extra container."* (PRD §11.2)
 
 The feature map §21 says it plainly: *"**Starts simple** — The first version keeps memories in FlowBoard's own database and finds them by keyword, newest first: nothing extra to install or pay for."*

@@ -5,6 +5,9 @@ module: Memory
 
 # Memory Recall
 
+> [!done] Built (2026-11-15), project scope only
+> run-flow recalls before every agent attempt, resumed ones included (#10), from the project scope only, with the attempt's preamble and step prompt as the query; a store it cannot read leaves the attempt without memory and logs a line (#28). See [[Project Memory Handoff]].
+
 The first of the two calls. Before launch, the runner asks the store for what earlier runs learned that is relevant to this run.
 
 > [!quote] `09-memory.md`

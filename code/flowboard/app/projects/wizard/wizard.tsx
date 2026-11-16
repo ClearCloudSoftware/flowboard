@@ -66,7 +66,7 @@ export function Wizard({ onClose }: { onClose: () => void }) {
   const type = st.type ? PROJECT_TYPES[st.type] : undefined;
   const ctx: Ctx | undefined =
     app.data && type
-      ? { base: resolveSettings(app.data.app, type.id, {}), os: app.data.machine.os, typeName: type.name, flows: type.flows, repo: st.repo && { name: st.repo.name, branch: st.repo.defaultBranch, sizeKb: st.repo.sizeKb } }
+      ? { base: resolveSettings(app.data.app, type.id, {}), os: app.data.machine.os, typeName: type.name, flows: type.flows, repo: st.repo && { name: st.repo.name, branch: st.repo.defaultBranch } }
       : undefined;
   const draft = st.draft ?? (ctx ? draftFrom(ctx.base, {}) : undefined);
   const pr = draft && ctx ? problems(draft, ctx) : undefined;

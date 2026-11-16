@@ -7,6 +7,9 @@ module: Projects
 
 > **Create a new project** — *A short form: name it and choose which recipe new tasks should follow (or start empty).* (feature map §1)
 
+> [!check] Built, 2026-11-13: the repo analyst
+> Once a GitHub clone is registered, the clone job starts the repo analyst (`startAnalysis` in `packages/cli/src/analysis-run.ts`) and logs `-- analysis started: run <name>`, or `-- analysis not started: <why>`; a refusal never fails the clone. The analyst is a run of the new project: its isolation, its monthly cap, its run folder in `runs/`. The record keeps only the run's name (`analysis.run`); the pages read its status and its `proposal` (`analysisView`), parsed as untrusted JSON (`parseProposal` in `analysis.ts`: one-line commands of at most 500 characters, host names only, short lists). The wizard's done screen and the project page show the proposals with **Accept**: the check command goes to the repo's `.flowboard.yaml`, the hosts to the record's `networkHosts` ([[Project Settings]]). A local project gets **Analyse** instead.
+
 ## What the sources specify
 
 | Source | Says |

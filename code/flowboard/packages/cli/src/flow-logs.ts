@@ -6,7 +6,8 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FlowState, Gate, RunRecord } from '../../core/src/flow/engine.ts';
 import { hostGit } from '@flowboard/adapters';
-import type { PageAsk } from './ask/page.ts';
+import { z } from 'zod';
+import { type PageAsk, QuestionsSchema } from './ask/page.ts';
 import { isDir, isFile } from './config.ts';
 import type { FlowConfig } from './flow-config.ts';
 import { findProject } from './isolation.ts';
@@ -79,12 +80,25 @@ const alive = (pid: unknown) => {
     return (e as NodeJS.ErrnoException).code === 'EPERM';
   }
 };
+/**
+ * An ask as run-flow writes it. The run folder is FlowBoard's, but an agent on this machine (Trusted) can write
+ * there, so a file is checked before the page or Slack renders it; one that does not pass is left out.
+ */
+const AskSchema = z.object({
+  id: z.string().regex(/^[\w-]+$/),
+  heading: z.string(),
+  at: z.string().default(''), // missing: never escalates (Date.parse('') is NaN)
+  questions: QuestionsSchema,
+});
 const asksOf = (dir: string): PageAsk[] =>
   isDir(join(dir, 'asks'))
     ? readdirSync(join(dir, 'asks'))
         .filter((f) => f.endsWith('.json'))
         .sort()
-        .flatMap((f) => (json(join(dir, 'asks', f)) as PageAsk | undefined) ?? [])
+        .flatMap((f) => {
+          const a = AskSchema.safeParse(json(join(dir, 'asks', f)));
+          return a.success ? [a.data] : [];
+        })
     : [];
 const hostOf = (dir: string) => json(join(dir, 'host.json')) as { pid?: number; page?: boolean } | undefined;
 
@@ -235,7 +249,8 @@ export function readArtifact(runsDir: string, name: string, type: string): strin
 
 /**
  * Writes the page's answer to the open ask `id` of run `name`, once each answer fits its question: a select's
- * value is one of its options, a required question is answered. Returns why not, or undefined when written.
+ * value is one of its options, a required question is answered. Returns why not, or undefined when written; a second
+ * answer before the host reads the first is `'already answered'`.
  */
 export function answerAsk(runsDir: string, name: string, id: string, answers: Record<string, unknown>): string | undefined {
   const run = readRun(runsDir, name);
@@ -257,7 +272,13 @@ export function answerAsk(runsDir: string, name: string, id: string, answers: Re
     if (q.kind === 'text' && typeof v !== 'string') return `${q.prompt}: text`;
   }
   const picked = Object.fromEntries(ask.questions.map((q) => [q.id, answers[q.id] === '' ? null : (answers[q.id] ?? null)]));
-  writeFileSync(join(runsDir, name, 'answers', `${id}.json`), JSON.stringify(picked));
+  try {
+    // Exclusive: the first answer wins, whether from the page or from Slack, until the host takes it away.
+    writeFileSync(join(runsDir, name, 'answers', `${id}.json`), JSON.stringify(picked), { flag: 'wx' });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'EEXIST') return 'already answered';
+    throw e;
+  }
   return undefined;
 }
 

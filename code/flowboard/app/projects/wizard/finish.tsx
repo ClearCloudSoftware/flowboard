@@ -9,6 +9,7 @@ import { FOLDER, FOLDER_RE, type ProjectType } from '../../../packages/cli/src/s
 import { type AppView, cloneJobQuery, cloneLost, startClone, targetQuery } from '../api.ts';
 import { type Ctx, type Draft, fromLabel, limitsText, type PageId, problems, SETTING_PAGES, summary, toLimits, toOverrides } from '../settings-model.ts';
 import { Warn } from '../settings-pages.tsx';
+import { Analysis } from '../analysis.tsx';
 import { Frame, type WizardState } from './wizard.tsx';
 
 interface Props {
@@ -94,9 +95,10 @@ export function Finish({ st, set, draft, ctx, type, slug, parent, app, connected
             </span>
             <span>knowledge: {s.knowledge}</span>
             {limitsText(draft.v) && <span className="text-wait">.flowboard.yaml is new in the repo: commit it so the limits travel with the code</span>}
-            <span className="text-muted-foreground">Next: set the check command on the project page; {type.flows[0]} runs it.</span>
+            <span className="text-muted-foreground">Next: accept the proposals below, or later on the project page.</span>
           </div>
         )}
+        {done && <div className="mb-2.5"><Analysis projectId={done.id} mode="wizard" /></div>}
         {failed && <Warn>{failed}</Warn>}
         {!done && !failed && (
           <>
@@ -164,7 +166,7 @@ export function Finish({ st, set, draft, ctx, type, slug, parent, app, connected
         {row('memory', s.memory, 'memory', src('memory'))}
         {row('knowledge', s.knowledge, 'knowledge', src('knowledge'), pr.warns.some((w) => w.caution && w.page === 'knowledge'))}
         {row('draft mode', s.draft, 'draft', src('draft'))}
-        {row('check command', 'set on the project page after cloning')}
+        {row('check command', 'proposed by the analysis agent after cloning')}
       </div>
       <div className={`mb-1.5 ${small} tracking-[0.12em] uppercase`}>clone into</div>
       <div className="mb-2 grid gap-2 sm:grid-cols-2">

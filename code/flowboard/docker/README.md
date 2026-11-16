@@ -36,6 +36,23 @@ same paths. `sandbox.env` names the variables passed in; nothing else from this 
   your provider's key) in the env, not in `~/.local/share/opencode/auth.json`.
 - A `folder` that contains FlowBoard's own code sees that part read-only.
 
+### Knowledge assets in the image
+
+The image also carries what a project's knowledge build needs offline (`packages/cli/src/knowledge.ts`): uv
+0.9.10 with its own Python, `graphifyy==0.7.5`, Serena v2.1.0 (commit `5e4f5cd`) and Serena's TypeScript/JavaScript
+and Python language servers, in `/opt/serena`. `fb-serena` runs Serena with FlowBoard's config
+(`internal/knowledge/serena_config.yml`) from `/tmp/serena`, since a box's root is read-only. A Normal or Untrusted
+project's build runs `graphify` and `fb-serena` in a shell step's box (`--network none`); its agents get
+`fb-serena start-mcp-server` as an MCP server inside their own box.
+
+To try an image built from a branch without replacing the shared `flowboard-cli`, build it under another tag and
+point runs at it:
+
+```sh
+docker build -f docker/Dockerfile -t flowboard-cli:knowledge .     # from code/flowboard
+FLOWBOARD_IMAGE=flowboard-cli:knowledge pnpm dev                   # or run-flow; the box image is boxImage() in isolation.ts
+```
+
 ## 2. The whole CLI in one container
 
 ```sh

@@ -6,6 +6,7 @@
 import type { ReactNode } from 'react';
 import { Input } from '@/components/ui/input';
 import type { SettingKey } from '../../packages/cli/src/settings.ts';
+import { SlackNote } from '../settings/slack.tsx';
 import { TRUST } from '../../packages/cli/src/settings.ts';
 import {
   type Ctx,
@@ -13,7 +14,6 @@ import {
   type Draft,
   type Field,
   fromLabel,
-  graphifyCost,
   KNOWLEDGE,
   limitsText,
   type Mode,
@@ -156,7 +156,7 @@ const PAGES: Record<Exclude<PageId, 'overview'>, (p: PageProps) => ReactNode> = 
           <b className="font-sans text-sm font-semibold">Package registries</b>
           <span className="border border-border px-1.5 text-[11px] text-muted-foreground">after cloning</span>
         </div>
-        <div className="text-[var(--ink-2)]">proposed by the analysis agent from the repo&apos;s lockfiles; you confirm them. The agent is not built yet.</div>
+        <div className="text-[var(--ink-2)]">proposed by the analysis agent from the repo&apos;s lockfiles; you confirm them. OpenSandbox boxes reach only these and the AI service; Docker boxes stay online until the egress proxy is built.</div>
         <p className={desc}>Never the git remote: FlowBoard does every fetch and push itself, outside the sandbox.</p>
       </section>
     </Sets>
@@ -178,7 +178,7 @@ const PAGES: Record<Exclude<PageId, 'overview'>, (p: PageProps) => ReactNode> = 
   ),
   escalation: (p) => (
     <Sets>
-      <Setting k="escalation" title="Chat" p={p} footnote={NOT_YET}>
+      <Setting k="escalation" title="Chat" p={p} footnote={<SlackNote />}>
         <div className="flex flex-wrap items-end gap-3">
           <NumField field="channel" label="Slack channel" p={p} />
           <NumField field="nudge" label="after, minutes" p={p} inputMode="numeric" />
@@ -189,7 +189,7 @@ const PAGES: Record<Exclude<PageId, 'overview'>, (p: PageProps) => ReactNode> = 
   ),
   memory: (p) => (
     <Sets>
-      <Setting k="memory" title="Project memory" p={p} footnote={`Memory’s project scope. ${NOT_YET}`}>
+      <Setting k="memory" title="Project memory" p={p} footnote="After a run of the project ends done, FlowBoard keeps facts from its summary and review artifacts and the choices you made, and hands the matching ones to later runs as background. See and forget them on the project page.">
         <Seg label="Project memory" value={String(p.draft.v.memory) as 'true' | 'false'} options={onOff} onPick={(v) => set(p, { memory: v === 'true' })} />
       </Setting>
     </Sets>
@@ -203,7 +203,7 @@ const PAGES: Record<Exclude<PageId, 'overview'>, (p: PageProps) => ReactNode> = 
           <b>{KNOWLEDGE[id].name}</b>
           <small className="font-sans text-xs text-muted-foreground">{KNOWLEDGE[id].what}</small>
           <small className="font-sans text-xs text-muted-foreground">
-            {id === 'graphify' && r?.sizeKb !== undefined ? `${KNOWLEDGE[id].cost}: about $${graphifyCost(r.sizeKb)} a rebuild for ${r.name}` : KNOWLEDGE[id].cost} · {KNOWLEDGE[id].via}
+            {KNOWLEDGE[id].cost} · {KNOWLEDGE[id].via}
           </small>
         </div>
         <Seg label={KNOWLEDGE[id].name} value={String(kn[id]) as 'true' | 'false'} options={{ true: 'On', false: 'Off' }} onPick={(v) => set(p, { knowledge: { ...kn, [id]: v === 'true' } })} />
@@ -212,13 +212,13 @@ const PAGES: Record<Exclude<PageId, 'overview'>, (p: PageProps) => ReactNode> = 
     return (
       <>
         <Sets>
-          <Setting k="knowledge" title="Knowledge assets" p={p} footnote={`Kept in .flowboard/knowledge/ in the clone, out of commits, and built first right after cloning. Serena never leaves this machine; graphify does, to the AI service. ${NOT_YET}`}>
+          <Setting k="knowledge" title="Knowledge assets" p={p} footnote="Kept in .flowboard/knowledge/ in the repo, out of commits. Built in the project’s sandbox, first right after cloning, then as set here or with Rebuild on the project page. Neither map calls an AI service.">
             {asset('serena')}
             {asset('graphify')}
             <div className="flex flex-wrap items-center justify-between gap-3.5 border-t border-border py-2">
               <div className="grid min-w-0 flex-1 gap-0.5">
                 <b>Rebuild</b>
-                <small className="font-sans text-xs text-muted-foreground">a map built from an older commit is marked stale, so agents know not to trust it</small>
+                <small className="font-sans text-xs text-muted-foreground">each build is stamped with the commit it mapped; agents are told the map may be older than the code</small>
               </div>
               <Seg label="Rebuild" value={kn.rebuild} options={{ ...REBUILD, push: r?.branch ? `on ${r.branch} moving` : REBUILD.push }} onPick={(rebuild) => set(p, { knowledge: { ...kn, rebuild } })} />
             </div>

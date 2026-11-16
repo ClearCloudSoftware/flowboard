@@ -14,7 +14,7 @@ import type { Answers, Decision, FlowCommand, FlowEvent, FlowState, Gate, Questi
 import type { Answerer } from './ask/broker.ts';
 import { either, pageAnswerer, watchStop } from './ask/page.ts';
 import { noTerminal, terminalAnswerer } from './ask/terminal.ts';
-import { isDir } from './config.ts';
+import { isDir, isFile } from './config.ts';
 import { agentNeeds, inside, loadFlow, NEEDS, toMermaid } from './flow-config.ts';
 import type { FlowConfig, Sandbox } from './flow-config.ts';
 import { artifactPath, execAi, execShell, processStart, shellEnv } from './flow-exec.ts';
@@ -26,12 +26,15 @@ import type { Isolation } from './isolation.ts';
 import { approver } from './approvals.ts';
 import { budgetState, monthName, monthOf, nextMonthName } from './budget.ts';
 import { listRuns } from './flow-logs.ts';
+import { addMemories, readMemories, recall, runNotes } from './memory.ts';
 import { owns, projectSpendUsd, readProjects, startOf } from './projects.ts';
 import type { Project } from './projects.ts';
 import { resolveSettings, TRUST } from './settings.ts';
-import type { Budget } from './settings.ts';
+import type { Budget, Knowledge, Trust } from './settings.ts';
 import { alive, readLock } from './lock.ts';
 import { openWorkspace } from './workspace.ts';
+import { GRAPH_REPORT, graphifyLine, KNOWLEDGE_DIR, SERENA_PROJECT, serenaTool } from './knowledge.ts';
+import { knowledgeView, writeSerenaConfig } from './knowledge-run.ts';
 import { dataDirOf, defaultProvider, stamp } from './run.ts';
 import type { RunDeps } from './run.ts';
 import { opencodeConfigFor, prepareRun } from './models.ts';
@@ -276,10 +279,13 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
       printErr(`${yaml}: runs: cannot create the artifacts folder: ${(e as Error).message}`);
       return 2;
     }
+    const maps = knowledgeFor(isolated!, config, dataDir);
     for (const s of Object.values(config.steps)) {
       if (s.kind !== 'ai') continue;
       const guards = s.run.spec.guards!;
       s.run.spec.guards = { ...guards, denyPaths: [...(guards.denyPaths ?? []), ...(denyRun ? [denyRun] : [])], denyCommands: [...(guards.denyCommands ?? []), ...DISCARD_COMMANDS] };
+      if (maps.serena) s.run.spec.tools = [...(s.run.spec.tools ?? []), maps.serena];
+      if (maps.line) s.run.spec.prompt = { ...s.run.spec.prompt, preamble: `${s.run.spec.prompt.preamble}\n\n${maps.line}` };
     }
     const pinned = JSON.stringify({ version: 1, config, artifactsDir, maxRuns: maxRuns ?? null }, null, 2) + '\n';
     writeFileSync(join(runDir, 'flow.json'), pinned);
@@ -310,6 +316,30 @@ export async function runFlow(args: string[], deps: RunDeps): Promise<number> {
   } finally {
     releaseLock(lockPath);
   }
+}
+
+/**
+ * The project's built maps for its agents: Serena as an MCP server and a line pointing at graphify's report. Only for a
+ * run in the repo's own folder (a task worktree or a subfolder has no index of its own, and a box sees only its folder)
+ * on this machine or in a Docker box; an OpenSandbox box holds the last commit, which never has `.flowboard/`.
+ * Only what FlowBoard's last build made counts: none when that build failed, or when git tracks anything under
+ * `.flowboard/` (the repo shipped it). Serena not when a `project.local.yml` would override FlowBoard's project file,
+ * which could hand agents its shell and editing tools, pre-approved as every injected server is.
+ */
+function knowledgeFor(iso: Isolated, config: FlowConfig, dataDir: string): { serena?: ReturnType<typeof serenaTool>; line?: string } {
+  const { kn, commit } = iso.knowledge;
+  const tier = iso.isolation.tier;
+  if (config.folder !== iso.repoPath || tier === 'opensandbox' || !iso.knowledge.built) return {};
+  const tracked = hostGit(iso.repoPath, iso.repoPath, ['ls-files', '--', '.flowboard']);
+  // Not a git repo: nothing can be tracked. A git FlowBoard refuses to run in, or that fails: nothing is trusted.
+  if ('refused' in tracked ? existsSync(join(iso.repoPath, '.git')) : tracked.status !== 0 || tracked.stdout.trim()) return {};
+  const where = tier === 'host' ? 'host' : 'box';
+  const yml = join(iso.repoPath, SERENA_PROJECT);
+  const serenaOk = isFile(yml) && /^read_only: true$/m.test(readFileSync(yml, 'utf8')) && !existsSync(join(iso.repoPath, KNOWLEDGE_DIR, 'serena', 'project.local.yml'));
+  return {
+    ...(kn.serena && serenaOk && { serena: serenaTool(where, iso.repoPath, where === 'host' ? writeSerenaConfig(dataDir) : '', process.env) }),
+    ...(kn.graphify && isFile(join(iso.repoPath, GRAPH_REPORT)) && { line: graphifyLine(iso.repoPath, commit) }),
+  };
 }
 
 const NO_ONE = 'this project is Trusted, so agents ask before edits and shell commands, and no one can answer here; run it in a terminal or from the runs page';
@@ -359,18 +389,22 @@ function projectCap(project: Project, dataDir: string, runsDir: string, month: s
   return { lines, cap: { name: project.name, month, budget, others } };
 }
 
-/** A run's isolation, decided as it starts: the sandbox it gets and the line saying so; `repoPath`: its project's repo. */
-interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string; repoPath: string }
+/**
+ * A run's isolation, decided as it starts: the sandbox it gets and the line saying so; `repoPath`: its project's repo;
+ * `knowledge`: its knowledge setting, the commit its maps were last built from, and whether that build made them.
+ */
+interface Isolated { sandbox?: Sandbox; isolation: Isolation; line: string; repoPath: string; knowledge: { kn: Knowledge; commit?: string | null; built: boolean } }
 
 /**
  * The isolation `project` gives a run of a flow whose own sandbox is `flowSandbox` (`isolation.ts`); or why it may not
  * run, a line each: a tier this machine cannot give, or a box that cannot start or log in.
  */
 function isolate(project: Project, flowSandbox: Sandbox | undefined, steps: FlowConfig['steps'], dataDir: string, deps: RunDeps): Isolated | { refused: string[] } {
-  const trust = resolveSettings(readAppSettings(dataDir), project.type, project.overrides).trust.value;
+  const resolved = resolveSettings(readAppSettings(dataDir), project.type, project.overrides);
+  const trust = resolved.trust.value;
   const docker = deps.docker ?? { gvisor: () => dockerHasGvisor(), notReady: (image: string) => dockerNotReady(image) };
   const needs = agentNeeds(steps).flatMap((n) => n.credential ?? []);
-  const r = isolationFor(trust, flowSandbox, needs, trust === 'untrusted' && docker.gvisor());
+  const r = isolationFor(trust, flowSandbox, needs, trust === 'untrusted' && docker.gvisor(), project.networkHosts ?? []);
   if ('refused' in r) return { refused: [r.refused] };
   if (r.sandbox?.runtime === 'docker') {
     const why = docker.notReady(r.sandbox.image);
@@ -383,7 +417,7 @@ function isolate(project: Project, flowSandbox: Sandbox | undefined, steps: Flow
   const asks = r.approvals ? '; agents ask before edits and shell commands' : '';
   // A copy: the run's sandbox may be this very object, and gets the project's limits.
   const isolation: Isolation = { projectId: project.id, trust, tier: r.tier, approvals: r.approvals, ...(flowSandbox && { flowSandbox: structuredClone(flowSandbox) }) };
-  return { sandbox: r.sandbox, isolation, line: `-- isolation: ${TRUST[trust].label} (${r.tier}), from project ${project.name}${asks}`, repoPath: project.repoPath };
+  return { sandbox: r.sandbox, isolation, line: `-- isolation: ${TRUST[trust].label} (${r.tier}), from project ${project.name}${asks}`, repoPath: project.repoPath, knowledge: { kn: resolved.knowledge.value, commit: project.knowledgeBuild?.commit, built: ['built', 'stale'].includes(knowledgeView(runsDirOf(deps), project, resolved.knowledge.value).status) } };
 }
 
 /** Makes `dir`; false when it already exists. */
@@ -799,7 +833,34 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   const asker = term && page ? either(term.ask, page) : (term?.ask ?? page);
   const show = term ? (line: string) => term.show(line) : print;
   const temps = new Set<string>();
+  /**
+   * The run's project id while its memory is on, read again each time so a change applies to a run already going;
+   * none for FlowBoard's own runs (the repo analyst, knowledge builds), whose flows live in the data folder.
+   */
+  const internal = inside(join(d.dataDir, 'internal'), config.yamlPath);
+  const memoryOf = (): { id: string; trust: Trust } | undefined => {
+    const iso = config.isolation;
+    if (internal || !iso) return undefined;
+    const p = readProjects(d.dataDir).find((x) => x.id === iso.projectId);
+    // The trust the run was isolated at, not the project's now: a note keeps how contained its writer was.
+    return p && resolveSettings(readAppSettings(d.dataDir), p.type, p.overrides).memory.value ? { id: iso.projectId, trust: iso.trust } : undefined;
+  };
+  const why = (e: unknown) => (e instanceof Error ? e.message : String(e)).split('\n')[0];
+  /** Memory is never on a run's critical path: a store that cannot be read leaves the attempt without it. */
+  const recallFor = (step: string, query: string): string | undefined => {
+    try {
+      const m = memoryOf();
+      if (!m) return undefined;
+      const r = recall(readMemories(d.dataDir, m.id), query, m.trust);
+      show(`-- memory: recalled ${plural(r?.count ?? 0, 'note')} for ${step}`);
+      return r?.text;
+    } catch (e) {
+      show(`-- memory: not read: ${why(e)}; ${step} runs without it`);
+      return undefined;
+    }
+  };
   const ctx: ExecContext = {
+    recall: recallFor,
     artifactsDir: d.artifactsDir,
     logDir: d.runDir,
     show,
@@ -1075,6 +1136,20 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
   }
 
   const status = ended ?? (stopAsked ? 'stopped' : 'paused');
+  // Only a run that ended done commits, on the host: from its declared artifacts and the answers it collected.
+  if (status === 'done') {
+    try {
+      const m = memoryOf();
+      if (m) {
+        const steps = config.flow.steps.map((s) => ({ id: s.id, ai: config.steps[s.id].kind === 'ai', produces: s.produces }));
+        const { notes, refused } = runNotes({ run: basename(d.runDir), runDir: d.runDir, artifactsDir: d.artifactsDir, trust: m.trust, steps });
+        const n = addMemories(d.dataDir, m.id, notes, now());
+        print(`-- memory: saved ${plural(n, 'note')} from this run${refused ? ` (${refused} left out: invisible characters, or what looks like a secret)` : ''}`);
+      }
+    } catch (e) {
+      print(`-- memory: not saved: ${why(e)}`);
+    }
+  }
   const launched = state.runs.filter((r) => r.error !== 'not launched');
   const total = (runs: FlowState['runs']) => sumCost(runs).toFixed(2);
   const unknown = launched.filter((r) => r.costUsd === null).length;

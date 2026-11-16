@@ -27,3 +27,13 @@ test('renders the six parts in canonical order', () => {
 test('omits empty parts', () => {
   assert.equal(renderPrompt({ preamble: 'P', inputs: [], outputs: [], closing: 'C' }), 'P\n\nC');
 });
+
+test('recalled memory goes just before the closing instruction', () => {
+  assert.equal(renderPrompt({ preamble: 'P', inputs: [], outputs: [], template: 'T', memory: 'M', closing: 'C' }), 'P\n\nT\n\nM\n\nC');
+});
+
+test('without memory the prompt is the six parts as before', () => {
+  const six = { preamble: 'P', inputs: [], outputs: [], template: 'T', closing: 'C' };
+  assert.equal(renderPrompt(six), 'P\n\nT\n\nC');
+  assert.equal(renderPrompt({ ...six, memory: '' }), 'P\n\nT\n\nC');
+});

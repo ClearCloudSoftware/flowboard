@@ -28,6 +28,9 @@ import { budgetState } from '../../packages/cli/src/budget.ts';
 import { PROJECT_TYPES, resolveSettings, ruleText } from '../../packages/cli/src/settings.ts';
 import { appSettingsQuery, inProject, newRunHref, projectsQuery, removeProject, updateProject, usd } from './api.ts';
 import type { ProjectView } from './api.ts';
+import { Analysis } from './analysis.tsx';
+import { Knowledge } from './knowledge.tsx';
+import { Memory } from './memory.tsx';
 import { FlowSelect } from './flow-select.tsx';
 import { Figures } from './list.tsx';
 import { type Draft, draftFrom, type PageId, problems, toLimits, toOverrides } from './settings-model.ts';
@@ -252,7 +255,7 @@ function Remove({ p, live }: { p: ProjectView; live: number }) {
         <AlertDialogHeader>
           <AlertDialogTitle className="font-sans">Remove {p.name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            FlowBoard forgets the project. The repo at <code className="break-all">{p.repoPath}</code>, its <code>.flowboard.yaml</code> and its runs stay where they are; adding the repo again brings the runs back.
+            FlowBoard forgets the project. The repo at <code className="break-all">{p.repoPath}</code>, its <code>.flowboard.yaml</code> and its runs stay where they are; adding the repo again brings the runs back. Its memory is forgotten.
           </AlertDialogDescription>
         </AlertDialogHeader>
         {remove.error && (
@@ -371,6 +374,21 @@ export function ProjectPage() {
                 )}
               </section>
             </div>
+            <Card>
+              <CardContent>
+                <Analysis projectId={p.id} mode="project" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent>
+                <Knowledge projectId={p.id} />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent>
+                <Memory p={p} />
+              </CardContent>
+            </Card>
             {!!p.approvals?.length && <Approvals p={p} />}
             <ProjectSettings key={JSON.stringify([p.overrides, p.limits])} p={p} />
           </>

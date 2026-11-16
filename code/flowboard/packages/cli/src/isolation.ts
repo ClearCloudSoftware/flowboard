@@ -31,8 +31,11 @@ export const IsolationSchema = z.strictObject({
   flowSandbox: SandboxSchema.optional(),
 });
 
-/** The image `docker/Dockerfile` builds: a flow without its own `sandbox:` runs in it. */
-const IMAGE = 'flowboard-cli';
+/**
+ * The image `docker/Dockerfile` builds: a flow without its own `sandbox:` runs in it. `FLOWBOARD_IMAGE` names another
+ * tag of it, such as one built from a branch, so a shared `flowboard-cli` need not be rebuilt to try it.
+ */
+export const boxImage = () => process.env.FLOWBOARD_IMAGE || 'flowboard-cli';
 
 /**
  * The project whose repo holds `folder`, a link or a task worktree under it included. A repo inside another
@@ -57,12 +60,17 @@ export function isolationFor(
   flow: Sandbox | undefined,
   needs: string[],
   gvisor: boolean,
+  hosts: string[] = [],
 ): { sandbox?: Sandbox; tier: Isolation['tier']; approvals: boolean } | { refused: string } {
   // A runtime neither of these is no box at all: the run's steps would work on this machine.
   const runtime: string | undefined = flow?.runtime;
   if (runtime !== undefined && runtime !== 'docker' && runtime !== 'opensandbox') return { refused: `sandbox: no runtime ${runtime}; a run works in docker or opensandbox` };
-  const own = (sb: Sandbox) => ({ sandbox: sb, tier: sb.runtime === 'docker' ? ('container' as const) : ('opensandbox' as const), approvals: false });
-  const box: Sandbox = { runtime: 'docker', image: IMAGE, env: needs };
+  // The project's own hosts (the repo analyst's, accepted) join an OpenSandbox box's egress; a docker box is online.
+  const own = (sb: Sandbox) =>
+    sb.runtime === 'docker'
+      ? { sandbox: sb, tier: 'container' as const, approvals: false }
+      : { sandbox: hosts.length ? { ...sb, egress: [...new Set([...sb.egress, ...hosts])] } : sb, tier: 'opensandbox' as const, approvals: false };
+  const box: Sandbox = { runtime: 'docker', image: boxImage(), env: needs };
   if (trust === 'trusted') return flow ? own(flow) : { tier: 'host', approvals: true };
   if (trust === 'normal') return own(flow ?? box);
   if (flow?.runtime === 'opensandbox') return { refused: "Untrusted runs need gVisor; this flow's OpenSandbox box is not gVisor" };

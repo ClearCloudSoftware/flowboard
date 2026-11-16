@@ -59,3 +59,12 @@ test('agents: each harness has a program, a model and an effort; a model the CLI
   assert.deepEqual(bad({ ...agents, 'claude-code': { ...agents['claude-code'], path: 'claude' } }), { ok: false, status: 400, error: 'a program path: absolute, or starting with ~/' });
   assert.deepEqual(bad({ ...agents, 'claude-code': { ...agents['claude-code'], effort: 'huge' } }).ok, false);
 });
+
+test('the FlowBoard address is an app setting, for the links in Slack', () => {
+  const data = mkdtempSync(join(tmpdir(), 'fb-address-'));
+  assert.equal(readAppSettings(data).address, 'http://localhost:3000');
+  assert.deepEqual(updateAppSettings(data, { address: 'ftp://x' }), { ok: false, status: 400, error: 'a web address, like http://localhost:3000' });
+  assert.deepEqual(updateAppSettings(data, { address: 'localhost:3000' }), { ok: false, status: 400, error: 'a web address, like http://localhost:3000' });
+  assert.equal(updateAppSettings(data, { address: ' http://mac.local:3000/ ' }).ok, true);
+  assert.equal(readAppSettings(data).address, 'http://mac.local:3000');
+});

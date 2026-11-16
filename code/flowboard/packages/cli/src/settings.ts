@@ -29,9 +29,11 @@ export interface HarnessConfig { path: string | null; model: string | null; effo
  * `projectsFolder`: where new projects are cloned; null for FlowBoard's own, `DEFAULT_PROJECTS_FOLDER`.
  * `agents`: how each harness is run; app-wide, as it is about this machine, so no project overrides it.
  * `opencodeModels`: the only models an OpenCode step may run on; app-wide, as it is about money and privacy.
+ * `address`: where FlowBoard's pages are reached, for the links Slack messages carry.
  */
 export interface AppSettings extends Settings {
   projectsFolder: string | null;
+  address: string;
   agents: Record<Harness, HarnessConfig>;
   internal: Record<InternalStep, InternalStepConfig>;
   opencodeModels: ApprovedModel[];
@@ -175,6 +177,7 @@ export const INTERNAL_STEPS: Record<InternalStep, { name: string; text: string; 
 
 export const APP_DEFAULTS: AppSettings = {
   projectsFolder: null,
+  address: 'http://localhost:3000',
   trust: 'normal',
   budget: { capUsd: null, alertAt: 80, onLimit: 'pause' },
   escalation: { channel: '#flowboard', nudgeMin: 5 },
@@ -196,6 +199,8 @@ const CAP = 'a dollar amount above 0';
 const ALERT = 'alert at 1 to 100 percent';
 const CHANNEL = 'a Slack channel, like #billing-alerts';
 const NUDGE = '1 to 120 minutes';
+export const ADDRESS = 'a web address, like http://localhost:3000';
+export const ADDRESS_RE = /^https?:\/\/[^\s/]+(\/\S*)?$/;
 export const FOLDER = 'a folder path: absolute, or starting with ~/';
 /** An absolute path, or one from the home folder. */
 export const FOLDER_RE = /^(~\/|\/)\S/;
@@ -254,6 +259,7 @@ export const AppSettingsSchema = z.strictObject({
   ...shape,
   budget: budget(cap.nullable()),
   projectsFolder: z.string().trim().regex(FOLDER_RE, { error: FOLDER }).nullable(),
+  address: z.string().trim().regex(ADDRESS_RE, { error: ADDRESS }).transform((a) => a.replace(/\/+$/, '')),
   agents: z.strictObject(HARNESS_SCHEMAS),
   internal: z.strictObject({ 'repo-analyst': INTERNAL_STEP_SCHEMA, 'backlog-importer': INTERNAL_STEP_SCHEMA }),
   opencodeModels: APPROVED_MODELS_SCHEMA,

@@ -15,6 +15,10 @@ import { askBroker } from '@flowboard/ask-user';
 import { processStart } from '../src/flow-exec.ts';
 import { DISCARD_COMMANDS, pushable, runFlow, sandboxFor } from '../src/flow-run.ts';
 import { cleanWorkspace } from '../src/workspace.ts';
+import { loadFlow } from '../src/flow-config.ts';
+import { KNOWLEDGE_TASK, knowledgeFlowText } from '../src/knowledge-run.ts';
+import { addMemories, memoryFile, readMemories, RECALL_HEAD } from '../src/memory.ts';
+import { renderPrompt } from '@flowboard/core';
 import type { RunDeps } from '../src/run.ts';
 import { DELIVERY, flowProject, registerProject, RUN } from './fixtures/flow.ts';
 
@@ -1516,4 +1520,185 @@ test('a cap raised on the project page while a run goes applies at once', { time
   when(() => s.script.timeline.includes('start:plan'), () => capProject(s, 5, 'pause'));
   assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.out.join('\n'));
   assert.ok(Math.abs((s.script.specs[1].limits?.maxBudgetUsd ?? 0) - 4.05) < 1e-9, JSON.stringify(s.script.specs[1].limits));
+});
+
+// --- knowledge assets
+
+/**
+ * The project's maps as a knowledge build leaves them in its repo, and the build's run on its record: `done` and its
+ * last line `built`, or one of the ways a build does not count.
+ */
+function builtMaps(base: string, ended: 'built' | 'failed' | 'none' = 'built') {
+  const proj = join(base, 'proj');
+  mkdirSync(join(proj, '.flowboard', 'knowledge', 'serena'), { recursive: true });
+  mkdirSync(join(proj, '.flowboard', 'knowledge', 'graphify-out'), { recursive: true });
+  writeFileSync(join(proj, '.flowboard', 'knowledge', 'serena', 'project.yml'), 'read_only: true\n');
+  writeFileSync(join(proj, '.flowboard', 'knowledge', 'graphify-out', 'GRAPH_REPORT.md'), '# report\n');
+  if (ended === 'none') return;
+  const name = '2026-10-18T09-00-00-knowledge-build';
+  const scratch = mkdtempSync(join(tmpdir(), 'fb-kb-'));
+  writeFileSync(join(scratch, 'task.md'), KNOWLEDGE_TASK);
+  writeFileSync(join(scratch, 'knowledge-build.yaml'), knowledgeFlowText('true'));
+  const loaded = loadFlow('knowledge-build.yaml', scratch, { folder: scratch, task: 'task.md' });
+  assert.ok(loaded.ok);
+  const dir = join(base, 'runs', name);
+  const artifactsDir = join(scratch, '.flowboard', name);
+  mkdirSync(dir, { recursive: true });
+  mkdirSync(artifactsDir, { recursive: true });
+  writeFileSync(join(dir, 'flow.json'), JSON.stringify({ version: 1, config: loaded.config, artifactsDir }));
+  writeFileSync(join(dir, 'state.json'), JSON.stringify({ status: 'done', steps: {}, runs: [] }));
+  writeFileSync(join(artifactsDir, 'build.md'), ended === 'built' ? '-- knowledge built at abc1234\n' : '-- knowledge build failed: serena: boom\n');
+  const file = join(base, 'data', 'projects.json');
+  const projects = JSON.parse(readFileSync(file, 'utf8'));
+  projects[0].knowledgeBuild = { run: name, commit: 'abc1234def' };
+  writeFileSync(file, JSON.stringify(projects));
+}
+
+const hasSerena = (spec: RunSpec) => !!spec.tools?.some((t) => t.name === 'serena');
+const hasMap = (spec: RunSpec) => /graphify/.test(spec.prompt.preamble);
+
+test("a repo's own files never reach the agents as FlowBoard's maps: not a failed build's, not a planted project.local.yml, not tracked ones", async () => {
+  for (const ended of ['failed', 'none'] as const) {
+    const s = setup(ONE_BUILD);
+    builtMaps(s.base, ended);
+    assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+    assert.deepEqual([hasSerena(s.script.specs[0]), hasMap(s.script.specs[0])], [false, false], ended);
+  }
+  const local = setup(ONE_BUILD);
+  builtMaps(local.base);
+  writeFileSync(join(local.base, 'proj', '.flowboard', 'knowledge', 'serena', 'project.local.yml'), 'read_only: false\n');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], local.deps), 0, local.err.join('\n'));
+  assert.deepEqual([hasSerena(local.script.specs[0]), hasMap(local.script.specs[0])], [false, true]);
+  const tracked = setup(ONE_BUILD);
+  builtMaps(tracked.base);
+  const proj = join(tracked.base, 'proj');
+  for (const args of [['init', '-q', '-b', 'main'], ['add', '-f', '.flowboard/knowledge/graphify-out/GRAPH_REPORT.md'], ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'planted']]) spawnSync('git', args, { cwd: proj });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], tracked.deps), 0, tracked.err.join('\n'));
+  assert.deepEqual([hasSerena(tracked.script.specs[0]), hasMap(tracked.script.specs[0])], [false, false]);
+});
+
+test("an agent step gets Serena and graphify's report once they are built, and only while the project has them on", async () => {
+  const s = setup(ONE_BUILD);
+  const proj = join(s.base, 'proj');
+  builtMaps(s.base);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  const spec = s.script.specs[0];
+  const serena = spec.tools?.find((t) => t.name === 'serena');
+  assert.equal(serena?.command, 'uvx'); // Trusted: on this machine
+  assert.deepEqual(serena?.args?.slice(0, 7), ['-q', '--from', 'git+https://github.com/oraios/serena@5e4f5cd173c7ff3eed37ee3f1de6c266b937c5dc', 'serena', 'start-mcp-server', '--project', proj]);
+  assert.equal(serena?.env?.SERENA_HOME, join(s.base, 'data', 'serena'));
+  assert.match(readFileSync(join(s.base, 'data', 'serena', 'serena_config.yml'), 'utf8'), /\.flowboard\/knowledge\/serena/);
+  assert.match(spec.prompt.preamble, new RegExp(`graphify, built at abc1234; it may be older than the code\\): ${proj}/\\.flowboard/knowledge/graphify-out/GRAPH_REPORT\\.md`));
+
+  const off = setup(ONE_BUILD);
+  builtMaps(off.base);
+  const projects = JSON.parse(readFileSync(join(off.base, 'data', 'projects.json'), 'utf8'));
+  projects[0].overrides.knowledge = { serena: false, graphify: false, rebuild: 'manual' };
+  writeFileSync(join(off.base, 'data', 'projects.json'), JSON.stringify(projects));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], off.deps), 0, off.err.join('\n'));
+  assert.equal(off.script.specs[0].tools?.some((t) => t.name === 'serena'), false);
+  assert.doesNotMatch(off.script.specs[0].prompt.preamble, /graphify/);
+
+  const unbuilt = setup(ONE_BUILD);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], unbuilt.deps), 0, unbuilt.err.join('\n'));
+  assert.equal(unbuilt.script.specs[0].tools?.some((t) => t.name === 'serena'), false);
+  assert.doesNotMatch(unbuilt.script.specs[0].prompt.preamble, /graphify/);
+});
+
+// --- project memory
+
+const VITEST = '- Tests use vitest, run with pnpm test';
+const MEMO = `${HEAD}steps:
+  plan: { prompt: prompts/plan.md }
+  review: { prompt: prompts/review.md, produces: [review_notes] }
+edges:
+  - { from: plan, to: review }
+`;
+/** A run of MEMO whose review writes VITEST, its project's memory `on` or not. */
+function memorySetup(on: boolean, plays: Record<string, Play[]> = { plan: ['ask'] }, yaml = MEMO, extra: Record<string, string> = {}) {
+  const s = setup(yaml, plays);
+  writeFileSync(join(s.base, 'prompts', 'review.md'), VITEST);
+  for (const [path, text] of Object.entries(extra)) {
+    mkdirSync(dirname(join(s.base, path)), { recursive: true });
+    writeFileSync(join(s.base, path), text);
+  }
+  const file = join(s.base, 'data', 'projects.json');
+  const projects = JSON.parse(readFileSync(file, 'utf8'));
+  projects[0].overrides.memory = on;
+  writeFileSync(file, JSON.stringify(projects));
+  s.deps.answer = async () => ({ colour: 'teal' });
+  const data = join(s.base, 'data');
+  return { ...s, data, memories: () => readMemories(data, 'p-1') };
+}
+
+test('memory: a done run of a project with memory on saves its review, not a typed answer, and the next run recalls it', { timeout: 10_000 }, async () => {
+  const s = memorySetup(true);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  assert.ok(s.out.includes('-- memory: recalled 0 notes for plan'), s.out.join('\n'));
+  assert.ok(s.out.includes('-- memory: saved 1 note from this run'), s.out.join('\n')); // the typed answer (teal) is never kept
+  assert.equal(s.out.at(-1), '-- flow done: 2 runs, $0.20 spent, $0.00 wasted');
+  const ms = s.memories();
+  assert.deepEqual(ms.map((m) => m.text), ['Tests use vitest, run with pnpm test']);
+  assert.ok(ms.every((m) => m.source.run === STAMPED && m.source.trust === 'trusted'), JSON.stringify(ms));
+  // A note a contained run wrote never reaches this Trusted project's runs, whose agents run on this machine.
+  addMemories(s.data, 'p-1', [{ text: 'Tests in vitest run in parallel by default', source: { run: 'boxed', trust: 'normal' } }]);
+  assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt))); // nothing to recall in the first run
+
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  const review = s.script.specs[3];
+  assert.equal(review.prompt.template, VITEST);
+  assert.equal(review.prompt.memory, `${RECALL_HEAD}\n- Tests use vitest, run with pnpm test`);
+  const text = renderPrompt(review.prompt);
+  assert.ok(text.indexOf(VITEST) < text.indexOf(RECALL_HEAD) && text.indexOf(RECALL_HEAD) < text.indexOf(review.prompt.closing), text);
+  assert.ok(text.endsWith(review.prompt.closing));
+  assert.ok(s.out.includes('-- memory: recalled 1 note for review'), s.out.join('\n'));
+});
+
+test('memory: with memory off the prompt is what it was, and nothing is saved or said', { timeout: 10_000 }, async () => {
+  const s = memorySetup(false);
+  addMemories(s.data, 'p-1', [{ text: 'Tests use vitest, run with pnpm test', source: { run: 'old' } }]);
+  const before = readFileSync(memoryFile(s.data, 'p-1'), 'utf8');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  assert.equal(s.script.specs.length, 2);
+  assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt)));
+  assert.deepEqual(s.out.filter((l) => l.includes('memory')), []);
+  assert.equal(readFileSync(memoryFile(s.data, 'p-1'), 'utf8'), before);
+});
+
+test('memory: a failed or paused run saves nothing', { timeout: 10_000 }, async () => {
+  // review writes its notes, then build fails and the person fails the flow
+  const failed = memorySetup(true, { build: ['error'] }, `${HEAD}steps:\n  review: { prompt: prompts/review.md, produces: [review_notes] }\n  build: { prompt: prompts/build.md }\nedges:\n  - { from: review, to: build }\n`);
+  failed.deps.answer = deciding('fail').answer;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], failed.deps), 1, failed.out.join('\n'));
+  assert.ok(existsSync(join(failed.base, 'proj', '.flowboard', STAMPED, 'review_notes.md')));
+  assert.equal(existsSync(memoryFile(failed.data, 'p-1')), false);
+  assert.deepEqual(failed.out.filter((l) => l.startsWith('-- memory: saved')), []);
+
+  // review reports no outcome, so it waits at a gate nobody is there for
+  const paused = memorySetup(true, { [VITEST]: ['none'] }, GATE.replace('prompts/review.md }', 'prompts/review.md, produces: [review_notes] }'));
+  delete paused.deps.answer;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], paused.deps), 3, paused.out.join('\n'));
+  assert.equal(existsSync(memoryFile(paused.data, 'p-1')), false);
+});
+
+test('memory: an unreadable store: the run goes on without memory, and its file is left alone', { timeout: 10_000 }, async () => {
+  const s = memorySetup(true);
+  mkdirSync(join(s.data, 'memory'));
+  writeFileSync(memoryFile(s.data, 'p-1'), '{oops');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  assert.ok(s.out.some((l) => /^-- memory: not read: .+; plan runs without it$/.test(l)), s.out.join('\n'));
+  assert.ok(s.out.some((l) => /^-- memory: not saved: .+/.test(l)), s.out.join('\n'));
+  assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt)));
+  assert.equal(readFileSync(memoryFile(s.data, 'p-1'), 'utf8'), '{oops');
+});
+
+test("memory: FlowBoard's own runs neither recall nor save", { timeout: 10_000 }, async () => {
+  const s = memorySetup(true, {}, MEMO, { 'data/internal/x/flow.yaml': MEMO, 'data/internal/x/prompts/plan.md': 'plan', 'data/internal/x/prompts/review.md': VITEST });
+  addMemories(s.data, 'p-1', [{ text: 'Tests use vitest, run with pnpm test', source: { run: 'old' } }]);
+  const before = readFileSync(memoryFile(s.data, 'p-1'), 'utf8');
+  assert.equal(await runFlow([...RUN, 'data/internal/x/flow.yaml'], s.deps), 0, s.err.join('\n'));
+  assert.equal(s.script.specs.length, 2);
+  assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt)));
+  assert.deepEqual(s.out.filter((l) => l.includes('memory')), []);
+  assert.equal(readFileSync(memoryFile(s.data, 'p-1'), 'utf8'), before);
 });

@@ -1,7 +1,7 @@
 'use client';
-/** The app settings sections: General, the three Connections pages and Defaults; Agents is `agents.tsx`. Each loads /api/settings. */
+/** The app settings sections: General, two Connections pages and Defaults; Escalation is `slack.tsx`, Agents `agents.tsx`. Each loads /api/settings. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, CircleDot, FileText, FolderGit2, GitBranch, ListTodo, type LucideIcon, Mail, MessageSquare, Webhook } from 'lucide-react';
+import { CircleDot, FileText, FolderGit2, GitBranch, ListTodo, type LucideIcon, Webhook } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,7 +85,7 @@ export function GeneralPage() {
 }
 
 /** A connection's row: its icon, name, what it is for, and what it says now. */
-function Row({ icon, name, text, soon, children }: { icon: ReactNode; name: string; text: string; soon?: boolean; children?: ReactNode }) {
+export function Row({ icon, name, text, soon, children }: { icon: ReactNode; name: string; text: string; soon?: boolean; children?: ReactNode }) {
   return (
     <li className="grid grid-cols-[20px_minmax(0,1fr)] gap-x-3 gap-y-2 border-b border-border px-4 py-3 last:border-b-0">
       <span className="pt-0.5 text-muted-foreground">{icon}</span>
@@ -147,11 +147,11 @@ function GitHub({ view }: { view: AppView }) {
   );
 }
 
-const ul = 'm-0 list-none border border-border bg-card p-0';
-const icon = (I: LucideIcon) => <I className="size-5" strokeWidth={1.75} />;
+export const ul = 'm-0 list-none border border-border bg-card p-0';
+export const icon = (I: LucideIcon) => <I className="size-5" strokeWidth={1.75} />;
 
 /** Connections not built yet, as rows. */
-const Soon = ({ items }: { items: { id: string; name: string; text: string; icon: LucideIcon }[] }) =>
+export const Soon = ({ items }: { items: { id: string; name: string; text: string; icon: LucideIcon }[] }) =>
   items.map((s) => <Row key={s.id} icon={icon(s.icon)} name={s.name} text={s.text} soon />);
 
 export function RepositoriesPage() {
@@ -187,27 +187,6 @@ export function TaskProvidersPage() {
       <Head title="Task providers">Where tasks come from, besides creating them by hand.</Head>
       <ul className={ul}>
         <Soon items={TASK_PROVIDERS} />
-      </ul>
-    </>
-  );
-}
-
-// Escalation And Notifications' Notifier adapters: Slack first (it answers in place), the rest later (Notification Channels).
-const CHANNELS = [
-  { id: 'slack', name: 'Slack', text: "A question nobody answered in FlowBoard is posted to the channel a project's escalation names, and can be answered there.", icon: MessageSquare },
-  { id: 'discord', name: 'Discord', text: 'The same, in a Discord channel, answered in place.', icon: MessageSquare },
-  { id: 'google-chat', name: 'Google Chat', text: 'The same, in a Google Chat space, answered in place.', icon: MessageSquare },
-  { id: 'email', name: 'Email', text: 'A link to the question in the inbox; the answer is given in FlowBoard.', icon: Mail },
-  { id: 'webhook', name: 'Webhook', text: 'The question posted as JSON to a URL, with a link back to the inbox.', icon: Webhook },
-  { id: 'desktop', name: 'Desktop', text: 'A notification on this machine.', icon: Bell },
-];
-
-export function EscalationChannelsPage() {
-  return (
-    <>
-      <Head title="Escalation channels">Where a question that waited too long reaches you. Each project picks its channel and how long to wait, under Defaults or its own settings.</Head>
-      <ul className={ul}>
-        <Soon items={CHANNELS} />
       </ul>
     </>
   );

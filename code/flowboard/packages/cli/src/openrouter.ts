@@ -2,12 +2,12 @@
  * OpenRouter, for OpenCode's steps: the API key FlowBoard keeps, OpenRouter's list of models and their prices, and
  * the rules the approved list (`AppSettings.opencodeModels`) makes of them.
  *
- * The key is the one credential FlowBoard stores: `secrets.json` in its data folder, apart from `settings.json` so
- * no page ever reads it, owner-only where the OS has file modes. An exported OPENROUTER_API_KEY wins over it.
+ * The key is kept in `secrets.json` (`secrets.ts`) beside Slack's tokens. An exported OPENROUTER_API_KEY wins over it.
  */
-import { readFileSync, rmSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { isFile, writeJsonFile } from './config.ts';
+import { readSecret, setSecret } from './secrets.ts';
 import type { Catalogue, CatalogueModel } from './settings.ts';
 
 export const KEY_VAR = 'OPENROUTER_API_KEY';
@@ -15,7 +15,6 @@ const API = 'https://openrouter.ai/api/v1';
 /** How old a saved list may be before a page or a run fetches it again. */
 export const CATALOGUE_MAX_AGE_MS = 60 * 60_000;
 
-const secretsOf = (dataDir: string) => join(dataDir, 'secrets.json');
 const catalogueOf = (dataDir: string) => join(dataDir, 'openrouter-models.json');
 const readJson = (file: string): unknown => {
   try {
@@ -28,10 +27,7 @@ const readJson = (file: string): unknown => {
 // --- the key ---------------------------------------------------------------------------------------------------
 
 /** The saved key, or undefined. */
-export function savedKey(dataDir: string): string | undefined {
-  const s = readJson(secretsOf(dataDir)) as { openrouter?: unknown } | undefined;
-  return typeof s?.openrouter === 'string' ? s.openrouter : undefined;
-}
+export const savedKey = (dataDir: string): string | undefined => readSecret(dataDir, 'openrouter');
 
 /** An OpenRouter key: `sk-or-` and no spaces. Checked before it is saved; OpenRouter says whether it works. */
 export const KEY_RE = /^sk-or-\S{8,300}$/;
@@ -39,11 +35,11 @@ export const KEY_RE = /^sk-or-\S{8,300}$/;
 export function saveKey(dataDir: string, key: string): { ok: true } | { ok: false; error: string } {
   const k = key.trim();
   if (!KEY_RE.test(k)) return { ok: false, error: 'not an OpenRouter key: they start with sk-or-' };
-  writeJsonFile(secretsOf(dataDir), { openrouter: k }, 0o600);
+  setSecret(dataDir, 'openrouter', k);
   return { ok: true };
 }
 
-export const removeKey = (dataDir: string) => rmSync(secretsOf(dataDir), { force: true });
+export const removeKey = (dataDir: string) => setSecret(dataDir, 'openrouter', null);
 
 /** Which key runs would use, never the key itself: `source` env when exported, saved when only saved. */
 export interface KeyView { source: 'env' | 'saved' | null; last4: string | null }

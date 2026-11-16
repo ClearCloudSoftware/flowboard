@@ -13,6 +13,7 @@ import { startBroker } from './ask/broker.ts';
 import { inside } from './flow-config.ts';
 import type { Answerer } from './ask/broker.ts';
 import type { Adapter, RunConfig } from './config.ts';
+import { SECRET_NAME } from './secrets.ts';
 import { openLog, streamRun, summaryLines, withAsking, WITHDRAWN, WITHDRAWN_QUEUED } from './run.ts';
 import type { Log } from './run.ts';
 import { isLocal } from './settings.ts';
@@ -51,6 +52,8 @@ export interface ExecContext {
   onInterrupt(): void;
   /** Live agent runs' temp folders, for a host that must exit before their runs end. */
   temps?: Set<string>;
+  /** The project's recalled memory for an attempt of `step` (prompt part 7), from its task and prompt; absent when memory is off. */
+  recall?(step: string, query: string): string | undefined;
   /** OpenCode config a step's model needs beyond the step's own (`models.ts`), for where the step runs; absent: none. */
   opencodeConfig?(model: string, hostName?: string): Record<string, unknown> | undefined;
 }
@@ -60,13 +63,12 @@ const FLOWBOARD_ROOT = resolve(SHIM_ENTRY, '../../../..');
 
 export const artifactPath = (artifactsDir: string, type: string): string => join(artifactsDir, `${type}.md`);
 
-const SECRET = /_(KEY|TOKEN|SECRET|PASSWORD)$/i;
 
 /** `env` without names ending in _KEY, _TOKEN, _SECRET or _PASSWORD (any case); `removed` lists them, sorted. */
 export function shellEnv(env: NodeJS.ProcessEnv): { env: NodeJS.ProcessEnv; removed: string[] } {
   return {
-    env: Object.fromEntries(Object.entries(env).filter(([k]) => !SECRET.test(k))),
-    removed: Object.keys(env).filter((k) => SECRET.test(k)).sort(),
+    env: Object.fromEntries(Object.entries(env).filter(([k]) => !SECRET_NAME.test(k))),
+    removed: Object.keys(env).filter((k) => SECRET_NAME.test(k)).sort(),
   };
 }
 
@@ -333,15 +335,13 @@ export function execAi(config: RunConfig, run: RunCommand, produces: string[], c
       const ref = (type: string) => ({ type, path: artifactPath(ctx.artifactsDir, type) });
       const missing = missingInputs(run, ctx);
       // New objects: the config's own prompt and guards are shared by every attempt.
-      spec.prompt = {
-        ...spec.prompt,
-        preamble:
-          spec.prompt.preamble +
-          (run.note ? `\n\nA person's note for this attempt: ${run.note}` : '') +
-          (missing.length ? `\n\nMissing inputs (an earlier step did not write them): ${missing.join(', ')}` : ''),
-        inputs: run.inputs.filter((type) => !missing.includes(type)).map(ref),
-        outputs: produces.map(ref),
-      };
+      const preamble =
+        spec.prompt.preamble +
+        (run.note ? `\n\nA person's note for this attempt: ${run.note}` : '') +
+        (missing.length ? `\n\nMissing inputs (an earlier step did not write them): ${missing.join(', ')}` : '');
+      // Absent, not empty, when nothing is recalled: the prompt is then exactly the six parts.
+      const memory = ctx.recall?.(run.step, `${preamble}\n${spec.prompt.template ?? ''}`);
+      spec.prompt = { ...spec.prompt, preamble, inputs: run.inputs.filter((type) => !missing.includes(type)).map(ref), outputs: produces.map(ref), ...(memory && { memory }) };
       spec.guards = { ...spec.guards, writeRoots: [...(spec.guards?.writeRoots ?? []), ctx.artifactsDir] };
       if (ctx.approve) {
         const approve = ctx.approve;

@@ -139,3 +139,21 @@ test('a clone that finished stays done after the quiet time has passed', async (
   await new Promise((r) => setTimeout(r, 2300));
   assert.equal(cloneJob(done.id)!.phase, 'done', cloneJob(done.id)!.error);
 });
+
+test('a clone starts the repo analyst once the project is registered; a refusal never fails the clone', async () => {
+  const seen: Project[] = [];
+  const started = async (p: Project) => (seen.push(p), { ok: true as const, run: '2026-11-13T10-00-00-repo-analyst' });
+  const ok = await finished(value(startClone(temp(), flows(), input(temp(), { repo: 'flowboard/a1' }), ghCloning('flowboard/a1', remote()), undefined, started)));
+  assert.equal(ok.phase, 'done', ok.error);
+  assert.deepEqual(seen.map((p) => p.id), [ok.project!.id]);
+  assert.equal(ok.lines.at(-1), '-- analysis started: run 2026-11-13T10-00-00-repo-analyst');
+  const refused = async () => ({ ok: false as const, error: 'flow.yaml: CLAUDE_CODE_OAUTH_TOKEN is not set: a container cannot use this machine\'s login\nmore' });
+  const no = await finished(value(startClone(temp(), flows(), input(temp(), { repo: 'flowboard/a2' }), ghCloning('flowboard/a2', remote()), undefined, refused)));
+  assert.equal(no.phase, 'done', no.error);
+  assert.equal(no.lines.at(-1), "-- analysis not started: flow.yaml: CLAUDE_CODE_OAUTH_TOKEN is not set: a container cannot use this machine's login");
+  // a clone that fails never starts it
+  const calls: Project[] = [];
+  const gone = await finished(value(startClone(temp(), flows(), input(temp(), { repo: 'flowboard/gone2' }), fakeGh({ 'repo clone flowboard/gone2 *': 'echo "GraphQL: Could not resolve to a Repository" >&2; exit 1' }), undefined, async (p) => (calls.push(p), { ok: true as const, run: 'x' }))));
+  assert.equal(gone.phase, 'failed');
+  assert.equal(calls.length, 0);
+});

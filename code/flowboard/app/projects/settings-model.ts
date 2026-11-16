@@ -24,8 +24,8 @@ export const SETTING_PAGES: SettingPageDef[] = [
 export const ON_LIMIT = { pause: 'pause new runs', ask: 'ask me first' } as const;
 export const REBUILD = { push: 'when the base branch moves', daily: 'once a day', manual: 'only when I ask' } as const;
 export const KNOWLEDGE = {
-  serena: { name: 'Serena', what: 'a symbol index: agents find definitions and references and edit by symbol', cost: 'local, no AI calls, free', via: 'an MCP server every agent step can call' },
-  graphify: { name: 'graphify', what: 'a graph of the modules, calls and concepts, with a written summary of each part', cost: 'uses the AI service', via: 'graphify-out/, readable by every step' },
+  serena: { name: 'Serena', what: 'a symbol index: agents find definitions and references by symbol, read-only', cost: 'local, no AI calls, free', via: 'an MCP server every agent step can call' },
+  graphify: { name: 'graphify', what: 'a graph of the modules, calls and imports, parsed from the code, with a report of its main parts', cost: 'local, no AI calls, free', via: 'graphify-out/, readable by every step' },
 } as const;
 
 /** What a field holds as typed. */
@@ -46,10 +46,10 @@ export type Field = 'cap' | 'alertAt' | 'channel' | 'nudge' | 'memMb' | 'cpus';
 /** `ov`: which settings this project overrides; `v`: their values, and the repo's limits. */
 export interface Draft { ov: Record<SettingKey, boolean>; v: Values }
 /**
- * `base`: each setting as it would be with no override (type, then app); `repo`: the repo's name, base branch and
- * size, for the knowledge warnings; `flows`: the type's.
+ * `base`: each setting as it would be with no override (type, then app); `repo`: the repo's name and base branch, for
+ * the knowledge page; `flows`: the type's.
  */
-export interface Ctx { base: Resolved; os: string; typeName: string; flows: string[]; repo?: { name: string; branch: string | null; sizeKb?: number } }
+export interface Ctx { base: Resolved; os: string; typeName: string; flows: string[]; repo?: { name: string; branch: string | null } }
 export type Mode = 'project' | 'app';
 
 const KEYS: SettingKey[] = ['trust', 'budget', 'escalation', 'memory', 'knowledge', 'draft'];
@@ -103,10 +103,6 @@ export const toLimits = (d: Draft): Limits => ({ ...(d.v.memMb.trim() && { memor
 /** Each setting's value in effect: the draft's where it is overridden (always, for the app's own page). */
 export const effective = <K extends SettingKey>(d: Draft, ctx: Ctx, k: K, mode: Mode = 'project'): Settings[K] => (mode === 'app' || d.ov[k] ? valueOf(d.v, k) : ctx.base[k].value);
 
-/** What graphify costs to map a repo this size, from GitHub's size; plan 5 meters the real figure. */
-// ponytail: a guess from the repo's size, shown as "about"; replace with metered rebuild costs once graphify runs
-export const graphifyCost = (sizeKb: number) => Math.max(0.05, (sizeKb / 1024) * 0.008).toFixed(2);
-
 /** Every rule the pages check: errors block saving, warnings only say what will happen. */
 export function problems(d: Draft, ctx: Ctx, mode: Mode = 'project') {
   const v = d.v;
@@ -130,17 +126,6 @@ export function problems(d: Draft, ctx: Ctx, mode: Mode = 'project') {
   if (trust === 'untrusted' && ctx.os !== 'linux')
     warns.push({ page: 'sandbox', text: `gVisor runs on Linux only; on this ${ctx.os === 'darwin' ? 'Mac' : 'machine'}, every run of this project is refused.` });
   const kn = effective(d, ctx, 'knowledge', mode);
-  if (kn.graphify) {
-    const cap = effective(d, ctx, 'budget', mode).capUsd;
-    const r = ctx.repo;
-    const when = { push: `on every move of ${r?.branch ?? 'the base branch'}`, daily: 'once a day', manual: 'each time you ask' }[kn.rebuild];
-    const cost = r?.sizeKb !== undefined ? `about $${graphifyCost(r.sizeKb)} a rebuild` : 'a charge on every rebuild';
-    warns.push({
-      page: 'knowledge',
-      caution: true,
-      text: `graphify sends ${r ? `${r.name}'s` : 'each project’s'} code to the AI service to describe it: ${cost}, ${when}, ${cap ? `counted against the $${cap} budget` : 'and the project has no budget cap to stop it'}. Turn it off, or rebuild less often, if the code must not leave this machine or the cost is too high.`,
-    });
-  }
   if (!kn.serena && !kn.graphify && on('knowledge')) warns.push({ page: 'knowledge', text: 'With no maps, agents find their way by reading files, which costs more tokens on a large repo.' });
   return { errors, warns, ok: Object.keys(errors).length === 0 };
 }

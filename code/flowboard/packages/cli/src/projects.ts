@@ -16,10 +16,13 @@ import { type ApprovalRule, ApprovalRuleSchema } from './approvals.ts';
 import { budgetState, monthName, monthOf } from './budget.ts';
 import { isDir, isFile, writeJsonFile } from './config.ts';
 import { FLOW_NAME } from './flow-files.ts';
+import { forgetAll } from './memory.ts';
 import { projectSlug } from './slug.ts';
+import { type AnalysisView, HOST, MAX_HOSTS } from './analysis.ts';
+import type { KnowledgeView } from './knowledge.ts';
 import type { RunStatus, RunSummary } from './flow-logs.ts';
 import { type Limits, PROJECT_FILE, projectSettings, setCheckCommand, setLimits } from './project.ts';
-import { type AppSettings, type Overrides, OverridesSchema, PROJECT_TYPES, type ProjectTypeId, type Resolved, resolveSettings } from './settings.ts';
+import { type AppSettings, type Knowledge, type Overrides, OverridesSchema, PROJECT_TYPES, type ProjectTypeId, type Resolved, resolveSettings } from './settings.ts';
 
 /** Where the repo came from: cloned from GitHub as `owner/name`, or a folder already on this machine. */
 export type Source = { kind: 'github'; repo: string } | { kind: 'local' };
@@ -29,7 +32,10 @@ export type Source = { kind: 'github'; repo: string } | { kind: 'local' };
  * library at registration, or null to pick one each run; `baseBranch`: the branch work starts from and lands on, the
  * one checked out at registration (null: HEAD was detached); `type`: decides its flows and the defaults its settings
  * start from; `overrides`: the settings it sets over those (`settings.ts`); `approvals`: what its owner chose to
- * allow from now on (`approvals.ts`), absent on a record from before them.
+ * allow from now on (`approvals.ts`), absent on a record from before them. `analysis`: the repo analyst's latest run
+ * (`analysis-run.ts`); `networkHosts`: the hosts its owner let its sandboxes reach, never set from the repo.
+ * `knowledgeBuild`: its maps' latest build, the run and the commit it mapped, null for a repo with no commits
+ * (`knowledge-run.ts`).
  */
 export interface Project {
   id: string;
@@ -43,6 +49,9 @@ export interface Project {
   source: Source;
   overrides: Overrides;
   approvals?: ApprovalRule[];
+  analysis?: { run: string };
+  networkHosts?: string[];
+  knowledgeBuild?: { run: string; commit: string | null };
 }
 export type Result<T> = { ok: true; value: T } | { ok: false; status: 400 | 404 | 409; error: string };
 
@@ -61,6 +70,24 @@ export function readProjects(dataDir: string): Project[] {
 
 // ponytail: read, change, write with no lock; one person's browser is the only writer
 const writeProjects = (dataDir: string, projects: Project[]) => writeJsonFile(fileOf(dataDir), projects);
+
+/** Keeps `run` as the project's latest repo analysis; nothing when the project is gone. */
+export function setAnalysisRun(dataDir: string, id: string, run: string): void {
+  const all = readProjects(dataDir);
+  const p = all.find((x) => x.id === id);
+  if (!p) return;
+  p.analysis = { run };
+  writeProjects(dataDir, all);
+}
+
+/** Keeps `build` as the project's latest knowledge build; nothing when the project is gone. */
+export function setKnowledgeBuild(dataDir: string, id: string, build: { run: string; commit: string | null }): void {
+  const all = readProjects(dataDir);
+  const p = all.find((x) => x.id === id);
+  if (!p) return;
+  p.knowledgeBuild = build;
+  writeProjects(dataDir, all);
+}
 
 /** The git repo holding `path` (absolute, or from `~/`): its top folder, as a real path. */
 export function repoRoot(path: string): Result<string> {
@@ -181,7 +208,7 @@ export function createProject(dataDir: string, flowsDir: string, input: NewProje
 }
 
 /** `overrides` replaces the project's whole set; `limits` replaces the repo's (an empty one removes them); `approvals` replaces the list. */
-export interface ProjectEdit { name?: string; defaultFlow?: string | null; checkCommand?: string | null; baseBranch?: string | null; overrides?: Overrides; limits?: Limits; approvals?: ApprovalRule[] }
+export interface ProjectEdit { name?: string; defaultFlow?: string | null; checkCommand?: string | null; baseBranch?: string | null; overrides?: Overrides; limits?: Limits; approvals?: ApprovalRule[]; networkHosts?: string[] }
 
 /**
  * Renames, moves the default flow, sets the check command (null or empty removes it), the base branch (a branch of
@@ -199,6 +226,11 @@ export function updateProject(dataDir: string, flowsDir: string, id: string, edi
   if (badOverrides) return badOverrides;
   const approvals = edit.approvals !== undefined ? z.array(ApprovalRuleSchema).safeParse(edit.approvals) : undefined;
   if (approvals && !approvals.success) return fail(400, BAD_APPROVAL);
+  if (edit.networkHosts !== undefined) {
+    const bad = edit.networkHosts.find((h) => !HOST.test(h));
+    if (bad !== undefined) return fail(400, `network hosts: ${bad} is not a host name`);
+    if (new Set(edit.networkHosts).size > MAX_HOSTS) return fail(400, `network hosts: at most ${MAX_HOSTS}`);
+  }
   const branch = edit.baseBranch?.trim();
   if (branch && gitOut(projects[at].repoPath, 'rev-parse', '--verify', '-q', `refs/heads/${branch}`) === undefined && branch !== currentBranch(projects[at].repoPath)) {
     return fail(400, `${projects[at].repoPath} has no branch ${branch}`);
@@ -218,6 +250,7 @@ export function updateProject(dataDir: string, flowsDir: string, id: string, edi
     ...(edit.baseBranch !== undefined && { baseBranch: branch || null }),
     ...(edit.overrides !== undefined && { overrides: edit.overrides }),
     ...(approvals?.success && { approvals: approvals.data }),
+    ...(edit.networkHosts !== undefined && { networkHosts: [...new Set(edit.networkHosts)].sort() }),
   };
   projects[at] = p;
   writeProjects(dataDir, projects);
@@ -238,12 +271,13 @@ export function addApproval(dataDir: string, id: string, rule: ApprovalRule): Re
   return { ok: true, value: projects[at] };
 }
 
-/** Forgets the project; its repo, runs and `.flowboard.yaml` stay where they are. */
+/** Forgets the project and its memory; its repo, runs and `.flowboard.yaml` stay where they are. */
 export function removeProject(dataDir: string, id: string): boolean {
   const projects = readProjects(dataDir);
   const kept = projects.filter((p) => p.id !== id);
   if (kept.length === projects.length) return false;
   writeProjects(dataDir, kept);
+  forgetAll(dataDir, id);
   return true;
 }
 
@@ -287,7 +321,16 @@ export interface ProjectView extends Project {
   weekSpendUsd: number;
   /** What its runs started this calendar month have spent, against its monthly cap (`budget.ts`). */
   monthSpendUsd: number;
+  /** Its latest repo analysis as it stands, read from `analysis.run`, or null when it has none (`analysis.ts`). */
+  analysed: AnalysisView | null;
+  /** Where its knowledge assets stand, read from `knowledgeBuild` and its base branch (`knowledge.ts`). */
+  knowledge: KnowledgeView;
 }
+
+/** Until a caller passes `analysisView`: `projects.ts` cannot import it, as it reads runs (see `viewProjects`). */
+const unread = (run: string): AnalysisView => ({ run, status: 'failed', spentUsd: 0, error: 'not read' });
+/** Until a caller passes `knowledgeView`, likewise. */
+const unbuilt = (p: Project, kn: Knowledge): KnowledgeView => (!kn.graphify && !kn.serena ? { status: 'off' } : p.knowledgeBuild ? { status: 'failed', error: 'not read' } : { status: 'never' });
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 /** A run folder's name starts with its local start time, `2026-11-12T13-32-04`. */
@@ -343,8 +386,13 @@ function projectCheckSteps(flowsDir: string, flow: string): string[] {
   }
 }
 
+/**
+ * The pages' view of each project. `analysisOf` reads a repo analysis from its run (`analysisView`) and `knowledgeOf`
+ * a knowledge build (`knowledgeView`): they are passed in, because importing them here would loop back through
+ * `flow-logs.ts` and `isolation.ts` to this module.
+ */
 // ponytail: "this week" is the last seven days, and a run's whole cost counts on the day it started (Projects OQ 11)
-export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: string, app: AppSettings, now = Date.now()): ProjectView[] {
+export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: string, app: AppSettings, now = Date.now(), analysisOf: (run: string) => AnalysisView = unread, knowledgeOf: (p: Project, kn: Knowledge) => KnowledgeView = unbuilt): ProjectView[] {
   return projects.map((p) => {
     const mine = runs.filter((r) => owns(p, r.folder));
     const counts: ProjectView['runs'] = {};
@@ -374,6 +422,8 @@ export function viewProjects(projects: Project[], runs: RunSummary[], flowsDir: 
       runs: counts,
       weekSpendUsd,
       monthSpendUsd,
+      analysed: p.analysis ? analysisOf(p.analysis.run) : null,
+      knowledge: knowledgeOf(p, resolved.knowledge.value),
     };
   });
 }

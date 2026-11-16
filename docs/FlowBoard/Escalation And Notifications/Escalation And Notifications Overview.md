@@ -60,6 +60,9 @@ It also names the warning sign: *"If **from chat** is most of the total, you are
 
 PRD milestone **M6 — Slack escalation**: *"5-minute timer, Block Kit rendering, interaction handler, idempotency and reconciliation both directions."* The first build had unit tests but backlog Story 6.3 records a **GAP**: *"run once against a real workspace — never done."* See [[Escalation And Notifications Roadmap]].
 
+> [!success] Built in the rebuild, 2026-11-15
+> Slack escalation is built on branch `feature/slack-escalation`, over **Socket Mode** (Open Questions #6), with no Notifier port yet: one channel, one module. A question a run asks the page is posted after the project's *Escalation* minutes, answered there through a modal or in FlowBoard, the first answer winning, and repainted everywhere. It has been checked against a fake Slack, not yet a real workspace; the GAP above still stands. See [[Slack Escalation Handoff]].
+
 ## Related
 
 - [[Escalation And Notifications Index]]

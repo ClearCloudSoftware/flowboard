@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import type { RunSummary } from '../src/flow-logs.ts';
 import { projectLimits, projectSettings, setCheckCommand, setLimits } from '../src/project.ts';
 import { APP_DEFAULTS } from '../src/settings.ts';
+import { addMemories, memoryFile } from '../src/memory.ts';
 import { addApproval, createProject, ownerOf, type Project, projectSlug, projectSpendUsd, readProjects, removeProject, repoProblems, repoRoot, seedOnce, slugify, updateProject, viewProjects } from '../src/projects.ts';
 
 const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'fb-projects-'))); // macOS's temp folder is a link
@@ -79,7 +80,9 @@ test("the check command lives in the repo's .flowboard.yaml, beside what is ther
   value(updateProject(data, lib, q.id, { checkCommand: '' }));
   assert.equal(existsSync(join(fresh, '.flowboard.yaml')), false); // made for the command, gone with it
 
+  addMemories(data, p.id, [{ text: 'Tests use vitest, run with pnpm test', source: { run: 'r1' } }]);
   assert.equal(removeProject(data, p.id), true);
+  assert.equal(existsSync(memoryFile(data, p.id)), false); // a re-added repo is a new project: its memory would be an orphan
   assert.equal(removeProject(data, p.id), false);
 });
 
@@ -365,4 +368,31 @@ test('a repo typed in another case than on disk registers, on a case-insensitive
   if (!existsSync(join(base, 'caserepo'))) return t.skip('the temp folder is case-sensitive');
   assert.deepEqual(repoRoot(join(base, 'caserepo')), { ok: true, value: onDisk });
   assert.deepEqual(repoRoot(join(base, 'caserepo', '.')), { ok: true, value: onDisk });
+});
+
+test("a project's analysis is on its view, read by the reader it is given; none without one", () => {
+  const r = repo();
+  const data = temp();
+  const lib = flows();
+  const proj = value(createProject(data, lib, { name: 'p', repoPath: r, type: 'software' }));
+  const read = (run: string) => ({ run, status: 'running' as const, spentUsd: 0 });
+  assert.equal(viewProjects([proj], [], lib, APP_DEFAULTS, Date.now(), read)[0].analysed, null);
+  const analysed = { ...proj, analysis: { run: '2026-11-13T10-00-00-repo-analyst' } };
+  assert.deepEqual(viewProjects([analysed], [], lib, APP_DEFAULTS, Date.now(), read)[0].analysed, { run: '2026-11-13T10-00-00-repo-analyst', status: 'running', spentUsd: 0 });
+});
+
+test("network hosts: saved sorted and once each on the record; anything but a host name is refused; an invalid .flowboard.yaml refuses a check command", () => {
+  const r = repo();
+  const data = temp();
+  const lib = flows();
+  const proj = value(createProject(data, lib, { name: 'p', repoPath: r, type: 'software' }));
+  assert.deepEqual(value(updateProject(data, lib, proj.id, { networkHosts: ['pypi.org', 'registry.npmjs.org', 'pypi.org'] })).networkHosts, ['pypi.org', 'registry.npmjs.org']);
+  assert.deepEqual(readProjects(data)[0].networkHosts, ['pypi.org', 'registry.npmjs.org']);
+  for (const bad of ['evil.com/x', 'evil.com:8080', 'https://pypi.org'])
+    assert.deepEqual(updateProject(data, lib, proj.id, { networkHosts: [bad] }), { ok: false, status: 400, error: `network hosts: ${bad} is not a host name` });
+  assert.equal(updateProject(data, lib, proj.id, { networkHosts: Array.from({ length: 21 }, (_, i) => `h${i}.example.com`) }).ok, false);
+  writeFileSync(join(r, '.flowboard.yaml'), 'sandbox: [nope\n');
+  const set = updateProject(data, lib, proj.id, { checkCommand: 'node --test' });
+  assert.equal(set.ok, false);
+  assert.match((set as { error: string }).error, /\.flowboard\.yaml/);
 });
