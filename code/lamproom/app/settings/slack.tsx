@@ -196,7 +196,7 @@ function Slack() {
   return (
     <Row icon={icon(MessageSquare)} name="Slack" help={<SlackHelp />} text="A question nobody answered in Lamproom is posted to the channel a project's escalation names, after its wait, and can be answered there; the first answer, here or there, wins. A project's budget alert and cap are posted too.">
       {!v ? (
-        view.isError ? <ErrorLine error={view.error} /> : <Loader className="text-xs" size={16} />
+        view.isError ? <ErrorLine error={view.error} /> : <Loader inline className="text-xs" />
       ) : (
         <div className="grid gap-2 font-sans text-[13px]">
           <Status v={v} />

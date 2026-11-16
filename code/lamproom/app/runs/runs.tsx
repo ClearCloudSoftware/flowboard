@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { LIVE, runQuery, runsQuery } from './api.ts';
 import type { RunStatus } from './api.ts';
 import { useState } from 'react';
+import { Loader } from '@/components/loader';
 import { NewRun } from './new-run.tsx';
 import { RunActions, RunView } from './run-view.tsx';
 
@@ -59,6 +60,7 @@ export function Runs() {
             <span className="sp" />
             <span className="lbl">{runs.data?.length ?? 0}</span>
           </div>
+          {runs.isPending && <Loader label="Loading runs…" />}
           {runs.isError && <div className="in-empty">{runs.error.message}</div>}
           {runs.data?.length === 0 && <div className="in-empty">No runs yet. Start one with + New run.</div>}
           {runs.data?.map((r) => (

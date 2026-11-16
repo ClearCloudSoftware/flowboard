@@ -163,7 +163,7 @@ export function RepoStep({ gh, owner, onOwner, picked, onPick }: { gh: GitHubVie
           </>
         )}
       </p>
-      {repos.isPending && <p className="py-6 text-center"><Loader label={`Asking GitHub for ${owner}'s repositories…`} /></p>}
+      {repos.isPending && <Loader label={`Asking GitHub for ${owner}'s repositories…`} />}
       {repos.isError && <p className="text-fail">{repos.error.message}</p>}
       {data && !data.ok && data.reason === 'restricted' && <Restricted owner={owner} url={gh.requestAccessUrl} onCheck={() => void repos.refetch()} checking={repos.isFetching} />}
       {data && !data.ok && data.reason === 'error' && (

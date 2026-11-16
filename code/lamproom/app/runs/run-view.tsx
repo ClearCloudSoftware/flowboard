@@ -482,7 +482,7 @@ function Side({ run, onCompare }: { run: RunDetail; onCompare: () => void }) {
           </button>
         )}
         {open === 'patch' && run.patch && <Diff text={run.patch.text} cut={run.patch.cut} />}
-        {open && open !== 'patch' && <pre className="rv-file">{artifact.data?.text ?? (artifact.isError ? artifact.error.message : <Loader />)}</pre>}
+        {open && open !== 'patch' && <pre className="rv-file">{artifact.data?.text ?? (artifact.isError ? artifact.error.message : <Loader inline />)}</pre>}
       </div>
       <div className="rv-sec">
         <h3>spend</h3>
@@ -631,11 +631,11 @@ export function Compare({ run, onClose }: { run: RunDetail; onClose: () => void 
       <div className="rv-cmp-b">
         <section>
           <h3>plan{plan ? ` · ${plan}` : ''}</h3>
-          <pre className="rv-file">{!plan ? 'This run has no plan artifact.' : (planText.data?.text ?? (planText.isError ? planText.error.message : <Loader />))}</pre>
+          <pre className="rv-file">{!plan ? 'This run has no plan artifact.' : (planText.data?.text ?? (planText.isError ? planText.error.message : <Loader inline />))}</pre>
         </section>
         <section>
           <h3>built · {built.data?.from === 'patch' ? 'changes.patch' : built.data?.from === 'folder' ? `${run.folder} against its last commit` : 'no changes'}</h3>
-          {built.data?.text ? <Diff text={built.data.text} cut={built.data.cut} /> : <pre className="rv-file">{built.isPending ? <Loader /> : built.error?.message ?? 'Nothing changed.'}</pre>}
+          {built.data?.text ? <Diff text={built.data.text} cut={built.data.cut} /> : <pre className="rv-file">{built.isPending ? <Loader inline /> : built.error?.message ?? 'Nothing changed.'}</pre>}
         </section>
       </div>
     </dialog>
