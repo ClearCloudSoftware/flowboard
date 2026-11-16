@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>FlowBoard Monitor</title>
+<title>Lamproom Monitor</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
@@ -373,7 +373,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;te
 
 <div class="app">
   <header class="topbar">
-    <div class="brand">flowboard<em>/</em><span>monitor</span></div>
+    <div class="brand">lamproom<em>/</em><span>monitor</span></div>
     <button class="stat" id="flowBtn" title="Open the pipeline view">
       <span class="lbl">flow</span>
       <b style="font-weight:400">research→plan→build∥tests→review→summarize</b>
@@ -471,53 +471,53 @@ const T = (id, title, repo, runs, extra = {}) => ({ id, title, repo, runs, log: 
 
 /* ══ seed — the board mid-morning ═══════════════════════════════════════ */
 const TASKS = [
-  T('auth-refactor','Rotate refresh tokens on every use','flowboard/api',{
+  T('auth-refactor','Rotate refresh tokens on every use','lamproom/api',{
     research: run('research','done',22,1.6),
     plan:     run('plan','done',20.4,4.2),
     build:    run('build','done',16.2,8.0),
     tests:    run('tests','done',16.2,5.1),
     review:   run('review','gate',8.2,3.2,{ since: ago(5) }),
   }),
-  T('csv-export','Stream the ledger export instead of buffering it','flowboard/api',{
+  T('csv-export','Stream the ledger export instead of buffering it','lamproom/api',{
     research: run('research','done',20,2.1),
     plan:     run('plan','asking',17.9,5.4,{ since: ago(12.5),
       ask:'The ledger export can stream straight out of Postgres, or stage to object storage first. Streaming is cheaper but holds a connection for the whole export.',
       opts:['Stream from Postgres','Stage to object storage','Decide it yourself'] }),
   }),
-  T('sandbox-egress','Default-deny egress allowlist, per step','flowboard/runner',{
+  T('sandbox-egress','Default-deny egress allowlist, per step','lamproom/runner',{
     research: run('research','done',41,2.4),
     plan:     run('plan','done',38.6,6.1),
     build:    run('build','running',32.5,null,{ planned: 38 * MIN }),
     tests:    run('tests','done',32.5,9.2),
   }),
-  T('billing-webhook','Idempotency keys for replayed Stripe events','flowboard/api',{
+  T('billing-webhook','Idempotency keys for replayed Stripe events','lamproom/api',{
     research: run('research','done',63,1.9),
     plan:     run('plan','done',61.1,3.8),
     build:    run('build','failed',44,2.3,{ attempts:3, wasted:1.442,
       err:'egress denied — api.stripe.com not in the step allowlist' }),
   }),
-  T('docs-pass','Plain-English feature map for the v3 rebuild','flowboard/docs',{
+  T('docs-pass','Plain-English feature map for the v3 rebuild','lamproom/docs',{
     research: run('research','running',3.2,null,{ planned: 7 * MIN }),
   }),
-  T('mem0-adapter','Wire the self-hosted memory port behind the seam','flowboard/core',{
+  T('mem0-adapter','Wire the self-hosted memory port behind the seam','lamproom/core',{
     research: run('research','done',27,2.2),
     plan:     run('plan','done',24.8,4.6),
     build:    run('build','running',20.2,null,{ planned: 26 * MIN }),
     tests:    run('tests','running',20.2,null,{ planned: 24 * MIN }),
   }),
-  T('cost-rollup','Wasted-spend metric, per flow version','flowboard/core',{
+  T('cost-rollup','Wasted-spend metric, per flow version','lamproom/core',{
     research: run('research','done',11,2.6),
     plan:     run('plan','queued',null,null),
   }),
-  T('provider-codex','Codex CLI behind the AgentProvider seam','flowboard/providers',{
+  T('provider-codex','Codex CLI behind the AgentProvider seam','lamproom/providers',{
     research: run('research','asking',9,1.4,{ since: ago(8),
       ask:'The Codex CLI reports no per-call cost. Estimate spend from token counts, or record it as unknown and leave the totals honest?',
       opts:['Estimate from tokens','Record as unknown'] }),
   }),
-  T('pdf-import','Pull quoted prices out of supplier PDFs','flowboard/api',{
+  T('pdf-import','Pull quoted prices out of supplier PDFs','lamproom/api',{
     research: run('research','queued',null,null),
   }),
-  T('flow-versioning','Pin a running task to the flow version it started on','flowboard/core',{
+  T('flow-versioning','Pin a running task to the flow version it started on','lamproom/core',{
     research: run('research','done',94,1.7),
     plan:     run('plan','done',92,5.0),
     build:    run('build','done',87,11.4,{ attempts:2, wasted:0.79 }),
@@ -525,7 +525,7 @@ const TASKS = [
     review:   run('review','done',75.6,3.4),
     summarize:run('summarize','done',72.2,1.3),
   },{ finished: ago(70.9) }),
-  T('inbox-keyboard','Number-key answers, no mouse, in the inbox','flowboard/web',{
+  T('inbox-keyboard','Number-key answers, no mouse, in the inbox','lamproom/web',{
     research: run('research','done',126,1.5),
     plan:     run('plan','done',124.5,3.1),
     build:    run('build','done',121.4,6.8),
@@ -533,7 +533,7 @@ const TASKS = [
     review:   run('review','done',114.6,2.6),
     summarize:run('summarize','done',112,1.1),
   },{ finished: ago(110.9) }),
-  T('drawio-export','Export a flow as a drawio diagram','flowboard/web',{}),
+  T('drawio-export','Export a flow as a drawio diagram','lamproom/web',{}),
 ];
 
 /* per-task log lines — what the agent is doing right now */
@@ -559,7 +559,7 @@ const LOGS = {
     ['g','› read  docs/feature-map.md (448 lines)'],
     ['' ,'› read  docs/old/PRD.MD'],
     ['g','⋯ summarising section E — Seeing & steering'],
-    ['' ,'› write .flowboard/artifacts/brief.md'],
+    ['' ,'› write .lamproom/artifacts/brief.md'],
   ],
   'cost-rollup':[
     ['g','› read  core/src/cost/rollup.ts'],
@@ -842,7 +842,7 @@ function detailHTML(t){
     return `<span class="stepchip ${cls}">${STEPS[s].label}<i>${STEPS[s].model} · ${val}${r.attempts > 1 ? ' · ×' + r.attempts : ''}</i></span>`;
   }).join('');
   const arts = ORDER.filter(s => t.runs[s] && t.runs[s].state === 'done' && ARTS[s]).map(s =>
-    `<div class="art"><span style="color:var(--ink-3)">${ICON.done}</span><span class="p">.flowboard/${t.id}/${ARTS[s][0]}</span><span class="sz">${ARTS[s][1]}</span></div>`).join('')
+    `<div class="art"><span style="color:var(--ink-3)">${ICON.done}</span><span class="p">.lamproom/${t.id}/${ARTS[s][0]}</span><span class="sz">${ARTS[s][1]}</span></div>`).join('')
     || `<div class="art"><span class="p" style="color:var(--ink-3)">Nothing written yet.</span></div>`;
   return `<div class="detail">
     <div class="d-block">

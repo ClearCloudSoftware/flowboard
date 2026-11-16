@@ -1,4 +1,4 @@
-# Project Budget Implementation Plan (projects phase 3b: the monthly cap in run-flow)
+# Project Budget Implementation Plan (projects phase 3b: the monthly cap in lr-run-flow)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -6,7 +6,7 @@
 first* once it is spent) limits what all of the project's runs spend together. Today it is stored and ignored; only
 a flow's own `budget_usd` stops a run.
 
-**Architecture:** run-flow already finds the run's project (`findProject`, phase 3a). It adds up what the project's
+**Architecture:** lr-run-flow already finds the run's project (`findProject`, phase 3a). It adds up what the project's
 runs started this calendar month have spent, from the run folders (`listRuns`), and refuses to start or resume once
 the cap is reached. A *pause* project's runs are refused outright; an *ask me first* project's run starts only when
 `--over-project-budget` is passed, which the runs page sends from a **Start anyway** / **Resume anyway** button.
@@ -17,17 +17,17 @@ its card and page, with a warning past the alert percentage.
 **Tech Stack:** TypeScript on Node 24 with type stripping, `node --test`, zod 4, Next 16 + TanStack Query + shadcn/ui
 + lucide-react.
 
-**Spec:** `docs/FlowBoard/Projects/Project Settings.md` (the *Budget* row) and `Budget` in
-`code/flowboard/packages/cli/src/settings.ts`. Builds on phase 3a, `docs/superpowers/plans/2026-11-13-isolation-enforcement.md`
-and `docs/FlowBoard/Projects/Isolation Enforcement Handoff.md` on branch `feature/isolation-enforcement`.
+**Spec:** `docs/Lamproom/Projects/Project Settings.md` (the *Budget* row) and `Budget` in
+`code/lamproom/packages/cli/src/settings.ts`. Builds on phase 3a, `docs/superpowers/plans/2026-11-13-isolation-enforcement.md`
+and `docs/Lamproom/Projects/Isolation Enforcement Handoff.md` on branch `feature/isolation-enforcement`.
 
 **Not in this plan:** a Slack or chat alert at the alert percentage (escalation, phase 6), the analysis agent's cost
 (phase 4; it counts here once its runs are run folders like any other), a per-project cap on concurrent runs, and
-`pnpm run-agent` (a single agent, not a flow).
+`pnpm lr-run-agent` (a single agent, not a flow).
 
 ## Global Constraints
 
-- All paths are under `code/flowboard/` unless they start with `docs/`. Run commands from `code/flowboard/`.
+- All paths are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
 - Branch `feature/project-budget`, cut from `feature/isolation-enforcement` in its own worktree (it needs
   `findProject`, `dataDirOf`, `isolate` and `resumeRun` from there), or from `dev` once that branch is merged.
   Do not merge into `dev`; Alex decides.
@@ -97,7 +97,7 @@ and `docs/FlowBoard/Projects/Isolation Enforcement Handoff.md` on branch `featur
   at 50 → `over: true`, `leftUsd: 0`; at 60 → `leftUsd: -10`; `capUsd: null` → `leftUsd: Infinity`, `alert: false`, `over: false`.
 
   `projects.test.ts`: `projectSpendUsd` over runs `2026-11-02T…` ($3, in the repo), `2026-11-20T…` ($2, in a task
-  worktree under the repo's `.flowboard/worktrees/`), `2026-10-31T23-10-00-…` ($7, October), `scratch` (no time, $9),
+  worktree under the repo's `.lamproom/worktrees/`), `2026-10-31T23-10-00-…` ($7, October), `scratch` (no time, $9),
   and one in a nested project's repo ($4) → `5` for `'2026-11'`, `7` for `'2026-10'`; with `except` the Nov 20 run → `3`;
   the nested project's own id → `4`. A run whose folder is gone still counts by its recorded path.
 
@@ -113,7 +113,7 @@ and `docs/FlowBoard/Projects/Isolation Enforcement Handoff.md` on branch `featur
 
 - [ ] **Step 5: Commit** `feat(projects): a project's spend this month, from its runs`
 
-### Task 2: run-flow keeps to the cap
+### Task 2: lr-run-flow keeps to the cap
 
 **Files:**
 - Modify: `packages/cli/src/flow-run.ts`, `packages/cli/test/flow-run.test.ts`, `packages/cli/test/fixtures/flow.ts`
@@ -160,7 +160,7 @@ and `docs/FlowBoard/Projects/Isolation Enforcement Handoff.md` on branch `featur
 
 - [ ] **Step 4: Run them to verify they pass**, then `pnpm test:packages`. Expected: PASS.
 
-- [ ] **Step 5: Commit** `feat(run-flow): a project's monthly cap stops its runs`
+- [ ] **Step 5: Commit** `feat(lr-run-flow): a project's monthly cap stops its runs`
 
 ### Task 3: The pages
 
@@ -174,7 +174,7 @@ and `docs/FlowBoard/Projects/Isolation Enforcement Handoff.md` on branch `featur
 - Consumes: Tasks 1–2.
 - Produces:
   - `StartInput.overProjectBudget?: boolean` → `--over-project-budget`. `Started` refusal gains `askOver?: true` when
-    run-flow's words contain `--over-project-budget`; `resumeRun(runDir, dataDir, budgetUsd?, overProjectBudget?)`
+    lr-run-flow's words contain `--over-project-budget`; `resumeRun(runDir, dataDir, budgetUsd?, overProjectBudget?)`
     returns the same.
   - `POST /api/runs` and `POST /api/runs/:run/resume` accept `overProjectBudget?: boolean`; a 422 body is
     `{ error, askOver? }`.
@@ -182,7 +182,7 @@ and `docs/FlowBoard/Projects/Isolation Enforcement Handoff.md` on branch `featur
     over: `spent $<spent> of its $<cap> for <Month>; new runs are paused` (pause) or `…; new runs ask first` (ask), and
     `spent <pct>% of its $<cap> for <Month>` at the alert.
 
-- [ ] **Step 1: Write the failing tests:** `flow-start.test.ts`: a fake run-flow that prints the ask refusal →
+- [ ] **Step 1: Write the failing tests:** `flow-start.test.ts`: a fake lr-run-flow that prints the ask refusal →
   `{ ok: false, askOver: true }`; `overProjectBudget: true` puts the flag in its arguments. `projects.test.ts`:
   `viewProjects` with $9 of a $10 cap → `monthSpendUsd: 9` and the alert problem line; with $10 and `ask` → the over line.
 
@@ -191,7 +191,7 @@ and `docs/FlowBoard/Projects/Isolation Enforcement Handoff.md` on branch `featur
 - [ ] **Step 3: Implement.** The New run form shows **Start anyway** beside the refusal when `askOver`, sending the
   same start with `overProjectBudget: true`; the run page's Resume shows **Resume anyway** the same way. The project
   page's settings card shows the budget as `$<spent> of $<cap> this month` (`text-wait` at the alert). The budget
-  page's footnote loses *"Saved now; FlowBoard does not act on it yet."* and becomes: `Everything the project’s runs
+  page's footnote loses *"Saved now; Lamproom does not act on it yet."* and becomes: `Everything the project’s runs
   cost in a calendar month counts. Each flow’s own budget still applies inside it.`
 
 - [ ] **Step 4: Run them to verify they pass**, then `pnpm test:packages`, `pnpm test:app`, `pnpm exec tsc --noEmit`. Expected: PASS, clean.
@@ -205,8 +205,8 @@ and `docs/FlowBoard/Projects/Isolation Enforcement Handoff.md` on branch `featur
 ### Task 4: Docs
 
 **Files:**
-- Modify: `docs/FlowBoard/Projects/Project Settings.md` (the Budget row's status: built, with the month rule and
-  what *ask me first* does), `docs/FlowBoard/Projects/Projects Index.md` (the *Built* callout: the budget is no
+- Modify: `docs/Lamproom/Projects/Project Settings.md` (the Budget row's status: built, with the month rule and
+  what *ask me first* does), `docs/Lamproom/Projects/Projects Index.md` (the *Built* callout: the budget is no
   longer in the *not yet acted on* list), the Run Flow Reference (the flag and the four lines)
 
 - [ ] **Step 1: Edit the three notes.** Each claim names the function or the line it describes.

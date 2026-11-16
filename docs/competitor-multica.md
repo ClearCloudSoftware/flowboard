@@ -1,4 +1,4 @@
-# Competitive analysis: Multica vs FlowBoard
+# Competitive analysis: Multica vs Lamproom
 
 **Date:** 2026-09-17 · **Subject:** [multica-ai/multica](https://github.com/multica-ai/multica) ([multica.ai](https://multica.ai))
 
@@ -8,18 +8,18 @@ security-model docs on the date above — all of it moves fast, so re-check befo
 ## Short version
 
 They look like the same product on a screenshot and aren't.
-**Multica orchestrates *agents*. FlowBoard orchestrates *steps*.**
+**Multica orchestrates *agents*. Lamproom orchestrates *steps*.**
 
 - **Multica** — an issue tracker where the assignee can be an agent. One agent takes an issue
   end-to-end, comments as it goes, hands back a PR. Columns are *statuses*.
-- **FlowBoard** — a pipeline engine with a board on top. One task is decomposed across a versioned
+- **Lamproom** — a pipeline engine with a board on top. One task is decomposed across a versioned
   DAG of headless sessions, each with its own model, budget, and gate. Columns are *steps*.
 
 That single difference drives almost everything below.
 
 ## Side by side
 
-| | **Multica** | **FlowBoard** |
+| | **Multica** | **Lamproom** |
 |---|---|---|
 | Unit of work | Issue → assigned agent | Task → flow (DAG of steps) |
 | Topology | Fan-out across *agents* working separate issues | Fan-out / join / loop-back *within one task* |
@@ -38,7 +38,7 @@ That single difference drives almost everything below.
 
 **1. The overlap is larger than the differentiators.** Multica already ships board, inbox, review
 gates, execution log, token usage, retries/timeouts, skills, self-hosting, provider-agnosticism, and
-Slack. Strip those from the FlowBoard README and what is actually ours is two things: the **flow DAG
+Slack. Strip those from the Lamproom README and what is actually ours is two things: the **flow DAG
 with per-step budgets**, and the **sandbox / egress model**. Everything else is table stakes someone
 else already shipped.
 
@@ -65,12 +65,12 @@ hosted-service and commercial-embedding terms, not a component to mount behind o
 
 ## Positioning that survives contact
 
-> Multica is Linear-for-agents: it makes many agents visible to a team. FlowBoard is a pipeline: it
+> Multica is Linear-for-agents: it makes many agents visible to a team. Lamproom is a pipeline: it
 > makes one agent's work decomposable, budgeted, and safe to leave running unattended.
 
 One sentence to test with users:
 
-> **Multica assumes you trust the agent and want to see it. FlowBoard assumes you don't, and caps it.**
+> **Multica assumes you trust the agent and want to see it. Lamproom assumes you don't, and caps it.**
 
 That is defensible. "Kanban board for coding agents" is not — that race is over.
 

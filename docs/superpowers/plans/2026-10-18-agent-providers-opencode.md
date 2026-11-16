@@ -2,24 +2,24 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add an `OpencodeProvider` that implements the `AgentProvider` port by driving a per-run `opencode serve` process through `@opencode-ai/sdk/v2`, so a FlowBoard step can run on a non-Claude model unchanged.
+**Goal:** Add an `OpencodeProvider` that implements the `AgentProvider` port by driving a per-run `opencode serve` process through `@opencode-ai/sdk/v2`, so a Lamproom step can run on a non-Claude model unchanged.
 
 **Architecture:** Each `launch()` starts its own `opencode serve` on `127.0.0.1` through `RunSpec.exec`, with a per-run password, a scratch `XDG_CONFIG_HOME` and the run's whole config injected as `OPENCODE_CONFIG_CONTENT`. The adapter talks to it with the v2 SDK client: create or fork a session, subscribe to `/event`, `promptAsync`, answer every `permission.asked`, and stop at the root session's `session.idle`. Five units, mirroring the Claude adapter: `permissions.ts` and `options.ts` (pure mappings), `normalize.ts` (events → `NormalizedEvent`), `guard-plugin.ts` (an OpenCode plugin enforcing `RunSpec.guards`), and `provider.ts` + `server.ts` (process and HTTP plumbing).
 
 **Tech Stack:** TypeScript on Node 24 type stripping, `node:test`, `@opencode-ai/sdk` 1.19.3 (`/v2` entry), OpenCode CLI 1.19.3.
 
-**Spec:** `docs/FlowBoard/Agent Providers/Provider SDK Fit Analysis.md` (the OpenCode column and *Changes the port needs*), plus the port notes it links (`AgentProvider Port.md`, `Run Spec.md`, `Agent Run Handle And Result.md`, `Normalized Event Envelope.md`, `Provider Capabilities.md`, `Capability Negotiation.md`). The shipped port is `code/flowboard/packages/core/src/`; the Claude adapter in `code/flowboard/packages/adapters/src/agent/claude/` is the pattern to follow.
+**Spec:** `docs/Lamproom/Agent Providers/Provider SDK Fit Analysis.md` (the OpenCode column and *Changes the port needs*), plus the port notes it links (`AgentProvider Port.md`, `Run Spec.md`, `Agent Run Handle And Result.md`, `Normalized Event Envelope.md`, `Provider Capabilities.md`, `Capability Negotiation.md`). The shipped port is `code/lamproom/packages/core/src/`; the Claude adapter in `code/lamproom/packages/adapters/src/agent/claude/` is the pattern to follow.
 
 ## Global Constraints
 
-- Work in the existing worktree `.claude/worktrees/agent-providers` on branch `feature/agent-providers`. Commands run from `code/flowboard/` unless stated.
-- Same code rules as the Claude plan: Node 24 type stripping (erasable syntax only, `import type`, `.ts` relative imports), `node:test` + `node:assert/strict`, `@flowboard/core` has no dependencies and never imports adapters.
+- Work in the existing worktree `.claude/worktrees/agent-providers` on branch `feature/agent-providers`. Commands run from `code/lamproom/` unless stated.
+- Same code rules as the Claude plan: Node 24 type stripping (erasable syntax only, `import type`, `.ts` relative imports), `node:test` + `node:assert/strict`, `@lamproom/core` has no dependencies and never imports adapters.
 - Pin `@opencode-ai/sdk` to exactly `1.19.3` and import only from `@opencode-ai/sdk/v2`. Never use the root import (legacy API) or the separate 2.x package `@opencode/sdk`. The installed CLI is `/opt/homebrew/bin/opencode` 1.19.3.
 - Provider id `'opencode'`.
 - One `opencode serve` per run, `--hostname 127.0.0.1 --port 0`, with a random per-run `OPENCODE_SERVER_PASSWORD` (basic auth, username `opencode`).
 - Isolation env for every server: `XDG_CONFIG_HOME=<fresh mkdtemp dir, deleted after the run>`, `OPENCODE_DISABLE_PROJECT_CONFIG=1`, `OPENCODE_DISABLE_CLAUDE_CODE=1`, `OPENCODE_DISABLE_AUTOUPDATE=1`, `OPENCODE_CONFIG_CONTENT=<JSON>`. Never touch `XDG_DATA_HOME`: it holds OpenCode's `auth.json` (the owner's credentials) and the session database that resume needs.
 - Models: `RunSpec.model` is a logical id; `resolveModel` maps it through a table passed to the constructor. A value is `"<providerID>/<modelID>"` split on the **first** `/` (OpenRouter model ids contain slashes). A logical id that already contains `/` passes through. An unknown id fails the run with `no OpenCode model for logical id '<id>'`.
-- Credentials: OpenCode's own login. Today the owner's only OpenCode credential is an OpenRouter API key, so **live tests spend real money** (cents). They run only when `FLOWBOARD_OPENCODE_MODEL` is set to a `providerID/modelID`.
+- Credentials: OpenCode's own login. Today the owner's only OpenCode credential is an OpenRouter API key, so **live tests spend real money** (cents). They run only when `LAMPROOM_OPENCODE_MODEL` is set to a `providerID/modelID`.
 - Out of scope: Codex, ACP, `run_events` persistence, flow-editor capability greying, the 2.x SDK.
 
 ## Decisions this plan makes
@@ -33,7 +33,7 @@
 | `maxTurns` | `agent.build.steps` in the injected config |
 | `maxBudgetUsd` | Enforced by the adapter: when the running `costUsd` reaches the cap, `session.abort` and error `max_budget: spent $<x> of $<cap>` |
 | Skills | A `plugin_dir` pack mounts `<path>/skills` via `skills.paths`; `invocation` `/<plugin>:<slug>` renders as `Use the "<slug>" skill.` in its canonical place |
-| Guards | `guard-plugin.ts`, loaded via config `plugin`, reads `FLOWBOARD_GUARDS` from the server env and throws the `checkToolCall` reason from `tool.execute.before` |
+| Guards | `guard-plugin.ts`, loaded via config `plugin`, reads `LAMPROOM_GUARDS` from the server env and throws the `checkToolCall` reason from `tool.execute.before` |
 | Usage | Sum of `step-finish` parts across the root session and its child sessions; `output` = `output + reasoning`; `numTurns` = number of `step-finish` parts; `costUsd` = summed `cost` |
 | Exit code | The server is killed by the adapter at the end, so `exitCode` is `0` for a run with no error, `1` for a run with an error, the server's own code if it died before the run ended, `130` after `stop()` |
 
@@ -50,26 +50,26 @@
 ### Task 1: SDK, a real event capture, and the provider id
 
 **Files:**
-- Modify: `code/flowboard/packages/adapters/package.json` (dependency)
-- Modify: `code/flowboard/packages/core/src/ports/agent-provider.ts` (`ProviderId` gains `'opencode'`)
-- Create: `code/flowboard/packages/adapters/test/fixtures/capture-opencode.ts`
-- Create: `code/flowboard/packages/adapters/test/fixtures/opencode-read.jsonl` (the captured output)
+- Modify: `code/lamproom/packages/adapters/package.json` (dependency)
+- Modify: `code/lamproom/packages/core/src/ports/agent-provider.ts` (`ProviderId` gains `'opencode'`)
+- Create: `code/lamproom/packages/adapters/test/fixtures/capture-opencode.ts`
+- Create: `code/lamproom/packages/adapters/test/fixtures/opencode-read.jsonl` (the captured output)
 
 **Interfaces:**
 - Produces: `opencode-read.jsonl` — one SSE event JSON per line, from `server.connected` to the root `session.idle`, for a run that reads a file and replies. Task 4 tests against it.
 
 - [ ] **Step 1: Add the SDK**
 
-Run: `pnpm --filter @flowboard/adapters add @opencode-ai/sdk@1.19.3`
+Run: `pnpm --filter @lamproom/adapters add @opencode-ai/sdk@1.19.3`
 Expected: `package.json` shows `"@opencode-ai/sdk": "1.19.3"` with no caret.
 
 - [ ] **Step 2: Write the capture script**
 
-`capture-opencode.ts` takes the model from `FLOWBOARD_OPENCODE_MODEL` and exits with a message when it is unset. It writes `hello.txt` containing `fixture-ok` into a fresh `mkdtemp` dir. It starts a server with `createOpencode({ hostname: '127.0.0.1', port: 0, config: { permission: 'allow' } })` from `@opencode-ai/sdk/v2`, then calls `client.session.create({ directory })`. It subscribes with `client.event.subscribe({ directory })` **before** prompting, and calls `client.session.promptAsync({ sessionID, directory, model, parts: [{ type: 'text', text: 'Read hello.txt and reply with its exact contents.' }] })`. It prints each event as one JSON line to stdout until the root session's `session.idle`, then closes the server. Add the comment `// Re-run to refresh the fixture when OpenCode's event shapes change; costs a few cents.`
+`capture-opencode.ts` takes the model from `LAMPROOM_OPENCODE_MODEL` and exits with a message when it is unset. It writes `hello.txt` containing `fixture-ok` into a fresh `mkdtemp` dir. It starts a server with `createOpencode({ hostname: '127.0.0.1', port: 0, config: { permission: 'allow' } })` from `@opencode-ai/sdk/v2`, then calls `client.session.create({ directory })`. It subscribes with `client.event.subscribe({ directory })` **before** prompting, and calls `client.session.promptAsync({ sessionID, directory, model, parts: [{ type: 'text', text: 'Read hello.txt and reply with its exact contents.' }] })`. It prints each event as one JSON line to stdout until the root session's `session.idle`, then closes the server. Add the comment `// Re-run to refresh the fixture when OpenCode's event shapes change; costs a few cents.`
 
 - [ ] **Step 3: Capture**
 
-Run: `FLOWBOARD_OPENCODE_MODEL=<model> node packages/adapters/test/fixtures/capture-opencode.ts > packages/adapters/test/fixtures/opencode-read.jsonl`
+Run: `LAMPROOM_OPENCODE_MODEL=<model> node packages/adapters/test/fixtures/capture-opencode.ts > packages/adapters/test/fixtures/opencode-read.jsonl`
 Expected: exit 0. The file contains at least `session.created`, `message.updated`, `message.part.updated` with parts of type `text`, `tool` (tool `read`, ending `completed`) and `step-finish`, and a final `session.idle`. If there is no `tool` part, re-run once; if there still is none, ledger it and continue (Task 4's synthetic tests cover tools).
 
 - [ ] **Step 4: Add `'opencode'` to `ProviderId` and typecheck**
@@ -89,11 +89,11 @@ git commit -m "test(adapters): add OpenCode SDK and a captured event stream"
 ### Task 2: Permission mapping
 
 **Files:**
-- Create: `code/flowboard/packages/adapters/src/agent/opencode/permissions.ts`
-- Test: `code/flowboard/packages/adapters/test/opencode-permissions.test.ts`
+- Create: `code/lamproom/packages/adapters/src/agent/opencode/permissions.ts`
+- Test: `code/lamproom/packages/adapters/test/opencode-permissions.test.ts`
 
 **Interfaces:**
-- Consumes: `RunSpec`, `PermissionMode` from `@flowboard/core`; `PermissionRule` type from `@opencode-ai/sdk/v2`.
+- Consumes: `RunSpec`, `PermissionMode` from `@lamproom/core`; `PermissionRule` type from `@opencode-ai/sdk/v2`.
 - Produces:
   - `toPermissionRules(spec: RunSpec): PermissionRule[]`
   - `replyFor(mode: PermissionMode | undefined, permission: string): { reply: 'once' } | { reply: 'reject'; message: string }`
@@ -161,17 +161,17 @@ git commit -m "feat(adapters): map RunSpec permissions to OpenCode rules"
 ### Task 3: `RunSpec` → server env, config and prompt
 
 **Files:**
-- Create: `code/flowboard/packages/adapters/src/agent/opencode/options.ts`
-- Test: `code/flowboard/packages/adapters/test/opencode-options.test.ts`
+- Create: `code/lamproom/packages/adapters/src/agent/opencode/options.ts`
+- Test: `code/lamproom/packages/adapters/test/opencode-options.test.ts`
 
 **Interfaces:**
-- Consumes: `renderPrompt`, `RunSpec` from `@flowboard/core`; `toPermissionRules` (Task 2); `Config` type from `@opencode-ai/sdk/v2`.
+- Consumes: `renderPrompt`, `RunSpec` from `@lamproom/core`; `toPermissionRules` (Task 2); `Config` type from `@opencode-ai/sdk/v2`.
 - Produces:
   - `splitModel(id: string): { providerID: string; modelID: string }` — on the first `/`; throws on an id without `/`.
   - `buildLaunch(spec: RunSpec, base: { env: NodeJS.ProcessEnv; configHome: string; password: string; guardPlugin: string }): { env: NodeJS.ProcessEnv; config: Config; permission: PermissionRule[]; prompt: { model: { providerID: string; modelID: string }; system?: string; parts: [{ type: 'text'; text: string }] } }` — `spec.model` is already resolved to `providerID/modelID`.
   - `pickVariant(effort: Effort | undefined, variants: string[]): string | undefined` — `effort` when the model lists it, else `undefined`.
 
-Config contents: `mcp[name] = { type: 'local', command: [command, ...args], environment: env, enabled: true }`; `skills.paths` = `<path>/skills` for each `plugin_dir` pack; `agent.build.steps` = `limits.maxTurns` when set; `plugin: [pathToFileURL(guardPlugin).href]` only when `spec.guards` is set; each `native` pack's `config` shallow-merged last. Env: `base.env` plus the isolation variables from Global Constraints, `OPENCODE_SERVER_PASSWORD: password`, and `FLOWBOARD_GUARDS: JSON.stringify(spec.guards)` when set. `system` = `spec.systemPrompt` and every `system_prompt` pack joined by `\n\n`, absent when empty.
+Config contents: `mcp[name] = { type: 'local', command: [command, ...args], environment: env, enabled: true }`; `skills.paths` = `<path>/skills` for each `plugin_dir` pack; `agent.build.steps` = `limits.maxTurns` when set; `plugin: [pathToFileURL(guardPlugin).href]` only when `spec.guards` is set; each `native` pack's `config` shallow-merged last. Env: `base.env` plus the isolation variables from Global Constraints, `OPENCODE_SERVER_PASSWORD: password`, and `LAMPROOM_GUARDS: JSON.stringify(spec.guards)` when set. `system` = `spec.systemPrompt` and every `system_prompt` pack joined by `\n\n`, absent when empty.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -182,19 +182,19 @@ test('splits the model on the first slash', () => {
 });
 test('isolates the server and injects the config', () => {
   const { env } = buildLaunch(spec, base);
-  assert.equal(env.XDG_CONFIG_HOME, '/tmp/fb-oc-cfg');
+  assert.equal(env.XDG_CONFIG_HOME, '/tmp/lr-oc-cfg');
   assert.equal(env.OPENCODE_DISABLE_PROJECT_CONFIG, '1');
   assert.equal(env.OPENCODE_DISABLE_CLAUDE_CODE, '1');
   assert.equal(env.OPENCODE_DISABLE_AUTOUPDATE, '1');
   assert.equal(env.OPENCODE_SERVER_PASSWORD, 'pw');
   assert.equal(env.XDG_DATA_HOME, base.env.XDG_DATA_HOME); // credentials and sessions untouched
   assert.deepEqual(JSON.parse(env.OPENCODE_CONFIG_CONTENT!), buildLaunch(spec, base).config);
-  assert.deepEqual(JSON.parse(env.FLOWBOARD_GUARDS!), { writeRoots: ['/repo/wt'] });
+  assert.deepEqual(JSON.parse(env.LAMPROOM_GUARDS!), { writeRoots: ['/repo/wt'] });
 });
 test('maps tools, skills, turns and guards into config', () => {
   const { config } = buildLaunch(spec, base);
   assert.deepEqual(config.mcp, { vibe: { type: 'local', command: ['node', 'shim.js'], environment: undefined, enabled: true } });
-  assert.deepEqual(config.skills, { paths: ['/plugins/fbecho/skills'] });
+  assert.deepEqual(config.skills, { paths: ['/plugins/lrecho/skills'] });
   assert.deepEqual(config.agent, { build: { steps: 5 } });
   assert.deepEqual(config.plugin, ['file:///abs/guard-plugin.ts']);
 });
@@ -210,11 +210,11 @@ test('joins system prompts and omits guards when unset', () => {
   const out = buildLaunch({ ...spec, guards: undefined }, base);
   assert.equal(out.prompt.system, 'You are the planner.\n\nBe terse.');
   assert.equal(out.config.plugin, undefined);
-  assert.equal(out.env.FLOWBOARD_GUARDS, undefined);
+  assert.equal(out.env.LAMPROOM_GUARDS, undefined);
 });
 ```
 
-`spec` mirrors the Claude options test fixture with `model: 'openrouter/openai/gpt-4.1-mini'`; `base = { env: { PATH: '/bin', XDG_DATA_HOME: '/home/x/.local/share' }, configHome: '/tmp/fb-oc-cfg', password: 'pw', guardPlugin: '/abs/guard-plugin.ts' }`.
+`spec` mirrors the Claude options test fixture with `model: 'openrouter/openai/gpt-4.1-mini'`; `base = { env: { PATH: '/bin', XDG_DATA_HOME: '/home/x/.local/share' }, configHome: '/tmp/lr-oc-cfg', password: 'pw', guardPlugin: '/abs/guard-plugin.ts' }`.
 
 - [ ] **Step 2: Run them to verify they fail**
 
@@ -240,11 +240,11 @@ git commit -m "feat(adapters): map RunSpec to OpenCode server env, config and pr
 ### Task 4: OpenCode event normalizer
 
 **Files:**
-- Create: `code/flowboard/packages/adapters/src/agent/opencode/normalize.ts`
-- Test: `code/flowboard/packages/adapters/test/opencode-normalize.test.ts`
+- Create: `code/lamproom/packages/adapters/src/agent/opencode/normalize.ts`
+- Test: `code/lamproom/packages/adapters/test/opencode-normalize.test.ts`
 
 **Interfaces:**
-- Consumes: `NormalizedEvent`, `Usage`, `ZERO_USAGE` from `@flowboard/core`; `Event` type from `@opencode-ai/sdk/v2`; `summarizeTool` from `../claude/normalize.ts` (move it to `packages/adapters/src/agent/summarize.ts` and re-import it in the Claude normalizer, since two providers now share it).
+- Consumes: `NormalizedEvent`, `Usage`, `ZERO_USAGE` from `@lamproom/core`; `Event` type from `@opencode-ai/sdk/v2`; `summarizeTool` from `../claude/normalize.ts` (move it to `packages/adapters/src/agent/summarize.ts` and re-import it in the Claude normalizer, since two providers now share it).
 - Produces: `createNormalizer(rootSessionID: string): (event: Event) => NormalizedEvent[]`. Every event carries `raw: event`.
 
 Mapping. "Ours" means the root session or a session whose `session.created` named an "ours" session as `parentID`. Events of other sessions produce nothing.
@@ -323,21 +323,21 @@ git commit -m "feat(adapters): normalize OpenCode events"
 ### Task 5: Guard plugin
 
 **Files:**
-- Create: `code/flowboard/packages/adapters/src/agent/opencode/guard-plugin.ts`
-- Test: `code/flowboard/packages/adapters/test/opencode-guard-plugin.test.ts`
+- Create: `code/lamproom/packages/adapters/src/agent/opencode/guard-plugin.ts`
+- Test: `code/lamproom/packages/adapters/test/opencode-guard-plugin.test.ts`
 
 **Interfaces:**
-- Consumes: `checkToolCall`, `GuardRules` from `@flowboard/core`.
-- Produces: the module's only export `FlowboardGuard: (input: { directory: string }) => Promise<{ 'tool.execute.before': (input: { tool: string }, output: { args: Record<string, unknown> }) => Promise<void> }>`. OpenCode loads every exported function of a plugin file as a plugin, so the file exports nothing else.
+- Consumes: `checkToolCall`, `GuardRules` from `@lamproom/core`.
+- Produces: the module's only export `LamproomGuard: (input: { directory: string }) => Promise<{ 'tool.execute.before': (input: { tool: string }, output: { args: Record<string, unknown> }) => Promise<void> }>`. OpenCode loads every exported function of a plugin file as a plugin, so the file exports nothing else.
 
-Behaviour: rules from `JSON.parse(process.env.FLOWBOARD_GUARDS)`; no env means a no-op hook. `write` / `edit` check `('Write', { file_path: args.filePath })`; `apply_patch` checks every path on a `*** Add File: `, `*** Update File: `, `*** Delete File: ` or `*** Move to: ` line of `args.patchText`; `bash` checks `('Bash', { command: args.command })`. `cwd` is the plugin input's `directory`. A reason is thrown as `new Error(reason)`.
+Behaviour: rules from `JSON.parse(process.env.LAMPROOM_GUARDS)`; no env means a no-op hook. `write` / `edit` check `('Write', { file_path: args.filePath })`; `apply_patch` checks every path on a `*** Add File: `, `*** Update File: `, `*** Delete File: ` or `*** Move to: ` line of `args.patchText`; `bash` checks `('Bash', { command: args.command })`. `cwd` is the plugin input's `directory`. A reason is thrown as `new Error(reason)`.
 
 - [ ] **Step 1: Write the failing tests**
 
 ```ts
-// before each: process.env.FLOWBOARD_GUARDS = JSON.stringify({ writeRoots: ['/repo/wt'], denyCommands: ['\\bgit\\s+push\\b'] })
+// before each: process.env.LAMPROOM_GUARDS = JSON.stringify({ writeRoots: ['/repo/wt'], denyCommands: ['\\bgit\\s+push\\b'] })
 test('blocks a write outside the worktree', async () => {
-  const hooks = await FlowboardGuard({ directory: '/repo/wt' });
+  const hooks = await LamproomGuard({ directory: '/repo/wt' });
   await assert.rejects(hooks['tool.execute.before']({ tool: 'write' }, { args: { filePath: '/etc/x' } }), /Write outside the worktree: \/etc\/x/);
   await hooks['tool.execute.before']({ tool: 'edit' }, { args: { filePath: '/repo/wt/a.ts' } }); // resolves
 });
@@ -346,7 +346,7 @@ test('checks every path in an apply_patch', async () => {
   await assert.rejects(hooks['tool.execute.before']({ tool: 'apply_patch' }, { args: { patchText } }), /\/etc\/evil/);
 });
 test('blocks a denied command', async () => { /* bash 'git push origin main' rejects /Command blocked by policy/ */ });
-test('is a no-op without FLOWBOARD_GUARDS', async () => { /* delete env; write /etc/x resolves */ });
+test('is a no-op without LAMPROOM_GUARDS', async () => { /* delete env; write /etc/x resolves */ });
 ```
 
 - [ ] **Step 2: Run them to verify they fail**
@@ -354,7 +354,7 @@ test('is a no-op without FLOWBOARD_GUARDS', async () => { /* delete env; write /
 Run: `node --test packages/adapters/test/opencode-guard-plugin.test.ts`
 Expected: FAIL with `ERR_MODULE_NOT_FOUND`.
 
-- [ ] **Step 3: Implement `FlowboardGuard`**
+- [ ] **Step 3: Implement `LamproomGuard`**
 
 - [ ] **Step 4: Run them to verify they pass**
 
@@ -373,12 +373,12 @@ git commit -m "feat(adapters): add OpenCode guard plugin"
 ### Task 6: `OpencodeProvider` and the server process
 
 **Files:**
-- Create: `code/flowboard/packages/adapters/src/agent/opencode/server.ts`
-- Create: `code/flowboard/packages/adapters/src/agent/opencode/provider.ts`
-- Modify: `code/flowboard/packages/adapters/src/index.ts` (re-export the provider)
-- Create: `code/flowboard/packages/adapters/test/fixtures/fake-opencode.mjs` (executable)
-- Create: `code/flowboard/packages/adapters/test/fixtures/fake-opencode-crash.sh` (executable: `echo "bad config" >&2; exit 2`)
-- Test: `code/flowboard/packages/adapters/test/opencode-provider.test.ts`
+- Create: `code/lamproom/packages/adapters/src/agent/opencode/server.ts`
+- Create: `code/lamproom/packages/adapters/src/agent/opencode/provider.ts`
+- Modify: `code/lamproom/packages/adapters/src/index.ts` (re-export the provider)
+- Create: `code/lamproom/packages/adapters/test/fixtures/fake-opencode.mjs` (executable)
+- Create: `code/lamproom/packages/adapters/test/fixtures/fake-opencode-crash.sh` (executable: `echo "bad config" >&2; exit 2`)
+- Test: `code/lamproom/packages/adapters/test/opencode-provider.test.ts`
 
 **Interfaces:**
 - Consumes: Tasks 2–5; `hostExecHost`; `createOpencodeClient` from `@opencode-ai/sdk/v2`.
@@ -387,7 +387,7 @@ git commit -m "feat(adapters): add OpenCode guard plugin"
   - `class OpencodeProvider implements AgentProvider` with `constructor(opts: { models: Record<string, string>; opencodePath?: string; env?: NodeJS.ProcessEnv })`; `id = 'opencode'`; capabilities `effort`, `sessions`, `resume_fork`, `mcp_tools`, `plugins`, `allowed_tools`, `permission_modes`, `native_cost`, `partial_stream`, `budget_cap`, `tool_hooks`.
 
 `launch(spec)` sequence, all inside a pump that never throws (failures become an `error` event and `RunResult.error`, as in the Claude provider):
-1. `resolveModel` (failure → error, skip to cleanup); `mkdtemp(join(tmpdir(), 'fb-oc-'))` as the config home; a random 24-byte hex password; `buildLaunch`.
+1. `resolveModel` (failure → error, skip to cleanup); `mkdtemp(join(tmpdir(), 'lr-oc-'))` as the config home; a random 24-byte hex password; `buildLaunch`.
 2. `startServer` through `spec.exec ?? hostExecHost`; resolve `pid`.
 3. `createOpencodeClient({ baseUrl, directory: spec.cwd, headers: { Authorization: 'Basic ' + base64('opencode:' + password) } })`.
 4. `config.providers()` → the resolved model's variant names → `pickVariant(spec.effort, names)` → `variant` on the prompt. (`buildLaunch` runs before step 2, since the server's env needs its config.)
@@ -402,7 +402,7 @@ git commit -m "feat(adapters): add OpenCode guard plugin"
 `fake-opencode.mjs` contract (plain JS, `node:http` only, no dependencies):
 - Accepts `serve --hostname H --port P`; listens on port 0; prints `opencode server listening on http://127.0.0.1:<port>`.
 - Rejects any request whose `Authorization` is not `Basic base64('opencode:' + OPENCODE_SERVER_PASSWORD)` with 401.
-- On start, appends `{ env: { XDG_CONFIG_HOME, OPENCODE_CONFIG_CONTENT, OPENCODE_DISABLE_PROJECT_CONFIG, OPENCODE_DISABLE_CLAUDE_CODE, FLOWBOARD_GUARDS } }` to the JSONL file `FAKE_OPENCODE_LOG`, then one `{ method, path, body }` line per request.
+- On start, appends `{ env: { XDG_CONFIG_HOME, OPENCODE_CONFIG_CONTENT, OPENCODE_DISABLE_PROJECT_CONFIG, OPENCODE_DISABLE_CLAUDE_CODE, LAMPROOM_GUARDS } }` to the JSONL file `FAKE_OPENCODE_LOG`, then one `{ method, path, body }` line per request.
 - `GET /config/providers` → one provider `fake` with model `m1` whose `variants` is `{ high: {} }`.
 - `POST /session` → `{ id: 'ses_fake1', directory }`; `POST /session/:id/fork` → `{ id: 'ses_fork1', directory }`; `PATCH /session/:id` → `{}`.
 - `GET /event` → SSE. After `POST /session/:id/prompt_async` (answers 204), it streams the JSON events in the file `FAKE_OPENCODE_SCRIPT`, replacing `"$SESSION"` with the session id. On a `permission.asked` event it waits for `POST /permission/:id/reply` before continuing. On an event `{ "hold": true }` it stops streaming until `POST /session/:id/abort`, which answers `true` and then sends that session's `session.idle`.
@@ -439,7 +439,7 @@ test('stop() aborts the session and settles as stopped', { timeout: 10_000 }, as
 });
 test('isolates the server from personal config', async () => {
   // guards { writeRoots:[cwd] } → env line: XDG_CONFIG_HOME under os.tmpdir(), OPENCODE_DISABLE_PROJECT_CONFIG '1',
-  // OPENCODE_DISABLE_CLAUDE_CODE '1', FLOWBOARD_GUARDS set, OPENCODE_CONFIG_CONTENT.plugin[0] ends with 'guard-plugin.ts'
+  // OPENCODE_DISABLE_CLAUDE_CODE '1', LAMPROOM_GUARDS set, OPENCODE_CONFIG_CONTENT.plugin[0] ends with 'guard-plugin.ts'
   // → after result: existsSync(XDG_CONFIG_HOME) === false
 });
 test('two concurrent runs get separate servers', async () => {
@@ -447,7 +447,7 @@ test('two concurrent runs get separate servers', async () => {
 });
 test('cleans up the config dir on failure', async () => {
   // opencodePath fake-opencode-crash.sh → result { exitCode: 2 }, error matches /bad config/
-  // → no fb-oc-* dir created by this run remains (compare tmpdir listing before/after)
+  // → no lr-oc-* dir created by this run remains (compare tmpdir listing before/after)
   // model 'unknown-model' → result.error "no OpenCode model for logical id 'unknown-model'"
 });
 ```
@@ -476,15 +476,15 @@ git commit -m "feat(adapters): add OpencodeProvider over a per-run opencode serv
 ### Task 7: Live check and docs
 
 **Files:**
-- Create: `code/flowboard/packages/adapters/test/opencode-live.test.ts`
-- Modify: `code/flowboard/package.json` (`test:live` runs both live files)
-- Create: `docs/FlowBoard/Agent Providers/OpenCode Adapter.md`
-- Modify: `docs/FlowBoard/Agent Providers/Agent Providers Index.md` (link under *The adapters*)
+- Create: `code/lamproom/packages/adapters/test/opencode-live.test.ts`
+- Modify: `code/lamproom/package.json` (`test:live` runs both live files)
+- Create: `docs/Lamproom/Agent Providers/OpenCode Adapter.md`
+- Modify: `docs/Lamproom/Agent Providers/Agent Providers Index.md` (link under *The adapters*)
 
 **Interfaces:**
 - Consumes: `OpencodeProvider` (Task 6).
 
-Live tests run only when `FLOWBOARD_OPENCODE_MODEL` is set; the provider gets `models: { default: process.env.FLOWBOARD_OPENCODE_MODEL }` and each spec uses `model: 'default'`, a fresh temp `cwd`, `limits: { maxTurns: 4 }`.
+Live tests run only when `LAMPROOM_OPENCODE_MODEL` is set; the provider gets `models: { default: process.env.LAMPROOM_OPENCODE_MODEL }` and each spec uses `model: 'default'`, a fresh temp `cwd`, `limits: { maxTurns: 4 }`.
 
 - [ ] **Step 1: Write the live tests**
 
@@ -494,27 +494,27 @@ test('reads a file and replies on the real server', live, async () => {
   // → some assistant_text matches /live-ok/; a tool_use named 'read'; res.error undefined; res.usage.output > 0
 });
 test('mounts a plugin skill', live, async () => {
-  // capabilities [plugin_dir fixtures/fbecho-plugin]; invocation '/fbecho:echo' → assistant_text matches /ECHO-OK/
+  // capabilities [plugin_dir fixtures/lrecho-plugin]; invocation '/lrecho:echo' → assistant_text matches /ECHO-OK/
 });
 test('guard plugin blocks a write outside the worktree', live, async () => {
-  // permissionMode 'bypassPermissions', guards { writeRoots:[cwd] }; preamble asks to write <tmpdir>/fb-oc-guard-<uuid>.txt
+  // permissionMode 'bypassPermissions', guards { writeRoots:[cwd] }; preamble asks to write <tmpdir>/lr-oc-guard-<uuid>.txt
   // → the file does not exist; a tool_result with ok false whose output mentions 'Write outside the worktree'
 });
 ```
 
 - [ ] **Step 2: Run them**
 
-Run: `FLOWBOARD_OPENCODE_MODEL=<model> FLOWBOARD_LIVE=1 node --test packages/adapters/test/opencode-live.test.ts`
+Run: `LAMPROOM_OPENCODE_MODEL=<model> LAMPROOM_LIVE=1 node --test packages/adapters/test/opencode-live.test.ts`
 Expected: 3 pass. If the skill test fails, check whether the model called the `skill` tool before changing code; record what OpenCode actually does in the doc note. Then run `pnpm -s test:packages` and confirm the live tests are skipped.
 
 - [ ] **Step 3: Write `OpenCode Adapter.md`**
 
-Same house style as `Claude Code Adapter.md` (frontmatter `tags: [flowboard, agent-providers, adapter, opencode]`, cited, sentence case, wikilinks). Sections: what it is and why (the second implementation, [[Provider SDK Fit Analysis]]), the per-run server, the `RunSpec` mapping table (the Decisions table of this plan), capabilities, isolation and credentials, what the live run verified, and Related. Add the Index link `- [[OpenCode Adapter]] — the second real provider: a per-run opencode server, non-Claude models`.
+Same house style as `Claude Code Adapter.md` (frontmatter `tags: [lamproom, agent-providers, adapter, opencode]`, cited, sentence case, wikilinks). Sections: what it is and why (the second implementation, [[Provider SDK Fit Analysis]]), the per-run server, the `RunSpec` mapping table (the Decisions table of this plan), capabilities, isolation and credentials, what the live run verified, and Related. Add the Index link `- [[OpenCode Adapter]] — the second real provider: a per-run opencode server, non-Claude models`.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add packages/adapters package.json "../../docs/FlowBoard/Agent Providers"
+git add packages/adapters package.json "../../docs/Lamproom/Agent Providers"
 git commit -m "test(adapters): live-check the OpenCode provider; document it"
 ```
 

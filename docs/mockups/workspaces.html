@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>FlowBoard Workspaces</title>
+<title>Lamproom Workspaces</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -211,7 +211,7 @@ dialog.dlg::backdrop{background:rgba(23,23,28,.28)}
 
   <div class="seam">
     <span class="seam-t">A git worktree per task</span>
-    <span class="seam-n">.flowboard/worktrees/task-&lt;id&gt; on fb/task-&lt;id&gt;, each with its own run lock</span>
+    <span class="seam-n">.lamproom/worktrees/task-&lt;id&gt; on lr/task-&lt;id&gt;, each with its own run lock</span>
     <span class="sp"></span>
     <span class="hint" id="bulkHint"></span>
     <button class="act" id="bulk"></button>
@@ -258,8 +258,8 @@ const STEPS = ['plan', 'implement + tests', 'check', 'review'];
 const RUN_S = [3, 8, 5, 4];             // a fresh run: 20s end to end
 const T0 = Date.now();
 const S = 1000, M = 60 * S, H = 60 * M, D = 24 * H;
-const pathOf = w => `${REPO}/.flowboard/worktrees/task-${w.id}`;
-const br = w => `fb/task-${w.id}`;
+const pathOf = w => `${REPO}/.lamproom/worktrees/task-${w.id}`;
+const br = w => `lr/task-${w.id}`;
 const c = (sha, msg) => ({ sha, msg });
 const done = (ago, cost, step = 4, status = 'done') => ({ flow: FLOW, status, step, at: T0 - ago, cost });
 
@@ -290,12 +290,12 @@ let WS = [
     run: done(4 * D, 0.71) },
   { id: 'refund-partial-capture', folder: true, behind: 0, disk: 96, dirty: [], ahead: [], art: [],
     broken: { kind: 'plain', why: 'exists but is not a git worktree; move it away',
-              fix: `mv ${REPO}/.flowboard/worktrees/task-refund-partial-capture ~/refund-partial-capture.bak` },
+              fix: `mv ${REPO}/.lamproom/worktrees/task-refund-partial-capture ~/refund-partial-capture.bak` },
     run: null },
   { id: 'dunning-email-copy', folder: true, behind: 2, disk: 172, dirty: [], art: ['brief.md', 'plan.md', 'review.md'],
     ahead: [c('41ce0aa', 'copy: plainer subject lines for the three dunning emails')],
-    broken: { kind: 'switched', on: 'alex/try-mjml', why: 'is on alex/try-mjml, not fb/task-dunning-email-copy; switch it back',
-              fix: `git -C ${REPO}/.flowboard/worktrees/task-dunning-email-copy switch fb/task-dunning-email-copy` },
+    broken: { kind: 'switched', on: 'alex/try-mjml', why: 'is on alex/try-mjml, not lr/task-dunning-email-copy; switch it back',
+              fix: `git -C ${REPO}/.lamproom/worktrees/task-dunning-email-copy switch lr/task-dunning-email-copy` },
     run: done(1 * D, 0.38) },
   { id: 'ledger-rounding', folder: true, behind: 2, disk: 179, dirty: [], ahead: [], art: ['brief.md', 'plan.md', 'check.log', 'review.md'],
     run: done(5 * H, 0.61) },
@@ -357,7 +357,7 @@ function pbar(r) {
 
 /* ── view state ──────────────────────────────────────────────── */
 let sel = 'stripe-webhook-idempotency', open = true, removedCount = 0, flashMsg = '', flashUntil = 0;
-let CLI = [['out', 'Each action here is a FlowBoard command you could have typed. The last one shows up in this strip.']];
+let CLI = [['out', 'Each action here is a Lamproom command you could have typed. The last one shows up in this strip.']];
 const byId = id => WS.find(w => w.id === id);
 const order = () => {
   const hot = WS.filter(needsYou);
@@ -399,27 +399,27 @@ function renderList() {
       <div class="hot-h"><span class="lbl">Needs you · ${hot.length}</span><span class="sans">finished work that isn't on main yet: land it, keep it, or throw it away</span></div>
       ${hot.map(rowHTML).join('')}</section>`;
   if (rest.length) h += `<div class="quiet-h"><span class="lbl">Everything else · ${rest.length}</span></div>${rest.map(rowHTML).join('')}`;
-  if (!WS.length) h += `<p class="small" style="padding:18px">No workspaces in billing-svc. The next <code>run-flow --workspace</code> makes one.</p>`;
+  if (!WS.length) h += `<p class="small" style="padding:18px">No workspaces in billing-svc. The next <code>lr-run-flow --workspace</code> makes one.</p>`;
   document.getElementById('list').innerHTML = h;
 }
 
-const cmdRun = w => `pnpm run-flow --folder ${REPO} --task tasks/${w.id}.md --workspace ${w.id} ${FLOW}.yaml`;
-const cmdClean = (w, force) => `pnpm clean-workspace --folder ${REPO}${force ? ' --force' : ''} ${w.id}`;
+const cmdRun = w => `pnpm lr-run-flow --folder ${REPO} --task tasks/${w.id}.md --workspace ${w.id} ${FLOW}.yaml`;
+const cmdClean = (w, force) => `pnpm lr-clean-workspace --folder ${REPO}${force ? ' --force' : ''} ${w.id}`;
 
 function why(w) {
   const s = state(w), b = `<code>${br(w)}</code>`;
   return {
-    running: `A run-flow holds this workspace's lock at <code>.flowboard/lock</code>, so nothing can clean it up until the run finishes or you stop it. Other tasks in billing-svc run alongside it; each workspace has its own lock.`,
+    running: `A lr-run-flow holds this workspace's lock at <code>.lamproom/lock</code>, so nothing can clean it up until the run finishes or you stop it. Other tasks in billing-svc run alongside it; each workspace has its own lock.`,
     dirty: `The last run failed at ${STEPS[w.run.step]} and left work that isn't committed. Commit what's worth keeping inside the workspace, or throw it away on purpose. A new run won't start on top of it.`,
     unmerged: `The flow finished. Its ${n(w.ahead.length, 'commit')} are on ${b} but not on main. Land them from your repo, or keep the branch. Cleaning up removes the folder and never this branch.`,
     broken: w.broken && w.broken.kind === 'plain'
-      ? `Something that isn't a git worktree sits where this task's workspace goes. FlowBoard won't run in it or clean it up until you move it away.`
-      : `Someone switched this worktree to another branch. FlowBoard won't run in it or clean it up until it's back on ${b}.`,
+      ? `Something that isn't a git worktree sits where this task's workspace goes. Lamproom won't run in it or clean it up until you move it away.`
+      : `Someone switched this worktree to another branch. Lamproom won't run in it or clean it up until it's back on ${b}.`,
     branch: w.how === 'hand'
       ? `The folder was deleted by hand. The branch and its ${n(w.ahead.length, 'commit')} are still in the repo, so the next run re-creates the folder from it and picks the work up again.`
       : `The folder is gone. The branch was kept because it has commits that aren't on main. Delete it yourself once you're sure: <code>git branch -D ${br(w)}</code>.`,
     kept: `You chose to keep this branch, so it's out of Needs you. Clean up removes the folder and the branch stays.`,
-    merged: `Everything on ${b} is already on main and nothing is uncommitted. Clean up removes the folder and the branch. Only the artifacts in <code>.flowboard/</code> go with it.`,
+    merged: `Everything on ${b} is already on main and nothing is uncommitted. Clean up removes the folder and the branch. Only the artifacts in <code>.lamproom/</code> go with it.`,
   }[s];
 }
 
@@ -432,7 +432,7 @@ function renderPanel() {
         running: 'A run holds the lock. Clean up is refused until it ends.',
         dirty: 'A run left files that aren’t committed. Cleaning up needs you to throw them away on purpose.',
         unmerged: 'Finished, with commits main doesn’t have. Land them or keep the branch.',
-        broken: 'Something else is in the way. The fix is spelled out; FlowBoard won’t touch it.',
+        broken: 'Something else is in the way. The fix is spelled out; Lamproom won’t touch it.',
         branch: 'No folder, only the branch. The next run re-creates the folder.',
         kept: 'You decided to keep the branch for now.',
         merged: 'All on main, nothing uncommitted. Safe to clean up.',
@@ -468,7 +468,7 @@ function renderPanel() {
   h += `<div class="sec"><span class="lbl">Where</span><dl class="kv">
     <dt>path</dt><dd><span>${w.folder ? pathOf(w) : `<s class="mute">${pathOf(w)}</s>`}</span></dd>
     <dt>branch</dt><dd><b>${broken && w.broken.kind === 'switched' ? `<span class="t-fail">${w.broken.on}</span>` : br(w)}</b></dd>
-    <dt>lock</dt><dd>${running ? `${ic('lock', 12)}<b>pid ${w.pid}</b> in .flowboard/lock` : 'free'}</dd>
+    <dt>lock</dt><dd>${running ? `${ic('lock', 12)}<b>pid ${w.pid}</b> in .lamproom/lock` : 'free'}</dd>
     <dt>vs main</dt><dd>${broken && w.broken.kind === 'plain' ? '—' : `${w.ahead.length} ahead, ${w.behind} behind`}</dd>
     <dt>disk</dt><dd>${mb(w.folder ? w.disk : 0)}</dd>
     <dt>last run</dt><dd>${r ? `${r.flow} · ${r.status === 'running' ? `${STEPS[r.step]} now` : r.status === 'failed' ? `failed at ${STEPS[r.step]}, ${ago(r.at)}` : `finished ${ago(r.at)}`} · <span data-cost="${w.id}">${money(cost(r))}</span>` : 'never run here'}</dd>
@@ -484,7 +484,7 @@ function renderPanel() {
       (running ? '<p class="small">The agent is still working; these are its edits in flight.</p>' : '')
       : '<p class="small">Clean working tree.</p>') + `</div>`;
 
-  if (w.folder && w.art.length) h += `<div class="sec"><span class="lbl">Artifacts in .flowboard/ · ${w.art.length}</span>` +
+  if (w.folder && w.art.length) h += `<div class="sec"><span class="lbl">Artifacts in .lamproom/ · ${w.art.length}</span>` +
     w.art.map(f => `<div class="fl art"><span>—</span><span>${f}</span></div>`).join('') +
     `<p class="small">These go when the folder goes. Run logs in <code>runs/</code> stay.</p></div>`;
 
@@ -529,11 +529,11 @@ function startRun(w) {
 
 function runAgain(w) {
   const s = state(w), cmd = cmdRun(w);
-  if (s === 'running') return say([['cmd', cmd], ['err', `${FLOW}.yaml: --folder: another run-flow (pid ${w.pid}) is working here; if it is not, delete ${pathOf(w)}/.flowboard/lock`]]);
+  if (s === 'running') return say([['cmd', cmd], ['err', `${FLOW}.yaml: --folder: another lr-run-flow (pid ${w.pid}) is working here; if it is not, delete ${pathOf(w)}/.lamproom/lock`]]);
   if (s === 'broken') return say([['cmd', cmd], ['err', `${FLOW}.yaml: --workspace: ${pathOf(w)} ${w.broken.why}`]]);
   // ponytail: every row here has a folder or a branch, so it is always "picked up again", never ", new"
   const out = [['cmd', cmd], ['out', `-- workspace ${pathOf(w)} on branch ${br(w)}, picked up again`]];
-  const tracked = w.dirty.filter(([st]) => st !== '??').length; // run-flow ignores untracked files
+  const tracked = w.dirty.filter(([st]) => st !== '??').length; // lr-run-flow ignores untracked files
   if (tracked) { out.push(['err', `${FLOW}.yaml: --folder: uncommitted changes in ${tracked} file(s); commit or stash them first, or pass --allow-dirty`]); return say(out); }
   if (!w.folder) { w.folder = true; w.how = null; w.disk = 160 + Math.floor(Math.random() * 50); w.art = []; }
   w.kept = false;
@@ -544,10 +544,10 @@ function runAgain(w) {
 
 function cleanUp(w, force) {
   const s = state(w), cmd = cmdClean(w, force);
-  if (s === 'running') return say([['cmd', cmd], ['err', `clean-workspace: a run-flow (pid ${w.pid}) is working in ${pathOf(w)}; let it finish or stop it first`]]);
+  if (s === 'running') return say([['cmd', cmd], ['err', `lr-clean-workspace: a lr-run-flow (pid ${w.pid}) is working in ${pathOf(w)}; let it finish or stop it first`]]);
   if (s === 'broken') { flash('fix the workspace first'); return; }
   if (w.dirty.length && !force) {           // what the CLI says without --force; the page then asks
-    say([['cmd', cmd], ['err', `clean-workspace: git worktree remove: fatal: '${pathOf(w)}' contains modified or untracked files, use --force to delete it; commit the changes, or pass --force to throw them away`]]);
+    say([['cmd', cmd], ['err', `lr-clean-workspace: git worktree remove: fatal: '${pathOf(w)}' contains modified or untracked files, use --force to delete it; commit the changes, or pass --force to throw them away`]]);
     return confirmThrowAway(w);
   }
   const out = [['cmd', cmd], ['out', `-- removed the workspace of task ${w.id}`]];
@@ -572,7 +572,7 @@ function doClean(w, force) { const out = cleanUp(w, force); if (out) say(out); r
 function bulkClean() {
   const ids = WS.filter(cleanable);
   if (!ids.length) return;
-  const out = [['cmd', `for id in ${ids.map(w => w.id).join(' ')}; do pnpm clean-workspace --folder ${REPO} $id; done`]];
+  const out = [['cmd', `for id in ${ids.map(w => w.id).join(' ')}; do pnpm lr-clean-workspace --folder ${REPO} $id; done`]];
   ids.forEach(w => out.push(...cleanUp(w, false).slice(1)));
   say(out); render();
 }
@@ -588,7 +588,7 @@ function confirmThrowAway(w) {
   const k = w.dirty.length;
   dlg.innerHTML = `<div class="dlg-b">
       <h2>Throw away ${n(k, 'file')} in ${w.id}?</h2>
-      <p>These aren't committed anywhere. Removing the workspace deletes them, along with the artifacts in its <code>.flowboard/</code>${w.art.length ? ` (${w.art.join(', ')})` : ''}. Run logs in <code>runs/</code> stay.${w.ahead.length ? ` The branch has commits not on main, so it is kept.` : ` The branch has nothing main doesn't, so it goes too.`}</p>
+      <p>These aren't committed anywhere. Removing the workspace deletes them, along with the artifacts in its <code>.lamproom/</code>${w.art.length ? ` (${w.art.join(', ')})` : ''}. Run logs in <code>runs/</code> stay.${w.ahead.length ? ` The branch has commits not on main, so it is kept.` : ` The branch has nothing main doesn't, so it goes too.`}</p>
       <div class="dlg-files">${w.dirty.map(([st, f]) => `<div class="fl"><span>${st}</span><span>${f}</span></div>`).join('')}</div>
       <label class="lbl" for="dlgIn">Type ${w.id} to confirm</label>
       <input class="dlg-in" id="dlgIn" autocomplete="off" spellcheck="false" placeholder="${w.id}">

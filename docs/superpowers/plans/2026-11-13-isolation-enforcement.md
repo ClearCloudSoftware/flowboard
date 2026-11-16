@@ -1,50 +1,50 @@
-# Isolation Enforcement Implementation Plan (projects phase 3a: the sandbox tier in run-flow)
+# Isolation Enforcement Implementation Plan (projects phase 3a: the sandbox tier in lr-run-flow)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A project's Isolation setting (`trust`: Trusted / Normal / Untrusted) decides where every run of that
 project executes. Today it is stored and ignored, and only a flow YAML's `sandbox:` block sandboxes anything.
 
-**Architecture:** run-flow finds the registered project that owns `--folder` (refusing when none does), resolves its
+**Architecture:** lr-run-flow finds the registered project that owns `--folder` (refusing when none does), resolves its
 `trust`, and turns that into the run's isolation with one pure function (`isolation.ts`). The result is pinned in
 `flow.json`, so `--resume` keeps it. Normal and Untrusted give every step a Docker box (Untrusted under gVisor's
 `runsc`, or the run is refused). Trusted runs on the machine, and agents ask the owner before each file edit and
 shell command through a new `RunSpec.approve` callback that both adapters honour. "Allow from now on" answers are
-saved on FlowBoard's project record (never in the repo) and listed on the project page with a remove button.
+saved on Lamproom's project record (never in the repo) and listed on the project page with a remove button.
 
 **Tech Stack:** TypeScript on Node 24 with type stripping, `node --test`, zod 4, Claude Agent SDK hooks, OpenCode SDK
 v2 permission events, Next 16 + TanStack Query + shadcn/ui + lucide-react for the project page.
 
 **Spec:** Alex's decisions in this conversation (2026-11-13), recorded in memory as
-`flowboard-isolation-enforcement-decisions`, copied verbatim into Global Constraints. Background:
-`docs/FlowBoard/Projects/Repository Trust And Sandboxing.md`, `docs/FlowBoard/Projects/Project Settings.md`.
+`lamproom-isolation-enforcement-decisions`, copied verbatim into Global Constraints. Background:
+`docs/Lamproom/Projects/Repository Trust And Sandboxing.md`, `docs/Lamproom/Projects/Project Settings.md`.
 
 **Not in this plan:** the project budget (phase 3b), the egress proxy (Docker boxes stay online for agents), a
-New run form that picks a project instead of a folder (run-flow's refusal text reaches the form already), and
-`pnpm run-agent` (a single agent, not a flow).
+New run form that picks a project instead of a folder (lr-run-flow's refusal text reaches the form already), and
+`pnpm lr-run-agent` (a single agent, not a flow).
 
 ## Global Constraints
 
-- All paths are under `code/flowboard/` unless they start with `docs/`. Run commands from `code/flowboard/`.
+- All paths are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
 - Branch `feature/isolation-enforcement`, cut from `dev` in its own worktree. Do not merge into `dev`; Alex decides.
-- **A flow never runs without a project.** run-flow refuses a `--folder` that no registered project owns
+- **A flow never runs without a project.** lr-run-flow refuses a `--folder` that no registered project owns
   (`owns()` in `projects.ts`, on real paths). `--check` and `--mermaid` run nothing and stay project-free.
 - **The project's tier is the floor.** A flow's `sandbox:` block may only be as strong or stronger; nothing in a
   flow or the repo can weaken it. Strength: host < docker = opensandbox < gvisor.
 - **Untrusted = gVisor or refuse.** No container fallback on a host without gVisor (macOS included).
-- **Trusted = the machine, with approvals for writes and shell only.** Reads, searches and FlowBoard's own tools
+- **Trusted = the machine, with approvals for writes and shell only.** Reads, searches and Lamproom's own tools
   pass. Each approval offers Allow / Allow from now on / Deny.
 - **"Allow from now on" is project-wide**, saved on the project record in `data/projects.json`, revocable on the
   project page. Edits are allowed by tool kind (all file edits); shell commands by prefix.
 - No new dependencies. Icons from `lucide-react`. Light only, zero radius, house tokens.
-- Refusals are run-flow `printErr` lines ending in exit code 2, so the runs page's New run form shows them as is.
+- Refusals are lr-run-flow `printErr` lines ending in exit code 2, so the runs page's New run form shows them as is.
 
 ## Decisions this plan makes (for Alex's review)
 
-1. Normal with no `sandbox:` block uses `{ runtime: 'docker', image: 'flowboard-cli', env: <the credentials the
+1. Normal with no `sandbox:` block uses `{ runtime: 'docker', image: 'lamproom-cli', env: <the credentials the
    flow's agents need> }`, the image `docker/Dockerfile` builds. Claude steps in a box need
    `CLAUDE_CODE_OAUTH_TOKEN` (a container cannot read the macOS keychain), so **a Normal project's runs are refused
-   until that variable is set in the environment FlowBoard runs in**. The refusal says how (`claude setup-token`).
+   until that variable is set in the environment Lamproom runs in**. The refusal says how (`claude setup-token`).
 2. Untrusted with a flow that asks for `runtime: opensandbox`: refused. OpenSandbox's box is not gVisor.
 3. Shell steps (the flow's or the project's check command) never ask, even in Trusted: they are the recipe's
    and the project's own commands, not an agent's choice.
@@ -63,7 +63,7 @@ New run form that picks a project instead of a folder (run-flow's refusal text r
    auto-allowed. Test: Task 1 `allowedBy refuses chained commands`.
 2. A step stopped, timed out or Ctrl+C'd while its approval waits must withdraw the question (no ask file left in
    `<runDir>/asks/`) and not hang. Test: Task 6 `a stopped step withdraws its approval`.
-3. `--folder` given as a symlink into the repo, or a task worktree under `<repo>/.flowboard/worktrees/`, must still
+3. `--folder` given as a symlink into the repo, or a task worktree under `<repo>/.lamproom/worktrees/`, must still
    find the project. Test: Task 3 `findProject follows links and owns worktrees`.
 4. `--resume` of a run whose project was removed must refuse; one whose trust changed must keep the pinned tier.
    Test: Task 3 `resume refuses without its project`.
@@ -82,7 +82,7 @@ New run form that picks a project instead of a folder (run-flow's refusal text r
 
 **Interfaces:**
 - Produces:
-  - In `packages/core/src/ports/agent-provider.ts`, exported from `@flowboard/core`:
+  - In `packages/core/src/ports/agent-provider.ts`, exported from `@lamproom/core`:
     `export type ApprovalCall = { kind: 'edit'; tool: string; path: string } | { kind: 'shell'; command: string }`
   - `export type ApprovalRule = { kind: 'edit' } | { kind: 'shell'; prefix: string }`
   - `export const ApprovalRuleSchema: z.ZodType<ApprovalRule>`
@@ -143,7 +143,7 @@ itself chained. The PATCH route's `Edit` gains `approvals: z.array(z.unknown()).
 - Produces:
   - `dockerHasGvisor(docker = 'docker'): boolean`: `docker info --format '{{json .Runtimes}}'` lists `runsc`
   - `dockerNotReady(image: string, docker = 'docker'): string | undefined`: undefined when `docker image inspect
-    <image>` succeeds; else `Docker is not running` or `no image <image>; build it from code/flowboard: docker
+    <image>` succeeds; else `Docker is not running` or `no image <image>; build it from code/lamproom: docker
     build -f docker/Dockerfile -t <image> .`
   - `dockerArgs` adds `--runtime runsc` when `profile.tier === 'gvisor'`
 
@@ -159,7 +159,7 @@ itself chained. The PATCH route's `Edit` gains `approvals: z.array(z.unknown()).
 
 ---
 
-### Task 3: run-flow enforces the project's tier
+### Task 3: lr-run-flow enforces the project's tier
 
 **Files:**
 - Create: `packages/cli/src/isolation.ts`
@@ -180,7 +180,7 @@ itself chained. The PATCH route's `Edit` gains `approvals: z.array(z.unknown()).
     (`needs`: the credential variables the flow's agents need, from `NEEDS`)
   - `FlowConfig.isolation?: Isolation`, pinned with the config
   - `Sandbox` docker variant gains `gvisor?: true`; `sandboxFor` passes `tier: sb.gvisor ? 'gvisor' : 'container'`
-  - `RunDeps.dataDir?: string` (default `FLOWBOARD_DATA_DIR` resolved from `cwd`, else `<cwd>/data`, as the app's
+  - `RunDeps.dataDir?: string` (default `LAMPROOM_DATA_DIR` resolved from `cwd`, else `<cwd>/data`, as the app's
     `dataDir()`), `RunDeps.docker?: { gvisor(): boolean; notReady(image: string): string | undefined }`
 
 `isolationFor` table:
@@ -189,17 +189,17 @@ itself chained. The PATCH route's `Edit` gains `approvals: z.array(z.unknown()).
 |---|---|---|
 | trusted | none | host, `approvals: true` |
 | trusted | any | the flow's, `approvals: false` |
-| normal | none | docker `flowboard-cli`, `env: needs` |
+| normal | none | docker `lamproom-cli`, `env: needs` |
 | normal | any | the flow's |
-| untrusted | none / docker, gVisor | docker (the flow's image, or `flowboard-cli`), `gvisor: true` |
+| untrusted | none / docker, gVisor | docker (the flow's image, or `lamproom-cli`), `gvisor: true` |
 | untrusted | opensandbox | refused: `Untrusted runs need gVisor; this flow's OpenSandbox box is not gVisor` |
 | untrusted | any, no gVisor | refused: `Untrusted runs need gVisor, and this machine's Docker has no runsc runtime; set the project to Normal, or run it on a Linux host with gVisor` |
 
 Then in `runFlow`, for a run (not `--check`/`--mermaid`), in this order, each a `printErr` + `return 2`:
-1. no project: `<folder>: not in a FlowBoard project; create one for this repo first`
+1. no project: `<folder>: not in a Lamproom project; create one for this repo first`
 2. `isolationFor` refused
 3. a docker tier: `dockerNotReady(image)`, then each `needs` variable unset: `<VAR> is not set: a container
-   cannot use this machine's login. Run \`claude setup-token\` and set CLAUDE_CODE_OAUTH_TOKEN where FlowBoard runs`
+   cannot use this machine's login. Run \`claude setup-token\` and set CLAUDE_CODE_OAUTH_TOKEN where Lamproom runs`
    (the OpenRouter line names `OPENROUTER_API_KEY`).
 Print before `-- sandbox limits`: `-- isolation: <label> (<tier>), from project <name>`, using `TRUST[trust].label`;
 on host with approvals add `; agents ask before edits and shell commands`.
@@ -210,7 +210,7 @@ on host with approvals add `; agents ask before edits and shell commands`.
 - [ ] **Step 2: Write the failing tests**
 
 `isolation.test.ts`: one assertion per table row; `findProject follows links and owns worktrees` (a symlink to
-the repo, and `<repo>/.flowboard/worktrees/task-1`, both return the project; a sibling folder returns undefined).
+the repo, and `<repo>/.lamproom/worktrees/task-1`, both return the project; a sibling folder returns undefined).
 
 `flow-run.test.ts`, with `deps.docker` faked:
 - `refuses a folder outside every project` (rewrite `projects.json` to `[]`; exit 2; message 1; no `runs/` made)
@@ -218,7 +218,7 @@ the repo, and `<repo>/.flowboard/worktrees/task-1`, both return the project; a s
 - `normal refuses when docker is not ready` (trust `normal`, `notReady` returns `Docker is not running`; exit 2;
   no run folder and no workspace made)
 - `normal boxes a flow with no sandbox` (`notReady` undefined, `CLAUDE_CODE_OAUTH_TOKEN` set in the test's env;
-  `flow.json`'s `config.sandbox` is `{ runtime: 'docker', image: 'flowboard-cli', env: ['CLAUDE_CODE_OAUTH_TOKEN'], ... }`
+  `flow.json`'s `config.sandbox` is `{ runtime: 'docker', image: 'lamproom-cli', env: ['CLAUDE_CODE_OAUTH_TOKEN'], ... }`
   and `config.isolation.tier === 'container'`; stop the run at its first step with the scripted provider)
 - `untrusted refuses without gvisor`
 - `resume refuses without its project` (start a run that pauses at a gate, empty `projects.json`, `--resume`; exit 2,
@@ -228,7 +228,7 @@ the repo, and `<repo>/.flowboard/worktrees/task-1`, both return the project; a s
   in favour of `isolationFor`'s, before the existing limits block at `flow-run.ts:141`, so limits apply to it.
 - [ ] **Step 5: Run `pnpm test:packages`; all pass.** Update `flow-live.test.ts` and `flow-opensandbox-live.test.ts`
   setups to register their folder as a project (they are not run here: they cost money).
-- [ ] **Step 6: Commit** `feat(run-flow): a run needs a project, and runs at its isolation tier`
+- [ ] **Step 6: Commit** `feat(lr-run-flow): a run needs a project, and runs at its isolation tier`
 
 ---
 
@@ -291,7 +291,7 @@ the repo, and `<repo>/.flowboard/worktrees/task-1`, both return the project; a s
 
 ---
 
-### Task 6: run-flow asks the owner, and keeps "Allow from now on"
+### Task 6: lr-run-flow asks the owner, and keeps "Allow from now on"
 
 **Files:**
 - Modify: `packages/cli/src/flow-exec.ts` (`ExecContext.approve`; `execAi` sets `spec.approve` with an
@@ -324,7 +324,7 @@ the repo, and `<repo>/.flowboard/worktrees/task-1`, both return the project; a s
 - [ ] **Step 2: Run and see them fail.**
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run and see them pass**; `pnpm test:packages` green.
-- [ ] **Step 5: Commit** `feat(run-flow): Trusted runs ask before agents' edits and shell commands`
+- [ ] **Step 5: Commit** `feat(lr-run-flow): Trusted runs ask before agents' edits and shell commands`
 
 ---
 
@@ -344,7 +344,7 @@ Copy (exact):
 - `TRUST.untrusted.text`: `A container under gVisor, a stronger wall for code nobody has reviewed. Needs a Linux host with gVisor; anywhere else, runs are refused.`
 - Trusted warning: `With no sandbox, agents in ${flows} stop before each file edit and shell command until you allow it.`
 - Untrusted off Linux: `gVisor runs on Linux only; on this ${Mac|machine}, every run of this project is refused.`
-- No page warning for an unset `CLAUDE_CODE_OAUTH_TOKEN`: run-flow's refusal says it (add one if it bites).
+- No page warning for an unset `CLAUDE_CODE_OAUTH_TOKEN`: lr-run-flow's refusal says it (add one if it bites).
 
 "Allowed from now on" card on the project page, shown when `p.approvals?.length`: one row per rule with
 `ruleText(rule)` and an icon button (lucide `X`, `aria-label="Remove <ruleText>"`) that PATCHes
@@ -364,11 +364,11 @@ Copy (exact):
 ### Task 8: Docs
 
 **Files:**
-- Modify: `docs/FlowBoard/Projects/Project Settings.md:44` (no longer "does not act on it yet"), `Projects Index.md:22`
+- Modify: `docs/Lamproom/Projects/Project Settings.md:44` (no longer "does not act on it yet"), `Projects Index.md:22`
   (trust leaves the not-yet list), `Repository Trust And Sandboxing.md` (a "Built" section: the table from Task 3,
   approvals, decisions 1–6), `Projects Open Questions.md` #16 (answered: per project, the project's tier is the floor)
-- Modify: `code/flowboard/docker/README.md` (Normal and Untrusted projects use `flowboard-cli` by default; the token)
-- Modify: `docs/FlowBoard/Running Agent Work.md` wherever it says the flow's `sandbox:` alone decides
+- Modify: `code/lamproom/docker/README.md` (Normal and Untrusted projects use `lamproom-cli` by default; the token)
+- Modify: `docs/Lamproom/Running Agent Work.md` wherever it says the flow's `sandbox:` alone decides
 
-- [ ] **Step 1: Edit them.** Quote nothing that the code no longer does; `grep -rn "not act on it yet\|does not act" docs code/flowboard/app` shows only the settings still pending.
+- [ ] **Step 1: Edit them.** Quote nothing that the code no longer does; `grep -rn "not act on it yet\|does not act" docs code/lamproom/app` shows only the settings still pending.
 - [ ] **Step 2: Commit** `docs(projects): isolation is enforced`

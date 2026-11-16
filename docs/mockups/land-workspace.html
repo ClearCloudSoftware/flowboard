@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>FlowBoard Land Task</title>
+<title>Lamproom Land Task</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
@@ -331,9 +331,9 @@ const I = {
 };
 
 /* ══ the world ═════════════════════════════════════════════════════════ */
-const REPO = '~/code/billing-svc', ID = 'stripe-webhook-idempotency', BR = 'fb/task-' + ID;
-const WT = `${REPO}/.flowboard/worktrees/task-${ID}`;
-const WT_ABS = `/Users/alex/code/billing-svc/.flowboard/worktrees/task-${ID}`;
+const REPO = '~/code/billing-svc', ID = 'stripe-webhook-idempotency', BR = 'lr/task-' + ID;
+const WT = `${REPO}/.lamproom/worktrees/task-${ID}`;
+const WT_ABS = `/Users/alex/code/billing-svc/.lamproom/worktrees/task-${ID}`;
 const RUNDIR = 'runs/2026-11-12T10-14-02-standard-flow/';
 const CUT = 'a41c9e0';
 
@@ -488,8 +488,8 @@ Stripe retries a webhook it didn't hear back from in time, and every retry wrote
 
 Review passed with one note: processed_events grows forever; Stripe retries for 3 days, so a TTL job can follow.
 
-FlowBoard-Task: ${ID}
-FlowBoard-Flow: standard-flow`;
+Lamproom-Task: ${ID}
+Lamproom-Flow: standard-flow`;
 const ARTS = [['brief.md','3.2 kB'], ['plan.md','8.9 kB'], ['review.md','5.1 kB'], ['check-attempt-1.txt','1.4 kB']];
 
 /* ══ state ════════════════════════════════════════════════════════════ */
@@ -565,7 +565,7 @@ function sendBack(){
   S.dry = 'fixing'; S.fix = 'sendback';
   play([
     { cmd:`git -C ${WT} merge main   (host; conflict left in the file)`, ms:800, out:'1 conflicted file handed to implement' },
-    { cmd:`run-flow --workspace ${ID} --from implement   · claude-sonnet`, ms:6400, usd:0.19, out:'resolved src/webhooks/stripe.ts, committed as 3f0b8a2' },
+    { cmd:`lr-run-flow --workspace ${ID} --from implement   · claude-sonnet`, ms:6400, usd:0.19, out:'resolved src/webhooks/stripe.ts, committed as 3f0b8a2' },
     { cmd:'check · pnpm test', ms:3600, out:'<span class="ok">✓ 134 passed  (14.9s)</span>' },
     { cmd:'review · claude-sonnet', ms:3000, usd:0.08, out:'<span class="ok">passed</span> — the duplicate path now also counts as received; intended' },
     { cmd:`git merge-tree --write-tree --name-only main ${BR}`, ms:900, out:'<span class="ok">clean — 5 files, no conflicts</span>' },
@@ -573,13 +573,13 @@ function sendBack(){
 }
 function land(){
   const st = STRATS[S.strategy];
-  play([{ cmd: st.cmd.replace('<message>', '.flowboard/land-message.txt'), ms:1300,
+  play([{ cmd: st.cmd.replace('<message>', '.lamproom/land-message.txt'), ms:1300,
           out: S.strategy === 'ff' ? 'Fast-forward 5c02e19..e2c91d4' : `main 5c02e19 → 7f20c4e` }],
     () => { S.landed = true; S.newHead = S.strategy === 'ff' ? 'e2c91d4' : '7f20c4e'; S.reached = 3; });
 }
 function cleanUp(force){
   play([
-    { cmd:`pnpm clean-workspace --folder ${REPO}${force ? ' --force' : ''} ${ID}`, ms:1500,
+    { cmd:`pnpm lr-clean-workspace --folder ${REPO}${force ? ' --force' : ''} ${ID}`, ms:1500,
       out: `-- removed the workspace of task ${ID}` +
            (branchMerged() ? '' : `\n-- kept branch ${BR}: it has commits not merged into HEAD; delete it with git branch -D ${BR}`) },
   ], () => { S.cleaned = branchMerged() ? 'removed' : 'kept'; });
@@ -757,7 +757,7 @@ function stage2(){
       <div class="choice">
         <div class="acts"><button class="act" onclick="sendBack()">${I.sendback}Send back to the flow</button><span class="mut">~$0.27 · ~4 min · implement, check, review</span></div>
         <p class="prose sans">The host merges main into the branch and leaves the conflict in the file; implement resolves it in the same workspace, then check and review run again.</p>
-        ${cmd(`pnpm run-flow --folder ${REPO} --workspace ${ID} --from implement standard-flow.yaml   # --from is proposed`)}
+        ${cmd(`pnpm lr-run-flow --folder ${REPO} --workspace ${ID} --from implement standard-flow.yaml   # --from is proposed`)}
       </div>
     </div>
   </div>`;
@@ -783,7 +783,7 @@ function stage2(){
   return `
   <section class="sec">
     <div class="sec-h"><h2>Before landing</h2></div>
-    <div class="pre"><span>${I.check}${REPO} is on main, nothing uncommitted</span><span>${I.check}no run-flow holds the workspace</span></div>
+    <div class="pre"><span>${I.check}${REPO} is on main, nothing uncommitted</span><span>${I.check}no lr-run-flow holds the workspace</span></div>
   </section>
   <section class="sec">
     <div class="sec-h"><h2>How to land</h2></div>
@@ -812,7 +812,7 @@ function stage3(){
     : '';
   const keptRow = merged ? '' :
       `<div class="lg-r"><span class="ic">${I.branch}</span><span class="n"><b>${BR}</b>
-        <div class="w kept">Kept. ${S.landed ? 'A squash isn’t a merge to git' : `${COMMITS.length} commits not merged into main`}, so <code>git branch -d</code> refuses — FlowBoard never uses <code>-D</code>. The work survives here; <code>run-flow --workspace ${ID}</code> picks it up again.</div></span></div>`;
+        <div class="w kept">Kept. ${S.landed ? 'A squash isn’t a merge to git' : `${COMMITS.length} commits not merged into main`}, so <code>git branch -d</code> refuses — Lamproom never uses <code>-D</code>. The work survives here; <code>lr-run-flow --workspace ${ID}</code> picks it up again.</div></span></div>`;
 
   let decision = '';
   if (!S.cleaned && !S.job) decision = `
@@ -822,12 +822,12 @@ function stage3(){
       <div class="out"><span class="g">$ git -C ${WT} status --porcelain</span>
 ?? scratch.log      <span class="g">2.1 kB · written by check attempt 1 at 10:47</span></div>
       <p class="prose sans">A plain clean up would refuse with:</p>
-      <div class="refuse">clean-workspace: git worktree remove: fatal: '${WT_ABS}' contains modified or untracked files, use --force to delete it; commit the changes, or pass --force to throw them away</div>
+      <div class="refuse">lr-clean-workspace: git worktree remove: fatal: '${WT_ABS}' contains modified or untracked files, use --force to delete it; commit the changes, or pass --force to throw them away</div>
       <div class="acts">
         <button class="act danger" onclick="cleanUp(true)">${I.trash}Throw away 1 file and clean up</button>
         <button class="act" onclick="keep()">${I.archive}Keep workspace</button>
       </div>
-      ${cmd(`pnpm clean-workspace --folder ${REPO} --force ${ID}`)}
+      ${cmd(`pnpm lr-clean-workspace --folder ${REPO} --force ${ID}`)}
     </div>
   </div>`;
 
@@ -835,14 +835,14 @@ function stage3(){
     ? `<div class="done-note">${I.archive}<span><b>Workspace kept.</b> It stays at <code>${WT}</code> on <code>${BR}</code> until you clean it up. Nothing changed on disk.</span></div>`
     : out ? `${jobHTML(S.jobOut)}<div class="done-note">${I.check}<span><b>${merged ? 'Cleaned up.' : 'Workspace removed, branch kept.'}</b> ${merged
         ? `The folder and the branch are gone; the work lives in main at ${S.newHead}.`
-        : `The folder is gone. The work is on <code>${BR}</code> only — delete it with <code>git branch -D ${BR}</code>, or pick it up again with <code>run-flow --workspace ${ID}</code>.`}</span></div>`
+        : `The folder is gone. The work is on <code>${BR}</code> only — delete it with <code>git branch -D ${BR}</code>, or pick it up again with <code>lr-run-flow --workspace ${ID}</code>.`}</span></div>`
     : `<div id="job">${S.job ? jobHTML(S.job.lines, S.job.i, S.job.t) : ''}</div>`;
 
   return `
   ${S.unlanded ? `<section class="sec"><p class="prose" style="color:var(--ink)"><b>Cleaning up without landing.</b> main won’t get this work. The branch keeps it, because clean up only ever deletes a merged branch.</p></section>` : ''}
   <section class="sec">
     <div class="sec-h"><h2>Before cleaning up</h2></div>
-    <div class="pre"><span>${I.check}no run-flow is working in the workspace</span><span>${I.check}task finished · review passed</span></div>
+    <div class="pre"><span>${I.check}no lr-run-flow is working in the workspace</span><span>${I.check}task finished · review passed</span></div>
   </section>
   <section class="sec">
     <div class="ledger">
@@ -851,7 +851,7 @@ function stage3(){
         <div class="lg-r"><span class="ic gone">${I.folder}</span><span class="n"><b>${WT}</b>
           <div class="w">The workspace folder, via <code>git worktree remove</code>.</div></span></div>
         ${branchRow}
-        <div class="lg-r"><span class="ic gone">${I.file}</span><span class="n"><b>.flowboard/ inside the workspace</b>
+        <div class="lg-r"><span class="ic gone">${I.file}</span><span class="n"><b>.lamproom/ inside the workspace</b>
           <div class="arts">${ARTS.map(([n, s]) => `<span>${n} <span class="mut">${s}</span></span>`).join('')}</div></span></div>
         <div class="lg-r"><span class="ic gone">${I.file}</span><span class="n"><b>scratch.log</b><div class="w">Only with “Throw away” — untracked, never committed.</div></span></div>
       </div>
@@ -863,7 +863,7 @@ function stage3(){
         <div class="lg-r"><span class="ic">${I.folder}</span><span class="n"><b>${REPO}</b><div class="w">Your checkout. Untouched.</div></span></div>
       </div>
     </div>
-    <div class="lose"><b>The artifacts go with the folder.</b> FlowBoard puts <code>.flowboard/</code> in git’s exclude file, so brief.md, plan.md and review.md were never committed. After clean up, Plan vs built on the task page has nothing to show. Copy them out first if you want them; the run logs in runs/ stay either way.</div>
+    <div class="lose"><b>The artifacts go with the folder.</b> Lamproom puts <code>.lamproom/</code> in git’s exclude file, so brief.md, plan.md and review.md were never committed. After clean up, Plan vs built on the task page has nothing to show. Copy them out first if you want them; the run logs in runs/ stay either way.</div>
   </section>
   ${decision}
   <section class="sec">${result}</section>`;

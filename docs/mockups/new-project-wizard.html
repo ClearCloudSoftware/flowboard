@@ -240,7 +240,7 @@ input[aria-invalid="true"]{border-color:var(--fail)}
 
 <div class="app">
   <header class="topbar">
-    <div class="brand">flowboard<em>/</em><span>projects</span></div>
+    <div class="brand">lamproom<em>/</em><span>projects</span></div>
     <span class="sp"></span>
     <button class="act primary" data-new>+ New project</button>
     <button class="act">Flows</button><button class="act">Runs</button><button class="act">Docs</button>
@@ -277,7 +277,7 @@ const ICON = {
   chev: '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 
-/* What FlowBoard can make and where code can come from. Only the first of each is wired up. */
+/* What Lamproom can make and where code can come from. Only the first of each is wired up. */
 const TYPES = [
   { id: 'software', name: 'Software', icon: ICON.code, text: 'A codebase agents read, change and test. Flows run steps against a clone of the repo.' , flows: ['delivery', 'review-loop'] },
   { id: 'research', name: 'Research', icon: ICON.book, text: 'Questions answered from sources, with citations kept as artifacts.', soon: true },
@@ -295,21 +295,21 @@ const SOURCES = [
    with an empty `shell:`, so it runs the project's check command. */
 const FLOWS = { delivery: { steps: 5, check: true }, 'review-loop': { steps: 2, check: false } };
 /*
- * Repos the connected GitHub account can read, with what FlowBoard reads from GitHub before cloning: the top-level
+ * Repos the connected GitHub account can read, with what Lamproom reads from GitHub before cloning: the top-level
  * files, package.json's scripts, the Makefile's targets and the commands CI runs. Nothing about the check command is
  * written per repo; detect() works it out from these. `taken`: already a project. `exists`: the default folder is in use.
  */
 const REPOS = [
-  { owner: 'flowboard', name: 'api', text: 'REST handlers and the board projection', lang: 'TypeScript', pushed: '2 h ago', branch: 'main', branches: ['main', 'develop', 'release/2.4'], mb: 48, objects: 18342, priv: true,
+  { owner: 'lamproom', name: 'api', text: 'REST handlers and the board projection', lang: 'TypeScript', pushed: '2 h ago', branch: 'main', branches: ['main', 'develop', 'release/2.4'], mb: 48, objects: 18342, priv: true,
     files: ['package.json', 'pnpm-lock.yaml', 'tsconfig.json', '.github/workflows/ci.yml'], scripts: ['build', 'lint', 'typecheck', 'test'], ci: ['pnpm lint', 'pnpm test'] },
-  { owner: 'flowboard', name: 'runner', text: 'Runs one flow step in its sandbox', lang: 'TypeScript', pushed: 'yesterday', branch: 'main', branches: ['main', 'docker-limits'], mb: 31, objects: 9021, priv: true,
+  { owner: 'lamproom', name: 'runner', text: 'Runs one flow step in its sandbox', lang: 'TypeScript', pushed: 'yesterday', branch: 'main', branches: ['main', 'docker-limits'], mb: 31, objects: 9021, priv: true,
     files: ['package.json', 'pnpm-lock.yaml', 'Dockerfile'], scripts: ['lint', 'test'] },
-  { owner: 'flowboard', name: 'core', text: 'Engine, flow graph, guards', lang: 'TypeScript', pushed: '5 h ago', branch: 'main', branches: ['main'], mb: 12, objects: 4410, priv: true, taken: 'Core', files: [] },
-  { owner: 'flowboard', name: 'web', text: 'The Next.js app: board, inbox, designer', lang: 'TypeScript', pushed: '3 d ago', branch: 'main', branches: ['main', 'projects-page'], mb: 112, objects: 40211, priv: true,
+  { owner: 'lamproom', name: 'core', text: 'Engine, flow graph, guards', lang: 'TypeScript', pushed: '5 h ago', branch: 'main', branches: ['main'], mb: 12, objects: 4410, priv: true, taken: 'Core', files: [] },
+  { owner: 'lamproom', name: 'web', text: 'The Next.js app: board, inbox, designer', lang: 'TypeScript', pushed: '3 d ago', branch: 'main', branches: ['main', 'projects-page'], mb: 112, objects: 40211, priv: true,
     files: ['package.json', 'package-lock.json', 'next.config.ts'], scripts: ['dev', 'build', 'lint', 'test'] },
-  { owner: 'flowboard', name: 'providers', text: 'Claude Code and OpenCode adapters', lang: 'TypeScript', pushed: '6 d ago', branch: 'main', branches: ['main'], mb: 9, objects: 3120, priv: false,
+  { owner: 'lamproom', name: 'providers', text: 'Claude Code and OpenCode adapters', lang: 'TypeScript', pushed: '6 d ago', branch: 'main', branches: ['main'], mb: 9, objects: 3120, priv: false,
     files: ['package.json', 'bun.lockb'], scripts: ['test'] },
-  { owner: 'flowboard', name: 'docs', text: 'The FlowBoard vault', lang: 'Markdown', pushed: '1 h ago', branch: 'main', branches: ['main'], mb: 21, objects: 6600, priv: false,
+  { owner: 'lamproom', name: 'docs', text: 'The Lamproom vault', lang: 'Markdown', pushed: '1 h ago', branch: 'main', branches: ['main'], mb: 21, objects: 6600, priv: false,
     files: ['README.md', '.github/workflows/ci.yml'], ci: ['npx markdownlint-cli2 "**/*.md"'] },
   { owner: 'alex', name: 'billing-svc', text: 'Invoices, dunning and the Stripe webhook', lang: 'Go', pushed: '4 d ago', branch: 'trunk', branches: ['trunk', 'stripe-v2'], mb: 27, objects: 7702, priv: true,
     files: ['go.mod', 'go.sum', 'Makefile'], make: ['build', 'lint', 'test'] },
@@ -355,20 +355,20 @@ function analyse(r) {
 }
 
 /* The GitHub accounts this mock can sign in as, and the owners each one sees. */
-const ACCOUNTS = { alex: ['alex', 'flowboard', 'clearcloud-labs', 'partner-co'], 'alex-work': ['alex-work', 'clearcloud-labs'] };
+const ACCOUNTS = { alex: ['alex', 'lamproom', 'clearcloud-labs', 'partner-co'], 'alex-work': ['alex-work', 'clearcloud-labs'] };
 /*
- * Organizations that restrict third-party apps hide their repositories until an owner approves FlowBoard.
+ * Organizations that restrict third-party apps hide their repositories until an owner approves Lamproom.
  * `none`: never asked; `requested`: waiting for an owner; `checking`: asking GitHub again; `granted`: approved.
  */
 const ORG_ACCESS = { 'partner-co': 'none' };
 const owners = () => ACCOUNTS[st.account];
 const locked = (o) => ORG_ACCESS[o] && ORG_ACCESS[o] !== 'granted';
 /*
- * Where clones go. Your own projects folder is an app setting; until you set one, FlowBoard's default is used.
+ * Where clones go. Your own projects folder is an app setting; until you set one, Lamproom's default is used.
  * OCCUPIED: folders that already exist and hold something, so a clone there gets a -2. RECENT: folders you cloned into before.
  */
-const FB_PROJECTS = '~/FlowBoard/projects';
-const OCCUPIED = new Set(['~/FlowBoard/projects/web', '~/code/web']);
+const LR_PROJECTS = '~/Lamproom/projects';
+const OCCUPIED = new Set(['~/Lamproom/projects/web', '~/code/web']);
 const RECENT = ['~/code', '~/work/clearcloud', '~/Desktop/tries'];
 const STEPS = ['Type', 'Source', 'Repository', 'Settings', 'Clone'];
 const slugify = (s) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
@@ -376,12 +376,12 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
 const projects = [
-  { name: 'Scratch', slug: 'scratch', flow: 'software', where: 'FlowBoard’s scratch repo' },
-  { name: 'Core', slug: 'core', flow: 'software', where: 'flowboard/core' },
+  { name: 'Scratch', slug: 'scratch', flow: 'software', where: 'Lamproom’s scratch repo' },
+  { name: 'Core', slug: 'core', flow: 'software', where: 'lamproom/core' },
 ];
 
 /* The app's own settings (the Settings page), and what a project type sets over them. A project overrides either. */
-const APP = { projectsFolder: '~/code', trust: 'normal', cap: null, alertAt: 80, onLimit: 'pause', channel: '#flowboard', nudge: 5, memory: false, draft: false, memoryAdapter: 'local' };
+const APP = { projectsFolder: '~/code', trust: 'normal', cap: null, alertAt: 80, onLimit: 'pause', channel: '#lamproom', nudge: 5, memory: false, draft: false, memoryAdapter: 'local' };
 /*
  * Knowledge assets: maps of the repo that agents query instead of reading every file, rebuilt from the code and
  * stamped with the commit they were built from. Serena needs no AI calls, so it is free; graphify asks the AI
@@ -408,7 +408,7 @@ const st = {
   step: 3, reached: 3, type: 'software', source: 'github', gh: 'connected', owner: 'clearcloud-labs', q: '', repo: 'clearcloud-labs/ingest-pipeline',
   sub: 3, adv: false, dest: 'default', custom: '~/work/clearcloud', makeDefault: false, clone: null, accepted: {},
   ov: { trust: false, budget: true, escalation: false, memory: false, knowledge: false, draft: false },
-  v: { trust: 'normal', cap: '150', alertAt: '80', onLimit: 'pause', channel: '#flowboard', nudge: '5', memory: false, knowledge: { serena: true, graphify: true, rebuild: 'push' }, draft: false, memMb: '', cpus: '' },
+  v: { trust: 'normal', cap: '150', alertAt: '80', onLimit: 'pause', channel: '#lamproom', nudge: '5', memory: false, knowledge: { serena: true, graphify: true, rebuild: 'push' }, draft: false, memMb: '', cpus: '' },
 };
 const repo = () => REPOS.find((r) => `${r.owner}/${r.name}` === st.repo);
 const type = () => TYPES.find((t) => t.id === st.type);
@@ -416,7 +416,7 @@ const typeFlows = () => type()?.flows ?? [];
 /* The project is the repo: its name is the repo's, its address the name's, or owner-name when another project has it. */
 const pname = () => repo().name;
 const slug = () => (projects.some((p) => p.slug === slugify(pname())) ? slugify(`${repo().owner}-${pname()}`) : slugify(pname()));
-const defaultParent = () => APP.projectsFolder ?? FB_PROJECTS;
+const defaultParent = () => APP.projectsFolder ?? LR_PROJECTS;
 const parentDir = () => (st.dest === 'default' ? defaultParent() : st.custom.trim().replace(/\/+$/, ''));
 /* The clone's folder: the repo's name inside the chosen parent, numbered when that folder is taken. */
 const folderIn = (parent) => `${parent}/${repo().name}${OCCUPIED.has(`${parent}/${repo().name}`) ? '-2' : ''}`;
@@ -456,9 +456,9 @@ const SUBS = [
   { id: 'sandbox', title: 'Sandbox', key: 'trust', errs: ['memMb', 'cpus'], intro: 'How far you trust this repo decides how its steps are boxed in.' },
   { id: 'network', title: 'Network', intro: 'What the sandbox may reach. Nothing else gets out.' },
   { id: 'budget', title: 'Budget', key: 'budget', errs: ['cap', 'alertAt'], intro: 'A ceiling on what the whole project spends, over every flow and run.' },
-  { id: 'escalation', title: 'Escalation', key: 'escalation', errs: ['channel', 'nudge'], intro: 'Where and how soon a question nobody answered in FlowBoard is posted to chat.' },
+  { id: 'escalation', title: 'Escalation', key: 'escalation', errs: ['channel', 'nudge'], intro: 'Where and how soon a question nobody answered in Lamproom is posted to chat.' },
   { id: 'memory', title: 'Memory', key: 'memory', intro: 'Whether runs remember facts about this codebase between them.' },
-  { id: 'knowledge', title: 'Knowledge', key: 'knowledge', intro: 'Maps of the code that agents query instead of reading every file. FlowBoard rebuilds them from the repo; nobody edits them by hand.' },
+  { id: 'knowledge', title: 'Knowledge', key: 'knowledge', intro: 'Maps of the code that agents query instead of reading every file. Lamproom rebuilds them from the repo; nobody edits them by hand.' },
   { id: 'draft', title: 'Draft mode', key: 'draft', intro: 'Every step on the cheapest model, while you are trying flows out on this project.' },
 ];
 const subAt = (id) => SUBS.findIndex((x) => x.id === id);
@@ -486,7 +486,7 @@ function problems() {
   else if (v.cpus !== '' && !(+v.cpus > 0)) e.cpus = 'more than 0; 1.5 is a CPU and a half';
   const warns = [];
   if (eff('trust') === 'trusted') warns.push({ sub: 'sandbox', text: `With no sandbox, ${typeFlows().join(' and ')} stop at every tool use for you to allow it; nothing runs unattended.` });
-  if (eff('trust') === 'untrusted') warns.push({ sub: 'sandbox', text: 'gVisor runs on Linux only; on this Mac, FlowBoard uses a container until you run it on a Linux host.' });
+  if (eff('trust') === 'untrusted') warns.push({ sub: 'sandbox', text: 'gVisor runs on Linux only; on this Mac, Lamproom uses a container until you run it on a Linux host.' });
   if (st.ov.memory && st.v.memory && APP.memoryAdapter === 'none') warns.push({ sub: 'memory', text: 'Memory is off in the app settings, so this does nothing until it is on.' });
   const kn = eff('knowledge');
   if (st.repo && kn?.graphify) {
@@ -540,7 +540,7 @@ const VIEWS = [
     foot: () => `${back()}<span class="sp"></span>${next()}`,
   },
   {
-    head: () => `<span class="lbl">step 2 of 5</span><h2>Where does the code live?</h2><p>FlowBoard clones the repository onto this machine. Agents work on that clone; FlowBoard does every fetch and push itself.</p>`,
+    head: () => `<span class="lbl">step 2 of 5</span><h2>Where does the code live?</h2><p>Lamproom clones the repository onto this machine. Agents work on that clone; Lamproom does every fetch and push itself.</p>`,
     body: () => `<div class="srcs">${SOURCES.map((s) => `<button class="src" data-src="${s.id}" aria-pressed="${st.source === s.id}" ${s.soon ? 'disabled' : ''}>
       ${s.id === 'local' ? ICON.folder : ICON.branch}<b>${s.name}</b>${s.soon ? '<span class="soon">coming soon</span>' : st.gh === 'connected' ? `<span class="lbl" style="color:var(--run)">connected as ${st.account}</span>` : st.gh === 'expired' ? '<span class="lbl" style="color:var(--wait)">reconnect needed</span>' : '<span></span>'}<small>${s.text}</small></button>`).join('')}</div>`,
     foot: () => `${back()}<span class="sp"></span>${next()}`,
@@ -576,9 +576,9 @@ function connectBox() {
   const waiting = st.gh === 'waiting';
   return `<div class="connect">
     ${st.switching
-      ? `<p class="sans" style="margin:0">FlowBoard forgot the token for <b>${st.account}</b>. GitHub signs you in as whoever is signed in on github.com, so sign out there first, or use a private window, then connect as the account you want.</p>`
-      : `<p class="sans" style="margin:0">FlowBoard asks GitHub for read access to your repositories and permission to push branches it makes. The token stays in this machine's keychain; agents never see it.</p>
-    <ul><li>clone and fetch the repositories you pick</li><li>push <code>fb/task-*</code> branches when you say so</li><li>nothing else: no admin, no org settings</li></ul>`}
+      ? `<p class="sans" style="margin:0">Lamproom forgot the token for <b>${st.account}</b>. GitHub signs you in as whoever is signed in on github.com, so sign out there first, or use a private window, then connect as the account you want.</p>`
+      : `<p class="sans" style="margin:0">Lamproom asks GitHub for read access to your repositories and permission to push branches it makes. The token stays in this machine's keychain; agents never see it.</p>
+    <ul><li>clone and fetch the repositories you pick</li><li>push <code>lr/task-*</code> branches when you say so</li><li>nothing else: no admin, no org settings</li></ul>`}
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <button class="act primary" data-connect ${waiting ? 'disabled' : ''}>${waiting ? 'Waiting for github.com…' : 'Connect GitHub'}</button>
       <span class="lbl" style="text-transform:none;letter-spacing:.02em">${waiting ? 'finish in the browser tab that opened' : 'opens github.com in a new tab'}</span>
@@ -589,7 +589,7 @@ function connectBox() {
 function expiredBox() {
   const waiting = st.gh === 'waiting';
   return `<div class="connect expired">
-    <p class="sans" style="margin:0">GitHub no longer accepts FlowBoard's token for <b>${st.account}</b>: it expired, or it was revoked under github.com → Settings → Applications. Reconnect to carry on.</p>
+    <p class="sans" style="margin:0">GitHub no longer accepts Lamproom's token for <b>${st.account}</b>: it expired, or it was revoked under github.com → Settings → Applications. Reconnect to carry on.</p>
     <p class="sans" style="margin:0;color:var(--ink-3)">Nothing is lost: ${st.repo ? `<b>${st.repo}</b> and your settings stay as you left them` : 'what you picked so far stays'}. Your other projects can't fetch or push until you reconnect.</p>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <button class="act primary" data-connect ${waiting ? 'disabled' : ''}>${waiting ? 'Waiting for github.com…' : `Reconnect as ${st.account}`}</button>
@@ -597,12 +597,12 @@ function expiredBox() {
     </div></div>`;
 }
 
-/* An organization that has not let FlowBoard in: why its repositories are hidden, and how to get them. */
+/* An organization that has not let Lamproom in: why its repositories are hidden, and how to get them. */
 function orgPanel(o) {
   const a = ORG_ACCESS[o];
   return `<div class="connect">
     ${a === 'none'
-      ? `<p class="sans" style="margin:0"><b>${o}</b> has not let FlowBoard in, so GitHub hides its repositories. An owner of ${o} approves it under the organization's Settings → Third-party access.</p>
+      ? `<p class="sans" style="margin:0"><b>${o}</b> has not let Lamproom in, so GitHub hides its repositories. An owner of ${o} approves it under the organization's Settings → Third-party access.</p>
          <div><button class="act primary" data-request="${o}">Request access</button> <span class="lbl" style="text-transform:none;letter-spacing:.02em">GitHub asks ${o}'s owners; you need nothing else</span></div>`
       : `<p class="sans" style="margin:0">Access requested from <b>${o}</b>. An owner has to approve it on GitHub; until then its repositories stay hidden.</p>
          <div><button class="act" data-recheck="${o}" ${a === 'checking' ? 'disabled' : ''}>${a === 'checking' ? 'Asking GitHub…' : 'Check again'}</button> <span class="lbl" style="text-transform:none;letter-spacing:.02em">or pick a repository from another owner meanwhile</span></div>`}
@@ -614,7 +614,7 @@ function repoPicker() {
   const list = REPOS.filter((r) => r.owner === st.owner && (!q || `${r.name} ${r.text}`.toLowerCase().includes(q)));
   const head = `<div class="who"><span class="ok">${ICON.check}</span><span>connected as <b>${st.account}</b></span><button class="link" data-disconnect>use another account</button><span class="sp"></span>
       <div class="owners" role="group" aria-label="Owner">${owners().map((o) => `<button class="owner ${locked(o) ? 'locked' : ''}" data-owner="${o}" aria-pressed="${st.owner === o}">${o}${locked(o) ? '<small>no access</small>' : ''}</button>`).join('')}</div></div>
-    <p class="orgs"><button class="link" data-orghelp aria-expanded="${st.orgHelp}">Don't see an organization?</button>${st.orgHelp ? ` An organization shows here when your account is a member of it. If it is listed with <i>no access</i>, it restricts apps like FlowBoard: request access from it. If it isn't listed at all, ask to be added to it on GitHub, then <button class="link" data-reload>reload the list</button>.` : ''}</p>`;
+    <p class="orgs"><button class="link" data-orghelp aria-expanded="${st.orgHelp}">Don't see an organization?</button>${st.orgHelp ? ` An organization shows here when your account is a member of it. If it is listed with <i>no access</i>, it restricts apps like Lamproom: request access from it. If it isn't listed at all, ask to be added to it on GitHub, then <button class="link" data-reload>reload the list</button>.` : ''}</p>`;
   if (locked(st.owner)) return head + orgPanel(st.owner);
   return `${head}
     <input class="search" id="q" value="${esc(st.q)}" placeholder="Filter ${st.owner}'s repositories…" aria-label="Filter repositories" autocomplete="off">
@@ -660,11 +660,11 @@ const SUB_VIEWS = {
   sandbox: () => `<div class="sets">${setting('trust', 'Isolation', () => `${seg('trust', Object.fromEntries(Object.entries(TRUST).map(([t, x]) => [t, `${x.label} · ${x.tier}`])))}<p class="d">${TRUST[st.v.trust].text}</p>`)}
       <section class="set"><div class="set-h"><b>Resource limits</b><span class="from">${limitsText() ? 'this repo' : 'Docker’s defaults'}</span></div>
         <div class="srow">${num('memMb', 'memory, MB', 'placeholder="a quarter of Docker’s" inputmode="numeric"')}${num('cpus', 'CPUs', 'placeholder="any" inputmode="decimal"')}</div>${err('memMb', 'cpus')}
-        <p class="d">Per container, for every sandboxed step. Kept in the repo's .flowboard.yaml, so they travel with the code.</p></section></div>${warnsFor('sandbox')}`,
+        <p class="d">Per container, for every sandboxed step. Kept in the repo's .lamproom.yaml, so they travel with the code.</p></section></div>${warnsFor('sandbox')}`,
   network: () => `<div class="sets"><section class="set"><div class="set-h"><b>Always</b></div><div class="inh">the AI service the agents use</div></section>
       <section class="set"><div class="set-h"><b>Package registries</b><span class="from">after cloning</span></div>
         <div class="inh">proposed by the analysis agent from the repo's lockfiles; you confirm them</div>
-        <p class="d">Never the git remote: FlowBoard does every fetch and push itself, outside the sandbox.</p></section></div>`,
+        <p class="d">Never the git remote: Lamproom does every fetch and push itself, outside the sandbox.</p></section></div>`,
   budget: () => `<div class="sets">${setting('budget', 'Monthly cap', () => `<div class="srow">${num('cap', '$ per month', 'inputmode="decimal"')}${num('alertAt', 'alert at, %', 'inputmode="numeric"')}<span class="nf">when it is spent${seg('onLimit', ON_LIMIT)}</span></div>${err('cap', 'alertAt')}`,
       'Everything the project’s runs cost counts, the analysis agent’s included. Each flow’s own budget still applies inside it.')}</div>`,
   escalation: () => `<div class="sets">${setting('escalation', 'Chat', () => `<div class="srow">${num('channel', 'Slack channel', 'spellcheck="false"')}${num('nudge', 'after, minutes', 'inputmode="numeric"')}</div>${err('channel', 'nudge')}`)}</div>`,
@@ -678,7 +678,7 @@ const SUB_VIEWS = {
     return `<div class="sets">${setting('knowledge', 'Knowledge assets', () => `${Object.keys(KNOWLEDGE).map(asset).join('')}
         <div class="ka"><div><b>Rebuild</b><small>a map built from an older commit is marked stale, so agents know not to trust it</small></div>
         <div class="seg2" role="radiogroup">${Object.entries(REBUILD).map(([v, l]) => `<button role="radio" data-kn="rebuild" data-val="${v}" aria-pressed="${kn.rebuild === v}" aria-checked="${kn.rebuild === v}">${v === 'push' ? `on ${r.branch} moving` : l}</button>`).join('')}</div></div>`,
-      'Kept in .flowboard/knowledge/ in the clone, out of commits, and built first right after cloning. Serena never leaves this machine; graphify does, to the AI service.')}</div>${warnsFor('knowledge')}`;
+      'Kept in .lamproom/knowledge/ in the clone, out of commits, and built first right after cloning. Serena never leaves this machine; graphify does, to the AI service.')}</div>${warnsFor('knowledge')}`;
   },
   draft: () => `<div class="sets">${setting('draft', 'Draft mode', () => seg('draft', { false: 'Off', true: 'On' }))}</div>`,
 };
@@ -704,7 +704,7 @@ function reviewView() {
     <div class="lbl" style="margin-bottom:6px">clone into</div>
     <div class="dest">
       <label class="opt"><input type="radio" name="dest" value="default" ${st.dest === 'default' ? 'checked' : ''}>
-        <b>${APP.projectsFolder ? 'Your projects folder' : 'FlowBoard’s projects folder'}</b><small>${esc(folderIn(defaultParent()))}</small>
+        <b>${APP.projectsFolder ? 'Your projects folder' : 'Lamproom’s projects folder'}</b><small>${esc(folderIn(defaultParent()))}</small>
         <small class="whence">${APP.projectsFolder ? 'set in app settings → Projects folder' : 'the default until you pick your own, in app settings or below'}</small></label>
       <label class="opt"><input type="radio" name="dest" value="custom" ${st.dest === 'custom' ? 'checked' : ''}>
         <b>Somewhere else</b><small>a folder for this project only; ${r.name} is made inside it</small></label>
@@ -738,12 +738,12 @@ function cloneView() {
       ? `<div class="done-box"><b>${esc(pname())} is ready at /p/${slug()}</b>
         <span>${esc(folder())} on <b>${repo().branch}</b> · ${type().name}: ${typeFlows().join(', ')} · ${summary.trust()}</span>
         <span>knowledge: ${esc(summary.knowledge())}</span>
-        ${limitsText() ? '<span style="color:var(--wait)">.flowboard.yaml is new in the repo: commit it so the limits travel with the code</span>' : ''}</div>${proposals()}`
+        ${limitsText() ? '<span style="color:var(--wait)">.lamproom.yaml is new in the repo: commit it so the limits travel with the code</span>' : ''}</div>${proposals()}`
       : `<div class="bar" aria-hidden="true"><i style="width:${Math.round(c.pct)}%"></i></div><div class="lbl" style="margin-bottom:6px">${c.phase} · ${Math.round(c.pct)}%</div>`}
     <div class="log" id="log" aria-live="polite">${c.lines.join('\n')}</div>`;
 }
 
-/* The clone engine: git's own phases at a believable pace, FlowBoard saving the settings, then the analysis agent. */
+/* The clone engine: git's own phases at a believable pace, Lamproom saving the settings, then the analysis agent. */
 function startClone() {
   const r = repo();
   const a = analyse(r);
@@ -764,10 +764,10 @@ function startClone() {
     const after = [
       `Resolving deltas: 100% (${Math.round(r.objects * 0.52)}/${Math.round(r.objects * 0.52)}), done.`,
       ...(st.dest === 'custom' && st.makeDefault ? [`<span class="fb">-- your projects folder is now ${esc(parentDir())} (app settings); new projects clone there</span>`] : []),
-      `<span class="fb">-- added .flowboard/ to .git/info/exclude</span>`,
+      `<span class="fb">-- added .lamproom/ to .git/info/exclude</span>`,
       `<span class="fb">-- project ${esc(pname())} registered at /p/${slug()}: ${type().name}, ${summary.trust()}</span>`,
       own.length ? `<span class="fb">-- overrides: ${own.join('; ')}</span>` : `<span class="fb">-- every setting inherited</span>`,
-      ...(limitsText() ? [`<span class="fb">-- wrote .flowboard.yaml: sandbox limits ${limitsText()}</span>`] : []),
+      ...(limitsText() ? [`<span class="fb">-- wrote .lamproom.yaml: sandbox limits ${limitsText()}</span>`] : []),
       `<span class="fb">-- analysis agent started: reading ${a.read.join(', ') || 'the tree'}</span>`,
       `<span class="fb">-- analysis: ${a.stacks.map((k) => `${k.name} · ${k.tool}`).join(', ') || 'no build system recognised'}</span>`,
       `<span class="fb">-- analysis done in 21 s, $0.04; ${(a.check ? 1 : 0) + (a.hosts.length ? 1 : 0)} proposal${(a.check ? 1 : 0) + (a.hosts.length ? 1 : 0) === 1 ? '' : 's'}</span>`,

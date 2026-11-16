@@ -1,15 +1,15 @@
-# Design review: `run-flow` orchestration plan
+# Design review: `lr-run-flow` orchestration plan
 
 - **Date:** 2026-10-19
 - **Plan:** `docs/superpowers/plans/2026-10-19-run-flow-orchestration.md` (updated with every answer below)
-- **Spec:** `docs/FlowBoard/Multi-Agent Orchestration Analysis.md`
+- **Spec:** `docs/Lamproom/Multi-Agent Orchestration Analysis.md`
 - **Status:** reviewed with Alex; ready to build once an execution method is picked.
 
 ## Chosen approach: B, the plan as written
 
 The work has two parts:
-- a pure engine, `advance(flow, state, event) → { state, commands }`, in `@flowboard/core`;
-- a `run-flow` CLI host on top of the existing agent providers.
+- a pure engine, `advance(flow, state, event) → { state, commands }`, in `@lamproom/core`;
+- a `lr-run-flow` CLI host on top of the existing agent providers.
 
 The alternatives were:
 - **A**, steps in sequence only: medium effort, low risk;
@@ -43,7 +43,7 @@ Calls I made inside the edge format (they share its cost of reversal):
 - **No `START` or `END`.**
 - **yamlgraph habits get an error that says what to write instead.** That covers `to: [a, b]`, a `condition` expression, and `START`.
 
-*2026-10-23:* Alex made three more calls after the build. A flow file is a reusable recipe: it holds no `folder` or `task`, and each run gives them, `pnpm run-flow --folder <dir> --task <file> <flow.yaml>`. A flow has a budget ceiling, the top-level `budget_usd`, 0 for none (see *Performance and scale*). And the next run-flow stops what a host killed with `kill -9` left running (see landmine 1). The details are in `docs/FlowBoard/Agent Providers/Run Flow Reference.md`.
+*2026-10-23:* Alex made three more calls after the build. A flow file is a reusable recipe: it holds no `folder` or `task`, and each run gives them, `pnpm lr-run-flow --folder <dir> --task <file> <flow.yaml>`. A flow has a budget ceiling, the top-level `budget_usd`, 0 for none (see *Performance and scale*). And the next lr-run-flow stops what a host killed with `kill -9` left running (see landmine 1). The details are in `docs/Lamproom/Agent Providers/Run Flow Reference.md`.
 
 ## Landmines, worst first
 
@@ -51,7 +51,7 @@ Each one now has a fix in the plan.
 
 | # | Failure | Fix | Task | What's left |
 |---|---|---|---|---|
-| 1 | The host crashes or is killed and leaves agents running and spending; `--resume` then starts a second agent in the same folder | `stopAll()` on any host error; a folder lock, so one host per folder | 9, 11 | Agents orphaned by `kill -9` can't be stopped, because the adapters expose no process IDs (pids); the lock only warns. *Correction, 2026-10-23:* the adapters do expose pids (`AgentRun.pid`); `run-flow` did not record them. Each run log now has a `pid` line, for agents and checks alike, with the process's start time. The orphans are now stopped (Alex's call): a run-flow that replaces a dead host's lock, and `--resume` in its own run folder, signal the process, or a check's whole process group, of each run whose log has a `pid` line and no `result` line, while its start time still matches the log (Claude's call, open to Alex's review). Still left: run-flow signals only an agent's own CLI process, not the processes that CLI started |
+| 1 | The host crashes or is killed and leaves agents running and spending; `--resume` then starts a second agent in the same folder | `stopAll()` on any host error; a folder lock, so one host per folder | 9, 11 | Agents orphaned by `kill -9` can't be stopped, because the adapters expose no process IDs (pids); the lock only warns. *Correction, 2026-10-23:* the adapters do expose pids (`AgentRun.pid`); `lr-run-flow` did not record them. Each run log now has a `pid` line, for agents and checks alike, with the process's start time. The orphans are now stopped (Alex's call): a lr-run-flow that replaces a dead host's lock, and `--resume` in its own run folder, signal the process, or a check's whole process group, of each run whose log has a `pid` line and no `result` line, while its start time still matches the log (Claude's call, open to Alex's review). Still left: lr-run-flow signals only an agent's own CLI process, not the processes that CLI started |
 | 2 | Your uncommitted work is destroyed by an agent's `git checkout .` or a check's `git clean` | Refuse a tree with uncommitted changes (Alex) | 9 | Untracked files aren't counted |
 | 3 | Ctrl+C on a check like `test -f x \|\| sleep 30` waits for the orphaned `sleep`, because SIGTERM reached only `sh`. The plan's own hanging-check test would have failed | Shell steps run in their own process group, and stopping kills the group | 7 | They no longer go through `ExecHost`, the hook a future sandbox would use; a `ponytail:` comment marks the way back |
 | 4 | Rejecting an approval step whose only edge is `always` (`plan → implement`) sent the rejected plan on to `implement` | A gate offers Reject only when the step has an `on_fail` edge | 2 | — |
@@ -84,12 +84,12 @@ These assumptions hold for a single-user CLI:
 - **What's actually slow** is the agent runs themselves: minutes and dollars per step.
   - `--max-runs` bounds how many run at once.
   - `max_attempts` multiplied by each step's limits bounds a loop.
-  - There is no budget ceiling for a whole flow (deferred: Flow Design #12). *2026-10-23:* built, Alex's call: the top-level `budget_usd`, 0 for none, which `--budget-usd` overrides. Each agent run may spend only what is left, and a flow that has spent it pauses (exit 3) until `pnpm run-flow --resume <run folder> --budget-usd <more>` (Claude's calls, open to Alex's review). Runs launched together may each spend all that is left.
+  - There is no budget ceiling for a whole flow (deferred: Flow Design #12). *2026-10-23:* built, Alex's call: the top-level `budget_usd`, 0 for none, which `--budget-usd` overrides. Each agent run may spend only what is left, and a flow that has spent it pauses (exit 3) until `pnpm lr-run-flow --resume <run folder> --budget-usd <more>` (Claude's calls, open to Alex's review). Runs launched together may each spend all that is left.
 
 ## Two-way doors I decided
 
 Override any of these at any time:
-- **Where run state lives:** `runs/` beside where the command runs, as for `run-agent`.
+- **Where run state lives:** `runs/` beside where the command runs, as for `lr-run-agent`.
 - **`--resume` uses the pinned `flow.json`.** Fixing a prompt partway through means starting the flow again.
 - **A step with no budget and no turn limit** gets a warning, not an error. *2026-10-23:* only when the flow has no ceiling (`budget_usd: 0`); with one, each agent run is capped by what is left.
 - **Artifact names:** type keys saved as `<type>.md`. Names have no dots today, so file names like `result.json` can be added later without breaking any flow.

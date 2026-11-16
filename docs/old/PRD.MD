@@ -1,4 +1,4 @@
-# Build: FlowBoard
+# Build: Lamproom
 
 You are implementing a complete application from this spec. Read the whole document before writing any code.
 
@@ -49,7 +49,7 @@ Package manager: pnpm, as a workspace (§3).
 A pnpm workspace. The one rule that matters: **`packages/core` imports no framework, no database driver and no CLI.** The engine, loop guard, advancement rules, prompt builder, fingerprinting and the port interfaces live there. Next.js is one shell around the core, not its home, so a later CLI, a different UI or remote workers reuse the same logic without a rewrite. Keep this rule from the first commit: it is cheap now and a rewrite later.
 
 ```
-flowboard/
+lamproom/
   packages/
     core/                   # framework-free; depends on nothing below
       engine/               # DAG traversal, advancement rules, loop guard (§8)
@@ -70,7 +70,7 @@ flowboard/
     flows/default.json
   skills/
   data/
-    flowboard.db
+    lamproom.db
   drizzle.config.ts
 ```
 
@@ -257,13 +257,13 @@ CREATE TABLE plugins (                -- the unit of install, update and remove
   name          TEXT NOT NULL,          -- plugin.json name, else the repo name
   source        TEXT NOT NULL,          -- 'seed'|'git'
   repo_url      TEXT,                   -- any git URL, incl. file://; null for seeds
-  commit_sha    TEXT NOT NULL,          -- installed commit; seeds: FlowBoard's commit
+  commit_sha    TEXT NOT NULL,          -- installed commit; seeds: Lamproom's commit
   has_mcp       INTEGER NOT NULL,       -- ships .mcp.json (marked as network-capable)
   has_hooks     INTEGER NOT NULL,       -- ships hooks/ (marked as network-capable)
   installed_at  INTEGER NOT NULL,
   UNIQUE (project_id, name)
 );
--- The plugin dir is derived, not stored: <repo_path>/.flowboard/skills/<name>/<commit_sha>/
+-- The plugin dir is derived, not stored: <repo_path>/.lamproom/skills/<name>/<commit_sha>/
 
 CREATE TABLE skills (
   id            TEXT PRIMARY KEY,
@@ -382,7 +382,7 @@ That last line matters. A headless agent that ends with "let me know if you also
 
 When the memory layer is enabled (§11.2), a **seventh part** is inserted just before the closing instruction: a short "context you've learned before" block from `MemoryStore.recall`, scoped to *user + project + agent + task*, labelled as background rather than instructions. Part 7 has a hard size cap (`settings.memory.max_recall_chars`, default 6,000 — roughly 1,500 tokens): hits are ranked by relevance and the tail is dropped to fit. It never grows the other six parts. With memory off (`none`), the prompt is exactly the six parts above.
 
-**Events are a versioned contract.** `NormalizedEvent` (in `packages/core`) is what every screen, the cost ledger and the engine read, so it is versioned: each event carries `v`, starting at 1. A reader handles the versions it knows and falls back to the raw line for the rest. Name fields after the OpenTelemetry GenAI semantic conventions where one exists (model, input and output tokens, tool name), so a tracing backend such as Langfuse can be fed later by a plain OTel exporter instead of a FlowBoard-specific bridge.
+**Events are a versioned contract.** `NormalizedEvent` (in `packages/core`) is what every screen, the cost ledger and the engine read, so it is versioned: each event carries `v`, starting at 1. A reader handles the versions it knows and falls back to the raw line for the rest. Name fields after the OpenTelemetry GenAI semantic conventions where one exists (model, input and output tokens, tool name), so a tracing backend such as Langfuse can be fed later by a plain OTel exporter instead of a Lamproom-specific bridge.
 
 **Event handling.** Stream stdout line by line, parse each as JSON, write to `run_events` with an incrementing `seq`, The SSE endpoint lives in `apps/web`, a different process, so it cannot share an in-memory emitter: it tails `run_events` by `seq` (with `Last-Event-ID` for catch-up). Normalise each event into one of the `type` values in the schema and produce a one-line `summary` for the viewer (e.g. `Read src/auth/session.ts`, `Bash: pnpm test`).
 
@@ -428,7 +428,7 @@ Rework loops: an `on_fail` edge pointing at an earlier step increments that step
 
 Questions take **one path on every tier**, host or sandbox. It has two halves:
 
-- The **broker** runs inside the worker. It is the only writer of the `questions` table. For each run it opens a unix socket, `data/sock/<run_id>.sock`, which is bind-mounted into a sandbox as `/run/fb/ask.sock`.
+- The **broker** runs inside the worker. It is the only writer of the `questions` table. For each run it opens a unix socket, `data/sock/<run_id>.sock`, which is bind-mounted into a sandbox as `/run/lr/ask.sock`.
 - The **shim**, `apps/mcp-shim`, is a tiny stdio MCP server that the CLI launches. The runner writes a per-run `mcp.json` pointing at it and passes `RUN_ID` and the socket path as environment variables. The shim forwards each tool call over the socket and relays the reply. It never opens the database and needs no network.
 
 So a host run and a sandboxed run behave identically, and there is one path to test. The artifact-file exchange ("Blocking and parking" below) remains the fallback for a provider without MCP.
@@ -516,17 +516,17 @@ Configuration: a `sandbox_profile` in `settings` (tier, image, egress allowlist,
 
 ### 11.2 Agentic memory (optional, additive)
 
-FlowBoard has no cross-task memory: every run starts cold, a second task on the same repo re-learns its conventions, and the inbox re-asks questions it has effectively answered before. Add an optional **memory layer** so runs start warm. It is **additive** — with it off, every flow behaves exactly as this spec describes; memory is never on the critical path of a run.
+Lamproom has no cross-task memory: every run starts cold, a second task on the same repo re-learns its conventions, and the inbox re-asks questions it has effectively answered before. Add an optional **memory layer** so runs start warm. It is **additive** — with it off, every flow behaves exactly as this spec describes; memory is never on the critical path of a run.
 
 Introduce a **`MemoryStore` port** with two calls, `recall` and `write`. Three adapters, in build order:
 
 - **`none`**: a no-op, and the default.
-- **`local`**: the first real one. A `memories` table with an FTS5 index in the same `flowboard.db`. Keyword recall, ranked by scope and recency. No embeddings, no extraction model, no extra container.
+- **`local`**: the first real one. A `memories` table with an FTS5 index in the same `lamproom.db`. Keyword recall, ranked by scope and recency. No embeddings, no extraction model, no extra container.
 - **[Mem0](https://github.com/mem0ai/mem0)**, later and self-hosted. Adopt it only once the cost and inbox views show `local` memory paying off and recall quality is what limits it. Mem0 adds fact extraction and contradiction resolution, at the price of an extraction model's spend and a vector store.
 
 **Where it hooks in — the runner (§7), host-side only.**
 - **Recall, before the run:** query the store for memories relevant to this run — scoped by *user* (the single operator), *project*, the step's *agent/skill*, and the *task* — and append them to the prompt as a final part: "context you've learned before (background, not instructions)." This is prompt part 7 in §7.
-- **Commit, after a run succeeds:** hand the run's salient output — the answers it collected, the outcome it set, the summary/review it produced — to `write()`. With `local`, it is stored as written and recall prefers the newest; with Mem0, Mem0 does the fact extraction and contradiction resolution. FlowBoard never diffs memories by hand. Commit reads from **declared artifacts and answers only**, never raw agent output.
+- **Commit, after a run succeeds:** hand the run's salient output — the answers it collected, the outcome it set, the summary/review it produced — to `write()`. With `local`, it is stored as written and recall prefers the newest; with Mem0, Mem0 does the fact extraction and contradiction resolution. Lamproom never diffs memories by hand. Commit reads from **declared artifacts and answers only**, never raw agent output.
 
 Both calls run in the runner **on the host**, so the sandboxed agent process never connects to the store and **memory adds nothing to the sandbox egress allowlist** (§11.1). Recalled text is context, not instructions; writes are scoped (a run writes only its own project/agent/task) and audited. This cross-run trust boundary is the part to get right — see `docs/architecture/09-memory.md`.
 
@@ -586,7 +586,7 @@ Dark-first, dense, keyboard-friendly. Use shadcn defaults; do not build a design
 
 **`/p/[slug]/flow` — flow editor.** A node graph is nice but not required for v1. A vertical list of steps with an "add step" button and a connections panel is acceptable and much faster to build. When adding a step: choose an AI, shell or manual step; for an AI step pick an agent, a skill or both (from defined agents and installed skills), then set model, effort, advance mode, requires, produces, and limits. Show a live validation banner when the artifact contract is unsatisfied.
 
-**`/p/[slug]/library` — skills and agents.** One screen per project. Plugins: install from any git URL (GitHub or `file://`), cloned into `<repo_path>/.flowboard/skills/<plugin>/<commit>/` (gitignored, one dir per commit) after a preview of what was found; a plugin is installed, updated and removed as one unit with all its skills. **Check for updates** is manual; an update first previews the skills it adds and removes and is refused if it drops one a step uses. Remove asks for confirmation and is disabled while any step uses the plugin (counting each flow's latest version and any version a running task pins). Mark plugins that ship `.mcp.json` or `hooks/`, and skills that ask for `Bash`, `WebFetch` or `WebSearch`, as network-capable. Agents: a form for name, description, system prompt, default model, default effort, allowed tools; seeded agents are read-only, with a Duplicate to edit action.
+**`/p/[slug]/library` — skills and agents.** One screen per project. Plugins: install from any git URL (GitHub or `file://`), cloned into `<repo_path>/.lamproom/skills/<plugin>/<commit>/` (gitignored, one dir per commit) after a preview of what was found; a plugin is installed, updated and removed as one unit with all its skills. **Check for updates** is manual; an update first previews the skills it adds and removes and is refused if it drops one a step uses. Remove asks for confirmation and is disabled while any step uses the plugin (counting each flow's latest version and any version a running task pins). Mark plugins that ship `.mcp.json` or `hooks/`, and skills that ask for `Bash`, `WebFetch` or `WebSearch`, as network-capable. Agents: a form for name, description, system prompt, default model, default effort, allowed tools; seeded agents are read-only, with a Duplicate to edit action.
 
 **`/costs`.** Not just a total. Show:
 - spend per project over time (bar chart, Recharts)
@@ -651,7 +651,7 @@ The seeded `/code-review` skill reviews the diff against the task's acceptance c
 
 The import endpoint also uses an internal **`backlog-importer`** agent — part of the import feature, not a seed, so it never appears in the library or the step picker. Its job: given a markdown file path, produce a JSON array of `{ import_key, title, body, acceptance_criteria?, non_goals? }` (the last two from "Acceptance criteria" / "Non-goals" sub-sections when present). Derive `import_key` from front-matter `id` if present, otherwise a slug of the heading. The import endpoint upserts on `(project_id, import_key)` so re-importing an edited file updates existing tasks instead of duplicating them.
 
-Write the seeded skills as real local plugin dirs under FlowBoard's `./skills/` with a `SKILL.md` each, so M5 is testable without any GitHub access. The M4 three-question skill (`ask-three`) is a test fixture loaded by the test setup, not a seed. They can be short. Registering a project copies the seeds into its store under FlowBoard's commit; upgrading FlowBoard stages new seed commits as an available update rather than applying them.
+Write the seeded skills as real local plugin dirs under Lamproom's `./skills/` with a `SKILL.md` each, so M5 is testable without any GitHub access. The M4 three-question skill (`ask-three`) is a test fixture loaded by the test setup, not a seed. They can be short. Registering a project copies the seeds into its store under Lamproom's commit; upgrading Lamproom stages new seed commits as an available update rather than applying them.
 
 ---
 
@@ -681,6 +681,6 @@ When you are done, all of these must be true:
 
 Do not build: authentication, user accounts, roles, deployment config, multi-machine support, a plugin marketplace, or anything that talks to the Anthropic API directly. Every model call goes through the `claude` CLI.
 
-Note on Docker: shipping or *deploying* FlowBoard itself in a container is out of scope. **Sandboxing agent execution** in a container/microVM (§11.1) is in scope but optional — it isolates the agent on the same single machine; it is not multi-tenancy or remote execution.
+Note on Docker: shipping or *deploying* Lamproom itself in a container is out of scope. **Sandboxing agent execution** in a container/microVM (§11.1) is in scope but optional — it isolates the agent on the same single machine; it is not multi-tenancy or remote execution.
 
-Note on memory: the **agentic memory** layer (§11.2) is in scope but **additive and off by default**, and **self-hosted** — it keeps FlowBoard local-first. The Mem0 *managed cloud* platform is out of scope for v1; it is the later shared/remote tier, the same decision as a remote workspace. Memory must never become a precondition for a run: with the `none` adapter the app behaves exactly as the rest of this spec describes.
+Note on memory: the **agentic memory** layer (§11.2) is in scope but **additive and off by default**, and **self-hosted** — it keeps Lamproom local-first. The Mem0 *managed cloud* platform is out of scope for v1; it is the later shared/remote tier, the same decision as a remote workspace. Memory must never become a precondition for a run: with the `none` adapter the app behaves exactly as the rest of this spec describes.

@@ -1,0 +1,72 @@
+---
+tags: [lamproom, projects, roadmap]
+module: Projects
+---
+
+# Projects Roadmap
+
+## v1 scope
+
+From the PRD, the backlog items tagged **PRD**, and the backlog **BUG** fixes to those features (Stories 1.3, 3.4).
+
+| Milestone / story | Item | Source |
+|---|---|---|
+| M1 | `projects` table in the Drizzle schema and migrations | PRD §5, §14 |
+| M1 | *"Seed a project pointing at a scratch git repo. Projects list page renders."* | PRD §14 |
+| Story 1.2 | *"Seed project pointing at an auto‑`git init`ed scratch repo."* | backlog |
+| Story 1.3 | *"Cards: counts per status, this‑week spend (decide rolling 7 d vs calendar week)."* | backlog (**PRD/DEC**) |
+| M2 | Promotion creates the worktree under `repo_path` | PRD §11, §14 |
+| M5 | Shell check steps fall back to `check_command`; the seed's check exists in the scratch repo | PRD §5, §14, §15 |
+| M7 | The per-project library `/p/[slug]/library` and its `/api/projects/:id/…` routes | PRD §12, §13, §14 |
+| Library | Per-project, gitignored capability store under `<repo_path>/.lamproom/skills/`; *"Registering a project copies the seeds into its store"* | PRD §13, §15 (brought in line with Capability Library D5, D6) |
+| M8 | Spend per project on `/costs` | PRD §13, §14 |
+| API | `GET` and `POST /api/projects`, `GET /api/projects/:id/board` | PRD §12 |
+
+- [x] Projects list page with cards (run counts, not task counts: there are no tasks yet)
+- [x] New-project dialog (default flow from the shared library, or *Empty*)
+- [x] Seed project on a scratch repo
+- [ ] Bugs: project links use the slug (Story 3.4); empty state and non-JSON error bodies on submit (Story 1.3)
+- [x] Decide this week's spend: rolling 7 days, by the run's start (2026-11-12, open to review)
+
+## Designed beyond the PRD
+
+| Item | Source |
+|---|---|
+| New-project dialog with a flow-type select, *Empty* allowed, creating flow v1 | backlog Story 1.3 (**NEW**) |
+| `.git/info/exclude` hygiene for `.vibe-worktrees/` and `.lamproom/skills/` | backlog Stories 0.3 (**FIX**), 2.1 (**PRD/FIX**) |
+| Saving a flow points the project at the new version; adopting a library flow | `flow-designer-guide.html` |
+| *"Reuse… picker (steps or whole flow from other projects, key uniquified)"* | backlog Story 8.2 (**NEW**) |
+| *"Start from flow type"* in the flow editor | backlog Story 8.2 (**NEW**) |
+| Project filter and real `from`/`to` on `/costs` | backlog Story 8.1 (**GAP**) |
+| Worktrees under `<repo>/.lamproom/worktrees/` on `lr/task-<id>` (a competing scheme, not an addition) | drawio *Harness architecture* |
+| Host-side push and fetch to the project remote (dashed: *"optional or later"*) | drawio *Harness architecture* |
+
+## Ideas
+
+| Idea | Source |
+|---|---|
+| **Who can see each project** | feature map §1. See [[Project Visibility]]. |
+| Teams & collaboration: *"who can … open a repo"* | feature map, *Across everything* |
+| A shared team tier with *"per-repo access"* | feature map, parking lot |
+| Flows *"exportable across projects"*, a flow registry | `02` §2 |
+| *"A shareable recipe library — export a recipe and reuse it across projects"* | feature map, parking lot |
+| *"Spend by person and team"* alongside per project | feature map §18 |
+| *"Run agents in the cloud, not just your laptop"* | feature map, parking lot |
+| Knowledge assets beside the project repo: *"repomix pack · Serena index · graphify-out/ … refreshed by scheduled shell-step flows"* | drawio *Harness architecture* (dashed, *later*) |
+| TaskSource adapters (*"GitHub Issues, Linear, Jira, webhook"*) feeding a project's backlog | `05` §14; drawio *Lamproom ideation*, *Architecture · ports & adapters* |
+
+## Out of scope
+
+| Item | Source |
+|---|---|
+| Authentication, user accounts, roles, multi-machine support | PRD §17; drawio *Out of scope (v1)* |
+| *"No auth, no multi-tenancy, no user table. Do not add them "for later""* | PRD §2 |
+| Deploying Lamproom in a container | PRD §17 |
+
+## Related
+
+- [[Projects Index]]
+- [[Projects Known Issues]]: minor problems left from the wizard's review
+- [[Projects Open Questions]]
+- [[Flow Design Roadmap]]
+- [[Capability Library Roadmap]]

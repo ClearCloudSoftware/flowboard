@@ -9,7 +9,7 @@
  * from inside the agent process, so memory stays off the sandbox egress
  * allowlist): `recall` before launch injects a 7th prompt part; `write` after a
  * successful run distils facts, with contradiction-resolution done by the
- * adapter, not by FlowBoard.
+ * adapter, not by Lamproom.
  *
  * See docs/architecture/09-memory.md.
  */

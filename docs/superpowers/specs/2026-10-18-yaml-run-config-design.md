@@ -1,6 +1,6 @@
 # YAML run config and runner — design
 
-Date: 2026-10-18. Branch: `feature/agent-providers`. Builds on the Claude Code and OpenCode providers in `code/flowboard/packages/adapters/` (see `docs/FlowBoard/Agent Providers/Claude Code Adapter.md`, `OpenCode Adapter.md`, `Provider Implementation Decisions.md`).
+Date: 2026-10-18. Branch: `feature/agent-providers`. Builds on the Claude Code and OpenCode providers in `code/lamproom/packages/adapters/` (see `docs/Lamproom/Agent Providers/Claude Code Adapter.md`, `OpenCode Adapter.md`, `Provider Implementation Decisions.md`).
 
 ## Intent
 
@@ -19,7 +19,7 @@ The owner wants to run one agent task from a file they can keep, edit and rerun,
 - Several runs, named agents or multi-step flows in one file (owner: "for now only 1 single run").
 - A throwaway workspace: the agent works in the folder the YAML names (owner changed this from throwaway).
 - Seeding files into the folder, MCP tool servers (`ask_user` needs the HITL broker), resume and fork, input/output artifact lists. Each can become a field later.
-- Any database, job queue or UI. This is a local command, not FlowBoard's runner component.
+- Any database, job queue or UI. This is a local command, not Lamproom's runner component.
 
 ## Anti-goals
 
@@ -29,7 +29,7 @@ The owner wants to run one agent task from a file they can keep, edit and rerun,
 
 ## Constraints
 
-- Same code rules as the providers: TypeScript run by Node 24 type stripping (erasable syntax only, `import type`, `.ts` relative imports), tests with `node:test` + `node:assert/strict`, commands run from `code/flowboard/`.
+- Same code rules as the providers: TypeScript run by Node 24 type stripping (erasable syntax only, `import type`, `.ts` relative imports), tests with `node:test` + `node:assert/strict`, commands run from `code/lamproom/`.
 - Auth is unchanged: Claude uses the installed `claude` login; OpenCode uses its own credentials. The YAML never holds secrets.
 - Runs spend real quota or money; automated tests must not.
 
@@ -44,8 +44,8 @@ effort: high                  # optional: low | medium | high | xhigh | max
 folder: ../my-project         # required: where the agent works; must be an existing directory
 prompt: ./task.md             # required: markdown file holding the task; must exist
 system_prompt: You are a careful reviewer.   # optional
-plugins: [./plugins/fbecho]   # optional: plugin folders whose skills are mounted
-skill: /fbecho:echo           # optional: skill to invoke; must start with "/"
+plugins: [./plugins/lrecho]   # optional: plugin folders whose skills are mounted
+skill: /lrecho:echo           # optional: skill to invoke; must start with "/"
 permissions:                  # optional
   mode: acceptEdits           # default acceptEdits: default | acceptEdits | bypassPermissions | dontAsk | plan | auto
   allow: [Read, Write, "Bash(pnpm *)"]
@@ -61,7 +61,7 @@ limits:                       # optional
 
 ### How each field becomes a `RunSpec`
 
-| YAML | `RunSpec` (`@flowboard/core`) |
+| YAML | `RunSpec` (`@lamproom/core`) |
 |---|---|
 | `adapter` | which provider the runner constructs: `ClaudeCodeProvider()` or `OpencodeProvider({ models: {} })` |
 | `model` | `model`, passed through unchanged (Claude's `resolveModel` is the identity; OpenCode passes through any id containing `/`). For `opencode`, a model without `/` is a config error |
@@ -94,7 +94,7 @@ With the opt-in set, the run goes ahead and the header prints one warning line s
 
 ## The runner
 
-Command: `pnpm run-agent <path/to/task.yaml>` (a script in `code/flowboard/package.json`).
+Command: `pnpm lr-run-agent <path/to/task.yaml>` (a script in `code/lamproom/package.json`).
 
 Every relative path — the YAML path on the command line, the paths inside the YAML, and `runs/` — is resolved against the folder `pnpm` was run from (owner's decision). pnpm runs scripts in the package folder and puts the original folder in `INIT_CWD`, so the runner uses `INIT_CWD` when set, else its own working directory (my call).
 
@@ -118,7 +118,7 @@ JSONL, written line by line as the run goes, so a crash or stop keeps everything
 
 ## Where it lives
 
-A new workspace package `code/flowboard/packages/cli` (`@flowboard/cli`), because it is the one place that knows every adapter (my call). It is not named `runner`: the architecture rule *"core/ and runner/ must never import from adapters/"* reserves that name for FlowBoard's runner component, and this command exists to import adapters (my call). It depends on `@flowboard/core`, `@flowboard/adapters`, `yaml` (Node cannot parse YAML itself) and `zod` (already in the workspace, used for validation with readable messages). `packages/adapters/try.ts` is deleted.
+A new workspace package `code/lamproom/packages/cli` (`@lamproom/cli`), because it is the one place that knows every adapter (my call). It is not named `runner`: the architecture rule *"core/ and runner/ must never import from adapters/"* reserves that name for Lamproom's runner component, and this command exists to import adapters (my call). It depends on `@lamproom/core`, `@lamproom/adapters`, `yaml` (Node cannot parse YAML itself) and `zod` (already in the workspace, used for validation with readable messages). `packages/adapters/try.ts` is deleted.
 
 ## Testing
 

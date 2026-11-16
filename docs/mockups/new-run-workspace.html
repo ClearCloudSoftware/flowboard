@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>FlowBoard New Run</title>
+<title>Lamproom New Run</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -202,7 +202,7 @@ code{font-family:var(--mono)}
 
 <div class="app">
   <header class="topbar">
-    <div class="brand">flowboard<em>/</em><span>runs</span></div>
+    <div class="brand">lamproom<em>/</em><span>runs</span></div>
     <span class="vchip" id="vchip"></span>
     <span class="sp"></span>
     <button class="act primary" id="newBtn" type="button"></button>
@@ -225,7 +225,7 @@ code{font-family:var(--mono)}
 
 <dialog class="sheet" id="sheet" aria-label="New run">
   <form id="form" method="dialog" autocomplete="off">
-    <div class="sh-h"><span class="lbl">new run</span><span class="sp"></span><span class="lbl" style="letter-spacing:.04em">run-flow --page, in the background</span></div>
+    <div class="sh-h"><span class="lbl">new run</span><span class="sp"></span><span class="lbl" style="letter-spacing:.04em">lr-run-flow --page, in the background</span></div>
     <div class="sh-b">
       <label for="f-flow">Flow</label>
       <span class="fv"><select id="f-flow"></select><em class="hint" id="f-flow-d"></em></span>
@@ -330,11 +330,11 @@ const stamp = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${p2(
 const unstamp = (s) => { const m = s.match(/^(\d+)-(\d+)-(\d+)T(\d+)-(\d+)-(\d+)/); return new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime(); };
 const shown = (name) => name.slice(0, 19).replace('T', ' ').replace(/-(\d\d)-(\d\d)$/, ':$1:$2');
 const span = (s) => { s = Math.max(0, Math.round(s)); return s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m` : s >= 60 ? `${Math.floor(s / 60)}m ${p2(s % 60)}s` : `${s}s`; };
-const wsPath = (id) => `${REPO}/.flowboard/worktrees/task-${id}`;
+const wsPath = (id) => `${REPO}/.lamproom/worktrees/task-${id}`;
 const norm = (f) => f.trim().replace(/\/+$/, '');
-const subOf = (folder) => folder === REPO ? '' : folder.startsWith(REPO + '/') && !folder.startsWith(REPO + '/.flowboard/') ? folder.slice(REPO.length + 1) : null; // null = not in git
+const subOf = (folder) => folder === REPO ? '' : folder.startsWith(REPO + '/') && !folder.startsWith(REPO + '/.lamproom/') ? folder.slice(REPO.length + 1) : null; // null = not in git
 /* which checkout a folder edits: a worktree, or the repo's own */
-const checkout = (f) => (f.match(/^(.*\/\.flowboard\/worktrees\/task-[^/]+)/) || [])[1] || (subOf(f) !== null ? REPO : f);
+const checkout = (f) => (f.match(/^(.*\/\.lamproom\/worktrees\/task-[^/]+)/) || [])[1] || (subOf(f) !== null ? REPO : f);
 const put = (el, html) => { if (el._h !== html) { el._h = html; el.innerHTML = html; } };
 
 /* ── the engine: a run is a script of the CLI's own lines, revealed by the clock ── */
@@ -365,7 +365,7 @@ function script(flow, head, o = {}) {
 const ceilingOf = (b) => b ? `a budget of ${usd(b)}` : 'no budget ceiling';
 function headFor(flow, ws, folder, name, budget, reused) {
   const h = [];
-  if (ws) h.push(`-- workspace ${wsPath(ws)} on branch fb/task-${ws}, ${reused ? 'picked up again' : 'new'}`);
+  if (ws) h.push(`-- workspace ${wsPath(ws)} on branch lr/task-${ws}, ${reused ? 'picked up again' : 'new'}`);
   if (!ws && subOf(folder) === null) h.push(`-- warning: ${folder} is not in a git repository; nothing can undo the flow's edits`);
   h.push(`-- flow ${flow.name}: ${plural(nSteps(flow), 'step')} in ${folder}, ${ceilingOf(budget)}`, `-- run folder runs/${name}`);
   return h;
@@ -427,7 +427,7 @@ function renderMain() {
       <div><span class="lbl">${lv ? 'running for' : 'took'}</span><b>${span(el(r))}</b></div>
       <div><span class="lbl">started</span><b>${shown(r.name).slice(11)}</b></div>
       ${lv ? `<div><span class="lbl">pid</span><b>${r.pid}</b></div>` : ''}
-      <div class="where"><span class="lbl">${r.ws ? 'workspace' : 'folder'}</span><b>${esc(r.folder)}${r.ws ? ` <span style="color:var(--ink-3)">on</span> fb/task-${esc(r.ws)}` : ''}</b></div>
+      <div class="where"><span class="lbl">${r.ws ? 'workspace' : 'folder'}</span><b>${esc(r.folder)}${r.ws ? ` <span style="color:var(--ink-3)">on</span> lr/task-${esc(r.ws)}` : ''}</b></div>
     </section>
     <nav class="rvbar" aria-label="Steps">${flow.cells.map((g) => `<div class="rvgrp">${g.map(cell).join('')}</div>`).join('')}</nav>
     <pre class="rvlog" id="log">${lines.map((e, i) => `<span class="t">${new Date(r.t0 + e.at * 1000).toTimeString().slice(0, 8)}</span><span class="${/^-- workspace/.test(e.line) ? 'ws' : /: fail|^-- flow failed|^-- warning/.test(e.line) ? 'bad' : ''}${lv && i === lines.length - 1 ? ' cur' : ''}">${esc(e.line)}</span>`).join('\n')}</pre>
@@ -452,7 +452,7 @@ function renderStrip() {
   const ids = [...new Set([...runs.map((r) => r.ws).filter(Boolean), ...Object.keys(WS)])];
   put($('strip'), `<span class="wsstrip-h">${L(LU.layers, 13)}<span class="lbl">workspaces in billing-svc</span></span>` + ids.map((id) => {
     const i = wsInfo(id);
-    return `<button type="button" class="wschip${id === freshWs ? ' is-new' : ''}" data-ws="${id}" title="${esc(wsPath(id))} on fb/task-${esc(id)}"><span style="color:${i.color}">${i.mark}</span><b>${esc(id)}</b><small>${i.text}</small></button>`;
+    return `<button type="button" class="wschip${id === freshWs ? ' is-new' : ''}" data-ws="${id}" title="${esc(wsPath(id))} on lr/task-${esc(id)}"><span style="color:${i.color}">${i.mark}</span><b>${esc(id)}</b><small>${i.text}</small></button>`;
   }).join(''));
 }
 function renderStatus() {
@@ -462,7 +462,7 @@ function renderStatus() {
 
 /* ── the sheet ────────────────────────────────────────────────────────── */
 let remembered = '';
-try { remembered = localStorage.getItem('flowboard.newRun.folder') || ''; } catch (e) { /* per-browser convenience */ }
+try { remembered = localStorage.getItem('lamproom.newRun.folder') || ''; } catch (e) { /* per-browser convenience */ }
 const f = {
   flow: 'standard-flow', folder: remembered || REPO, mode: 'ws', id: 'stripe-webhook-idempotency', budget: '', dirty: false,
   task: 'Make the Stripe webhook handler idempotent: dedupe on event.id before writing to the ledger.',
@@ -477,18 +477,18 @@ function suggestions() {
   return { slug: slug && !WS[slug] ? slug : '', near };
 }
 
-/* what the run would do, worked out with run-flow's own rules and order */
+/* what the run would do, worked out with lr-run-flow's own rules and order */
 function evaluate() {
   const folder = norm(f.folder), sub = folder ? subOf(folder) : null;
   const p = { tone: '', ok: true, rows: [], notes: [], files: [], acts: [] };
   if (!folder) return { ...p, ok: false, tag: 'no folder yet', reason: 'pick the folder to run in', notes: ['The folder decides which repository the workspace is cut from.'] };
   if (f.mode === 'repo') {
     p.run = folder;
-    p.rows = [['folder', esc(folder)], ['branch', sub === null ? '<span style="color:var(--ink-3)">none, not a git repository</span>' : `${BASE_BRANCH}, as it is checked out; shared with anything else working here`], ['lock', `${esc(folder)}/.flowboard/lock`]];
+    p.rows = [['folder', esc(folder)], ['branch', sub === null ? '<span style="color:var(--ink-3)">none, not a git repository</span>' : `${BASE_BRANCH}, as it is checked out; shared with anything else working here`], ['lock', `${esc(folder)}/.lamproom/lock`]];
     const h = holderOf(folder), n = !h && nearOf(folder);
     if (h) {
       Object.assign(p, { tone: 'fail', ok: false, tag: 'refused · this folder is busy', reason: `${h.flow} (pid ${h.pid}) holds this folder's lock` });
-      p.err = `--folder: another run-flow (pid ${h.pid}) is working here on runs/${h.name}; if it is not, delete ${folder}/.flowboard/lock`;
+      p.err = `--folder: another lr-run-flow (pid ${h.pid}) is working here on runs/${h.name}; if it is not, delete ${folder}/.lamproom/lock`;
       const w = runs.find((r) => live(r) && r.ws);
       p.notes.push(`One run at a time in a folder. A task workspace has a folder, a branch and a lock of its own${w ? ` — <code>${w.ws}</code> is running in one right now, next to <code>${h.flow}</code> here` : ''}.`);
       p.acts.push(`<button type="button" class="act" data-act="ws">${L(LU.branch, 13)}Use a task workspace</button>`);
@@ -508,14 +508,14 @@ function evaluate() {
   if (!TASK_ID.test(f.id)) return { ...p, tone: 'fail', ok: false, tag: 'refused · not a usable id', reason: 'the task id cannot name a folder and a branch', err: `--workspace: task id ${JSON.stringify(f.id)}: use letters, digits, - and _, starting with a letter or digit` };
   const path = wsPath(f.id), w = WS[f.id];
   p.run = path + (sub ? '/' + sub : '');
-  p.rows = [['folder', `${esc(path)}${sub ? `<span class="sub">/${esc(sub)}</span>` : ''}`], ['branch', `fb/task-${esc(f.id)}${w ? '' : ` <span style="color:var(--ink-3)">from ${BASE_BRANCH} @ ${HEAD}</span>`}`], ['lock', `${esc(p.run)}/.flowboard/lock`]];
+  p.rows = [['folder', `${esc(path)}${sub ? `<span class="sub">/${esc(sub)}</span>` : ''}`], ['branch', `lr/task-${esc(f.id)}${w ? '' : ` <span style="color:var(--ink-3)">from ${BASE_BRANCH} @ ${HEAD}</span>`}`], ['lock', `${esc(p.run)}/.lamproom/lock`]];
   if (sub) p.notes.push(`The folder is <code>${esc(sub)}</code> inside the repo, so the run works in the same subfolder of the worktree.`);
-  p.echo = `-- workspace ${path} on branch fb/task-${f.id}, ${w ? 'picked up again' : 'new'}`;
+  p.echo = `-- workspace ${path} on branch lr/task-${f.id}, ${w ? 'picked up again' : 'new'}`;
   const h = holderOf(p.run);
   if (h) {
     Object.assign(p, { tone: 'fail', ok: false, tag: 'refused · running now', reason: `${f.id} is running (pid ${h.pid})` });
     p.notes.unshift(`<code>${h.flow}</code> is running in this workspace, step ${current(h).join(', ') || 'starting'}, pid ${h.pid}. Wait for it, or use another id.`);
-    p.err = `--folder: another run-flow (pid ${h.pid}) is working here on runs/${h.name}; if it is not, delete ${p.run}/.flowboard/lock`;
+    p.err = `--folder: another lr-run-flow (pid ${h.pid}) is working here on runs/${h.name}; if it is not, delete ${p.run}/.lamproom/lock`;
     return p;
   }
   if (!w) p.tag = 'new', p.notes.unshift(`A new worktree cut from <code>${BASE_BRANCH} @ ${HEAD}</code>, the repo's current HEAD. Nothing else is working in it.`);
@@ -523,7 +523,7 @@ function evaluate() {
     const files = w.files.filter((x) => !sub || x.startsWith(sub + '/'));
     const lastLine = w.ahead ? `${plural(w.ahead, 'commit')} ahead of ${BASE_BRANCH}; last: <span class="sans">“${esc(w.last)}”</span>` : `no commits ahead of ${BASE_BRANCH}`;
     p.tag = w.folder ? 'picked up again' : 'checked out again';
-    p.notes.unshift(w.folder ? `This workspace exists: ${lastLine}.` : `Its folder was removed but branch <code>fb/task-${esc(f.id)}</code> was kept, so it is checked out again: ${lastLine}.`);
+    p.notes.unshift(w.folder ? `This workspace exists: ${lastLine}.` : `Its folder was removed but branch <code>lr/task-${esc(f.id)}</code> was kept, so it is checked out again: ${lastLine}.`);
     if (files.length) {
       p.files = files;
       if (!f.dirty) {
@@ -575,7 +575,7 @@ function renderSheet() {
     ${p.echo && p.ok ? `<div class="pv-echo">prints: ${esc(p.echo)}</div>` : ''}`);
   $('f-pv').className = 'pv ' + p.tone;
   put($('f-err'), flow.errors.length ? `<div class="sh-err" role="alert">${flow.errors.map(esc).join('\n')}\n<a href="#">Fix in the designer</a></div>` : '');
-  put($('f-cli'), `${L(LU.term, 12)}<code>pnpm run-flow --folder ${esc(q(folder || '<folder>'))} --task <em>&lt;task file&gt;</em>${f.mode === 'ws' ? ` --workspace ${esc(q(f.id || '<id>'))}` : ''}${f.budget !== '' ? ` --budget-usd ${esc(f.budget)}` : ''}${f.dirty ? ' --allow-dirty' : ''} --page flows/${flow.name}.yaml</code>`);
+  put($('f-cli'), `${L(LU.term, 12)}<code>pnpm lr-run-flow --folder ${esc(q(folder || '<folder>'))} --task <em>&lt;task file&gt;</em>${f.mode === 'ws' ? ` --workspace ${esc(q(f.id || '<id>'))}` : ''}${f.budget !== '' ? ` --budget-usd ${esc(f.budget)}` : ''}${f.dirty ? ' --allow-dirty' : ''} --page flows/${flow.name}.yaml</code>`);
   const why = $('f-why');
   why.className = 'why ' + (reason ? (p.tone || (flow.errors.length ? 'fail' : '')) : '');
   why.innerHTML = reason ? `${L(p.tone === 'wait' ? LU.alert : LU.ban, 13)}<span>Start is off: ${esc(reason)}</span>` : `<span>${f.mode === 'ws' ? `in task-${esc(f.id)}` : 'in the repo folder'}</span>`;
@@ -620,7 +620,7 @@ function start() {
   r.ev = script(flow, headFor(flow, ws, p.run, name, budget ?? flow.budget, reused), {});
   if (ws) { WS[ws] = WS[ws] || { ahead: 0, files: [] }; WS[ws].folder = true; freshWs = ws; }
   runs.unshift(r); picked = name;
-  try { localStorage.setItem('flowboard.newRun.folder', norm(f.folder)); } catch (e) { /* per-browser convenience */ }
+  try { localStorage.setItem('lamproom.newRun.folder', norm(f.folder)); } catch (e) { /* per-browser convenience */ }
   sheet.close();
   renderAll();
   document.querySelector(`[data-run="${name}"]`).classList.add('is-fresh');

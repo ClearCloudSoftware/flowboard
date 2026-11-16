@@ -2,25 +2,25 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Once a GitHub repo is cloned and registered, FlowBoard's repo analyst reads it and proposes its stack, its
+**Goal:** Once a GitHub repo is cloned and registered, Lamproom's repo analyst reads it and proposes its stack, its
 check command and the package-registry hosts its sandbox must reach. You accept each proposal or leave it for later,
 in the wizard or on the project page. Today the analyst's skill, flow and app-wide setting exist, but nothing runs it.
 
-**Architecture:** The analyst runs as an ordinary run of its project: `startRun` launches `run-flow --page` on the
+**Architecture:** The analyst runs as an ordinary run of its project: `startRun` launches `lr-run-flow --page` on the
 internal flow (`internalFlowText('repo-analyst', …)` written into the data folder), in the project's repo, at the
 project's isolation and under its monthly cap. The project record keeps only the analysis run's name. Everything else
 is read from that run when a page asks (`analysisView`): its status, and its `proposal` artifact, parsed as untrusted
 JSON. A proposal counts as accepted when the project's value already equals it, so the record stores no decisions.
-Accepting the check command writes it to the repo's `.flowboard.yaml` (existing `setCheckCommand`). Accepting the
+Accepting the check command writes it to the repo's `.lamproom.yaml` (existing `setCheckCommand`). Accepting the
 hosts saves them on the record's new `networkHosts`; OpenSandbox boxes of the project's runs may reach them.
 
 **Tech Stack:** TypeScript on Node 24 with type stripping, `node --test`, zod 4, Next 16 + TanStack Query +
 shadcn/ui + lucide-react.
 
 **Spec:** `docs/mockups/new-project-wizard.html` (`analyse()`, `proposals()`, the clone log lines),
-`code/flowboard/internal/repo-analyst/SKILL.md` (the proposal's JSON shape) and `flow.yaml` (its fixed tools),
-`docs/FlowBoard/Projects/Project Settings.md` (the *Network hosts* and *Check command* rows: stored on the record,
-never in the repo, for hosts; the repo's `.flowboard.yaml` for the check command).
+`code/lamproom/internal/repo-analyst/SKILL.md` (the proposal's JSON shape) and `flow.yaml` (its fixed tools),
+`docs/Lamproom/Projects/Project Settings.md` (the *Network hosts* and *Check command* rows: stored on the record,
+never in the repo, for hosts; the repo's `.lamproom.yaml` for the check command).
 
 **Not in this plan:** knowledge assets (Serena, graphify: phase 5; the skill already copes when they are absent),
 the egress proxy that would hold Docker boxes to the hosts (Docker boxes stay online), analysing a local project
@@ -28,10 +28,10 @@ automatically (it gets an **Analyse** button), and a live test that spends money
 
 ## Global Constraints
 
-- All paths are under `code/flowboard/` unless they start with `docs/`. Run commands from `code/flowboard/`.
+- All paths are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
 - Branch `feature/analysis-agent`, cut from `dev` at `2b2c29d` in `.claude/worktrees/analysis-agent`. Do not merge
   into `dev`; Alex decides.
-- **The analyst is a run of its project.** It goes through `startRun` and run-flow like any run: the project's
+- **The analyst is a run of its project.** It goes through `startRun` and lr-run-flow like any run: the project's
   isolation, its monthly cap, the folder lock, a run folder in `runs/` (so its cost shows and counts). It is started
   with `allowDirty: true` (it edits nothing; `write_roots: []`) and `--page` (a Trusted project's approvals; its own
   output file never asks).
@@ -40,11 +40,11 @@ automatically (it gets an **Analyse** button), and a live test that spends money
   at most 20; `stack.value` at most 12 strings of at most 40 characters; `notes` cut at 1000 characters. Anything
   else is `the proposal is not in the shape the analyst writes: <first zod issue>`.
 - **Nothing is applied without a person.** No proposal is accepted automatically, in the wizard or anywhere else.
-- **Hosts are FlowBoard's, never the repo's.** `networkHosts` lives on the project record (`projects.json`), set only
+- **Hosts are Lamproom's, never the repo's.** `networkHosts` lives on the project record (`projects.json`), set only
   through `PATCH /api/projects/:id`. An OpenSandbox box's egress becomes the flow's own hosts plus the project's.
   Docker boxes are unchanged (online) until the egress proxy.
 - Copy, exact:
-  - clone log, started: `-- analysis started: run <run name>`; refused: `-- analysis not started: <run-flow's first line>`
+  - clone log, started: `-- analysis started: run <run name>`; refused: `-- analysis not started: <lr-run-flow's first line>`
   - status lines: `analysing…`, `analysis failed: <reason>` (the run's status `failed`/`stopped`, or its proposal unreadable), `analysis paused: <reason>` (e.g. the cap)
   - the network page: `proposed by the analysis agent from the repo's lockfiles; you confirm them. OpenSandbox boxes reach only these and the AI service; Docker boxes stay online until the egress proxy is built.`
   - the wizard review row `check command`: `proposed by the analysis agent after cloning`
@@ -64,7 +64,7 @@ automatically (it gets an **Analyse** button), and a live test that spends money
    run. A run left `paused` or `stopped` reads as such, with **Analyse again**. Test in Task 1.
 4. **The proposal file is missing or not JSON** after a run that ended `done`: `analysis failed: the analyst wrote no proposal`
    or the parse error. Test in Task 1.
-5. **The check command is accepted while the repo's `.flowboard.yaml` is invalid:** `setCheckCommand` already refuses
+5. **The check command is accepted while the repo's `.lamproom.yaml` is invalid:** `setCheckCommand` already refuses
    with the file's error; the page shows it. Test in Task 4.
 
 ---
@@ -128,12 +128,12 @@ automatically (it gets an **Analyse** button), and a live test that spends money
     `<dataDir>/internal/repo-analyst.yaml`, calls `start(runsDir, <dataDir>/internal, { flow: 'repo-analyst', folder: project.repoPath, task: ANALYST_TASK, allowDirty: true }, dataDir)`,
     and on success saves `analysis: { run }` on the record (`setAnalysisRun(dataDir, id, run)`). A refusal saves nothing.
   - `ANALYST_TASK = 'Analyse this repository: propose its stack, its check command and the network hosts its sandbox must reach.'`
-  - `POST /api/projects/:id/analysis` → `{ run }`, or 422 `{ error }` with run-flow's words, 404 for no project.
+  - `POST /api/projects/:id/analysis` → `{ run }`, or 422 `{ error }` with lr-run-flow's words, 404 for no project.
 
 - [ ] **Step 1: Write the failing tests:** with a fake `start` that records its arguments and returns
   `{ ok: true, name: '2026-11-13T10-00-00-repo-analyst' }`: the flow file exists and loads (`loadFlow`) with the app's
   internal model and budget; `start` got the project's folder, `allowDirty: true` and the data folder; the record's
-  `analysis.run` is the name. With a fake that refuses (`{ ok: false, error: 'flow.yaml: --folder: another run-flow …' }`):
+  `analysis.run` is the name. With a fake that refuses (`{ ok: false, error: 'flow.yaml: --folder: another lr-run-flow …' }`):
   `{ ok: false, error }` and the record unchanged.
 - [ ] **Step 2: Run them to verify they fail.** Run: `node --test packages/cli/test/analysis.test.ts`. Expected: FAIL.
 - [ ] **Step 3: Implement**, and the route (behind `refused(request)`, like every write route).
@@ -183,7 +183,7 @@ automatically (it gets an **Analyse** button), and a live test that spends money
   saves `['pypi.org', 'registry.npmjs.org']`; with `['evil.com/x']` → 400 with the line. `isolationFor('normal',
   { runtime: 'opensandbox', image: 'i', egress: ['api.anthropic.com'], credentials: [] }, [], false, ['pypi.org'])`
   → egress `['api.anthropic.com', 'pypi.org']`; a docker result has no egress key. Accepting the check command on a
-  repo whose `.flowboard.yaml` does not parse → the existing 400 with the file's error. `analysisAccepted` true/false
+  repo whose `.lamproom.yaml` does not parse → the existing 400 with the file's error. `analysisAccepted` true/false
   for each key.
 - [ ] **Step 2: Run them to verify they fail.** Run: `node --test packages/cli/test/projects.test.ts packages/cli/test/isolation.test.ts`. Expected: FAIL.
 - [ ] **Step 3: Implement.** `isolate` in `flow-run.ts` passes `project.networkHosts ?? []`; the resume check compares
@@ -217,10 +217,10 @@ automatically (it gets an **Analyse** button), and a live test that spends money
   Constraints.
 - [ ] **Step 2: Typecheck and test.** Run: `pnpm exec tsc --noEmit`, `pnpm test:app`, `pnpm test:packages`. Expected: clean, PASS.
 - [ ] **Step 3: Check it in the browser, without spending money.** On a dev server for this worktree (another port,
-  `FLOWBOARD_DATA_DIR`/`RUNS_DIR`/`FLOWS_DIR` in a scratch folder): register a test repo, write a finished
+  `LAMPROOM_DATA_DIR`/`RUNS_DIR`/`FLOWS_DIR` in a scratch folder): register a test repo, write a finished
   `repo-analyst` run folder by hand whose `proposal.md` proposes `node --test` and `registry.npmjs.org` plus a custom
   `npm.internal.example.com`, and set the record's `analysis.run` to it. The project page shows both rows and the
-  custom warning; **Accept** on the check command writes `check_command: node --test` to the repo's `.flowboard.yaml`
+  custom warning; **Accept** on the check command writes `check_command: node --test` to the repo's `.lamproom.yaml`
   and the row reads `accepted`; **Accept** on the hosts saves `networkHosts`. Then a run folder left `running`:
   `analysing…`. Then **Analyse again** on a project whose folder is locked by a fake lock: the refusal shows.
 - [ ] **Step 4: Commit** `feat(projects): the analyst's proposals in the wizard and on the project page`
@@ -228,9 +228,9 @@ automatically (it gets an **Analyse** button), and a live test that spends money
 ### Task 6: Docs
 
 **Files:**
-- Modify: `docs/FlowBoard/Projects/Project Settings.md` (the *Network hosts* and *Check command* rows: built, and how),
-  `docs/FlowBoard/Projects/Projects Index.md` (the *Built* callout), `docs/FlowBoard/Projects/Creating A Project.md`
-  (the clone's last stage), `docs/FlowBoard/Capability Library/Seeded Capabilities.md` (the analyst now runs)
+- Modify: `docs/Lamproom/Projects/Project Settings.md` (the *Network hosts* and *Check command* rows: built, and how),
+  `docs/Lamproom/Projects/Projects Index.md` (the *Built* callout), `docs/Lamproom/Projects/Creating A Project.md`
+  (the clone's last stage), `docs/Lamproom/Capability Library/Seeded Capabilities.md` (the analyst now runs)
 
 - [ ] **Step 1: Edit the notes.** Each claim names the function, route or line it describes. Say plainly that Docker
   boxes do not yet keep to the hosts.

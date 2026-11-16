@@ -1,30 +1,30 @@
-# `run-flow`: Multi-Agent Flow Orchestration Implementation Plan
+# `lr-run-flow`: Multi-Agent Flow Orchestration Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** `pnpm run-flow flow.yaml` runs a graph of agent and shell steps. Steps can fan out, join, loop back on failure, stop at human gates and resume after a crash. Each step runs on its own provider (Claude Code or OpenCode), through the agent providers already built.
+**Goal:** `pnpm lr-run-flow flow.yaml` runs a graph of agent and shell steps. Steps can fan out, join, loop back on failure, stop at human gates and resume after a crash. Each step runs on its own provider (Claude Code or OpenCode), through the agent providers already built.
 
 **Architecture:**
-- The engine is one pure function in `@flowboard/core`: `advance(flow, state, event) → { state, commands }`. It implements the designed PRD §8 rules, and a validator checks a flow before it runs.
-- `@flowboard/cli` adds the first host, `run-flow`:
-  - it reads a flow YAML that grows out of `run-agent`'s YAML;
+- The engine is one pure function in `@lamproom/core`: `advance(flow, state, event) → { state, commands }`. It implements the designed PRD §8 rules, and a validator checks a flow before it runs.
+- `@lamproom/cli` adds the first host, `lr-run-flow`:
+  - it reads a flow YAML that grows out of `lr-run-agent`'s YAML;
   - it carries out the engine's commands (launch a provider run, run a shell check, ask a person);
   - it saves the state after every transition.
-- `@flowboard/ask-user` gains `set_outcome`.
-- `@flowboard/adapters` does not change.
+- `@lamproom/ask-user` gains `set_outcome`.
+- `@lamproom/adapters` does not change.
 
 **Tech Stack:** TypeScript on Node 24 type stripping, `node:test`, pnpm 10 workspaces, `yaml` 2.9, `zod` 4.6, `@modelcontextprotocol/sdk` (ask-user), `node:util` `parseArgs`.
 
-**Spec:** `docs/FlowBoard/Multi-Agent Orchestration Analysis.md`. It is on `dev` and was untracked when this plan was written, so read it from the main checkout. This plan carries every decision an implementer needs; the analysis is the background.
+**Spec:** `docs/Lamproom/Multi-Agent Orchestration Analysis.md`. It is on `dev` and was untracked when this plan was written, so read it from the main checkout. This plan carries every decision an implementer needs; the analysis is the background.
 
-**As built:** notes dated 2026-10-23 correct facts this plan got wrong and mark calls replaced since. The rules as built are in *Rules this command settles* in `docs/FlowBoard/Agent Providers/Run Flow Reference.md`. The calls numbered D1–D22 there are Claude's, taken on 2026-10-23 and open to Alex's review. Three calls of the same day are Alex's: a flow file is a reusable recipe, and a run gives its folder and task (`pnpm run-flow --folder <dir> --task <file> <flow.yaml>`); a flow has a budget ceiling, `budget_usd`, 0 for none; and the next run-flow stops what a host killed with `kill -9` left running.
+**As built:** notes dated 2026-10-23 correct facts this plan got wrong and mark calls replaced since. The rules as built are in *Rules this command settles* in `docs/Lamproom/Agent Providers/Run Flow Reference.md`. The calls numbered D1–D22 there are Claude's, taken on 2026-10-23 and open to Alex's review. Three calls of the same day are Alex's: a flow file is a reusable recipe, and a run gives its folder and task (`pnpm lr-run-flow --folder <dir> --task <file> <flow.yaml>`); a flow has a budget ceiling, `budget_usd`, 0 for none; and the next lr-run-flow stops what a host killed with `kill -9` left running.
 
 ## Before you start
 
 - Create a worktree for a new branch `feature/flow-orchestration` from `dev`, using superpowers:using-git-worktrees. `feature/agent-providers` is merged into `dev` first (Alex, 2026-10-19).
   - Don't reuse an existing worktree: another session may own it. Check ListAgents first.
 - Copy this plan into the new worktree's `docs/superpowers/plans/` and commit it.
-- In `code/flowboard/`, run `pnpm install && pnpm test:packages && pnpm typecheck:packages`. Everything should pass before Task 1.
+- In `code/lamproom/`, run `pnpm install && pnpm test:packages && pnpm typecheck:packages`. Everything should pass before Task 1.
 
 ## Decisions this plan makes
 
@@ -33,9 +33,9 @@ The analysis left these open (its §7 and §8). Each line below is **my call**, 
 | Question | Call |
 |---|---|
 | **(Alex)** Where routes live | A top-level `edges:` list, as in yamlgraph, because the Flow Design canvas will read and write these files. An edge is `{ from, to, condition }`, the fields of a `step_edges` row; `condition` is `always` (the default), `on_pass` or `on_fail`. At most one edge goes from one step to another, so `from` and `to` identify it: the stable edge id the backlog asks for. There is no `START` or `END`, which `step_edges` could not store: the entry is the step no edge points to. *2026-10-23:* commit `148d7a6` (2026-10-19) added a fallback for a flow where every step has an edge into it: the entry became the step only rework edges point to. That fallback is gone; such a flow now names its first step with a top-level `entry: <step>` (D1 in Run Flow Reference: Claude's call, open to Alex's review) |
-| Flow Design #24: type keys or file names | Type keys, each saved as `<type>.md`. Names cannot contain a dot today, so accepting a file name such as `result.json` later breaks no flow. *Correction, 2026-10-23:* this row also cited #25, which asks which artifact types are seeded. `run-flow` seeds none and has no known-types check: any lowercase name is a type (D9 in Run Flow Reference: Claude's call, open to Alex's review) |
+| Flow Design #24: type keys or file names | Type keys, each saved as `<type>.md`. Names cannot contain a dot today, so accepting a file name such as `result.json` later breaks no flow. *Correction, 2026-10-23:* this row also cited #25, which asks which artifact types are seeded. `lr-run-flow` seeds none and has no known-types check: any lowercase name is a type (D9 in Run Flow Reference: Claude's call, open to Alex's review) |
 | 7.1 The unfinished "but …" | Unknown. The plan assumes it changes nothing below |
-| 7.2 Where flows live | Decide later. The engine takes a plain `FlowDef`. `run-flow` reads YAML and pins its loaded copy (`flow.json`) for the run, so `--resume` never re-reads the YAML. *2026-10-23 (Alex's call):* a flow file is a reusable recipe. It holds no `folder` or `task`; each run gives them, `pnpm run-flow --folder <dir> --task <file> <flow.yaml>`, and `flow.json` pins them with the loaded copy, so `--resume` takes neither. See Run Flow Reference |
+| 7.2 Where flows live | Decide later. The engine takes a plain `FlowDef`. `lr-run-flow` reads YAML and pins its loaded copy (`flow.json`) for the run, so `--resume` never re-reads the YAML. *2026-10-23 (Alex's call):* a flow file is a reusable recipe. It holds no `folder` or `task`; each run gives them, `pnpm lr-run-flow --folder <dir> --task <file> <flow.yaml>`, and `flow.json` pins them with the loaded copy, so `--resume` takes neither. See Run Flow Reference |
 | 7.3 CLI or worker first | CLI. The worker, queue and web app are out of scope |
 | 7.4 Provider per step | Yes: `adapter` per step, with a flow-level `defaults`. There are no capability-gap warnings, because both providers declare the same capability set today |
 | 7.5 Parallel steps, one folder | One folder. `write_roots` narrows a step's file edits, and `--max-runs 1` runs branches one at a time |
@@ -47,7 +47,7 @@ The analysis left these open (its §7 and §8). Each line below is **my call**, 
 | Execution #17: which runs are wasted | On rework: every run so far of the target and of every step downstream of it, including the failing run. Also interrupted runs, infra-failed runs, and a run replaced by a gate Retry |
 | Execution #18, Flow Design #20: downstream attempts | Reset. Downstream instances are recreated, and only the target's count carries |
 | Execution #64: approve over the agent's `fail` | The person wins: approve sets `pass`, reject sets `fail` |
-| Execution #71: a silent approval step | Gated once. The approval gate's decision is the outcome. *Correction, 2026-10-23:* this row also cited #5, which asks about a step with both an approval gate and unanswered questions. That cannot happen in `run-flow`: questions are answered live, and any still open are withdrawn when the run ends, before its gate opens. #5 stays open for the worker |
+| Execution #71: a silent approval step | Gated once. The approval gate's decision is the outcome. *Correction, 2026-10-23:* this row also cited #5, which asks about a step with both an approval gate and unanswered questions. That cannot happen in `lr-run-flow`: questions are answered live, and any still open are withdrawn when the run ends, before its gate opens. #5 stays open for the worker |
 | Execution #66: does `attempts` count the first run? | Yes, the first run sets 1. Escalate when `attempts + 1 > max_attempts` |
 | Execution #14, #16: a spent loop | Escalate, never fail on its own (D3). Retry does not reset the count, so the next failure escalates at once |
 | Execution #58, #67: stuck detection | A failing shell run whose fingerprint equals that step's previous *failed* run escalates (PRD wording), across instances |
@@ -63,8 +63,8 @@ The analysis left these open (its §7 and §8). Each line below is **my call**, 
 | New: exit 0 without a declared output | The step waits at a gate with `did not write: …`. It is never a silent pass |
 | New: infra failures | Not retried automatically. They wait at a gate: Retry keeps the attempt number, Fail ends the flow |
 | **(Alex)** Uncommitted changes at start | Refused unless `--allow-dirty`: changed tracked files in `folder` exit 2 before anything is created. Untracked files don't count, or the flow's own new files would block every run. `--resume` never checks. Not a git repository: a warning |
-| Where run state lives | `runs/` beside where the command runs, as for `run-agent`. When that is inside `folder`, ai steps' `guards.denyPaths` cover the run folder, and the host re-creates the folder before each state write, so a check running `git clean -fdx` cannot crash it |
-| Two hosts in one folder | Refused, by `<folder>/.flowboard/lock`. A lock whose pid is dead is replaced, with a warning that its agents may still be running: the adapters expose no pids to stop them. *Correction, 2026-10-23:* the adapters do expose pids (`AgentRun.pid`, a `Promise<number>`); `run-flow` did not record them. Each run log now has a `pid` line (the agent's process, or a check's process group id), with the process's start time. A run-flow that replaces a dead host's lock now stops what that host left running (Alex's call): the process, or a check's whole process group, of each run whose log has a `pid` line and no `result` line, with SIGTERM, then SIGKILL after up to 2 s. It signals a process only while its start time still matches the log, since the pid may be another process's by now (Claude's call, open to Alex's review). `--resume` does the same in its own run folder. See Run Flow Reference |
+| Where run state lives | `runs/` beside where the command runs, as for `lr-run-agent`. When that is inside `folder`, ai steps' `guards.denyPaths` cover the run folder, and the host re-creates the folder before each state write, so a check running `git clean -fdx` cannot crash it |
+| Two hosts in one folder | Refused, by `<folder>/.lamproom/lock`. A lock whose pid is dead is replaced, with a warning that its agents may still be running: the adapters expose no pids to stop them. *Correction, 2026-10-23:* the adapters do expose pids (`AgentRun.pid`, a `Promise<number>`); `lr-run-flow` did not record them. Each run log now has a `pid` line (the agent's process, or a check's process group id), with the process's start time. A lr-run-flow that replaces a dead host's lock now stops what that host left running (Alex's call): the process, or a check's whole process group, of each run whose log has a `pid` line and no `result` line, with SIGTERM, then SIGKILL after up to 2 s. It signals a process only while its start time still matches the log, since the pid may be another process's by now (Claude's call, open to Alex's review). `--resume` does the same in its own run folder. See Run Flow Reference |
 | A step that hangs | `timeout_minutes` per step. Shell steps default to 30; ai steps have none, since their `limits` bound them. A timeout is an infra failure, so it opens a `run_failed` gate |
 | Secrets and shell steps | Variables named `*_KEY`, `*_TOKEN`, `*_SECRET` or `*_PASSWORD` are removed from shell steps' environment, and their names are printed at start. Agents keep the environment their provider needs; the sandbox is the real fix |
 | A failing check that prints nothing | Gets no fingerprint, so it never counts as stuck |
@@ -89,7 +89,7 @@ Each is small to add later, when its trigger arrives:
 - cancel;
 - an `agent:` file key (use `system_prompt`);
 - prompt-injection scanning of hand-offs between steps;
-- stopping agents orphaned by `kill -9` (the adapters expose no pids, so the lock only warns. *Correction, 2026-10-23:* the adapters do expose pids, `AgentRun.pid`; what was left out is recording and stopping them. Checks outlive a `kill -9` of the host too. Each run log now has a `pid` line, for agents and checks, with the process's start time. Built since, Alex's call: a run-flow that finds a dead host's lock stops what that host's runs left running, and `--resume` does the same in its own run folder; a process is signalled only while its start time still matches its log (Claude's call, open to Alex's review). A second Ctrl+C now kills every run still going before it exits. See Run Flow Reference);
+- stopping agents orphaned by `kill -9` (the adapters expose no pids, so the lock only warns. *Correction, 2026-10-23:* the adapters do expose pids, `AgentRun.pid`; what was left out is recording and stopping them. Checks outlive a `kill -9` of the host too. Each run log now has a `pid` line, for agents and checks, with the process's start time. Built since, Alex's call: a lr-run-flow that finds a dead host's lock stops what that host's runs left running, and `--resume` does the same in its own run folder; a process is signalled only while its start time still matches its log (Claude's call, open to Alex's review). A second Ctrl+C now kills every run still going before it exits. See Run Flow Reference);
 - counting untracked files as uncommitted changes;
 - manual steps (*added 2026-10-23*, D11 in Run Flow Reference: Claude's call, open to Alex's review): blocked on Flow Design #39, which asks what a manual step does. The stand-in is a shell step `shell: "true"` with `gate: approval`.
 
@@ -100,26 +100,26 @@ Each is small to add later, when its trigger arrives:
   - `import type` for types;
   - `.ts` relative imports;
   - tests with `node:test` and `node:assert/strict`;
-  - commands run from `code/flowboard/`.
-- **Core purity:** `packages/core` imports no framework, database driver, CLI or `@flowboard/adapters`. `validateFlow` and `advance` do no I/O. `@flowboard/adapters` is not changed.
+  - commands run from `code/lamproom/`.
+- **Core purity:** `packages/core` imports no framework, database driver, CLI or `@lamproom/adapters`. `validateFlow` and `advance` do no I/O. `@lamproom/adapters` is not changed.
 - **No new dependencies.**
-- **Relative paths** (the YAML or run-folder argument, `folder`, `task`, `prompt`, `plugins`, `skills`, `runs/`) resolve against the folder the command was run from, `process.env.INIT_CWD ?? process.cwd()` (R2). `write_roots` resolve against `folder`. *2026-10-23:* a flow file is a reusable recipe (Alex's call), so `folder` and `task` are the run's `--folder` and `--task`, which still resolve against the folder run-flow starts in. The recipe's own paths (`prompt`, `plugins` and `skills`, in a step or in `defaults`) now resolve against the flow file's folder, so a recipe and its prompts move together (Claude's call, open to Alex's review). `write_roots` must be relative paths inside the folder; an absolute path, `~` or `..` is refused.
+- **Relative paths** (the YAML or run-folder argument, `folder`, `task`, `prompt`, `plugins`, `skills`, `runs/`) resolve against the folder the command was run from, `process.env.INIT_CWD ?? process.cwd()` (R2). `write_roots` resolve against `folder`. *2026-10-23:* a flow file is a reusable recipe (Alex's call), so `folder` and `task` are the run's `--folder` and `--task`, which still resolve against the folder lr-run-flow starts in. The recipe's own paths (`prompt`, `plugins` and `skills`, in a step or in `defaults`) now resolve against the flow file's folder, so a recipe and its prompts move together (Claude's call, open to Alex's review). `write_roots` must be relative paths inside the folder; an absolute path, `~` or `..` is refused.
 - **Names:** step names and artifact types match `/^[a-z0-9][a-z0-9_-]*$/`, because they become file names. Lowercase only: macOS treats `Plan.md` and `plan.md` as one file.
-- **Error line format:** `<yaml path as typed>: <field>: <message>`, as in `run-agent`.
+- **Error line format:** `<yaml path as typed>: <field>: <message>`, as in `lr-run-agent`.
 - **Exit codes:**
   - 0: the flow is done.
   - 1: the flow failed.
-  - 2: bad usage, config or flow, uncommitted changes, or another run-flow in the folder; nothing launched.
+  - 2: bad usage, config or flow, uncommitted changes, or another lr-run-flow in the folder; nothing launched.
   - 3: paused at a gate with no terminal to answer it. *2026-10-23:* also paused because the flow has spent its budget.
   - 130: stopped by Ctrl+C.
 - **Files:**
   - `runs/<stamp>-<flow name>/` holds `flow.json`, `state.json`, `flow.jsonl` (one line per engine transition), `<NNN>-<step>.jsonl` and `<NNN>-<step>.outcome.json`. `<NNN>` is the run id, zero-padded to 3; `<stamp>` is `run.ts`'s `stamp()`. A taken folder name gets `-2`, `-3`, ….
-  - Artifacts go in `<folder>/.flowboard/<run folder name>/<type>.md`.
-  - `<folder>/.flowboard/lock` exists while a host works in the folder.
-  - `run-flow` never touches `.gitignore` (R14).
+  - Artifacts go in `<folder>/.lamproom/<run folder name>/<type>.md`.
+  - `<folder>/.lamproom/lock` exists while a host works in the folder.
+  - `lr-run-flow` never touches `.gitignore` (R14).
 - **Env:**
-  - `FLOWBOARD_OUTCOME_FILE` tells the shim where `set_outcome` writes `{"outcome":"pass"|"fail","reason"?:string}`.
-  - `FLOWBOARD_ARTIFACTS` tells a shell step where the artifacts are.
+  - `LAMPROOM_OUTCOME_FILE` tells the shim where `set_outcome` writes `{"outcome":"pass"|"fail","reason"?:string}`.
+  - `LAMPROOM_ARTIFACTS` tells a shell step where the artifacts are.
 - **Shell output:**
   - The last 20 000 characters go to the step's artifact.
   - The fingerprint uses the last 20 non-empty lines.
@@ -132,7 +132,7 @@ Each is small to add later, when its trigger arrives:
   - Note question: `Note for the next attempt (optional)`.
 - **Spending:**
   - Automated tests spend nothing.
-  - Live tests run only under `FLOWBOARD_LIVE=1`.
+  - Live tests run only under `LAMPROOM_LIVE=1`.
   - OpenCode live runs use `openrouter/deepseek/deepseek-v4.1-flash`, which spends OpenRouter credit.
 - **Simplifications:** where the code makes a deliberate simplification from *Left out*, mark it with a `ponytail:` comment that names the ceiling.
 
@@ -159,8 +159,8 @@ Each is small to add later, when its trigger arrives:
 | `packages/cli/src/flow-exec.ts` (new) | `execShell`, `execAi`: one step run, then a `RunEnd`; `shellEnv` |
 | `packages/cli/src/flow-run.ts` (new) | `runFlow`: arguments, the uncommitted-changes check, the lock, the transition loop, terminal, gates, state, resume |
 | `packages/cli/src/flow-main.ts` (new) | Entry point |
-| `package.json` | Scripts `run-flow` and `test:live` |
-| `docs/FlowBoard/Agent Providers/Run Flow Reference.md` (new) | User reference |
+| `package.json` | Scripts `lr-run-flow` and `test:live` |
+| `docs/Lamproom/Agent Providers/Run Flow Reference.md` (new) | User reference |
 
 ---
 
@@ -672,7 +672,7 @@ git commit -m "feat(core): rework loops, shared attempts, escalation and resume"
 
 ---
 
-### Task 4: `run-agent` config checks usable from a parsed mapping
+### Task 4: `lr-run-agent` config checks usable from a parsed mapping
 
 **Files:**
 - Modify: `packages/cli/src/config.ts`
@@ -724,7 +724,7 @@ Expected: FAIL, `configFromObject` is not exported.
 - [ ] **Step 4: Run the whole CLI suite**
 
 Run: `node --test packages/cli/test/*.test.ts && pnpm typecheck:packages`
-Expected: all pass. That includes every existing `run-agent` test, unchanged.
+Expected: all pass. That includes every existing `lr-run-agent` test, unchanged.
 
 - [ ] **Step 5: Commit**
 
@@ -739,7 +739,7 @@ git commit -m "refactor(cli): run config checks usable from a parsed mapping"
 
 **Files:**
 - Create: `packages/cli/src/flow-config.ts`, `packages/cli/src/flow-run.ts`, `packages/cli/src/flow-main.ts`
-- Modify: `package.json` (script `"run-flow": "node packages/cli/src/flow-main.ts"`)
+- Modify: `package.json` (script `"lr-run-flow": "node packages/cli/src/flow-main.ts"`)
 - Test: `packages/cli/test/flow-config.test.ts`, `packages/cli/test/flow-run.test.ts`
 
 **Interfaces:**
@@ -762,11 +762,11 @@ git commit -m "refactor(cli): run config checks usable from a parsed mapping"
 - **Flow-level keys:**
   - `folder` (required);
   - `task` (required: a file whose text is every step's preamble);
-  - `defaults` (optional: any `run-agent` key except `folder`);
+  - `defaults` (optional: any `lr-run-agent` key except `folder`);
   - `steps` (required: a non-empty mapping of name to step);
   - `edges` (optional, default `[]`: a list of strict `{ from, to, condition }` objects; `from` and `to` are step names, and `condition` is `always` (the default), `on_pass` or `on_fail`).
 - **Step keys:**
-  - every `run-agent` key except `folder`;
+  - every `lr-run-agent` key except `folder`;
   - `prompt` (the step's own prompt file, which becomes `spec.prompt.template`);
   - `requires` and `produces` (lists of artifact types, default `[]`);
   - `gate: approval`;
@@ -811,17 +811,17 @@ Warnings (`FlowConfig.warnings`, no file prefix):
 **The `--check` and `--mermaid` commands:**
 - **Usage** (stderr, exit 2):
   ```
-  usage: pnpm run-flow [--check | --mermaid] [--max-runs <n>] [--allow-dirty] <flow.yaml>
-         pnpm run-flow --resume <run folder> [--max-runs <n>]
+  usage: pnpm lr-run-flow [--check | --mermaid] [--max-runs <n>] [--allow-dirty] <flow.yaml>
+         pnpm lr-run-flow --resume <run folder> [--max-runs <n>]
   ```
   *2026-10-23:* the usage is now:
   ```
-  usage: pnpm run-flow --folder <dir> --task <file> [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] <flow.yaml>
-         pnpm run-flow --check | --mermaid [--folder <dir> --task <file>] <flow.yaml>
-         pnpm run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>]
+  usage: pnpm lr-run-flow --folder <dir> --task <file> [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] <flow.yaml>
+         pnpm lr-run-flow --check | --mermaid [--folder <dir> --task <file>] <flow.yaml>
+         pnpm lr-run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>]
   ```
   A run without both `--folder` and `--task`, `--check` or `--mermaid` with only one of them, or a resume with either prints it and exits 2. Without them, `--check` checks the recipe on its own.
-- **Without `--check`, `--mermaid` or `--resume`:** this task prints `run-flow: running flows comes in Task 9` and exits 2. Task 9 replaces it.
+- **Without `--check`, `--mermaid` or `--resume`:** this task prints `lr-run-flow: running flows comes in Task 9` and exits 2. Task 9 replaces it.
 - **`--check`:** prints warnings as `-- warning: <line>`, then `-- flow ok: <n> steps`, and exits 0. Errors go to stderr, with exit 2.
 - **`--mermaid`:** prints `toMermaid(flow)` and exits 0.
 
@@ -951,7 +951,7 @@ Expected: all pass.
 
 ```bash
 git add packages/cli/src/flow-config.ts packages/cli/src/flow-run.ts packages/cli/src/flow-main.ts packages/cli/test/flow-config.test.ts packages/cli/test/flow-run.test.ts package.json
-git commit -m "feat(cli): flow YAML with run-flow --check and --mermaid"
+git commit -m "feat(cli): flow YAML with lr-run-flow --check and --mermaid"
 ```
 
 ---
@@ -965,7 +965,7 @@ git commit -m "feat(cli): flow YAML with run-flow --check and --mermaid"
 **Interfaces:**
 - Produces:
   - `createAskServer(socketPath: string, outcomeFile?: string): McpServer`, which registers `set_outcome` only when `outcomeFile` is set.
-  - `main.ts` passes `process.env.FLOWBOARD_OUTCOME_FILE`.
+  - `main.ts` passes `process.env.LAMPROOM_OUTCOME_FILE`.
   - The file holds `{"outcome":"pass"|"fail","reason"?:string}`. A later call replaces it.
 
 - [ ] **Step 1: Write the failing tests**
@@ -973,10 +973,10 @@ git commit -m "feat(cli): flow YAML with run-flow --check and --mermaid"
 Change the `shim()` helper to `shim(socketPath, env: Record<string, string> = {})`, merging `env` into the child's environment.
 
 ```ts
-test('set_outcome is offered only with FLOWBOARD_OUTCOME_FILE, and writes the verdict', async (t) => {
+test('set_outcome is offered only with LAMPROOM_OUTCOME_FILE, and writes the verdict', async (t) => {
   const broker = await fakeBroker({ answers: {} });
-  const file = join(mkdtempSync(join(tmpdir(), 'fb-out-')), 'outcome.json');
-  const client = await shim(broker.socketPath, { FLOWBOARD_OUTCOME_FILE: file });
+  const file = join(mkdtempSync(join(tmpdir(), 'lr-out-')), 'outcome.json');
+  const client = await shim(broker.socketPath, { LAMPROOM_OUTCOME_FILE: file });
   t.after(async () => { await client.close(); await broker.close(); });
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((x) => x.name).sort(), ['ask_user', 'ask_user_batch', 'set_outcome']);
@@ -1072,7 +1072,7 @@ test('a different failure changes it', () => {
 - `echo boom; exit 1` gives outcome `fail`, with `fingerprint === fingerprint('boom\n')`.
 - `exit 1` with no output gives outcome `fail` and no fingerprint, so a quiet check never counts as stuck.
 - Output longer than `OUTPUT_TAIL` leaves exactly the last `OUTPUT_TAIL` characters in the artifact.
-- `echo "$FLOWBOARD_ARTIFACTS"` writes `artifactsDir` into the artifact.
+- `echo "$LAMPROOM_ARTIFACTS"` writes `artifactsDir` into the artifact.
 - With `process.env.FAKE_TOKEN = 'x'`, `echo "${FAKE_TOKEN:-gone}"` writes `gone`, and `shellEnv(process.env).removed` includes `FAKE_TOKEN`.
 - `stop()` on `test -n x && sleep 30`, where sleep is a child of `sh`, ends within 2 s with `{ costUsd: 0, error: 'stopped' }`.
 - `logDir/007-check.jsonl` has a `start` line (holding the command) and a `result` line (holding `exitCode` and `outcome`).
@@ -1084,7 +1084,7 @@ Expected: FAIL, missing modules.
 
 - [ ] **Step 3: Implement `fingerprint` and `execShell`**
 
-- **Spawning:** `spawn('sh', ['-c', command], { cwd: folder, env: { ...shellEnv(process.env).env, FLOWBOARD_ARTIFACTS: artifactsDir }, detached: true, stdio: 'pipe' })` from `node:child_process`, so the command and its children form one process group. Add a `ponytail:` comment: this bypasses `ExecHost`, which cannot kill a process group; go through it once the sandbox tier can. End the child's stdin at once. Collect stdout and stderr in arrival order, keeping the last `OUTPUT_TAIL` characters.
+- **Spawning:** `spawn('sh', ['-c', command], { cwd: folder, env: { ...shellEnv(process.env).env, LAMPROOM_ARTIFACTS: artifactsDir }, detached: true, stdio: 'pipe' })` from `node:child_process`, so the command and its children form one process group. Add a `ponytail:` comment: this bypasses `ExecHost`, which cannot kill a process group; go through it once the sandbox tier can. End the child's stdin at once. Collect stdout and stderr in arrival order, keeping the last `OUTPUT_TAIL` characters.
 - **On close:**
   - write the tail to `produces[0]`'s artifact, if there is one;
   - exit 0 is `pass`, anything else is `fail`;
@@ -1122,7 +1122,7 @@ git commit -m "feat: shell steps write check_output and fingerprint failures"
   export async function streamRun(launch: () => AgentRun, log: Log, show: (line: string) => void): Promise<{ result: RunResult; failedTools: number; last?: string }>;
   /** `-- N tool call(s) failed` and `-- last message: …`, each only when there is something to say. */
   export function summaryLines(failedTools: number, last?: string): string[];
-  export function withAsking(config: RunConfig, socket: string, tmp: string, env?: Record<string, string>): RunSpec; // `env` joins the flowboard tool server's env
+  export function withAsking(config: RunConfig, socket: string, tmp: string, env?: Record<string, string>): RunSpec; // `env` joins the lamproom tool server's env
   export { stamp, defaultProvider, WITHDRAWN }; // now exported (openLog since Task 7)
   // flow-exec.ts
   export function execAi(config: RunConfig, run: RunCommand, produces: string[], ctx: ExecContext): StepRun;
@@ -1132,7 +1132,7 @@ git commit -m "feat: shell steps write check_output and fingerprint failures"
 
 Use a fake provider that records the spec it gets. Its run can:
 - write files (`spec.prompt.outputs`);
-- write the outcome file (`spec.tools` → `flowboard` → `env.FLOWBOARD_OUTCOME_FILE`);
+- write the outcome file (`spec.tools` → `lamproom` → `env.LAMPROOM_OUTCOME_FILE`);
 - set `result.outcome`, `result.error` or `exitCode`;
 - cost $0.10.
 
@@ -1143,7 +1143,7 @@ The tests:
   - `prompt.outputs` lists `produces`;
   - with `note: 'shorter'`, the preamble ends `\n\nA person's note for this attempt: shorter`;
   - `guards.writeRoots` ends with `artifactsDir`;
-  - the `flowboard` tool's env has both `FLOWBOARD_ASK_SOCKET` and `FLOWBOARD_OUTCOME_FILE` (`<logDir>/007-plan.outcome.json`).
+  - the `lamproom` tool's env has both `LAMPROOM_ASK_SOCKET` and `LAMPROOM_OUTCOME_FILE` (`<logDir>/007-plan.outcome.json`).
 - **Outcome:**
   - the outcome file `{"outcome":"fail","reason":"r"}` beats `result.outcome: 'pass'` and gives `outcome: 'fail', reason: 'r'`;
   - with no file, `result.outcome` is used;
@@ -1170,9 +1170,9 @@ Expected: the new tests fail.
   - `runAgent` calls `streamRun(() => (run = provider.launch(spec)), log, show)`, so Ctrl+C still reaches `run`.
   - Its output lines and log lines stay byte-for-byte the same.
 - **`execAi`, in order:**
-  1. Open `openLog(logDir, '<NNN>-<step>')`, and make `tmp = realpathSync(mkdtempSync('/tmp/fb-'))` (the socket path limit).
+  1. Open `openLog(logDir, '<NNN>-<step>')`, and make `tmp = realpathSync(mkdtempSync('/tmp/lr-'))` (the socket path limit).
   2. Start the broker. `ctx.answer` answers questions; the events log `question`, `answer` and `withdrawn`; a withdrawal also shows `WITHDRAWN`; interrupts go to `ctx.onInterrupt`.
-  3. Build the spec: `withAsking(config, sock, tmp, { FLOWBOARD_OUTCOME_FILE })`, then set the prompt inputs, outputs, note and missing-inputs line, and the write roots. Show each missing input.
+  3. Build the spec: `withAsking(config, sock, tmp, { LAMPROOM_OUTCOME_FILE })`, then set the prompt inputs, outputs, note and missing-inputs line, and the write roots. Show each missing input.
   4. Log `start` with `{ step, attempt, config: spec }`, and note the start time.
   5. Call `streamRun`, then close the broker. Log `result`, and show `summaryLines`.
   6. Settle `ended`. A setup failure is `error: 'cannot set up the run: <message>'`.
@@ -1192,7 +1192,7 @@ git commit -m "feat(cli): agent steps read set_outcome and check their declared 
 
 ---
 
-### Task 9: `run-flow` runs a flow
+### Task 9: `lr-run-flow` runs a flow
 
 **Files:**
 - Modify: `packages/cli/src/flow-run.ts`
@@ -1206,8 +1206,8 @@ How the host behaves:
 
 1. **Setup**, in this order. Each refusal exits 2 before anything is created.
    - Load the flow. Print each warning as `-- warning: <line>`.
-   - **Uncommitted changes:** unless `--allow-dirty`, run `git status --porcelain --untracked-files=no -- .` in `folder`. Any output refuses with `<yaml>: folder: uncommitted changes in <n> file(s); commit or stash them first, or pass --allow-dirty`. If git fails (not a repository, or no git), print `-- warning: <folder> is not in a git repository; nothing can undo the flow's edits` instead. Add a `ponytail:` comment: untracked files don't count, because the flow's own new files (`flow.yaml`, `runs/`, `.flowboard/`) usually are untracked.
-   - **The lock:** choose the run folder's name, then create `<folder>/.flowboard/lock` exclusively (`openSync(path, 'wx')`), holding `{ pid, runDir }`. If it exists and its pid is alive (`process.kill(pid, 0)` does not throw), refuse with `<yaml>: folder: another run-flow (pid <pid>) is working here on <runDir>; if it is not, delete <lock path>`. If its pid is dead, replace the lock and print `-- warning: a run-flow (pid <pid>) ended without cleaning up; check that none of its agents are still running`. The host removes the lock when it finishes, however it finishes.
+   - **Uncommitted changes:** unless `--allow-dirty`, run `git status --porcelain --untracked-files=no -- .` in `folder`. Any output refuses with `<yaml>: folder: uncommitted changes in <n> file(s); commit or stash them first, or pass --allow-dirty`. If git fails (not a repository, or no git), print `-- warning: <folder> is not in a git repository; nothing can undo the flow's edits` instead. Add a `ponytail:` comment: untracked files don't count, because the flow's own new files (`flow.yaml`, `runs/`, `.lamproom/`) usually are untracked.
+   - **The lock:** choose the run folder's name, then create `<folder>/.lamproom/lock` exclusively (`openSync(path, 'wx')`), holding `{ pid, runDir }`. If it exists and its pid is alive (`process.kill(pid, 0)` does not throw), refuse with `<yaml>: folder: another lr-run-flow (pid <pid>) is working here on <runDir>; if it is not, delete <lock path>`. If its pid is dead, replace the lock and print `-- warning: a lr-run-flow (pid <pid>) ended without cleaning up; check that none of its agents are still running`. The host removes the lock when it finishes, however it finishes.
    - Make the run folder and the artifacts folder. A failure is `<yaml>: runs: cannot create the run folder: <message>`, with exit 2.
    - Write `flow.json`: `{ version: 1, config, artifactsDir }`.
    - When the run folder is inside `folder`, add `<run folder relative to folder>/**` to every ai step's `guards.denyPaths`.
@@ -1229,10 +1229,10 @@ How the host behaves:
 8. **Paused:** when nothing is live or queued and a gate waits unanswered, finish paused.
 9. **Finish:**
    - Print `-- flow <done|failed|paused>: <runs> runs, $<spent> spent, $<wasted> wasted`.
-   - When paused, also print `-- waiting for a decision: <steps>` and `-- continue with: pnpm run-flow --resume <run folder>`.
+   - When paused, also print `-- waiting for a decision: <steps>` and `-- continue with: pnpm lr-run-flow --resume <run folder>`.
 10. **A host error:** write one `stopAll()` that stops launching, stops every live run, and feeds each one's end with `interrupted: true`. An exception anywhere in the loop calls it, saves the state, prints the `--resume` hint and rethrows, so Node prints the error and exits 1.
 
-*2026-10-23:* Alex's calls changed some of these rules. The start line ends with the ceiling, `, a budget of $5.00` or `, no budget ceiling`, and with a ceiling the summary reads `-- flow done: 3 runs, $0.30 of $1.00 spent, $0.00 wasted`. When the flow's spending reaches its ceiling and the flow has not ended, the host stops the live runs (interrupted and wasted; queued ones are `not launched`) and pauses with exit 3, printing `-- the budget is spent: $0.20 of $0.15` and `-- continue with: pnpm run-flow --resume <run folder> --budget-usd <more>`; `--resume` without a larger budget refuses. A run-flow that replaces a dead host's lock then stops what that host's runs left running (see *Two hosts in one folder* in the decisions table). See Run Flow Reference.
+*2026-10-23:* Alex's calls changed some of these rules. The start line ends with the ceiling, `, a budget of $5.00` or `, no budget ceiling`, and with a ceiling the summary reads `-- flow done: 3 runs, $0.30 of $1.00 spent, $0.00 wasted`. When the flow's spending reaches its ceiling and the flow has not ended, the host stops the live runs (interrupted and wasted; queued ones are `not launched`) and pauses with exit 3, printing `-- the budget is spent: $0.20 of $0.15` and `-- continue with: pnpm lr-run-flow --resume <run folder> --budget-usd <more>`; `--resume` without a larger budget refuses. A lr-run-flow that replaces a dead host's lock then stops what that host's runs left running (see *Two hosts in one folder* in the decisions table). See Run Flow Reference.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1249,10 +1249,10 @@ The helper `scripted(plays: Record<string, Play[]>)` returns `{ makeProvider, ti
 
 Fixtures share the head `folder: proj`, `task: task.md`, `defaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 5 } }`, and prompts `prompts/<S>.md` holding `S`. An arrow is an `always` edge.
 
-- **Linear:** `plan → build → check`, where check is `shell: test -s "$FLOWBOARD_ARTIFACTS/notes.md"` with `produces: [check_output]`.
+- **Linear:** `plan → build → check`, where check is `shell: test -s "$LAMPROOM_ARTIFACTS/notes.md"` with `produces: [check_output]`.
   - Expect exit 0 and `state.json` status `done`.
   - The logs `001-plan.jsonl`, `002-build.jsonl` and `003-check.jsonl` exist. `flow.jsonl` has one line per transition, and the first holds the `start` event.
-  - `proj/.flowboard/2026-10-18T09-05-07-flow/plan.md` exists, and `proj/.flowboard/lock` does not.
+  - `proj/.lamproom/2026-10-18T09-05-07-flow/plan.md` exists, and `proj/.lamproom/lock` does not.
   - The not-a-repository warning is printed. With `process.env.FAKE_TOKEN` set, so is a `-- shell steps run without:` line naming `FAKE_TOKEN`.
   - The output ends with `-- flow done: 3 runs, $0.20 spent, $0.00 wasted`.
 - **Fan-out and join:** `plan → [a, b] → join`.
@@ -1273,7 +1273,7 @@ Fixtures share the head `folder: proj`, `task: task.md`, `defaults: { adapter: c
   - With `--allow-dirty`, the flow runs; exit 0.
   - With the change committed and one new untracked file, the flow runs; exit 0.
 - **The lock:**
-  - A lock holding this process's pid exits 2 with the `another run-flow` line.
+  - A lock holding this process's pid exits 2 with the `another lr-run-flow` line.
   - A lock holding a dead pid (a finished `true` child's) is replaced with the warning, and the flow runs; exit 0.
 - **Host error:** `plan → [a, b]`, where a plays `hang` and b plays `pass`. When b's run ends, arm `deps.now` to throw `disk full` once.
   - `runFlow` rejects with `disk full`.
@@ -1298,7 +1298,7 @@ Expected: all pass.
 
 ```bash
 git add packages/cli/src/flow-run.ts packages/cli/test/flow-run.test.ts
-git commit -m "feat(cli): run-flow runs flows: fan-out, joins, rework, timeouts and a folder lock"
+git commit -m "feat(cli): lr-run-flow runs flows: fan-out, joins, rework, timeouts and a folder lock"
 ```
 
 ---
@@ -1365,7 +1365,7 @@ Expected: all pass.
 
 ```bash
 git add packages/cli/src/flow-run.ts packages/cli/test/flow-run.test.ts
-git commit -m "feat(cli): run-flow asks at gates, and agents' questions take turns in one terminal"
+git commit -m "feat(cli): lr-run-flow asks at gates, and agents' questions take turns in one terminal"
 ```
 
 ---
@@ -1379,12 +1379,12 @@ git commit -m "feat(cli): run-flow asks at gates, and agents' questions take tur
 **Interfaces:**
 - Consumes: Tasks 9 and 10, including Task 9's `stopAll()`.
 - Produces:
-  - `run-flow --resume <run folder>` continues a stopped, paused or crashed flow from `flow.json` and `state.json`.
+  - `lr-run-flow --resume <run folder>` continues a stopped, paused or crashed flow from `flow.json` and `state.json`.
   - Ctrl+C exits 130.
 
 Rules:
 
-1. **Ctrl+C, SIGTERM and SIGHUP** behave like `run-agent`'s (R13, R29):
+1. **Ctrl+C, SIGTERM and SIGHUP** behave like `lr-run-agent`'s (R13, R29):
    - **First press:**
      1. Print `-- stopping`.
      2. Abort open gate prompts, and call Task 9's `stopAll()`.
@@ -1396,15 +1396,15 @@ Rules:
    - The YAML is never read again, and uncommitted changes are not checked: the tree now holds the flow's own edits.
    - Errors (exit 2, as `<dir as typed>: cannot resume: …`), in this order:
      - `no state.json`;
-     - `made by a different version of run-flow`, when `flow.json`'s `version` is not 1;
+     - `made by a different version of lr-run-flow`, when `flow.json`'s `version` is not 1;
      - `the flow already ended (<status>)`;
-     - Task 9's lock line, when a live run-flow holds the folder.
+     - Task 9's lock line, when a live lr-run-flow holds the folder.
 3. **`state.json` is written atomically:** write `state.json.tmp`, then rename it. A stray `.tmp` file is ignored.
 
 - [ ] **Step 1: Write the failing tests**
 
 - **Ctrl+C during a run:** `build` plays `hang`; emit `SIGINT` once its run has started.
-  - Expect exit 130, with `-- stopping`, `-- flow stopped:` and `-- continue with: pnpm run-flow --resume runs/2026-10-18T09-05-07-flow` printed.
+  - Expect exit 130, with `-- stopping`, `-- flow stopped:` and `-- continue with: pnpm lr-run-flow --resume runs/2026-10-18T09-05-07-flow` printed.
   - In `state.json`, `steps.build.state` is `running`, and run 1 has `live: false` and `wasted: true`.
   - Then `runFlow(['--resume', 'runs/2026-10-18T09-05-07-flow'], deps)` with build playing `pass` exits 0. The new build run is attempt 1.
 - **Hanging check** (Review Focus 5): check is `shell: 'test -f go.flag || sleep 30'`.
@@ -1415,8 +1415,8 @@ Rules:
 - **Resume errors:**
   - resuming a finished flow exits 2 with `runs/…: cannot resume: the flow already ended (done)`;
   - `--resume runs/nope` exits 2 with `runs/nope: cannot resume: no state.json`;
-  - a `flow.json` with `version: 2` exits 2 with `runs/…: cannot resume: made by a different version of run-flow`;
-  - a lock holding this process's pid exits 2 with `runs/…: cannot resume: another run-flow (pid …` and the rest of the lock line.
+  - a `flow.json` with `version: 2` exits 2 with `runs/…: cannot resume: made by a different version of lr-run-flow`;
+  - a lock holding this process's pid exits 2 with `runs/…: cannot resume: another lr-run-flow (pid …` and the rest of the lock line.
 - **Atomic state:** after a run, no `state.json.tmp` remains, and a stray `state.json.tmp` written before `--resume` is ignored.
 - **Second press:** a second `SIGINT` more than 300 ms after the first calls `exit(130)`.
 
@@ -1436,7 +1436,7 @@ Expected: all pass.
 
 ```bash
 git add packages/cli/src/flow-run.ts packages/cli/test/flow-run.test.ts
-git commit -m "feat(cli): run-flow stops cleanly on Ctrl+C and resumes from its state file"
+git commit -m "feat(cli): lr-run-flow stops cleanly on Ctrl+C and resumes from its state file"
 ```
 
 ---
@@ -1444,15 +1444,15 @@ git commit -m "feat(cli): run-flow stops cleanly on Ctrl+C and resumes from its 
 ### Task 12: A live flow on both providers, and the reference
 
 **Files:**
-- Create: `packages/cli/test/flow-live.test.ts`, `docs/FlowBoard/Agent Providers/Run Flow Reference.md`
-- Modify: `package.json` (append `packages/cli/test/flow-live.test.ts` to `test:live`), `docs/FlowBoard/Agent Providers/Agent Providers Index.md` (link the reference next to Run Config Reference)
+- Create: `packages/cli/test/flow-live.test.ts`, `docs/Lamproom/Agent Providers/Run Flow Reference.md`
+- Modify: `package.json` (append `packages/cli/test/flow-live.test.ts` to `test:live`), `docs/Lamproom/Agent Providers/Agent Providers Index.md` (link the reference next to Run Config Reference)
 
 **Interfaces:**
 - Consumes: everything above.
 
 - [ ] **Step 1: Write the live test**
 
-It is skipped unless `FLOWBOARD_LIVE=1`, with a 300 s timeout, using `cli-live.test.ts`'s pattern. The flow:
+It is skipped unless `LAMPROOM_LIVE=1`, with a 300 s timeout, using `cli-live.test.ts`'s pattern. The flow:
 
 ```yaml
 folder: proj
@@ -1460,10 +1460,10 @@ task: task.md          # "Write the single word hello, in lowercase, into your o
 defaults: { limits: { max_turns: 6, budget_usd: 0.3 } }
 steps:
   write: { adapter: claude-code, model: haiku, prompt: write.md, produces: [greeting] }
-  check: { shell: 'grep -qi hello "$FLOWBOARD_ARTIFACTS/greeting.md"', produces: [check_output] }
+  check: { shell: 'grep -qi hello "$LAMPROOM_ARTIFACTS/greeting.md"', produces: [check_output] }
   judge:
     adapter: opencode
-    model: openrouter/deepseek/deepseek-v4.1-flash   # or $FLOWBOARD_OPENCODE_MODEL
+    model: openrouter/deepseek/deepseek-v4.1-flash   # or $LAMPROOM_OPENCODE_MODEL
     prompt: judge.md     # "Read the greeting file. Report pass if it contains the word hello, otherwise fail."
     requires: [greeting]
 edges:
@@ -1480,7 +1480,7 @@ Assertions:
 
 - [ ] **Step 2: Run it**
 
-Run: `FLOWBOARD_LIVE=1 node --test packages/cli/test/flow-live.test.ts`
+Run: `LAMPROOM_LIVE=1 node --test packages/cli/test/flow-live.test.ts`
 Expected: PASS. It costs a few cents of Claude quota and OpenRouter credit.
 
 If the judge does not call `set_outcome`, the run pauses at a gate and the test fails. Fix the closing copy or the prompt rather than relaxing the assertion.
@@ -1490,7 +1490,7 @@ If the judge does not call `set_outcome`, the run pauses at a gate and the test 
 Mirror `Run Config Reference.md`'s style:
 - an example;
 - the commands and exit codes;
-- the flow and step fields (run-agent keys by reference);
+- the flow and step fields (lr-run-agent keys by reference);
 - edges, loops and joins;
 - gates and their choices;
 - the files written;
@@ -1506,6 +1506,6 @@ Expected: all pass, with live tests skipped.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/cli/test/flow-live.test.ts package.json "docs/FlowBoard/Agent Providers/Run Flow Reference.md" "docs/FlowBoard/Agent Providers/Agent Providers Index.md"
-git commit -m "test(cli): live flow across Claude Code and OpenCode; docs: run-flow reference"
+git add packages/cli/test/flow-live.test.ts package.json "docs/Lamproom/Agent Providers/Run Flow Reference.md" "docs/Lamproom/Agent Providers/Agent Providers Index.md"
+git commit -m "test(cli): live flow across Claude Code and OpenCode; docs: lr-run-flow reference"
 ```

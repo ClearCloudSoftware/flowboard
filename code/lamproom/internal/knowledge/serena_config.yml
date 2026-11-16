@@ -1,0 +1,11 @@
+# Serena's global config for Lamproom's knowledge assets (knowledge.ts): in the sandbox image at /opt/serena, and on
+# this machine in <data folder>/serena. Each project's index goes in its .lamproom/knowledge/, out of commits.
+# No dashboard or window: nobody is there to see them. No project is trusted: a repo's own project.yml can never run
+# a command or set a language server's options.
+web_dashboard: false
+web_dashboard_open_on_launch: false
+gui_log_window: false
+log_level: 30
+project_serena_folder_location: "$projectDir/.lamproom/knowledge/serena"
+trusted_project_path_patterns: []
+projects: []

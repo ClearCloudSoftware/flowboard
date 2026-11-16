@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>FlowBoard Flow Designer</title>
+<title>Lamproom Flow Designer</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
@@ -228,7 +228,7 @@ input,select{font:inherit;color:inherit;border-radius:0}
 
 <div class="app" id="app">
   <header class="topbar">
-    <div class="brand">flowboard<em>/</em><span>flows</span></div>
+    <div class="brand">lamproom<em>/</em><span>flows</span></div>
     <span class="vchip" id="vchip"></span>
     <span class="sp"></span>
     <button class="tgl" id="draft" aria-pressed="false"><i></i><span class="lbl" style="letter-spacing:.06em">draft mode</span></button>
@@ -280,7 +280,7 @@ const EFFORT = ['low','medium','high'];
 const SANDBOX = ['none','container','sealed container'];
 
 /* ══ the library ═══════════════════════════════════════════════════════
-   Domains come from FlowBoard's role starter packs. Several flows share a
+   Domains come from Lamproom's role starter packs. Several flows share a
    name across authors on purpose — that's the problem this rail solves.  */
 const DOMAINS = [
   ['all','All'], ['analysis','Analysis'], ['po-pm','PO / PM'], ['sdlc','SDLC'],
@@ -321,7 +321,7 @@ const LIBRARY = [
   F('Positioning sprint','@growth',1,'marketing','Interview, differentiate, draft the messaging house.','linear',4,0,0.88,6,'1mo ago'),
 ];
 
-/* Step names per domain, taken from FlowBoard's role starter packs, so a
+/* Step names per domain, taken from Lamproom's role starter packs, so a
    preview shows that flow's real shape rather than a stand-in. */
 const STEPNAMES = {
   sdlc:['Plan implementation','Implement','Write tests','Code review','Merge and integrate','Threat model','Secret scan','Sign off'],

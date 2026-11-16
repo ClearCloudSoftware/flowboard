@@ -1,0 +1,426 @@
+/**
+ * One run of one flow step: a shell command or an agent session. Each ends
+ * with a RunEnd for the engine and never rejects.
+ */
+import { spawn, spawnSync } from 'node:child_process';
+import { appendFileSync, closeSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { dirname, join, resolve } from 'node:path';
+import { SHIM_ENTRY } from '@lamproom/ask-user';
+import { fingerprint, ZERO_USAGE } from '@lamproom/core';
+import type { AgentProvider, AgentRun, ApprovalCall, ExecHost, Outcome, RunCommand, RunEnd, RunResult, RunSpec } from '@lamproom/core';
+import { startBroker } from './ask/broker.ts';
+import { inside } from './flow-config.ts';
+import type { Answerer } from './ask/broker.ts';
+import type { Adapter, RunConfig } from './config.ts';
+import { SECRET_NAME } from './secrets.ts';
+import { openLog, streamRun, summaryLines, withAsking, WITHDRAWN, WITHDRAWN_QUEUED } from './run.ts';
+import type { Log } from './run.ts';
+import { isLocal } from './settings.ts';
+
+/** How much of a shell step's output its artifact keeps: the end, where failures are. */
+export const OUTPUT_TAIL = 20_000;
+const KILL_AFTER_MS = 2000;
+/** How long a check's output may still arrive after its shell exits. */
+const DRAIN_MS = 200;
+
+/**
+ * `ended` never rejects. `stop(reason)`: the run ends with `reason` as its error, `stopped` by default.
+ * `kill()`: SIGKILL now, for a host that must exit before the run ends.
+ */
+export interface StepRun { ended: Promise<RunEnd>; stop(reason?: string): void; kill(): void }
+export interface ExecContext {
+  artifactsDir: string;
+  logDir: string;
+  show(line: string): void;
+  now(): Date;
+  /**
+   * Where steps run; absent, on this machine. `online` for agents, which reach their model APIs; `tmpDir` and
+   * `mounts` (read-only) are host folders the process sees at the same paths.
+   */
+  sandbox?(o: { online?: boolean; tmpDir?: string; mounts?: string[] }): ExecHost;
+  /**
+   * runtime: opensandbox, where the box does not share this disk: brings these files back from it.
+   * Its presence means the box holds Lamproom's own code and reaches lr-run-flow only through a tunnel.
+   */
+  pull?(files: string[]): Promise<void>;
+  // ai steps:
+  makeProvider(adapter: Adapter): AgentProvider;
+  answer: Answerer;
+  /** Trusted runs: asks the owner before an agent's edit or shell command; `signal` withdraws the question. */
+  approve?: (call: ApprovalCall, signal: AbortSignal) => Promise<boolean>;
+  onInterrupt(): void;
+  /** Live agent runs' temp folders, for a host that must exit before their runs end. */
+  temps?: Set<string>;
+  /** The project's recalled memory for an attempt of `step` (prompt part 7), from its task and prompt; absent when memory is off. */
+  recall?(step: string, query: string): string | undefined;
+  /** OpenCode config a step's model needs beyond the step's own (`models.ts`), for where the step runs; absent: none. */
+  opencodeConfig?(model: string, hostName?: string): Record<string, unknown> | undefined;
+}
+
+/** code/lamproom: holds the shim and the adapters' plugins, and their node_modules. */
+const LAMPROOM_ROOT = resolve(SHIM_ENTRY, '../../../..');
+
+export const artifactPath = (artifactsDir: string, type: string): string => join(artifactsDir, `${type}.md`);
+
+
+/** `env` without names ending in _KEY, _TOKEN, _SECRET or _PASSWORD (any case); `removed` lists them, sorted. */
+export function shellEnv(env: NodeJS.ProcessEnv): { env: NodeJS.ProcessEnv; removed: string[] } {
+  return {
+    env: Object.fromEntries(Object.entries(env).filter(([k]) => !SECRET_NAME.test(k))),
+    removed: Object.keys(env).filter((k) => SECRET_NAME.test(k)).sort(),
+  };
+}
+
+/**
+ * When process `pid` started, as `ps` prints it; undefined when it has gone or `ps` cannot say. With the pid it
+ * tells a run's process from a later one given the same pid.
+ */
+export function processStart(pid: number): string | undefined {
+  if (!(pid > 0)) return undefined;
+  const ps = spawnSync('ps', ['-o', 'lstart=', '-p', String(pid)], { encoding: 'utf8' });
+  return (ps.status === 0 && ps.stdout.trim()) || undefined;
+}
+
+/** `<NNN>-<step>`: the run id, zero-padded, and the step; names the run's files in the log folder. */
+const runName = (run: RunCommand) => `${String(run.run).padStart(3, '0')}-${run.step}`;
+
+/** `<logDir>/<NNN>-<step>.jsonl` for one run, with `log(kind, body)` appending a line. */
+function runLog(ctx: ExecContext, run: RunCommand) {
+  const { fd } = openLog(ctx.logDir, runName(run));
+  return {
+    log: (kind: string, body: object) => appendFileSync(fd, JSON.stringify({ kind, at: ctx.now().toISOString(), ...body }) + '\n'),
+    close: () => closeSync(fd),
+  };
+}
+
+/** A shell that could not run its command, or that died by a signal: the setup failed, not the work. */
+function setupFailure(code: number | null, sig: NodeJS.Signals | null, exec?: ExecHost): string | undefined {
+  const sandboxed = !!exec;
+  if (sig) return `killed by ${sig}`;
+  // docker run's own failure (no image, no daemon): the container never ran. On the host 125 is the check's own.
+  if (code === 125 && sandboxed) return 'exit code 125: the sandbox could not start the command';
+  // 128 + SIGKILL: something in the check was killed from outside (the OOM killer, a sandbox limit). A container
+  // and a shell that ran it in a child both hand on a signal as this code, not as a signal (Open Questions #41).
+  // ponytail: only SIGKILL; 139 (SIGSEGV) and the like are the code under test crashing, which is its fail
+  const mb = exec?.profile?.limits?.memoryMb;
+  if (code === 137) return `exit code 137: killed by SIGKILL, out of memory most likely${mb ? ` (the sandbox's limit is ${mb} MB; see .lamproom.yaml)` : ''}`;
+  if (code === 126) return 'exit code 126: the command cannot run';
+  if (code === 127) return 'exit code 127: command not found';
+  return undefined;
+}
+
+/** The inputs not in the artifacts folder, each said aloud: the step runs without them. */
+function missingInputs(run: RunCommand, ctx: ExecContext): string[] {
+  const missing = run.inputs.filter((type) => !existsSync(artifactPath(ctx.artifactsDir, type)));
+  for (const type of missing) ctx.show(`-- ${run.step}: missing input ${type}; it runs without it`);
+  return missing;
+}
+
+/**
+ * Runs `command` in `folder`: exit 0 is pass, any other exit a fail, except 126, 127, 137 and a death by a signal,
+ * which are setup failures. The output's tail is `produces[0]`'s artifact and the run log's last line.
+ */
+export function execShell(command: string, folder: string, run: RunCommand, produces: string[], ctx: ExecContext): StepRun {
+  let logger: ReturnType<typeof runLog> | undefined;
+  try {
+    logger = runLog(ctx, run);
+    logger.log('start', { command, run });
+  } catch (e) {
+    logger?.close();
+    return { ended: Promise.resolve({ costUsd: 0, error: `cannot set up the run: ${(e as Error).message}` }), stop: () => {}, kill: () => {} };
+  }
+  const { log, close } = logger;
+  missingInputs(run, ctx);
+  // On the host, `detached` makes the command and everything it starts one group, so stop() reaches all.
+  // In a sandbox, the container is the group: it ends with the shell, and stopping `docker` stops it.
+  // stdin is /dev/null (or closed): a check never waits for input. A person's note reaches it as LAMPROOM_NOTE.
+  const env = { ...shellEnv(process.env).env, LAMPROOM_ARTIFACTS: ctx.artifactsDir, ...(run.note !== undefined && { LAMPROOM_NOTE: run.note }) };
+  const exec = ctx.sandbox?.({});
+  const child = exec
+    ? exec.spawn('sh', ['-c', command], { cwd: folder, env })
+    : spawn('sh', ['-c', command], { cwd: folder, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  child.stdin?.end();
+  try {
+    // The group to stop, should this host die with the check still running; `started` tells it from a later one.
+    // ponytail: a sandboxed check is not logged: its docker client is no group, and --rm ends the container when the client goes
+    if (child.pid && !exec) log('pid', { pid: child.pid, group: true, started: processStart(child.pid) });
+  } catch {
+    // best effort, like the result line
+  }
+  let tail = '';
+  for (const s of [child.stdout, child.stderr]) {
+    s.setEncoding('utf8');
+    s.on('data', (d: string) => (tail = (tail + d).slice(-OUTPUT_TAIL)));
+  }
+
+  let stopReason: string | undefined;
+  let killer: NodeJS.Timeout | undefined;
+  let settle!: (end: RunEnd) => void;
+  const ended = new Promise<RunEnd>((resolve) => (settle = resolve));
+  let done = false;
+  const finish = (end: RunEnd, exitCode: number | null) => {
+    if (done) return;
+    done = true;
+    clearTimeout(killer);
+    try {
+      log('result', { exitCode, ...end, output: tail });
+    } catch {
+      // Best effort: the end must still reach the host, whose own state writes report the disk trouble.
+    } finally {
+      close();
+    }
+    settle(end);
+  };
+  child.on('error', (e) => finish({ costUsd: 0, error: e.message }, null));
+  /** The shell has exited: stop what it left running, save its output and report its verdict. */
+  const over = (code: number | null, sig: NodeJS.Signals | null) => {
+    if (done) return;
+    // Whatever is left in the group was started in the background and outlived its shell: it ends with the check.
+    if (signal('SIGTERM')) setTimeout(() => signal('SIGKILL'), KILL_AFTER_MS).unref();
+    let unsaved: string | undefined;
+    if (produces[0]) {
+      try {
+        mkdirSync(ctx.artifactsDir, { recursive: true }); // the check may have cleaned it away (git clean -fdx)
+        writeFileSync(artifactPath(ctx.artifactsDir, produces[0]), tail);
+      } catch (e) {
+        unsaved = `cannot save the output: ${(e as Error).message}`;
+      }
+    }
+    const last = tail.split('\n').findLast((l) => l.trim());
+    if (last) ctx.show(`-- ${run.step}: last output: ${last.trim().slice(0, 300)}`);
+    const error = stopReason ?? unsaved ?? setupFailure(code, sig, exec);
+    if (error) return finish({ costUsd: 0, error }, code);
+    const end: RunEnd = { costUsd: 0, outcome: code === 0 ? 'pass' : 'fail' };
+    if (code !== 0 && tail.trim()) end.fingerprint = fingerprint(tail);
+    finish(end, code);
+  };
+  // The check is over when its shell exits. Output written before that drains in a moment; a background
+  // command still holding the pipes after it would keep them open, so the end does not wait for them.
+  let drain: NodeJS.Timeout | undefined;
+  child.on('exit', (code, sig) => (drain = setTimeout(() => over(code, sig), DRAIN_MS)));
+  child.on('close', (code, sig) => {
+    clearTimeout(drain);
+    over(code, sig);
+  });
+
+  /** False when the group has already gone. */
+  const signal = (sig: NodeJS.Signals): boolean => {
+    try {
+      if (exec) return child.kill(sig);
+      if (child.pid) process.kill(-child.pid, sig);
+      return child.pid !== undefined;
+    } catch {
+      return false;
+    }
+  };
+  return {
+    ended,
+    stop(reason = 'stopped') {
+      if (done || stopReason) return;
+      stopReason = reason;
+      signal('SIGTERM');
+      killer = setTimeout(() => signal('SIGKILL'), KILL_AFTER_MS);
+    },
+    kill() {
+      signal('SIGKILL');
+    },
+  };
+}
+
+/** The verdict set_outcome wrote, when it wrote a valid one. */
+function readOutcome(file: string): { outcome: Outcome; reason?: string } | undefined {
+  try {
+    const v = JSON.parse(readFileSync(file, 'utf8')) as { outcome?: unknown; reason?: unknown };
+    if (v.outcome === 'pass' || v.outcome === 'fail') return { outcome: v.outcome, ...(typeof v.reason === 'string' && v.reason && { reason: v.reason }) };
+  } catch {
+    // no verdict reported
+  }
+  return undefined;
+}
+
+/** True when `path` was written at or after `since`: a copy left by an earlier attempt does not count. */
+function writtenSince(path: string, since: number): boolean {
+  try {
+    return statSync(path).mtimeMs >= since;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Runs one attempt of an agent step: inputs that exist go in the prompt, the rest are named as missing; the
+ * verdict comes from set_outcome, else the provider's result; an output this run did not write is missing.
+ * `verdict`: the step's routes or gate use the outcome; without it, set_outcome is not offered and no outcome kept.
+ * `capUsd`: the most this run may spend, what the flow's budget has left; the step's own `budget_usd` if lower.
+ */
+export function execAi(config: RunConfig, run: RunCommand, produces: string[], ctx: ExecContext, opts: { verdict?: boolean; capUsd?: number } = {}): StepRun {
+  const verdict = opts.verdict ?? true;
+  let stopReason: string | undefined;
+  let agent: AgentRun | undefined;
+  let agentPid: number | undefined;
+  /** Withdraws the owner's open approval questions once the run is stopped or over. */
+  const approving = new AbortController();
+  const ended = (async (): Promise<RunEnd> => {
+    let logger: ReturnType<typeof runLog> | undefined;
+    const log: Log = (kind, body) => logger?.log(kind, body);
+    // The broker calls these from its own code, where a throw would go unhandled: they log best effort.
+    const quietly: Log = (kind, body) => {
+      try {
+        log(kind, body);
+      } catch {
+        // the result line, or the host's next state write, reports the disk trouble
+      }
+    };
+    // In a box that keeps its own disk, the verdict comes back with the artifacts; the run folder never goes in.
+    const keptOutcome = ctx.pull ? join(ctx.artifactsDir, '.outcomes', `${runName(run)}.json`) : join(ctx.logDir, `${runName(run)}.outcome.json`);
+    let outcomeFile = keptOutcome;
+    let tmp: string | undefined;
+    let hostDir: string | undefined;
+    let tunnel: { close(): void } | undefined;
+    let broker: Awaited<ReturnType<typeof startBroker>> | undefined;
+    const noRun = (error: string): RunEnd => {
+      const result: RunResult = { usage: ZERO_USAGE, exitCode: 1, error };
+      log('result', { result });
+      return { costUsd: 0, error };
+    };
+    try {
+      let spec: RunSpec;
+      try {
+        logger = runLog(ctx, run);
+        // Short and real: a Unix socket path is limited to about 104 characters, and /tmp is a link on macOS.
+        tmp = realpathSync(mkdtempSync('/tmp/lr-'));
+        ctx.temps?.add(tmp);
+        // In a sandbox the shim reaches the broker over TCP: a Unix socket cannot cross Docker Desktop's VM.
+        // In an OpenSandbox box it reaches it through the relay's tunnel: the box cannot dial this machine at all.
+        const token = ctx.sandbox && !ctx.pull && randomBytes(24).toString('hex');
+        // A container sees the run folder read-only: the verdict is written in tmp and kept in the run folder after.
+        if (token) outcomeFile = join(tmp, 'outcome.json');
+        if (ctx.pull) hostDir = realpathSync(mkdtempSync('/tmp/lr-h-')); // apart from tmp, which is copied into the box
+        broker = await startBroker(token ? { token } : join(hostDir ?? tmp, 'ask.sock'), ctx.answer, {
+          onQuestion: (questions, batch) => quietly('question', { batch, questions }),
+          onAnswer: (answers, batch) => quietly('answer', { batch, answers }),
+          onWithdrawn: (batch, shown) => {
+            quietly('withdrawn', { batch });
+            ctx.show(shown ? WITHDRAWN : WITHDRAWN_QUEUED);
+          },
+          onDone: () => {},
+          onInterrupt: ctx.onInterrupt,
+        });
+        const outcome: Record<string, string> = verdict ? { LAMPROOM_OUTCOME_FILE: outcomeFile } : {};
+        if (ctx.pull) {
+          if (verdict) mkdirSync(dirname(outcomeFile), { recursive: true });
+          const shim = ctx.sandbox!({}).mapPath?.(SHIM_ENTRY) ?? SHIM_ENTRY;
+          spec = await withAsking(config, join(tmp, 'ask.sock'), tmp, outcome, 'node', shim);
+          const plugins = (spec.capabilities ?? []).flatMap((c) => (c.mount.kind === 'plugin_dir' && !inside(tmp!, c.mount.path) ? [c.mount.path] : []));
+          const exec = ctx.sandbox!({ online: true, tmpDir: tmp, mounts: plugins });
+          tunnel = await exec.tunnel!(join(tmp, 'ask.sock'), join(hostDir!, 'ask.sock'));
+          spec.exec = exec;
+        } else if (token) {
+          spec = await withAsking(config, `host.docker.internal:${broker.port}`, tmp, { ...outcome, LAMPROOM_ASK_TOKEN: token }, 'node');
+        } else {
+          spec = await withAsking(config, join(tmp, 'ask.sock'), tmp, outcome);
+        }
+        if (ctx.sandbox && !ctx.pull) {
+          // Lamproom's own code (the ask_user shim, OpenCode's guard plugin) and the step's plugins, at their host paths.
+          const plugins = (spec.capabilities ?? []).flatMap((c) => (c.mount.kind === 'plugin_dir' && !inside(tmp!, c.mount.path) ? [c.mount.path] : []));
+          spec.exec = ctx.sandbox({ online: true, tmpDir: tmp, mounts: [LAMPROOM_ROOT, ctx.logDir, ...plugins] });
+        }
+        // A local model's provider, pointed at Ollama from where the step runs, known only now that spec.exec is.
+        const native = config.adapter === 'opencode' && ctx.opencodeConfig?.(spec.model, spec.exec?.hostName);
+        if (native) spec.capabilities = [...(spec.capabilities ?? []), { id: 'ollama', provider: 'opencode', mount: { kind: 'native', config: native } }];
+      } catch (e) {
+        return noRun(`cannot set up the run: ${(e as Error).message}`);
+      }
+      const ref = (type: string) => ({ type, path: artifactPath(ctx.artifactsDir, type) });
+      const missing = missingInputs(run, ctx);
+      // New objects: the config's own prompt and guards are shared by every attempt.
+      const preamble =
+        spec.prompt.preamble +
+        (run.note ? `\n\nA person's note for this attempt: ${run.note}` : '') +
+        (missing.length ? `\n\nMissing inputs (an earlier step did not write them): ${missing.join(', ')}` : '');
+      // Absent, not empty, when nothing is recalled: the prompt is then exactly the six parts.
+      const memory = ctx.recall?.(run.step, `${preamble}\n${spec.prompt.template ?? ''}`);
+      spec.prompt = { ...spec.prompt, preamble, inputs: run.inputs.filter((type) => !missing.includes(type)).map(ref), outputs: produces.map(ref), ...(memory && { memory }) };
+      spec.guards = { ...spec.guards, writeRoots: [...(spec.guards?.writeRoots ?? []), ctx.artifactsDir] };
+      if (ctx.approve) {
+        const approve = ctx.approve;
+        // The run's own outputs pass: its artifacts folder is Lamproom's, already a write root of every step.
+        spec.approve = (call) =>
+          call.kind === 'edit' && inside(ctx.artifactsDir, resolve(spec.cwd, call.path)) ? Promise.resolve(true) : approve(call, approving.signal).catch((e: unknown) => {
+            if ((e as Error).name === 'ExitPromptError') ctx.onInterrupt(); // Ctrl+C at the question
+            throw e;
+          });
+      }
+      if (opts.capUsd !== undefined) spec.limits = { ...spec.limits, maxBudgetUsd: Math.min(spec.limits?.maxBudgetUsd ?? Infinity, opts.capUsd) };
+      log('start', { step: run.step, attempt: run.attempt, adapter: config.adapter, config: spec });
+      if (stopReason) return noRun(stopReason);
+
+      const startedAt = Date.now();
+      const launch = () => {
+        agent = ctx.makeProvider(config.adapter).launch(spec);
+        // To stop it, should this host die first; `started` tells it from a later process given the same pid.
+        agent.pid.then((pid) => {
+          agentPid = pid;
+          quietly('pid', { pid, started: processStart(pid) });
+        }, () => {});
+        return agent;
+      };
+      const { result, failedTools, last } = await streamRun(launch, log, ctx.show);
+      // Its own outputs and verdict only, before anything below reads them: other files may be newer here.
+      await ctx.pull?.([...produces.map((type) => artifactPath(ctx.artifactsDir, type)), ...(verdict ? [outcomeFile] : [])]);
+      await broker.close(); // withdraw any question still open, so the log ends with the result
+      broker = undefined;
+      log('result', { result, ...(stopReason && { error: stopReason }) }); // why the host stopped it, if it did
+      summaryLines(failedTools, last).forEach((l) => ctx.show(l));
+
+      // A run cut off before its result has its running totals; Claude's carry tokens but no price yet.
+      const { usage } = result;
+      const tokens = usage.input + usage.output + usage.cacheRead + usage.cacheWrite;
+      const costUsd = usage.costUsd ?? (tokens ? null : 0);
+      // OpenCode reports 0 for a model it has no price for, so limits.budget_usd can never stop it. A local model is really free.
+      if (config.adapter === 'opencode' && costUsd === 0 && tokens)
+        ctx.show(isLocal(config.spec.model) ? `-- ${run.step}: ${config.spec.model} runs locally at $0, so only limits.max_turns or a timeout stops it` : `-- ${run.step}: no price for ${config.spec.model}: its cost shows as $0, and limits.budget_usd cannot stop it`);
+      const error = stopReason ?? result.error ?? (result.exitCode !== 0 ? `exit code ${result.exitCode}` : undefined);
+      if (error) return { costUsd, error };
+      const end: RunEnd = { costUsd };
+      if (outcomeFile !== keptOutcome && existsSync(outcomeFile)) copyFileSync(outcomeFile, keptOutcome);
+      const reported = verdict ? readOutcome(keptOutcome) : undefined;
+      if (reported) Object.assign(end, reported);
+      else if (verdict && result.outcome) end.outcome = result.outcome;
+      const unwritten = produces.filter((type) => !writtenSince(artifactPath(ctx.artifactsDir, type), startedAt));
+      if (unwritten.length) end.missing = unwritten;
+      return end;
+    } finally {
+      approving.abort();
+      tunnel?.close();
+      await broker?.close();
+      logger?.close();
+      if (hostDir) rmSync(hostDir, { recursive: true, force: true });
+      if (tmp) {
+        rmSync(tmp, { recursive: true, force: true });
+        ctx.temps?.delete(tmp);
+      }
+    }
+  })().catch((e: unknown): RunEnd => {
+    agent?.stop(); // whatever failed, the agent must not go on unwatched
+    return { costUsd: 0, error: e instanceof Error ? e.message : String(e) };
+  });
+  return {
+    ended,
+    stop(reason = 'stopped') {
+      stopReason ??= reason;
+      approving.abort();
+      agent?.stop();
+    },
+    kill() {
+      // No pid here: the agent runs in a box, which only its provider can reach.
+      if (agentPid === undefined || agentPid <= 0) return agent?.stop();
+      try {
+        process.kill(agentPid, 'SIGKILL');
+      } catch {
+        // already gone
+      }
+    },
+  };
+}

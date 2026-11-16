@@ -4,7 +4,7 @@
 
 **Goal:** A project's *Escalation* setting (`{ channel, nudgeMin }`) stops being stored-and-ignored. A question a run
 asks the page, left unanswered for `nudgeMin` minutes, is posted to the project's Slack channel; it can be answered
-there (an **Answer** button opens a modal) as well as in FlowBoard, the first answer wins, and the Slack message is
+there (an **Answer** button opens a modal) as well as in Lamproom, the first answer wins, and the Slack message is
 repainted when the question is answered anywhere or stops waiting. A project's monthly budget alert and cap are posted
 once each per month. Alex's decision: *"Answer in Slack too"*, over Socket Mode, as there is no public URL.
 
@@ -21,8 +21,8 @@ The page's answer route tells the escalation module, which repaints at once. Run
 Next 16 (`instrumentation.ts`, route handlers) + TanStack Query + shadcn/ui + lucide-react. Slack Web API
 (`auth.test`, `apps.connections.open`, `chat.postMessage`, `chat.update`, `views.open`), Socket Mode, Block Kit.
 
-**Spec:** `docs/old/PRD.MD` §10 (lines 459-489), `docs/FlowBoard/Escalation And Notifications/` (Overview, Slack
-Adapter, Notifier Port, Escalation Threshold), `docs/FlowBoard/Human In The Loop/Escalation To Chat.md`, the
+**Spec:** `docs/old/PRD.MD` §10 (lines 459-489), `docs/Lamproom/Escalation And Notifications/` (Overview, Slack
+Adapter, Notifier Port, Escalation Threshold), `docs/Lamproom/Human In The Loop/Escalation To Chat.md`, the
 controller's brief of 2026-11-15 (defaults 1-11) and Alex's decision *"Answer in Slack too"*.
 
 **Not in this plan:** Discord, Google Chat, email, webhook and desktop channels (they stay *coming soon*); the
@@ -32,7 +32,7 @@ one adapter (YAGNI: one channel, one module); undo; per-person routing; posting 
 
 ## Global Constraints
 
-- All paths are under `code/flowboard/` unless they start with `docs/`. Run commands from `code/flowboard/`.
+- All paths are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
 - Branch `feature/slack-escalation`, cut from `feature/knowledge-assets` at `87f0f70` in
   `.claude/worktrees/slack-escalation`. Never merge (except `git merge feature/knowledge-assets` when asked), never push.
 - No new npm dependencies. Socket Mode uses Node's global `WebSocket`; tests use a hand-written RFC 6455 server.
@@ -54,18 +54,18 @@ one adapter (YAGNI: one channel, one module); undo; per-person routing; posting 
 - Light only, zero radius, house tokens, Lucide icons, pages outside `.fd`, test locators scoped to `main:visible`.
   Spend no money: no real agent runs; hand-made run folders.
 - Copy, exact:
-  - console, no token: `-- escalation: <project>: <run> asks "<first prompt, 80 chars>"; Slack is not connected, so it waits in FlowBoard`
-  - message header: `FlowBoard: a question is waiting`; context: `<project> · run <run> · <step>`
-  - buttons: **Answer** (primary), **Open in FlowBoard** (link to `<address>/runs?run=<run>`)
-  - modal title `Answer FlowBoard`, submit `Send`, cancel `Cancel`
-  - repaint: `Answered in Slack by <user>` / `Answered in FlowBoard` / `Answered in the terminal`, then one line per
+  - console, no token: `-- escalation: <project>: <run> asks "<first prompt, 80 chars>"; Slack is not connected, so it waits in Lamproom`
+  - message header: `Lamproom: a question is waiting`; context: `<project> · run <run> · <step>`
+  - buttons: **Answer** (primary), **Open in Lamproom** (link to `<address>/runs?run=<run>`)
+  - modal title `Answer Lamproom`, submit `Send`, cancel `Cancel`
+  - repaint: `Answered in Slack by <user>` / `Answered in Lamproom` / `Answered in the terminal`, then one line per
     question `<prompt>: <answer>` (`Yes`/`No`, option labels joined `, `, `skipped`); `No longer waiting: the run ended`
-  - modal or click after the fact: `Already answered in <Slack|FlowBoard|the terminal>.` / `No longer waiting.`
+  - modal or click after the fact: `Already answered in <Slack|Lamproom|the terminal>.` / `No longer waiting.`
   - number input not a number: `a number, like 3 or 2.5`
   - budget alert: `<project> has spent <pct>% of its $<cap> for <Month YYYY>.`
   - budget cap, pause: `<project> has spent $<spent> of its $<cap> for <Month YYYY>; new runs are paused until <Next Month YYYY>.`
   - budget cap, ask: `<project> has spent $<spent> of its $<cap> for <Month YYYY>; new runs ask first, and Start anyway is on the runs page: <address>/runs`
-  - channel problem: `Slack: <channel>: <why>` with why `the bot is not in the channel; invite it with /invite @FlowBoard`
+  - channel problem: `Slack: <channel>: <why>` with why `the bot is not in the channel; invite it with /invite @Lamproom`
     (`not_in_channel`), `no such channel` (`channel_not_found`), `the channel is archived` (`is_archived`), else Slack's error code
 
 ## Review Focus
@@ -105,7 +105,7 @@ one adapter (YAGNI: one channel, one module); undo; per-person routing; posting 
 - [ ] **Step 1: Failing tests**: `the OpenRouter key and Slack's tokens keep each other` (save OpenRouter, save both Slack,
   remove OpenRouter → Slack's still read; file mode 0o600; remove Slack → file gone); `a Slack token must look like one`
   (`saveSlackTokens(d, { bot: 'sk-x' })` → error naming `xoxb-`); `testSlack asks auth.test with the bot token` (fake answers
-  `{ ok: true, team: 'Acme', team_id: 'T1', user: 'flowboard' }` → `{ ok: true, team: 'Acme', teamId: 'T1', bot: 'flowboard' }`;
+  `{ ok: true, team: 'Acme', team_id: 'T1', user: 'lamproom' }` → `{ ok: true, team: 'Acme', teamId: 'T1', bot: 'lamproom' }`;
   `invalid_auth` → `{ ok: false, error: 'Slack does not know this bot token (invalid_auth)' }`; a closed port → `Slack did not answer`).
 - [ ] **Step 2:** Run `node --test packages/cli/test/slack.test.ts packages/cli/test/openrouter.test.ts`; expect FAIL (no module).
 - [ ] **Step 3:** Implement `secrets.ts` (read-modify-write through `writeJsonFile(…, 0o600)`), the `slack.ts` functions above, `fake-slack.ts`.
@@ -155,14 +155,14 @@ one adapter (YAGNI: one channel, one module); undo; per-person routing; posting 
     multi → `multi_static_select`; text → `plain_text_input` (multiline); number → `plain_text_input`; option values are the index)
   - `answersFromView(ask: PageAsk, values: Record<string, Record<string, any>>): { answers: Answers } | { errors: Record<string, string> }`
   - `closedMessage(a: { project: string; run: string; ask: PageAsk; by: Where | null; answers?: Answers; slackUser?: string }): { text: string; blocks: object[] }`
-    (`Where = 'Slack' | 'FlowBoard' | 'the terminal'`; `by: null` → *No longer waiting: the run ended*; no actions block)
+    (`Where = 'Slack' | 'Lamproom' | 'the terminal'`; `by: null` → *No longer waiting: the run ended*; no actions block)
   - `noticeModal(text: string): object` (a view with no submit)
   - `stepOf(ask: PageAsk): string` (`-- review asks:` → `review`; a gate's empty heading → the prompt up to its first `:`)
   - `clip(s: string, n: number): string`; `escapeMrkdwn(s: string): string`
 
 - [ ] **Step 1: Failing tests**: `the message is plain text with an Answer button and a link` (header copy; context
   `Scratch · run 2026-11-15T10-00-00-delivery · review`; each question a `plain_text` section with its options listed;
-  actions `Answer` primary with value `<run>/<id>` and `Open in FlowBoard` url `http://localhost:3000/runs?run=…`);
+  actions `Answer` primary with value `<run>/<id>` and `Open in Lamproom` url `http://localhost:3000/runs?run=…`);
   `hostile text is cut and never mrkdwn` (5000-char prompt → section text ≤ 3000; `<!channel>` in a label appears
   only in `plain_text` objects; fallback `text` contains `&lt;!channel&gt;`; no block of type `mrkdwn` anywhere;
   every `text.text` within its limit); `the modal holds every question` (5 kinds → radio Yes/No, radio for 3 options,
@@ -191,7 +191,7 @@ one adapter (YAGNI: one channel, one module); undo; per-person routing; posting 
   - store `<dataDir>/escalations.json`: `{ asks: Record<"<run>/<id>", Escalated>; budget: Record<"<projectId>/<month>", { alert?: true; cap?: true }>; problems: Record<channel, string> }`,
     `Escalated = { project: string; channel: string; slackChannel?: string; ts?: string; triedAt: string; error?: string; closed?: { by: Where | null; at: string; answers?: Answers; slackUser?: string } }`
   - `escalationTick(dataDir, runsDir, o?: { now?: number; base?: string; log?: (l: string) => void; address?: string }): Promise<void>`
-  - `noteAnswered(dataDir, runsDir, run, id, answers: Answers, by: 'FlowBoard' | 'Slack', o?: { slackUser?: string; base?: string }): Promise<void>`
+  - `noteAnswered(dataDir, runsDir, run, id, answers: Answers, by: 'Lamproom' | 'Slack', o?: { slackUser?: string; base?: string }): Promise<void>`
   - `onInteraction(dataDir, runsDir, payload: any, base?): Promise<object | undefined>` (Socket Mode's handler)
   - `slackProblems(dataDir, channel: string): string[]` (the copy's channel problem line, for the project page)
   - `readEscalations(dataDir)` for the pages.
@@ -205,22 +205,22 @@ one adapter (YAGNI: one channel, one module); undo; per-person routing; posting 
 
 - [ ] **Step 1: Failing tests** (fake Slack from Task 1; hand-made run folders with `host.json` `{ pid: process.pid, page: true }`,
   `state.json` `{ status: 'running' }` and an `asks/<id>.json`):
-  - `an ask is posted once it has waited nudgeMin, once` (at 4 min: no call; at 5 min: one `chat.postMessage` to `#flowboard`
+  - `an ask is posted once it has waited nudgeMin, once` (at 4 min: no call; at 5 min: one `chat.postMessage` to `#lamproom`
     with `unfurl_links: false`; next tick: none; store has `{ slackChannel: 'C1', ts }`);
   - `a project's nudgeMin, changed while waiting, applies` (override `nudgeMin: 10` → not posted at 5 min, posted at 10);
   - `without a token the ask is logged once and posted when a token appears` (one log line with the copy; second tick: none;
     after `saveSlackTokens` and 60 s: posted);
   - `a paused or ended run does not escalate` (dead pid → no post);
   - `Slack down or not_in_channel: recorded, retried a minute later, never thrown` (`chat.postMessage` → `not_in_channel`
-    → `slackProblems(d, '#flowboard')` = `['Slack: #flowboard: the bot is not in the channel; invite it with /invite @FlowBoard']`;
+    → `slackProblems(d, '#lamproom')` = `['Slack: #lamproom: the bot is not in the channel; invite it with /invite @Lamproom']`;
     a tick 30 s later: no call; 60 s: retried; success clears the problem; a closed port: no throw);
   - `Answer opens the modal; a submission writes the answer, repaints, and a second gets already answered`
     (`block_actions` → `views.open` with `trigger_id`; `view_submission` → answers file written as `answerAsk` writes it,
     `chat.update` with `Answered in Slack by alex`, returns `undefined` (modal closes); a second submission → returns
     `{ response_action: 'update', view: noticeModal('Already answered in Slack.') }`);
   - `a number that is not a number keeps the modal open` (→ `{ response_action: 'errors', errors: { q0: … } }`, no file);
-  - `the page's answer repaints the message` (`noteAnswered(…, 'FlowBoard')` → `chat.update` `Answered in FlowBoard`; a late
-    **Answer** click → `views.open` with `Already answered in FlowBoard.`);
+  - `the page's answer repaints the message` (`noteAnswered(…, 'Lamproom')` → `chat.update` `Answered in Lamproom`; a late
+    **Answer** click → `views.open` with `Already answered in Lamproom.`);
   - `a gone ask repaints: terminal while alive, no longer waiting once the run ended` (both cases, then no further calls);
   - `the budget is posted once at the alert and once at the cap` (spend 85% → one alert copy; again: none; 100% with
     `onLimit: 'ask'` → the ask copy with `http://localhost:3000/runs`; a new month → alert again);
@@ -251,7 +251,7 @@ one adapter (YAGNI: one channel, one module); undo; per-person routing; posting 
   `removeSlack` + `refresh()` → `state()` is `off`).
 - [ ] **Step 2:** Run; expect FAIL.
 - [ ] **Step 3:** Implement; `instrumentation.ts` calls it beside `startScheduler`; the answer route calls
-  `void noteAnswered(dataDir(), runsDir(), run, id, picked, 'FlowBoard')` after a successful `answerAsk` (`answerAsk` now
+  `void noteAnswered(dataDir(), runsDir(), run, id, picked, 'Lamproom')` after a successful `answerAsk` (`answerAsk` now
   returns nothing on success, so the route passes the answers it validated).
 - [ ] **Step 4:** Rerun; `pnpm typecheck:packages`; expect PASS.
 - [ ] **Step 5:** Commit `feat(escalation): the Next server keeps Slack connected and checks every 15 seconds`.
@@ -271,12 +271,12 @@ one adapter (YAGNI: one channel, one module); undo; per-person routing; posting 
 - `slackQuery`, `saveSlackTokens`, `removeSlackTokens`, `testSlackTokens` in `app/projects/api.ts`.
 - The Connections page: two password inputs (*Bot token*, *App-level token*), each showing only *set* or *not set*;
   **Save**, **Test** (workspace and bot name), **Remove**; a status line (*Connected to <team>* / *Connecting…* /
-  *Not connected: <error>* / *Not connected: paste both tokens*); the problem lines; the *FlowBoard address* field (saved
+  *Not connected: <error>* / *Not connected: paste both tokens*); the problem lines; the *Lamproom address* field (saved
   as the app's `address`); a link to the setup note's manifest. The project escalation footnote becomes
   *Slack is connected: a question waiting this long is posted to the channel, and can be answered there.* or
   *Slack is not connected (Settings → Connections → Escalation channels): waiting questions are only logged.*
 
-- [ ] **Step 1: Failing test** in `settings.test.ts`: `the FlowBoard address is an app setting` (default; `updateAppSettings({ address: 'ftp://x' })` → 400 with the copy).
+- [ ] **Step 1: Failing test** in `settings.test.ts`: `the Lamproom address is an app setting` (default; `updateAppSettings({ address: 'ftp://x' })` → 400 with the copy).
 - [ ] **Step 2:** Run; expect FAIL. **Step 3:** Implement the setting, route, client functions, pages.
 - [ ] **Step 4:** `pnpm typecheck:packages`, `npx tsc --noEmit -p .`, `pnpm test:app`; then a browser check on a dev server
   (scratch data and runs dirs, `SLACK_API_URL` at a fake Slack): paste tokens → *set*, **Test** → workspace name,
@@ -286,9 +286,9 @@ one adapter (YAGNI: one channel, one module); undo; per-person routing; posting 
 
 ### Task 7: Docs
 
-- [ ] Update `docs/FlowBoard/Projects/Project Settings.md` (Escalation row), the *Status* sections of
+- [ ] Update `docs/Lamproom/Projects/Project Settings.md` (Escalation row), the *Status* sections of
   `Escalation And Notifications Overview.md` and `Slack Adapter.md` (and the Index if it says not built), `Projects Index.md`;
-  write `docs/FlowBoard/Projects/Slack Escalation Handoff.md` (how it works, the Slack app manifest and setup steps, what
+  write `docs/Lamproom/Projects/Slack Escalation Handoff.md` (how it works, the Slack app manifest and setup steps, what
   was checked, decisions open to review, rulings, known problems). Commit `docs(projects): Slack escalation is built`.
 
 ## Decisions open to Alex's review
@@ -298,6 +298,6 @@ one adapter (YAGNI: one channel, one module); undo; per-person routing; posting 
 | 1 | Anyone in the channel who can click may answer | Single-user app; Socket Mode only receives the app's own workspace | Check `payload.user.id` against a saved list of Slack user ids |
 | 2 | Gates (verdict, escalation, run failed) escalate like agents' questions | They reach the page through the same asks files | Skip asks whose heading is empty |
 | 3 | The server checks every 15 s; a question escalates up to 15 s late and a terminal answer repaints up to 15 s late | No queue, files only | A file watcher on the runs folder |
-| 4 | An answer typed in the terminal repaints as *Answered in the terminal*, with no summary | The host deletes the ask and answer files and logs nothing FlowBoard can read | Have run-flow write its answers to the run's log |
+| 4 | An answer typed in the terminal repaints as *Answered in the terminal*, with no summary | The host deletes the ask and answer files and logs nothing Lamproom can read | Have lr-run-flow write its answers to the run's log |
 | 5 | A post that failed is retried each minute while the question waits | A missing invite is fixed by hand, then it just works | Back off longer |
 | 6 | Budget messages go to the project's escalation channel | One channel setting per project | A separate budget channel setting |

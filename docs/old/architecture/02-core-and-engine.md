@@ -69,7 +69,7 @@ The hexagon core: data model, flow definition, execution state machine, board pr
   `shell` is in v3 scope because it is the only executor whose verdict does not come from a model (PRD §7 "Shell
   steps"). The wider idea: generalize `step_defs.kind` (`skill|agent|shell|manual`) into a **StepExecutor interface**. An AI invocation is one executor;
   a shell command, an HTTP call, a pure transform, or a human task are others — each producing/consuming the
-  same artifact contract. This turns FlowBoard into a general workflow engine that *ships* AI executors rather
+  same artifact contract. This turns Lamproom into a general workflow engine that *ships* AI executors rather
   than *being* one. Nearly free given the DAG already exists; widens the engine's core interface, so decide
   before hardening.
 

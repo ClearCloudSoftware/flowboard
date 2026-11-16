@@ -1,6 +1,6 @@
 # Mockups
 
-Clickable mockups of FlowBoard screens, built before the code so the shape of a
+Clickable mockups of Lamproom screens, built before the code so the shape of a
 module can be argued about while it's still cheap to change.
 
 Each one is a **single self-contained `.html` file** — no build step, no package
@@ -96,7 +96,7 @@ browser, or run `python3 -m http.server` in this folder.
 
 - **[`capability-library.html`](./capability-library.html)** — the skills, agents
   and packs that steps draw on (the *Capability library* group in
-  [`flowboard-ideation.drawio`](../flowboard-ideation.drawio)). A capability is
+  [`lamproom-ideation.drawio`](../lamproom-ideation.drawio)). A capability is
   the logical thing; a **pack is one packaging of it for one provider**, so each
   entry shows its Claude and Codex coverage and warns that a step can't use a
   capability with no pack for the provider it runs on. Also: the tools each one
@@ -120,13 +120,13 @@ browser, or run `python3 -m http.server` in this folder.
 - **New project, three directions to choose from.** Each runs the same flow:
   project type (only *Software* for now) → where the code lives (GitHub now;
   GitLab, Bitbucket, Azure Repos and a local folder marked *coming soon*) →
-  connect GitHub and pick a repository → clone it into FlowBoard's projects
-  folder (`~/FlowBoard/projects/<repo>`) or a folder you name. A simulated clone
-  streams git's progress, then FlowBoard's set-up: base branch, `.flowboard/`
+  connect GitHub and pick a repository → clone it into Lamproom's projects
+  folder (`~/Lamproom/projects/<repo>`) or a folder you name. A simulated clone
+  streams git's progress, then Lamproom's set-up: base branch, `.lamproom/`
   kept out of commits, the check command found from the repo's manifest.
   Repos that are already a project can't be picked, and a taken default folder
   gets a `-2`.
-  - **[`new-project-wizard.html`](./new-project-wizard.html)**: **chosen, built** (phases 1–2, 2026-11-12: the wizard on `gh` with a real clone, and the settings stored with where each comes from; see [Projects Index](../FlowBoard/Projects/Projects%20Index.md)). A
+  - **[`new-project-wizard.html`](./new-project-wizard.html)**: **chosen, built** (phases 1–2, 2026-11-12: the wizard on `gh` with a real clone, and the settings stored with where each comes from; see [Projects Index](../Lamproom/Projects/Projects%20Index.md)). A
     dialog over the projects list with a clickable step rail: Type → Source →
     Repository → **Settings** → Clone. What the repo fixes is shown, not asked:
     the name and `/p/` address come from the repo, the base branch follows
@@ -135,7 +135,7 @@ browser, or run `python3 -m http.server` in this folder.
     override, red is an error); an *Overview* page shows them all. Each is
     inherited from the app or the project type, with an *override* switch:
     sandbox (repo trust: trusted / normal container / untrusted gVisor, plus
-    resource limits kept in `.flowboard.yaml`), budget ($ a month, alert, then
+    resource limits kept in `.lamproom.yaml`), budget ($ a month, alert, then
     pause or ask), escalation (Slack channel, wait), memory (project scope),
     knowledge assets (both on for Software: Serena's symbol index, local and
     free; graphify's code graph, with a standing ochre warning that it sends
@@ -144,7 +144,7 @@ browser, or run `python3 -m http.server` in this folder.
     analysis agent after cloning, from the repo's files, and accepted on the
     done screen or left for the project page. The clone goes, by default,
     into your projects folder (an app setting) or, until you set one,
-    FlowBoard's `~/FlowBoard/projects`; *Somewhere else* takes a folder for
+    Lamproom's `~/Lamproom/projects`; *Somewhere else* takes a folder for
     this project only (typed or picked from folders used before), optionally
     saved as your projects folder for new projects. A taken folder gets a `-2`. *Open* adds the project's card
     to the list behind. Opens on Settings for a Python (uv) repo with a budget
@@ -162,12 +162,12 @@ browser, or run `python3 -m http.server` in this folder.
 
 - **[`workspaces.html`](./workspaces.html)**: every task workspace in one
   project's repo. A workspace is a git worktree at
-  `.flowboard/worktrees/task-<id>` on branch `fb/task-<id>`. Each row shows the
+  `.lamproom/worktrees/task-<id>` on branch `lr/task-<id>`. Each row shows the
   branch, commits ahead of and behind `main`, uncommitted files, the last run
   and its size. Rows that need you (unmerged commits, work left by a failed run)
   sit under one ochre band. Broken rows (a plain folder in the way, a switched
   branch) show the exact fix. **Clean up** follows the rules
-  `pnpm clean-workspace` enforces: it refuses while a run holds the lock,
+  `pnpm lr-clean-workspace` enforces: it refuses while a run holds the lock,
   throws away uncommitted files only when you say so, and keeps an unmerged
   branch rather than deleting it. The running task finishes about 20 seconds in,
   and its Clean up becomes available. Every action shows its CLI line.
@@ -183,7 +183,7 @@ browser, or run `python3 -m http.server` in this folder.
   branch, or refused. It refuses while a run holds the workspace, for a bad id,
   or while the repo folder's lock is held. That last case is the point of the
   feature: in the repo folder a second run is refused, while a task workspace
-  runs alongside. Start streams run-flow's real output lines into a new run row.
+  runs alongside. Start streams lr-run-flow's real output lines into a new run row.
   Keys: `n` new run, `Esc` close, `⌘↵` start, `↑`/`↓`/`↵` pick an id.
 
 - **[`land-workspace.html`](./land-workspace.html)**: a proposal for landing
@@ -217,7 +217,7 @@ anything here overrides the skill's defaults.
 | **Depth** | Hairlines and colour fields, not shadows. |
 | **Type** | IBM Plex Mono is the primary voice (ids, steps, numbers, logs); IBM Plex Sans only for text a human wrote or reads as prose. |
 | **Motion** | 150ms `cubic-bezier(.4,0,.2,1)`, `transform`/`opacity` only, and `prefers-reduced-motion` honoured. |
-| **Data** | Mock data comes from FlowBoard's own world — real step names, real models, plausible repos, and at least one detail only this product would have. |
+| **Data** | Mock data comes from Lamproom's own world — real step names, real models, plausible repos, and at least one detail only this product would have. |
 
 Spend boldness in one place and keep everything around it quiet: in
 `monitor.html` the accent runs at full strength on exactly one element, and

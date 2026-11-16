@@ -1,16 +1,16 @@
-# Terminal ask_user for run-agent — design
+# Terminal ask_user for lr-run-agent — design
 
-Date: 2026-10-18. Branch: `feature/agent-providers`. Builds on the `run-agent` CLI (`docs/superpowers/specs/2026-10-18-yaml-run-config-design.md`, code in `code/flowboard/packages/cli/`) and the two providers in `packages/adapters/`. The Human In The Loop design it follows is in `docs/FlowBoard/Human In The Loop/` (`Ask User MCP Server.md`, `Questions.md`, `Ask Park And Resume.md`).
+Date: 2026-10-18. Branch: `feature/agent-providers`. Builds on the `lr-run-agent` CLI (`docs/superpowers/specs/2026-10-18-yaml-run-config-design.md`, code in `code/lamproom/packages/cli/`) and the two providers in `packages/adapters/`. The Human In The Loop design it follows is in `docs/Lamproom/Human In The Loop/` (`Ask User MCP Server.md`, `Questions.md`, `Ask Park And Resume.md`).
 
 ## Intent
 
-The owner wants to run skills that need their input, such as their grill-me skill, through `run-agent`. Today a run cannot ask: the prompt says there is no terminal, Claude's built-in question tool has nothing behind it, and OpenCode's is switched off. The agent guesses or ends with an unanswered question.
+The owner wants to run skills that need their input, such as their grill-me skill, through `lr-run-agent`. Today a run cannot ask: the prompt says there is no terminal, Claude's built-in question tool has nothing behind it, and OpenCode's is switched off. The agent guesses or ends with an unanswered question.
 
-The owner wants an easy terminal interface for answering, and wants the work to carry over to FlowBoard's web inbox and Slack later. FlowBoard's design already splits asking into two halves: a small tool program the agent talks to (the *shim*) and a listener that gets the answer from a human (the *broker*). This design builds the shim as FlowBoard will use it, and makes `run-agent` a terminal broker. Later the worker becomes the broker, and the shim stays unchanged.
+The owner wants an easy terminal interface for answering, and wants the work to carry over to Lamproom's web inbox and Slack later. Lamproom's design already splits asking into two halves: a small tool program the agent talks to (the *shim*) and a listener that gets the answer from a human (the *broker*). This design builds the shim as Lamproom will use it, and makes `lr-run-agent` a terminal broker. Later the worker becomes the broker, and the shim stays unchanged.
 
 ## Goals
 
-- During a `run-agent` run, the agent can ask the owner one question or a batch, and carries on with the answers in the same run.
+- During a `lr-run-agent` run, the agent can ask the owner one question or a batch, and carries on with the answers in the same run.
 - Answering in the terminal is easy (owner's words), as played back and confirmed:
   - while a question is open, event lines stop scrolling and the question stands on its own, its help text under it;
   - batches come one question at a time, labelled `question 2 of 4`;
@@ -41,9 +41,9 @@ The owner wants an easy terminal interface for answering, and wants the work to 
 
 ## Constraints
 
-- Same code rules as the rest of `packages/`: TypeScript on Node 24 type stripping, erasable syntax only, `node:test`, pnpm workspaces, commands run from `code/flowboard/`.
+- Same code rules as the rest of `packages/`: TypeScript on Node 24 type stripping, erasable syntax only, `node:test`, pnpm workspaces, commands run from `code/lamproom/`.
 - The shim never opens a database and needs no network: it talks only to the broker over a local Unix socket (`Ask User MCP Server.md`: *"It never opens the database and needs no network."*).
-- The question shape is FlowBoard's (`Questions.md`), defined once:
+- The question shape is Lamproom's (`Questions.md`), defined once:
 
   ```ts
   type QuestionKind = 'yes_no' | 'single_select' | 'multi_select' | 'text' | 'number';
@@ -60,7 +60,7 @@ The owner wants an easy terminal interface for answering, and wants the work to 
 
 ## The how, as decided
 
-### The shim: `packages/ask-user` (`@flowboard/ask-user`)
+### The shim: `packages/ask-user` (`@lamproom/ask-user`)
 
 A stdio MCP server (my call: `@modelcontextprotocol/sdk`, already in the workspace) launched by the agent's CLI. It offers two tools, as the design names them:
 
@@ -69,14 +69,14 @@ A stdio MCP server (my call: `@modelcontextprotocol/sdk`, already in the workspa
 
 Answer values: `yes_no` → boolean, `single_select` → the option's `value`, `multi_select` → an array of values, `text` → string, `number` → number; a skipped optional question → `null` (my call). The shim checks the agent's input (ids unique, select kinds have options) and returns a tool error for bad input rather than forwarding it (my call).
 
-It forwards each call over the Unix socket named by the environment variable `FLOWBOARD_ASK_SOCKET` and relays the reply (my call on the name). Protocol (my call): newline-delimited JSON, one request per connection: `{ "questions": Question[] }` → `{ "answers": {...} }` or `{ "error": "<message>" }`. The shim turns `{ error }` into a tool error and relays **any other reply verbatim** as the tool result, so the worker broker's later park reply, `{ "status": "no_answer_yet", "instruction": … }` (`Ask Park And Resume.md`), passes through without changing the shim (my call). The question and protocol types, that park reply included, live in `@flowboard/core` (`hitl/question.ts`), so the worker broker later uses the same ones.
+It forwards each call over the Unix socket named by the environment variable `LAMPROOM_ASK_SOCKET` and relays the reply (my call on the name). Protocol (my call): newline-delimited JSON, one request per connection: `{ "questions": Question[] }` → `{ "answers": {...} }` or `{ "error": "<message>" }`. The shim turns `{ error }` into a tool error and relays **any other reply verbatim** as the tool result, so the worker broker's later park reply, `{ "status": "no_answer_yet", "instruction": … }` (`Ask Park And Resume.md`), passes through without changing the shim (my call). The question and protocol types, that park reply included, live in `@lamproom/core` (`hitl/question.ts`), so the worker broker later uses the same ones.
 
-### The broker: `run-agent`
+### The broker: `lr-run-agent`
 
-For each run, `run-agent`:
+For each run, `lr-run-agent`:
 
 1. creates a private temp dir under `/tmp` and listens on `<dir>/ask.sock` (my call: macOS's default temp folder, `/var/folders/…`, is too long for the roughly 104-character Unix socket path limit);
-2. adds the shim to the run as a tool server: `RunSpec.tools = [{ name: 'flowboard', command: process.execPath, args: [<abs path to the shim's entry>], env: { FLOWBOARD_ASK_SOCKET } }]`. Both adapters already inject tool servers and always allow their tools, so a strict `allow` list cannot lock asking out (Claude: `mcp__flowboard__*`; OpenCode: config `mcp`);
+2. adds the shim to the run as a tool server: `RunSpec.tools = [{ name: 'lamproom', command: process.execPath, args: [<abs path to the shim's entry>], env: { LAMPROOM_ASK_SOCKET } }]`. Both adapters already inject tool servers and always allow their tools, so a strict `allow` list cannot lock asking out (Claude: `mcp__lamproom__*`; OpenCode: config `mcp`);
 3. on a request: holds back event lines, shows the questions one at a time as in *Goals*, then sends the answers back and prints the held lines. Requests that arrive while another is on screen (Claude's parallel tool calls, subagents) wait in a first-in-first-out queue (my call);
 4. when a request's connection closes, or the run ends, while its question is on screen or queued (a CLI time limit fired anyway, a budget or turn limit, a crash): cancels the prompt, restores the terminal, prints `-- question withdrawn: the agent stopped waiting`, and logs it, so a question never disappears silently (my call, from the anti-goal);
 5. logs `{"kind":"question","at":…,"questions":[…]}`, `{"kind":"answer","at":…,"answers":{…}}` and `{"kind":"withdrawn","at":…}` lines to the run's JSONL log (my call);
@@ -98,7 +98,7 @@ These live in the adapters, not the CLI, since any tool server that waits on a h
 So the agent always asks through `ask_user`:
 
 - OpenCode's `question` tool is already denied.
-- `run-agent` adds Claude's built-in `AskUserQuestion` to every Claude run's deny list (my call).
+- `lr-run-agent` adds Claude's built-in `AskUserQuestion` to every Claude run's deny list (my call).
 
 ### The prompt's closing line
 
@@ -118,8 +118,8 @@ skill: /grill-me
 
 - `skills:` is a list of skill folders, each an existing directory holding a `SKILL.md`. Paths follow the same rules as `plugins:` (relative to the folder the command runs from; `~/` expands). It sits alongside `plugins:`.
 - A skill's name is its folder name, and the `name:` in its `SKILL.md` frontmatter must match it, since OpenCode may load skills by that name (my call); two entries with the same name are a config error.
-- For each run, `run-agent` copies the folders into `<temp>/local/skills/<name>/`, with `<temp>` under `/tmp` and passed as its real path so the Claude provider's plugin-loaded check, which does not follow links, matches (my call) and mounts `<temp>/local` as a `plugin_dir` capability (my calls: a copy, not a link, because both CLIs handle links unreliably and the providers' plugin-loaded check ignores them; the plugin is named `local`). The temp dir is deleted when the run ends. The copy is fresh each run, so edits to the skill apply next time.
-- `skill:` may now name such a skill as `/<name>` with no colon. `run-agent` rewrites it to `/local:<name>`. A colon-less `skill` that names no `skills:` entry is a config error. `/plugin:skill` works as before.
+- For each run, `lr-run-agent` copies the folders into `<temp>/local/skills/<name>/`, with `<temp>` under `/tmp` and passed as its real path so the Claude provider's plugin-loaded check, which does not follow links, matches (my call) and mounts `<temp>/local` as a `plugin_dir` capability (my calls: a copy, not a link, because both CLIs handle links unreliably and the providers' plugin-loaded check ignores them; the plugin is named `local`). The temp dir is deleted when the run ends. The copy is fresh each run, so edits to the skill apply next time.
+- `skill:` may now name such a skill as `/<name>` with no colon. `lr-run-agent` rewrites it to `/local:<name>`. A colon-less `skill` that names no `skills:` entry is a config error. `/plugin:skill` works as before.
 - A `plugins:` entry whose folder is named `local` clashes with this and is a config error.
 
 ## Testing

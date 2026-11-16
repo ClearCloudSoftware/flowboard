@@ -185,7 +185,7 @@ html{scroll-behavior:smooth}
 </style>
 
 <header class="top">
-  <div class="brand">flowboard<em>/</em><span>library</span><em>·</em><span>field guide</span></div>
+  <div class="brand">lamproom<em>/</em><span>library</span><em>·</em><span>field guide</span></div>
   <span class="sp"></span>
   <a class="openlink" href="./capability-library.html">Open the library →</a>
 </header>
@@ -213,7 +213,7 @@ packaging of it for one agent CLI.</b> Almost everything odd about this screen f
   <h2>Anatomy</h2>
   <div class="anat" aria-label="Schematic of the capability library">
     <div class="a-b a-flex">
-      <span style="font-weight:600">flowboard/library</span>
+      <span style="font-weight:600">lamproom/library</span>
       <span style="color:var(--ink-3)">7 skills · 7 agents · 3 packs</span>
       <span style="flex:1"></span>
       <span style="color:var(--ink-3)">+ Define agent · + Install from GitHub</span>
@@ -242,7 +242,7 @@ packaging of it for one agent CLI.</b> Almost everything odd about this screen f
         <button class="pin" data-go="model" title="Jump to Capability vs pack">3</button>
       </div>
     </div>
-    <div class="a-b a-sb">17 capabilities · 1 update available · 1 used by nothing · codex packs for 7 of 17 · store ~/.flowboard/capabilities
+    <div class="a-b a-sb">17 capabilities · 1 update available · 1 used by nothing · codex packs for 7 of 17 · store ~/.lamproom/capabilities
       <button class="pin" data-go="lifecycle" title="Jump to Update &amp; remove">4</button></div>
   </div>
   <div class="legend">
@@ -344,7 +344,7 @@ packaging of it for one agent CLI.</b> Almost everything odd about this screen f
 
   <div class="scrub">
     <div class="sc-head"><span class="lbl">walkthrough</span>
-      <span style="font-size:13px;color:var(--ink-3)">installing <span class="m">acme-sec/fb-dependency-audit</span></span>
+      <span style="font-size:13px;color:var(--ink-3)">installing <span class="m">acme-sec/lr-dependency-audit</span></span>
       <span class="sc-branch">
         <button data-branch="claude" aria-pressed="true">Step runs on Claude</button>
         <button data-branch="codex" aria-pressed="false">…on Codex</button>
@@ -456,16 +456,16 @@ const COMMON = [
       Nothing matches. Clear the search or widen the filters.</div>`,
     why:'You want a step that audits the dependency tree. Search comes back empty across all three kinds, so this has to come from outside.',
     ask:'Search matches <b>name, author and description</b> together — so an empty result really does mean nothing installed covers it.' },
-  { t:'Paste the repository', stage:() => `<div class="gcode" style="white-space:normal">https://github.com/acme-sec/fb-dependency-audit</div>
+  { t:'Paste the repository', stage:() => `<div class="gcode" style="white-space:normal">https://github.com/acme-sec/lr-dependency-audit</div>
       <div style="font-family:var(--sans);font-size:13px;color:var(--ink-3);margin-top:8px">
-      FlowBoard clones the repository into its capability store, reads the manifest, and shows you what it
+      Lamproom clones the repository into its capability store, reads the manifest, and shows you what it
       found before anything is installed.</div>`,
     why:'Install from GitHub takes a URL and nothing else. The clone lands in the capability store on your machine — this is local-first, so nothing is fetched at run time.',
     ask:'<b>Nothing is written until you confirm.</b> The clone and the parse are a preview, not the install.' },
   { t:'It clones and parses', stage:() => stp('git clone into the capability store', true) +
       stp('read .claude-plugin/plugin.json and skills/*/SKILL.md', true) +
       stp('check the tools it asks for, and which providers it packages', true),
-    why:'Three checks, in order. The second is the one that matters — the manifest is what FlowBoard reads to learn what this thing is and how a step would invoke it.',
+    why:'Three checks, in order. The second is the one that matters — the manifest is what Lamproom reads to learn what this thing is and how a step would invoke it.',
     ask:'A repository that does not parse stops here. You never get a half-installed capability.' },
   { t:'What was found', stage:() => `<div style="font-family:var(--mono);font-size:12px;line-height:1.9">
       <div><span style="color:var(--ink-3);display:inline-block;width:92px">name</span><b>dependency-audit</b></div>

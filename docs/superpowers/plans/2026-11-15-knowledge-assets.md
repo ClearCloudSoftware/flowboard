@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A project's *Knowledge assets* setting (Serena on/off, graphify on/off, rebuild on push, daily or by hand)
-stops being stored-and-ignored. FlowBoard builds the maps into the repo's `.flowboard/knowledge/`, after a clone, when
+stops being stored-and-ignored. Lamproom builds the maps into the repo's `.lamproom/knowledge/`, after a clone, when
 the base branch moves, once a day or from a **Rebuild** button, and every agent step of the project's runs can use
 them: graphify's map as files, Serena as a read-only MCP server.
 
@@ -13,48 +13,48 @@ folder and starts it with `startRun` (`allowDirty`). So it gets the project's is
 through `uvx`; Normal and Untrusted in a box from the sandbox image, which now carries graphify, Serena and its language
 servers), shows in the runs list, takes the folder lock, and counts toward the monthly cap at $0. The record keeps only
 `knowledgeBuild: { run, commit }`; the pages read the rest from the run and from git (`knowledgeView`). A scheduler
-in the Next server (`instrumentation.ts`, every 10 minutes) starts the builds that are due. run-flow injects Serena
+in the Next server (`instrumentation.ts`, every 10 minutes) starts the builds that are due. lr-run-flow injects Serena
 into each agent step through `spec.tools` when the index exists, and tells each agent where graphify's report is.
 
 **Tech Stack:** TypeScript on Node 24 with type stripping, `node --test`, zod 4, Next 16 (`instrumentation.ts`) +
 TanStack Query + shadcn/ui + lucide-react; Docker image: uv 0.9.10, `graphifyy==0.7.5`, Serena v2.1.0
 (`5e4f5cd173c7ff3eed37ee3f1de6c266b937c5dc`) with its TypeScript and Python language servers.
 
-**Spec:** `docs/FlowBoard/Projects/Project Settings.md` (the *Knowledge assets* row), `docs/FlowBoard/Projects/Projects Storage.md`
-(`.flowboard/knowledge/`, stamped with the build's commit), `docs/mockups/README.md` (rebuilt when the base branch
+**Spec:** `docs/Lamproom/Projects/Project Settings.md` (the *Knowledge assets* row), `docs/Lamproom/Projects/Projects Storage.md`
+(`.lamproom/knowledge/`, stamped with the build's commit), `docs/mockups/README.md` (rebuilt when the base branch
 moves, daily or by hand), the controller's brief of 2026-11-15 and Alex's ruling *"extend the image too"*.
 
 **Not in this plan:** repomix (no setting for it); graphify's paid document extraction (`graphify extract`: only the
 free code map, `graphify update`, is built); fetching the remote to notice pushes (the base branch is the local one);
-knowledge in OpenSandbox boxes (the box holds the last commit, and `.flowboard/` is never committed); Serena for runs in
+knowledge in OpenSandbox boxes (the box holds the last commit, and `.lamproom/` is never committed); Serena for runs in
 a task worktree or a subfolder of the repo.
 
 ## Global Constraints
 
-- All paths are under `code/flowboard/` unless they start with `docs/`. Run commands from `code/flowboard/`.
+- All paths are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
 - Branch `feature/knowledge-assets`, cut from `feature/analysis-agent` at `098340e` in
   `.claude/worktrees/knowledge-assets`. Never merge, never push.
 - **A build respects isolation.** It is a run of the project through `startRun`; a cloned repo can never make it run
   on this machine, reach the network or spend money. A Normal or Untrusted build's shell step runs offline
   (`--network none`), so everything it needs is in the image. A Trusted build runs on this machine through `uvx`,
   pinned to the same versions.
-- **Nothing a repo or an agent writes decides what FlowBoard does.** The record (`projects.json`) holds the build's run
-  and commit; `stamp.json` in the repo is for agents to read, and FlowBoard never reads it back.
+- **Nothing a repo or an agent writes decides what Lamproom does.** The record (`projects.json`) holds the build's run
+  and commit; `stamp.json` in the repo is for agents to read, and Lamproom never reads it back.
 - **Serena is read-only for agents:** context `ide`, modes `planning`, `no-onboarding`, `no-memories`, and the
-  project's `project.yml` set to `read_only: true` by the build. FlowBoard's Serena config trusts no project, so a repo's
+  project's `project.yml` set to `read_only: true` by the build. Lamproom's Serena config trusts no project, so a repo's
   own `.serena/project.yml` can never run its `activation_command`.
-- **One build at a time per project:** the folder lock already refuses a second run-flow; the scheduler also skips a
+- **One build at a time per project:** the folder lock already refuses a second lr-run-flow; the scheduler also skips a
   project whose last build is still running.
-- **The shared `flowboard-cli` image is never rebuilt or retagged.** This branch builds `flowboard-cli:knowledge`
-  and points runs at it with `FLOWBOARD_IMAGE`.
+- **The shared `lamproom-cli` image is never rebuilt or retagged.** This branch builds `lamproom-cli:knowledge`
+  and points runs at it with `LAMPROOM_IMAGE`.
 - No new npm dependencies. Light only, zero radius, house tokens, Lucide icons, pages outside `.fd`, test locators
   scoped to `main:visible`. Spend no money: no real agent runs; shell-only builds are free and may run for real.
 - Copy, exact:
-  - clone log: `-- knowledge build started: run <run>`; `-- knowledge build not started: <run-flow's first line>`;
+  - clone log: `-- knowledge build started: run <run>`; `-- knowledge build not started: <lr-run-flow's first line>`;
     `-- knowledge built at <short commit>`; `-- knowledge build <failed|paused>: <reason>; the analysis starts anyway`
   - card statuses: `off`, `never built`, `building…`, `built at <short> · <when>`, `stale: <base> is at <short> now`,
     `build failed: <reason>`; button **Rebuild** (**Build** when never built)
-  - the agent's line: `FlowBoard's map of this repo's code (graphify, built at <short>; it may be older than the code): <path>/GRAPH_REPORT.md, with graph.json beside it.`
+  - the agent's line: `Lamproom's map of this repo's code (graphify, built at <short>; it may be older than the code): <path>/GRAPH_REPORT.md, with graph.json beside it.`
   - graphify on the settings page: `local, no AI calls, free` · `graphify-out/, readable by every step`
 
 ## Review Focus
@@ -63,7 +63,7 @@ a task worktree or a subfolder of the repo.
    language servers may execute repo code (a `tsconfig` plugin, a build script): that is why the build is boxed. Test:
    the Normal build's flow has no `sandbox:` of its own and so gets the project's docker box (Task 2).
 2. **A repo ships `.serena/project.yml`.** Serena prefers its configured folder when it exists; the build makes
-   `.flowboard/knowledge/serena/` first, so the repo's file is never read. Test: the command makes the folder before it
+   `.lamproom/knowledge/serena/` first, so the repo's file is never read. Test: the command makes the folder before it
    indexes (Task 2).
 3. **The scheduler loops.** A build that fails at commit X is not started again until the base moves (push) or 24 h
    pass (daily); a repo whose checked-out branch is not the base is never built by the push rule. Tests in Task 4.
@@ -76,22 +76,22 @@ a task worktree or a subfolder of the repo.
 
 **Files:**
 - Modify: `docker/Dockerfile`, `docker/README.md`, `packages/cli/src/isolation.ts` (`boxImage`)
-- Create: `docker/fb-serena.sh`, `internal/knowledge/serena_config.yml`
+- Create: `docker/lr-serena.sh`, `internal/knowledge/serena_config.yml`
 - Test: `packages/cli/test/isolation.test.ts`
 
 **Interfaces:**
-- Produces: `boxImage(): string`: `FLOWBOARD_IMAGE`, else `flowboard-cli`; `isolationFor`'s default box uses it.
-- The image: `/usr/local/bin/{uv,uvx,graphify,serena,fb-serena}`, `SERENA_HOME=/opt/serena` holding
-  `serena_config.yml` and `language_servers/` (TypeScript, Python). `fb-serena` copies the config to `/tmp/serena`
+- Produces: `boxImage(): string`: `LAMPROOM_IMAGE`, else `lamproom-cli`; `isolationFor`'s default box uses it.
+- The image: `/usr/local/bin/{uv,uvx,graphify,serena,lr-serena}`, `SERENA_HOME=/opt/serena` holding
+  `serena_config.yml` and `language_servers/` (TypeScript, Python). `lr-serena` copies the config to `/tmp/serena`
   (a box's root is read-only) and links the language servers.
 
-- [ ] **Step 1: Failing test:** with `FLOWBOARD_IMAGE=flowboard-cli:knowledge`, `isolationFor('normal', undefined, [], false)`
-  gives `image: 'flowboard-cli:knowledge'`; without it, `flowboard-cli`.
+- [ ] **Step 1: Failing test:** with `LAMPROOM_IMAGE=lamproom-cli:knowledge`, `isolationFor('normal', undefined, [], false)`
+  gives `image: 'lamproom-cli:knowledge'`; without it, `lamproom-cli`.
 - [ ] **Step 2: Run it to fail.** `node --test packages/cli/test/isolation.test.ts`
-- [ ] **Step 3: Implement**, then build: `docker build -f docker/Dockerfile -t flowboard-cli:knowledge .`
+- [ ] **Step 3: Implement**, then build: `docker build -f docker/Dockerfile -t lamproom-cli:knowledge .`
 - [ ] **Step 4: Verify the image by hand, offline, as a box runs it** (`--network none --read-only --tmpfs /tmp
   --user 1000:1000 -e HOME=/tmp`, a scratch TS + Python repo mounted): `graphify update` writes the map,
-  `fb-serena project index` indexes both languages, and an MCP `tools/list` against `fb-serena start-mcp-server
+  `lr-serena project index` indexes both languages, and an MCP `tools/list` against `lr-serena start-mcp-server
   --project … --context ide --mode planning --mode no-onboarding --mode no-memories` lists no editing, shell or memory
   writing tool.
 - [ ] **Step 5: Commit** `feat(sandbox): the box image carries graphify, Serena and its language servers`
@@ -106,10 +106,10 @@ a task worktree or a subfolder of the repo.
 
 **Interfaces:**
 - `knowledge.ts`:
-  - `SERENA_FROM`, `GRAPHIFY_FROM`, `KNOWLEDGE_DIR = '.flowboard/knowledge'`, `SERENA_ARGS` (the MCP server's args).
+  - `SERENA_FROM`, `GRAPHIFY_FROM`, `KNOWLEDGE_DIR = '.lamproom/knowledge'`, `SERENA_ARGS` (the MCP server's args).
   - `buildCommand(kn: { graphify: boolean; serena: boolean }, commit: string | null, host?: { serenaHome: string }): string`:
-    one `sh` script; `host` absent means a box (`graphify`, `fb-serena` on PATH), present means this machine (`uvx`).
-    It makes `.flowboard/knowledge/serena/` before Serena runs, sets `read_only: true`, writes `stamp.json`
+    one `sh` script; `host` absent means a box (`graphify`, `lr-serena` on PATH), present means this machine (`uvx`).
+    It makes `.lamproom/knowledge/serena/` before Serena runs, sets `read_only: true`, writes `stamp.json`
     `{ commit, builtAt, graphify, serena }`, and exits 1 when any asset asked for failed.
   - `knowledgeFlowText(command: string): string`: `budget_usd: 0`, one step `build: { shell, produces: [build], timeout_minutes: 20 }`.
   - `interface KnowledgeView { status: 'off' | 'never' | 'building' | 'built' | 'stale' | 'failed'; run?: string; commit?: string | null; tip?: string | null; builtAt?: string; error?: string }`
@@ -179,15 +179,15 @@ a task worktree or a subfolder of the repo.
 
 **Interfaces:**
 - `serenaTool(where: 'host' | 'box', repoPath: string, serenaHome: string, path?: string): ToolServer`: on this
-  machine `uvx -q --from <SERENA_FROM> serena start-mcp-server …` with `SERENA_HOME`; in a box `/usr/local/bin/fb-serena start-mcp-server …`.
+  machine `uvx -q --from <SERENA_FROM> serena start-mcp-server …` with `SERENA_HOME`; in a box `/usr/local/bin/lr-serena start-mcp-server …`.
 - A run gets Serena when its project has `knowledge.serena` on, its folder is the repo's top folder,
-  `.flowboard/knowledge/serena/project.yml` exists, and its tier is `host`, `container` or `gvisor`. It gets the
+  `.lamproom/knowledge/serena/project.yml` exists, and its tier is `host`, `container` or `gvisor`. It gets the
   graphify line when `graphify` is on and `GRAPH_REPORT.md` exists, under the same folder and tier rules.
 
 - [ ] **Step 1: Failing tests (flow-run):** a Trusted project with a built index: the agent's spec has a `serena`
   tool and the line in its preamble; with knowledge off, or no index, neither.
 - [ ] **Step 2–4:** fail, implement, pass, `pnpm test:packages`.
-- [ ] **Step 5: Commit** `feat(run-flow): agent steps get Serena and graphify's map`
+- [ ] **Step 5: Commit** `feat(lr-run-flow): agent steps get Serena and graphify's map`
 
 ### Task 6: The pages
 
@@ -203,19 +203,19 @@ a task worktree or a subfolder of the repo.
 - [ ] **Step 3:** `pnpm exec tsc --noEmit`, `pnpm test:app`, `pnpm test:packages`.
 - [ ] **Step 4: Browser check (free):** a dev server on a spare port with scratch data/runs folders; register a scratch
   repo as Trusted, **Build**: a real shell-only build on this machine (uvx), the card goes building → built; commit on
-  the base: stale; **Rebuild**. Then the same project as Normal with `FLOWBOARD_IMAGE=flowboard-cli:knowledge`: the
+  the base: stale; **Rebuild**. Then the same project as Normal with `LAMPROOM_IMAGE=lamproom-cli:knowledge`: the
   build runs in a box. Stop the server.
 - [ ] **Step 5: Commit** `feat(projects): the knowledge card, with Rebuild; graphify's code map is free`
 
 ### Task 7: Docs
 
-- Modify: `docs/FlowBoard/Projects/Project Settings.md` (the *Knowledge assets* row), `Projects Index.md`, `docker/README.md`
-- Create: `docs/FlowBoard/Projects/Knowledge Assets Handoff.md`
+- Modify: `docs/Lamproom/Projects/Project Settings.md` (the *Knowledge assets* row), `Projects Index.md`, `docker/README.md`
+- Create: `docs/Lamproom/Projects/Knowledge Assets Handoff.md`
 - [ ] **Commit** `docs(projects): knowledge assets are built and used`
 
 ## Decisions open to Alex's review
 
-1. **The push rule watches the local base branch, not GitHub.** No `git fetch`: FlowBoard builds the working tree,
+1. **The push rule watches the local base branch, not GitHub.** No `git fetch`: Lamproom builds the working tree,
    which a fetch does not change, and fetching every 10 minutes would need the network and the GitHub login from the
    server. A push someone else makes shows up once you pull. Changing it: fetch, then build from a temporary worktree at
    `origin/<base>` and copy the map back.

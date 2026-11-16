@@ -1,0 +1,1704 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
+import { EventEmitter } from 'node:events';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { ZERO_USAGE } from '@lamproom/core';
+import type { AgentProvider, FlowState, NormalizedEvent, Question, RunResult, RunSpec } from '@lamproom/core';
+import { dockerArgs, hostExecHost, ReplayProvider } from '@lamproom/adapters';
+import type { Box } from '@lamproom/adapters';
+import { askBroker } from '@lamproom/ask-user';
+import { processStart } from '../src/flow-exec.ts';
+import { DISCARD_COMMANDS, pushable, runFlow, sandboxFor } from '../src/flow-run.ts';
+import { cleanWorkspace } from '../src/workspace.ts';
+import { loadFlow } from '../src/flow-config.ts';
+import { KNOWLEDGE_TASK, knowledgeFlowText } from '../src/knowledge-run.ts';
+import { addMemories, memoryFile, readMemories, RECALL_HEAD } from '../src/memory.ts';
+import { renderPrompt } from '@lamproom/core';
+import type { RunDeps } from '../src/run.ts';
+import { DELIVERY, flowProject, registerProject, RUN } from './fixtures/flow.ts';
+
+const USAGE = [
+  'usage: pnpm lr-run-flow --folder <dir> --task <file> [--workspace <task id>] [--budget-usd <n>] [--max-runs <n>] [--allow-dirty] [--page] [--over-project-budget] <flow.yaml>',
+  '       pnpm lr-run-flow --check | --mermaid [--folder <dir> --task <file>] <flow.yaml>',
+  '       pnpm lr-run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--page] [--over-project-budget]',
+];
+
+type Play = 'pass' | 'fail' | 'none' | 'no-output' | 'error' | 'hang' | 'ask' | 'slow' | 'approve' | 'write-own';
+const COLOUR: Question = { id: 'colour', prompt: 'Colour?', kind: 'text' };
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * A provider whose n-th run of step S plays plays[S][n] (default `pass`); S is the step's prompt text. Every run
+ * costs $0.10; one stopped ends early with tokens and no price, as a Claude run does. `timeline` records start:S and end:S.
+ * `approve` asks the owner to run `pnpm test` first, `write-own` to write its first output; `approvals` records each
+ * answer (a rejected ask is a no).
+ */
+function scripted(plays: Record<string, Play[]>) {
+  const timeline: string[] = [];
+  const specs: RunSpec[] = [];
+  const counts: Record<string, number> = {};
+  const approvals: boolean[] = [];
+  let live = 0;
+  let maxLive = 0;
+  const provider: AgentProvider = {
+    id: 'scripted',
+    capabilities: new Set(),
+    resolveModel: (m) => m,
+    launch: (spec) => {
+      const step = (spec.prompt.template ?? '').trim();
+      const n = counts[step] ?? 0;
+      counts[step] = n + 1;
+      const play = plays[step]?.[n] ?? 'pass';
+      specs.push(spec);
+      timeline.push(`start:${step}`);
+      maxLive = Math.max(maxLive, ++live);
+      const env = spec.tools?.find((t) => t.name === 'lamproom')?.env ?? {};
+      let stop = () => {};
+      let halted = false;
+      const stopped = new Promise<void>((r) => (stop = r)).then(() => (halted = true));
+      const result = (async (): Promise<RunResult> => {
+        const usage = { ...ZERO_USAGE, costUsd: 0.1 };
+        await delay(play === 'slow' ? 300 : 20); // long enough for parallel runs to overlap
+        if (play === 'hang') await stopped;
+        if (play === 'ask' && !halted) await askBroker(env.LAMPROOM_ASK_SOCKET, { questions: [COLOUR] });
+        if (play === 'approve' && !halted) approvals.push(await spec.approve!({ kind: 'shell', command: 'pnpm test' }).catch(() => false));
+        if (play === 'write-own' && !halted) approvals.push(await spec.approve!({ kind: 'edit', tool: 'Write', path: spec.prompt.outputs[0].path }).catch(() => false));
+        timeline.push(`end:${step}`);
+        live -= 1;
+        if (halted) return { usage: { ...ZERO_USAGE, input: 1000 }, exitCode: 1, error: 'stopped' };
+        if (play === 'error') return { usage, exitCode: 1, error: 'boom' };
+        if (['pass', 'fail', 'none', 'ask', 'slow', 'approve', 'write-own'].includes(play)) for (const o of spec.prompt.outputs) writeFileSync(o.path, step);
+        // set_outcome is offered only where the verdict is read
+        if (play !== 'none' && env.LAMPROOM_OUTCOME_FILE) writeFileSync(env.LAMPROOM_OUTCOME_FILE, JSON.stringify({ outcome: play === 'fail' ? 'fail' : 'pass' }));
+        return { usage, exitCode: 0 };
+      })();
+      async function* events(): AsyncGenerator<NormalizedEvent> {
+        await result;
+      }
+      return { sessionId: Promise.resolve('s-1'), pid: Promise.resolve(-1), events: events(), result, stop: () => stop() };
+    },
+  };
+  return {
+    makeProvider: () => provider,
+    timeline,
+    specs,
+    approvals,
+    get maxLive() {
+      return maxLive;
+    },
+  };
+}
+
+const STAMPED = '2026-10-18T09-05-07-flow';
+
+/** A temp flow project, deps that capture output, and a scripted provider. */
+function setup(yaml = DELIVERY, plays: Record<string, Play[]> = {}) {
+  const base = flowProject(yaml, Object.fromEntries(['build', 'b', 'join', 'lint', 'ship'].map((n) => [`prompts/${n}.md`, n])));
+  const script = scripted(plays);
+  const out: string[] = [];
+  const err: string[] = [];
+  const signals = new EventEmitter();
+  const exits: number[] = [];
+  const deps: RunDeps = {
+    cwd: base,
+    dataDir: join(base, 'data'),
+    canAsk: true, // as at a terminal; a run left with no one to ask pauses at its gates
+    makeProvider: script.makeProvider,
+    print: (l) => out.push(l),
+    printErr: (l) => err.push(l),
+    signals,
+    exit: (c) => exits.push(c),
+    now: () => new Date(2026, 9, 18, 9, 5, 7),
+  };
+  const runDir = join(base, 'runs', STAMPED);
+  const state = () => JSON.parse(readFileSync(join(runDir, 'state.json'), 'utf8')) as FlowState;
+  return { base, out, err, deps, script, runDir, state, signals, exits };
+}
+
+test('--check validates the flow and prints its size', async () => {
+  const { out, err, deps } = setup();
+  delete deps.dataDir; // a check needs no project; with a data folder the app's OpenCode model rules apply (models.ts)
+  assert.equal(await runFlow(['--check', 'flow.yaml'], deps), 0);
+  assert.deepEqual([out, err], [['-- flow ok: 5 steps, starting at plan'], []]);
+});
+
+test('a bad flow exits 2 with its errors on stderr and creates nothing', async () => {
+  const { base, out, err, deps } = setup();
+  assert.equal(await runFlow(['--folder', 'nope', '--task', 'task.md', 'flow.yaml'], deps), 2);
+  assert.deepEqual([out, err], [[], [`flow.yaml: --folder: not a directory: ${join(base, 'nope')}`]]);
+  assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+test('--mermaid prints the diagram', async () => {
+  const { out, deps } = setup();
+  delete deps.dataDir; // as --check: no project, and no model rules
+  assert.equal(await runFlow(['--mermaid', 'flow.yaml'], deps), 0);
+  assert.equal(out[0], 'flowchart LR');
+});
+
+test('bad arguments print the usage and exit 2', async () => {
+  const cases = [
+    [], ['--nope', 'flow.yaml'], ['--check', '--mermaid', 'flow.yaml'], ['--allow-dirty', '--check', 'flow.yaml'], ['--workspace', 't1', '--check', 'flow.yaml'], ['--workspace', 't1', '--resume', 'runs/x'], ['--page', '--check', 'flow.yaml'], ['--over-project-budget', '--check', 'flow.yaml'], ['--resume', 'runs/x', 'flow.yaml'], [...RUN, 'a.yaml', 'b.yaml'],
+    ['flow.yaml'], ['--folder', 'proj', 'flow.yaml'], ['--check', '--task', 'task.md', 'flow.yaml'], ['--resume', 'runs/x', '--folder', 'proj'],
+  ];
+  for (const args of cases) {
+    const { err, deps } = setup();
+    assert.equal(await runFlow(args, deps), 2, args.join(' '));
+    assert.deepEqual(err, USAGE, args.join(' '));
+  }
+  for (const n of ['0', '1.5', 'x']) {
+    const { err, deps } = setup();
+    assert.equal(await runFlow([...RUN, '--max-runs', n, 'flow.yaml'], deps), 2, n);
+    assert.deepEqual(err, ['--max-runs: must be a whole number above 0'], n);
+  }
+  for (const n of ['x', '1e3', '.5']) {
+    const { err, deps } = setup();
+    assert.equal(await runFlow([...RUN, '--budget-usd', n, 'flow.yaml'], deps), 2, n);
+    assert.deepEqual(err, ['--budget-usd: must be a number of dollars, 0 or more; 0 means no ceiling'], n);
+  }
+});
+
+// --- running flows
+
+const HEAD = 'budget_usd: 0\ndefaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 5 } }\n';
+const FAILS_ONCE = `'test -f done.flag || { touch done.flag; echo "FAIL first"; exit 1; }'`;
+const LINEAR = `${HEAD}steps:
+  plan: { prompt: prompts/plan.md, produces: [plan] }
+  build: { prompt: prompts/build.md, requires: [plan], produces: [notes] }
+  check: { shell: 'test -s "$LAMPROOM_ARTIFACTS/notes.md"', produces: [check_output] }
+edges:
+  - { from: plan, to: build }
+  - { from: build, to: check }
+`;
+const FAN = `${HEAD}steps:
+  plan: { prompt: prompts/plan.md }
+  a: { prompt: prompts/a.md }
+  b: { prompt: prompts/b.md }
+  join: { prompt: prompts/join.md }
+edges:
+  - { from: plan, to: a }
+  - { from: plan, to: b }
+  - { from: a, to: join }
+  - { from: b, to: join }
+`;
+const REWORK = `${HEAD}entry: build
+steps:
+  build: { prompt: prompts/build.md, produces: [notes] }
+  check: { shell: ${FAILS_ONCE}, produces: [check_output] }
+edges:
+  - { from: build, to: check }
+  - { from: check, to: build, condition: on_fail }
+`;
+const SIBLING = `${HEAD}entry: build
+steps:
+  build: { prompt: prompts/build.md, produces: [notes] }
+  check: { shell: ${FAILS_ONCE}, produces: [check_output] }
+  lint: { prompt: prompts/lint.md }
+edges:
+  - { from: build, to: check }
+  - { from: build, to: lint }
+  - { from: check, to: build, condition: on_fail }
+`;
+const GATE = `${HEAD}steps:
+  review: { prompt: prompts/review.md }
+  ship: { prompt: prompts/ship.md }
+edges:
+  - { from: review, to: ship, condition: on_pass }
+`;
+const TIMEOUT = `${HEAD}steps:\n  check: { shell: sleep 30, timeout_minutes: 0.005 }\n`;
+const SHELL_ONLY = `${HEAD}steps:\n  check: { shell: 'exit 0' }\n`;
+const SPLIT = `${HEAD}steps:
+  plan: { prompt: prompts/plan.md }
+  a: { prompt: prompts/a.md }
+  b: { prompt: prompts/b.md }
+edges:
+  - { from: plan, to: a }
+  - { from: plan, to: b }
+`;
+
+test('a linear flow runs each step once and ends done', async (t) => {
+  process.env.FAKE_TOKEN = 'x';
+  t.after(() => delete process.env.FAKE_TOKEN);
+  const { base, out, deps, runDir, state } = setup(LINEAR);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.equal(state().status, 'done');
+  for (const log of ['001-plan.jsonl', '002-build.jsonl', '003-check.jsonl']) assert.ok(existsSync(join(runDir, log)), log);
+  const transitions = readFileSync(join(runDir, 'flow.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  assert.deepEqual(transitions.map((t) => t.event.type), ['start', 'launched', 'run_ended', 'launched', 'run_ended', 'launched', 'run_ended']);
+  assert.ok(existsSync(join(base, 'proj', '.lamproom', STAMPED, 'plan.md')));
+  assert.equal(existsSync(join(base, 'proj', '.lamproom', 'lock')), false);
+  assert.ok(out.includes(`-- warning: ${join(base, 'proj')} is not in a git repository; nothing can undo the flow's edits`), out.join('\n'));
+  const without = out.find((l) => l.startsWith('-- shell steps run without: '));
+  assert.ok(without?.slice('-- shell steps run without: '.length).split(', ').includes('FAKE_TOKEN'), without);
+  assert.equal(out.at(-1), '-- flow done: 3 runs, $0.20 spent, $0.00 wasted');
+});
+
+test('fan-out runs both branches at once, and the join waits for both', async () => {
+  const { deps, script } = setup(FAN);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0);
+  const at = (e: string) => script.timeline.indexOf(e);
+  assert.ok(at('start:join') > at('end:a') && at('start:join') > at('end:b'), script.timeline.join(' '));
+  assert.equal(script.maxLive, 2);
+  const one = setup(FAN);
+  assert.equal(await runFlow([...RUN, '--max-runs', '1', 'flow.yaml'], one.deps), 0);
+  assert.equal(one.script.maxLive, 1);
+});
+
+test('a failed check reworks its target, which reads the failing output', async () => {
+  const { out, deps, script } = setup(REWORK);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  const builds = script.specs.filter((s) => s.prompt.template === 'build');
+  assert.ok(builds[1]?.prompt.inputs.some((i) => i.type === 'check_output'), JSON.stringify(builds[1]?.prompt.inputs));
+  assert.equal(out.at(-1), '-- flow done: 4 runs, $0.20 spent, $0.10 wasted');
+});
+
+test('a rework stops a sibling run that is still going', async () => {
+  const { out, deps, state } = setup(SIBLING, { lint: ['hang', 'pass'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.deepEqual(state().runs.filter((r) => r.step === 'lint').map((r) => [r.wasted, r.error]), [[true, 'superseded'], [false, undefined]]);
+});
+
+test('a gate with no one to answer it pauses the flow', async () => {
+  const { out, deps } = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 3);
+  assert.ok(out.includes('-- review needs a decision'), out.join('\n'));
+  assert.ok(out.some((l) => l.startsWith('-- flow paused: ')));
+  assert.deepEqual(out.slice(-2), ['-- waiting for a decision: review', `-- continue with: pnpm lr-run-flow --resume ${join('runs', STAMPED)}`]);
+});
+
+test('with --page, the runs page answers a gate no terminal is there for, and can stop the flow', async () => {
+  const { out, deps, runDir } = setup(GATE, { review: ['none'] });
+  const answering = (async () => {
+    for (let i = 0; i < 200; i++) {
+      await delay(25);
+      const asks = existsSync(join(runDir, 'asks')) ? readdirSync(join(runDir, 'asks')) : [];
+      if (!asks.length) continue;
+      assert.ok(existsSync(join(runDir, 'host.json')));
+      const ask = JSON.parse(readFileSync(join(runDir, 'asks', asks[0]), 'utf8'));
+      assert.equal(ask.questions[0].id, 'decision');
+      writeFileSync(join(runDir, 'answers', asks[0]), JSON.stringify({ decision: 'approve', note: null }));
+      return;
+    }
+  })();
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], deps), 0, out.join('\n'));
+  await answering;
+  assert.equal(existsSync(join(runDir, 'host.json')), false);
+});
+
+test('with --page, a stop file from the runs page stops the flow so --resume can continue it', async () => {
+  const { out, deps, runDir } = setup(GATE, { review: ['none'] });
+  void (async () => {
+    while (!existsSync(join(runDir, 'host.json'))) await delay(20);
+    writeFileSync(join(runDir, 'stop'), '');
+  })();
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], deps), 130, out.join('\n'));
+});
+
+test('with --page, a second stop file is a repeat, never the quit-at-once second Ctrl+C', async () => {
+  const { out, deps, runDir, exits } = setup(SHELL_ONLY.replace("shell: 'exit 0'", 'prompt: prompts/build.md'), { build: ['hang'] });
+  const make = deps.makeProvider!;
+  deps.makeProvider = (id) => {
+    const p = make(id);
+    // An agent slow to stop, so the second stop arrives while the first is still under way
+    return { ...p, launch: (spec) => { const run = p.launch(spec); return { ...run, stop: () => void setTimeout(() => run.stop(), 900) }; } };
+  };
+  const t0 = Date.now(); // a clock that moves, from the fixture's time, so the run folder keeps its name
+  deps.now = () => new Date(new Date(2026, 9, 18, 9, 5, 7).getTime() + Date.now() - t0);
+  void (async () => {
+    while (!existsSync(join(runDir, 'host.json'))) await delay(20);
+    writeFileSync(join(runDir, 'stop'), '');
+    await delay(500);
+    writeFileSync(join(runDir, 'stop'), '');
+  })();
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], deps), 130, out.join('\n'));
+  assert.deepEqual(exits, []);
+});
+
+test('a step that runs past timeout_minutes is stopped and waits at a run_failed gate', async () => {
+  const { out, deps, state, runDir } = setup(TIMEOUT);
+  const at = Date.now();
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 3);
+  assert.ok(Date.now() - at < 2000, `took ${Date.now() - at} ms`);
+  assert.ok(out.includes('-- check attempt 1: failed: timed out after 0.005 minutes, $0.00'), out.join('\n'));
+  assert.equal(state().steps.check.gate?.kind, 'run_failed');
+  const result = JSON.parse(readFileSync(join(runDir, '001-check.jsonl'), 'utf8').trim().split('\n').at(-1)!);
+  assert.equal(result.error, 'timed out after 0.005 minutes');
+});
+
+test("a run_failed gate points at the run's log", async () => {
+  const { deps, runDir } = setup(TIMEOUT);
+  const d = deciding('fail');
+  deps.answer = d.answer;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 1);
+  assert.equal(d.gate()?.help, `See: ${join(runDir, '001-check.jsonl')}`);
+});
+
+test("the timeout clock stops while a run's question waits for a person", { timeout: 10_000 }, async () => {
+  const { out, deps } = setup(`${HEAD}steps:\n  build: { prompt: prompts/build.md, timeout_minutes: 0.005 }\n`, { build: ['ask'] });
+  deps.answer = async () => {
+    await delay(600); // twice the timeout
+    return { colour: 'teal' };
+  };
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+});
+
+const git = (cwd: string, ...args: string[]) =>
+  execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', ...args], { cwd, stdio: 'pipe' });
+
+test('uncommitted changes refuse a run unless --allow-dirty; untracked files do not count', async () => {
+  const { base, err, deps } = setup(SHELL_ONLY);
+  const proj = join(base, 'proj');
+  git(proj, 'init', '-q');
+  writeFileSync(join(proj, 'f.txt'), 'one');
+  git(proj, 'add', 'f.txt');
+  git(proj, 'commit', '-qm', 'one');
+  writeFileSync(join(proj, 'f.txt'), 'two');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, ['flow.yaml: --folder: uncommitted changes in 1 file(s); commit or stash them first, or pass --allow-dirty']);
+  assert.equal(existsSync(join(base, 'runs')), false);
+  assert.equal(await runFlow([...RUN, '--allow-dirty', 'flow.yaml'], deps), 0);
+  git(proj, 'commit', '-qam', 'two');
+  writeFileSync(join(proj, 'new.txt'), 'untracked');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0);
+  // .lamproom/ is kept out of the repository, so an agent's `git add -A` leaves the lock alone
+  assert.match(readFileSync(join(proj, '.git', 'info', 'exclude'), 'utf8'), /^\.lamproom\/$/m);
+  writeFileSync(join(proj, '.lamproom', 'stray'), 'x');
+  git(proj, 'add', '-A');
+  assert.equal(execFileSync('git', ['status', '--porcelain'], { cwd: proj, encoding: 'utf8' }), 'A  new.txt\n');
+});
+
+test('a live lock is reported before uncommitted changes', async () => {
+  const { base, err, deps } = setup(SHELL_ONLY);
+  const proj = join(base, 'proj');
+  git(proj, 'init', '-q');
+  writeFileSync(join(proj, 'f.txt'), 'one');
+  git(proj, 'add', 'f.txt');
+  git(proj, 'commit', '-qm', 'one');
+  writeFileSync(join(proj, 'f.txt'), 'two'); // the live flow's own edit
+  const lock = join(proj, '.lamproom', 'lock');
+  mkdirSync(dirname(lock), { recursive: true });
+  writeFileSync(lock, JSON.stringify({ pid: process.pid, runDir: 'runs/other' }));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, [`flow.yaml: --folder: another lr-run-flow (pid ${process.pid}) is working here on runs/other; if it is not, delete ${lock}`]);
+});
+
+/** A git repo in `proj` with one commit. */
+function gitProj(base: string): string {
+  const proj = join(base, 'proj');
+  git(proj, 'init', '-q');
+  writeFileSync(join(proj, 'f.txt'), 'one');
+  git(proj, 'add', 'f.txt');
+  git(proj, 'commit', '-qm', 'one');
+  return proj;
+}
+
+test('--workspace runs each task in its own worktree, so two tasks run at once in one repo', async () => {
+  const { base, out, err, deps } = setup(SHELL_ONLY.replace("shell: 'exit 0'", "shell: 'sleep 0.3; pwd > where.txt'"));
+  const proj = gitProj(base);
+  const codes = await Promise.all(['t1', 't2'].map((id) => runFlow([...RUN, '--workspace', id, 'flow.yaml'], deps)));
+  assert.deepEqual([codes, err], [[0, 0], []], out.join('\n'));
+  for (const id of ['t1', 't2']) {
+    const path = join(proj, '.lamproom', 'worktrees', `task-${id}`);
+    assert.ok(out.includes(`-- workspace ${path} on branch lr/task-${id}, new`), out.join('\n'));
+    assert.equal(realpathSync(readFileSync(join(path, 'where.txt'), 'utf8').trim()), path);
+    assert.equal(existsSync(join(path, '.lamproom', 'lock')), false);
+  }
+  assert.equal(existsSync(join(proj, 'where.txt')), false);
+  assert.equal(execFileSync('git', ['status', '--porcelain'], { cwd: proj, encoding: 'utf8' }), '');
+  // the second run of a task picks its worktree up again
+  assert.equal(await runFlow([...RUN, '--workspace', 't1', 'flow.yaml'], deps), 0);
+  assert.ok(out.includes(`-- workspace ${join(proj, '.lamproom', 'worktrees', 'task-t1')} on branch lr/task-t1, picked up again`), out.join('\n'));
+});
+
+test('--workspace needs a git repository and a good id, and makes nothing for a flow that does not load', async () => {
+  const { base, err, deps } = setup(SHELL_ONLY);
+  assert.equal(await runFlow([...RUN, '--workspace', 't1', 'flow.yaml'], deps), 2);
+  assert.deepEqual(err.splice(0), [`flow.yaml: --workspace: ${join(base, 'proj')} is not in a git repository`]);
+  const proj = gitProj(base);
+  assert.equal(await runFlow([...RUN, '--workspace', '../x', 'flow.yaml'], deps), 2);
+  assert.match(err.splice(0)[0], /^flow\.yaml: --workspace: task id "\.\.\/x": use letters/);
+  assert.equal(await runFlow(['--folder', 'proj', '--task', 'nope.md', '--workspace', 't1', 'flow.yaml'], deps), 2);
+  assert.equal(existsSync(join(proj, '.lamproom', 'worktrees')), false);
+});
+
+test('lr-clean-workspace refuses while a run holds the worktree, and uncommitted work without --force', async () => {
+  const { base, deps } = setup(SHELL_ONLY.replace("shell: 'exit 0'", "shell: 'echo x > new.txt'"));
+  const proj = gitProj(base);
+  assert.equal(await runFlow([...RUN, '--workspace', 't1', 'flow.yaml'], deps), 0);
+  const path = join(proj, '.lamproom', 'worktrees', 'task-t1');
+  const out: string[] = [];
+  const err: string[] = [];
+  const clean = (...args: string[]) => cleanWorkspace([...args, 't1'], { cwd: base, dataDir: join(base, 'data'), print: (l) => out.push(l), printErr: (l) => err.push(l) });
+  writeFileSync(join(path, '.lamproom', 'lock'), JSON.stringify({ pid: process.pid }));
+  assert.equal(await clean('--folder', 'proj'), 2);
+  assert.deepEqual(err.splice(0), [`lr-clean-workspace: a lr-run-flow (pid ${process.pid}) is working in ${path}; let it finish or stop it first`]);
+  rmSync(join(path, '.lamproom', 'lock'));
+  assert.equal(await clean('--folder', 'proj'), 1); // new.txt is the flow's uncommitted work
+  assert.match(err.splice(0)[0], /pass --force to throw them away$/);
+  assert.ok(existsSync(path));
+  assert.equal(await clean('--folder', 'proj', '--force'), 0);
+  assert.deepEqual([out, err], [['-- removed the workspace of task t1'], []]);
+  assert.equal(existsSync(path), false);
+  assert.equal(execFileSync('git', ['branch', '--list', 'lr/task-t1'], { cwd: proj, encoding: 'utf8' }), '');
+  assert.equal(await clean('--folder', 'proj'), 1);
+  assert.deepEqual(err, ['lr-clean-workspace: task t1 has no workspace']);
+});
+
+test('a live lock refuses the run; a stale one is replaced with a warning', async () => {
+  const { base, out, err, deps } = setup(SHELL_ONLY);
+  const lock = join(base, 'proj', '.lamproom', 'lock');
+  mkdirSync(dirname(lock), { recursive: true });
+  writeFileSync(lock, JSON.stringify({ pid: process.pid, runDir: 'runs/other' }));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, [`flow.yaml: --folder: another lr-run-flow (pid ${process.pid}) is working here on runs/other; if it is not, delete ${lock}`]);
+  assert.equal(existsSync(join(base, 'runs')), false);
+  const dead = spawnSync('true').pid;
+  writeFileSync(lock, JSON.stringify({ pid: dead, runDir: 'runs/other' }));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0);
+  assert.ok(out.includes(`-- warning: a lr-run-flow (pid ${dead}) ended without cleaning up; check that none of its agents or checks are still running`), out.join('\n'));
+  assert.equal(existsSync(lock), false);
+  writeFileSync(lock, '{ half'); // not a lock lr-run-flow writes: it publishes whole files
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.equal(err.at(-1), `flow.yaml: --folder: cannot read ${lock}; if no lr-run-flow is working here, delete it`);
+});
+
+test('a lock a check deletes is taken again; one another host took meanwhile is left to it', async () => {
+  const again = setup(`${HEAD}steps:\n  wipe: { shell: 'rm -rf .lamproom/lock' }\n  after: { shell: 'cp .lamproom/lock lock.copy' }\nedges:\n  - { from: wipe, to: after }\n`);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], again.deps), 0, again.out.join('\n'));
+  assert.equal(existsSync(join(again.base, 'proj', '.lamproom', 'lock')), false);
+  assert.deepEqual(JSON.parse(readFileSync(join(again.base, 'proj', 'lock.copy'), 'utf8')), { pid: process.pid, runDir: again.runDir });
+  const other = setup(`${HEAD}steps:\n  swap: { shell: 'printf %s "{\\"pid\\": ${process.ppid}}" > .lamproom/lock' }\n`);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], other.deps), 0, other.out.join('\n'));
+  assert.ok(other.out.some((l) => l.startsWith(`-- warning: a check deleted this folder's lock, and another lr-run-flow (pid ${process.ppid}) took it`)), other.out.join('\n'));
+  assert.equal(readFileSync(join(other.base, 'proj', '.lamproom', 'lock'), 'utf8'), `{"pid": ${process.ppid}}`);
+});
+
+test('a run folder another run made in the same second is passed over', async () => {
+  const { base, out, deps } = setup(SHELL_ONLY);
+  mkdirSync(join(base, 'runs', STAMPED), { recursive: true });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0);
+  assert.ok(out.includes(`-- run folder ${join('runs', `${STAMPED}-2`)}`), out.join('\n'));
+});
+
+test('agents may not write the runs folder, theirs or other runs\', whatever the flow file is called, nor discard uncommitted edits', async () => {
+  const { base, deps, script } = setup(ONE_PLAN);
+  registerProject(base, base, 'trusted'); // the base is the project here
+  writeFileSync(join(base, 'a[1].yaml'), readFileSync(join(base, 'flow.yaml'), 'utf8'));
+  assert.equal(await runFlow(['--folder', '.', '--task', 'task.md', 'a[1].yaml'], deps), 0);
+  const guards = script.specs[0].guards!;
+  // every run's state.json is what the project's monthly cap adds up, so other runs' folders are off limits too
+  assert.deepEqual(guards.denyPaths, ['runs/**']);
+  for (const c of DISCARD_COMMANDS) assert.ok(guards.denyCommands?.includes(c));
+  const denied = (cmd: string) => DISCARD_COMMANDS.some((c) => new RegExp(c).test(cmd));
+  for (const cmd of [
+    'git checkout .', 'git checkout -- src/a.ts', 'git checkout .;', '(git checkout .)', `bash -c "git checkout ."`, `sh -c 'cd x && git checkout .'`,
+    'git -C x restore a.ts', 'git restore --staged --worktree a.ts', 'git restore -W -S a.ts', 'git stash', 'git stash push -u',
+    'git clean -fd', 'git switch -f main',
+  ]) assert.ok(denied(cmd), cmd);
+  for (const cmd of [
+    'git checkout main', 'git checkout -b fix', 'git stash list', 'git commit -m "restore the cache"', 'git status',
+    'git restore --staged a.ts', 'git restore -S a.ts', 'git clean -n', 'git clean --dry-run -d',
+  ]) assert.ok(!denied(cmd), cmd);
+});
+
+test('a host error stops every live run, saves the state and rethrows', async () => {
+  const s = setup(SPLIT, { a: ['hang'] });
+  let armed = false;
+  s.deps.print = (l) => {
+    s.out.push(l);
+    if (l.startsWith('-- b attempt 1:')) armed = true;
+  };
+  s.deps.now = () => {
+    if (!armed) return new Date(2026, 9, 18, 9, 5, 7);
+    armed = false;
+    throw new Error('disk full');
+  };
+  await assert.rejects(runFlow([...RUN, 'flow.yaml'], s.deps), /disk full/);
+  const a = s.state().runs.find((r) => r.step === 'a');
+  assert.deepEqual([a?.live, a?.wasted], [false, true]);
+  assert.equal(existsSync(join(s.base, 'proj', '.lamproom', 'lock')), false);
+  assert.ok(s.out.includes(`-- continue with: pnpm lr-run-flow --resume ${join('runs', STAMPED)}`), s.out.join('\n'));
+});
+
+// --- gates and the terminal
+
+/** An answerer that picks `decision` at every gate; `asked` records each batch. */
+function deciding(decision: string) {
+  const asked: Question[][] = [];
+  const answer = async (questions: Question[]) => {
+    asked.push(questions);
+    return { decision, note: null };
+  };
+  const gate = () => asked.flat().find((q) => q.id === 'decision');
+  return { asked, answer, gate };
+}
+
+const ONE_PLAN = `${HEAD}steps:\n  plan: { prompt: prompts/plan.md, produces: [plan] }\n`;
+const ESCALATE = `${HEAD}entry: build
+steps:
+  build: { prompt: prompts/build.md, produces: [notes], max_attempts: 2 }
+  check: { shell: 'echo FAIL; exit 1', produces: [check_output] }
+edges:
+  - { from: build, to: check }
+  - { from: check, to: build, condition: on_fail }
+`;
+
+test('a gate asks in the terminal; approving takes the pass route', async () => {
+  const { out, deps, script } = setup(GATE, { review: ['none'] });
+  const d = deciding('approve');
+  deps.answer = d.answer;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.equal(d.gate()?.prompt, 'review: no outcome reported');
+  assert.deepEqual(d.gate()?.options?.map((o) => o.value), ['approve', 'retry', 'fail']); // review has no on_fail edge
+  assert.deepEqual(d.asked[0].map((q) => q.id), ['decision', 'note']);
+  assert.ok(out.includes('-- review needs a decision'));
+  assert.ok(script.timeline.includes('start:ship'));
+});
+
+test('a spent loop escalates with the failing output as evidence; failing the flow exits 1', async () => {
+  const { base, out, deps } = setup(ESCALATE);
+  const d = deciding('fail');
+  deps.answer = d.answer;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 1);
+  assert.equal(d.gate()?.prompt, 'build: build has used 2 of 2 attempts');
+  assert.equal(d.gate()?.help, `See: ${join(base, 'proj', '.lamproom', STAMPED, 'check_output.md')}`);
+  assert.ok(out.at(-1)?.startsWith('-- flow failed: '), out.at(-1));
+});
+
+test('parallel agents ask one at a time, each batch headed with its step', async () => {
+  const { out, deps } = setup(SPLIT, { a: ['ask'], b: ['ask'] });
+  let open = 0;
+  let most = 0;
+  deps.answer = async () => {
+    most = Math.max(most, ++open);
+    await delay(30);
+    open -= 1;
+    return { colour: 'teal' };
+  };
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.equal(most, 1);
+  assert.ok(out.includes('-- a asks:') && out.includes('-- b asks:'), out.join('\n'));
+});
+
+test('an agent that did not write its output waits at a gate; retry runs the next attempt', async () => {
+  const { out, deps, script } = setup(ONE_PLAN, { plan: ['no-output', 'pass'] });
+  const d = deciding('retry');
+  deps.answer = d.answer;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.equal(d.gate()?.prompt, 'plan: did not write: plan');
+  assert.ok(out.includes('-- plan attempt 2 (claude-code sonnet)'), out.join('\n'));
+  assert.equal(script.specs.length, 2);
+});
+
+test('an infra failure waits at a gate offering retry or fail; retry runs the same attempt', async () => {
+  const { out, deps } = setup(ONE_PLAN, { plan: ['error', 'pass'] });
+  const d = deciding('retry');
+  deps.answer = d.answer;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.equal(d.gate()?.prompt, 'plan: run failed: boom');
+  assert.deepEqual(d.gate()?.options?.map((o) => o.value), ['retry', 'fail']);
+  assert.equal(out.filter((l) => l === '-- plan attempt 1 (claude-code sonnet)').length, 2);
+});
+
+// --- stopping and resuming
+
+const RUN_DIR = join('runs', STAMPED);
+const ONE_BUILD = `${HEAD}steps:\n  build: { prompt: prompts/build.md }\n`;
+/** Calls `then` once `ready()` holds; checks every 5 ms. */
+function when(ready: () => boolean, then: () => void) {
+  const timer = setInterval(() => {
+    if (!ready()) return;
+    clearInterval(timer);
+    then();
+  }, 5);
+}
+
+test('Ctrl+C stops the flow, and --resume reruns the step it cut off', { timeout: 10_000 }, async () => {
+  const s = setup(ONE_BUILD, { build: ['hang', 'pass'] });
+  when(() => s.script.timeline.includes('start:build'), () => s.signals.emit('SIGINT'));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 130);
+  assert.ok(s.out.includes('-- stopping'), s.out.join('\n'));
+  assert.ok(s.out.some((l) => l.startsWith('-- flow stopped: ')));
+  assert.equal(s.out.at(-1), `-- continue with: pnpm lr-run-flow --resume ${RUN_DIR}`);
+  const stopped = s.state();
+  assert.deepEqual([stopped.steps.build.state, stopped.runs[0].live, stopped.runs[0].wasted], ['running', false, true]);
+  // stopped before its result, with tokens and no price: its cost is not known, not $0
+  assert.equal(stopped.runs[0].costUsd, null);
+  assert.ok(s.out.includes('-- flow stopped: 1 run, $0.00 spent, $0.00 wasted, cost unknown for 1 run'), s.out.join('\n'));
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+  assert.deepEqual(s.state().runs.map((r) => [r.step, r.attempt]), [['build', 1], ['build', 1]]);
+});
+
+test('a run reads as launched in state.json while it runs', { timeout: 10_000 }, async () => {
+  const s = setup(`${HEAD}steps:\n  check: { shell: 'sleep 0.5' }\n`);
+  let seen: unknown = 'not read';
+  when(() => s.out.includes('-- check attempt 1 (shell)'), () => setTimeout(() => (seen = s.state().runs[0].queued), 250));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.equal(seen, undefined);
+});
+
+test('a run still queued when the flow stops was not launched; --resume keeps the --max-runs it started with', { timeout: 10_000 }, async () => {
+  const s = setup(SPLIT, { a: ['hang', 'pass'] });
+  when(() => s.script.timeline.includes('start:a'), () => s.signals.emit('SIGINT'));
+  assert.equal(await runFlow([...RUN, '--max-runs', '1', 'flow.yaml'], s.deps), 130);
+  const b = s.state().runs.find((r) => r.step === 'b');
+  assert.deepEqual([b?.wasted, b?.error], [false, 'not launched']);
+  assert.ok(s.out.includes('-- flow stopped: 2 runs, $0.10 spent, $0.00 wasted, cost unknown for 1 run'), s.out.join('\n'));
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+  assert.equal(s.script.maxLive, 1);
+});
+
+test('a check that deletes the run folder leaves the run resumable', { timeout: 10_000 }, async () => {
+  const s = setup(`budget_usd: 0\ndefaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 5 } }\nsteps:
+  clean: { shell: 'rm -rf runs' }
+  review: { prompt: prompts/review.md, gate: approval }
+edges:
+  - { from: clean, to: review }
+`, { review: ['none'] });
+  registerProject(s.base, s.base, 'trusted'); // the base is the project here
+  assert.equal(await runFlow(['--folder', '.', '--task', 'task.md', 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  s.deps.answer = deciding('approve').answer;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+});
+
+test('--resume refuses a folder that has gone, rather than make an empty one', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  rmSync(join(s.base, 'proj'), { recursive: true });
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: folder not found: ${join(s.base, 'proj')}`]);
+  assert.equal(existsSync(join(s.base, 'proj')), false);
+});
+
+test('Ctrl+C stops a hanging check at once, and --resume reruns it', { timeout: 10_000 }, async () => {
+  const s = setup(`${HEAD}steps:\n  check: { shell: 'test -f go.flag || sleep 30' }\n`);
+  when(() => s.out.includes('-- check attempt 1 (shell)'), () => setTimeout(() => s.signals.emit('SIGINT'), 100));
+  const at = Date.now();
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 130);
+  assert.ok(Date.now() - at < 2000, `took ${Date.now() - at} ms`);
+  writeFileSync(join(s.base, 'proj', 'go.flag'), '');
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+});
+
+test('Ctrl+C at a gate prompt stops the flow like a first press', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  s.deps.answer = async () => {
+    throw Object.assign(new Error('User force closed the prompt'), { name: 'ExitPromptError' });
+  };
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 130);
+  assert.equal(s.state().steps.review.state, 'awaiting_approval');
+});
+
+test('a paused flow resumes from its pinned copy and asks its open gate again', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  rmSync(join(s.base, 'flow.yaml')); // --resume runs the pinned flow.json
+  s.deps.answer = deciding('approve').answer;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+  assert.ok(s.out.includes(`-- resuming ${RUN_DIR}`));
+  assert.ok(s.script.timeline.includes('start:ship'));
+});
+
+test('--resume refuses a missing state, another version, a finished flow and a held lock', { timeout: 10_000 }, async () => {
+  const done = setup(SHELL_ONLY);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], done.deps), 0);
+  assert.equal(await runFlow(['--resume', 'runs/nope'], done.deps), 2);
+  assert.equal(await runFlow(['--resume', RUN_DIR], done.deps), 2);
+  const pinned = join(done.runDir, 'flow.json');
+  writeFileSync(pinned, JSON.stringify({ ...JSON.parse(readFileSync(pinned, 'utf8')), version: 2 }));
+  assert.equal(await runFlow(['--resume', RUN_DIR], done.deps), 2);
+  assert.deepEqual(done.err, [
+    'runs/nope: cannot resume: no state.json',
+    `${RUN_DIR}: cannot resume: the flow already ended (done)`,
+    `${RUN_DIR}: cannot resume: made by a different version of lr-run-flow`,
+  ]);
+  const paused = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], paused.deps), 3);
+  const lock = join(paused.base, 'proj', '.lamproom', 'lock');
+  writeFileSync(lock, JSON.stringify({ pid: process.pid, runDir: 'runs/other' }));
+  assert.equal(await runFlow(['--resume', RUN_DIR], paused.deps), 2);
+  assert.deepEqual(paused.err, [`${RUN_DIR}: cannot resume: another lr-run-flow (pid ${process.pid}) is working here on runs/other; if it is not, delete ${lock}`]);
+});
+
+test('state.json is written atomically, and a stray state.json.tmp is ignored', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  assert.equal(existsSync(join(s.runDir, 'state.json.tmp')), false);
+  writeFileSync(join(s.runDir, 'state.json.tmp'), '{ half written');
+  s.deps.answer = deciding('approve').answer;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+});
+
+test('a replayed agent drives a flow as an adapter does: the cost is what its stream reported, also when stopped', { timeout: 10_000 }, async () => {
+  const s = setup(ONE_BUILD);
+  const usage = { ...ZERO_USAGE, input: 120, output: 40, numTurns: 1 };
+  s.deps.makeProvider = () => new ReplayProvider({ events: [{ type: 'system', sessionId: 's-1' }, { type: 'assistant_text', text: 'done' }, { type: 'result', usage: { ...usage, costUsd: 0.02 } }] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.equal(s.state().runs[0].costUsd, 0.02);
+  // Stopped mid-stream: what the running totals said, priced (OpenCode) or not (Claude).
+  for (const [running, want] of [[{ ...usage, costUsd: 0.01 }, 0.01], [usage, null]] as const) {
+    const t = setup(ONE_BUILD);
+    t.deps.makeProvider = () => new ReplayProvider({ events: [{ type: 'system', sessionId: 's-1' }, { type: 'usage', usage: running }, { type: 'assistant_text', text: 'still going' }, { type: 'result', usage: { ...usage, costUsd: 0.02 } }], streamDelayMs: 100 });
+    when(() => t.out.includes('-- build attempt 1 (claude-code sonnet)'), () => setTimeout(() => t.signals.emit('SIGINT'), 150));
+    assert.equal(await runFlow([...RUN, 'flow.yaml'], t.deps), 130, t.out.join('\n'));
+    assert.equal(t.state().runs[0].costUsd, want);
+  }
+});
+
+test('a second Ctrl+C more than 300 ms after the first exits at once, after removing the runs\' temp folders', { timeout: 10_000 }, async () => {
+  const s = setup(ONE_BUILD, { build: ['hang'] });
+  let clock = new Date(2026, 9, 18, 9, 5, 7).getTime();
+  s.deps.now = () => new Date(clock);
+  const temp = () => dirname(s.script.specs[0].tools!.find((t) => t.name === 'lamproom')!.env!.LAMPROOM_ASK_SOCKET);
+  let tempLeft: boolean | undefined;
+  s.deps.exit = (c) => {
+    tempLeft = existsSync(temp());
+    s.exits.push(c);
+  };
+  when(() => s.script.timeline.includes('start:build'), () => {
+    s.signals.emit('SIGINT');
+    clock += 100;
+    s.signals.emit('SIGINT'); // within 300 ms: the same press, forwarded twice under pnpm
+    clock += 400;
+    s.signals.emit('SIGINT');
+  });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 130);
+  assert.deepEqual([s.exits, tempLeft], [[130], false]);
+});
+
+const FORK = (b: string) => `${HEAD}steps:
+  plan: { prompt: prompts/plan.md }
+  a: { prompt: prompts/a.md }
+  ${b}
+  c: { prompt: prompts/c.md }
+edges:
+  - { from: plan, to: a }
+  - { from: plan, to: b }
+  - { from: b, to: c }
+`;
+
+test('a run that ends as Ctrl+C lands is fed before stopping: what it would start is stopped too', { timeout: 10_000 }, async () => {
+  for (const b of ['b: { prompt: prompts/b.md }', 'b: { prompt: prompts/b.md, gate: approval }']) {
+    const s = setup(FORK(b), { a: ['hang'] });
+    let asked = 0;
+    s.deps.answer = async () => {
+      asked += 1;
+      return { decision: 'approve', note: null };
+    };
+    s.deps.print = (l) => {
+      s.out.push(l);
+      if (l.startsWith('-- b attempt 1:')) s.signals.emit('SIGINT'); // the end is about to be posted
+    };
+    assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 130, b);
+    const st = s.state();
+    assert.deepEqual(st.runs.filter((r) => r.live), [], `${b}: a run left live`);
+    assert.equal(asked, 0, `${b}: a gate was asked after stopping`);
+  }
+});
+
+test('a gate prompt the engine moves past is taken down', { timeout: 10_000 }, async () => {
+  const s = setup(`${HEAD}entry: build
+steps:
+  build: { prompt: prompts/build.md, produces: [notes] }
+  check: { shell: 'sleep 0.3; test -f done.flag || { touch done.flag; exit 1; }', produces: [check_output] }
+  lint: { prompt: prompts/lint.md }
+  ship: { prompt: prompts/ship.md }
+edges:
+  - { from: build, to: check }
+  - { from: build, to: lint }
+  - { from: check, to: build, condition: on_fail }
+  - { from: lint, to: ship, condition: on_pass }
+`, { lint: ['none', 'pass'] });
+  const answers: string[] = [];
+  // lint's first run reports no outcome and waits at a gate; check's rework then replaces lint before anyone answers.
+  s.deps.answer = (_questions, signal) => {
+    answers.push('open');
+    return new Promise((_resolve, reject) => {
+      signal.addEventListener('abort', () => {
+        answers[answers.length - 1] = 'taken down';
+        reject(signal.reason);
+      });
+    });
+  };
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.deepEqual(answers, ['taken down']);
+});
+
+// --- the budget, and processes left running
+
+const CHAIN = (budget: string) => `budget_usd: ${budget}
+defaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 5 } }
+steps:
+  plan: { prompt: prompts/plan.md }
+  build: { prompt: prompts/build.md }
+  ship: { prompt: prompts/ship.md }
+edges:
+  - { from: plan, to: build }
+  - { from: build, to: ship }
+`;
+
+test('a flow stops and waits once it has spent its budget, and each run may spend only what is left', { timeout: 10_000 }, async () => {
+  const s = setup(CHAIN('0.15'));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  assert.ok(Math.abs((s.script.specs[1].limits?.maxBudgetUsd ?? 0) - 0.05) < 1e-9, JSON.stringify(s.script.specs[1].limits));
+  assert.deepEqual(s.script.timeline.filter((x) => x.startsWith('start:')), ['start:plan', 'start:build']);
+  assert.deepEqual(s.out.slice(-3), [
+    '-- flow paused: 2 runs, $0.20 of $0.15 spent, $0.00 wasted',
+    '-- the budget is spent: $0.20 of $0.15',
+    `-- continue with: pnpm lr-run-flow --resume ${RUN_DIR} --budget-usd <more>`,
+  ]);
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: the budget is spent, $0.20 of $0.15; give a larger one, or 0 for none, with --budget-usd`]);
+  assert.equal(await runFlow(['--resume', RUN_DIR, '--budget-usd', '1'], s.deps), 0, s.out.join('\n'));
+  assert.equal(s.out.at(-1), '-- flow done: 3 runs, $0.30 of $1.00 spent, $0.00 wasted');
+  assert.equal(JSON.parse(readFileSync(join(s.runDir, 'flow.json'), 'utf8')).config.budgetUsd, 1);
+  // 0 is no ceiling: nothing caps a run
+  const free = setup(CHAIN('0'));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], free.deps), 0);
+  assert.equal(free.script.specs[1].limits?.maxBudgetUsd, undefined);
+});
+
+test('the lr-run-flow after one that died stops the processes its run logs name, and only those', { timeout: 15_000 }, async (t) => {
+  const s = setup(SHELL_ONLY);
+  const sleeper = () => spawn('sleep', ['30'], { detached: true, stdio: 'ignore' });
+  const left = sleeper(); // the dead host's check, in its own group
+  const other = sleeper(); // a process given a pid an old log names
+  t.after(() => [left, other].forEach((c) => c.kill('SIGKILL')));
+  const old = join(s.base, 'runs', 'old');
+  mkdirSync(old, { recursive: true });
+  const line = (o: object) => JSON.stringify(o) + '\n';
+  writeFileSync(join(old, '001-check.jsonl'), line({ kind: 'start' }) + line({ kind: 'pid', pid: left.pid, group: true, started: processStart(left.pid!) }));
+  writeFileSync(join(old, '002-check.jsonl'), line({ kind: 'start' }) + line({ kind: 'pid', pid: other.pid, group: true, started: 'Thu Jan  1 00:00:00 1970' }));
+  writeFileSync(join(old, '003-check.jsonl'), line({ kind: 'pid', pid: 1, started: 'x' }) + line({ kind: 'result' })); // ended: left alone
+  const lock = join(s.base, 'proj', '.lamproom', 'lock');
+  mkdirSync(dirname(lock), { recursive: true });
+  const dead = spawnSync('true').pid;
+  writeFileSync(lock, JSON.stringify({ pid: dead, runDir: old }));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.ok(s.out.includes(`-- warning: a lr-run-flow (pid ${dead}) ended without cleaning up; stopped 1 run it left running`), s.out.join('\n'));
+  assert.ok(s.out.includes(`-- warning: pid ${other.pid} (${join(old, '002-check.jsonl')}) is running but may not be the process its run started; check it yourself`), s.out.join('\n'));
+  await delay(100);
+  assert.equal(left.signalCode, 'SIGTERM');
+  assert.equal(other.exitCode ?? other.signalCode, null);
+});
+
+test('a second Ctrl+C kills a run that its stop did not end', { timeout: 10_000 }, async (t) => {
+  const s = setup(ONE_BUILD);
+  let child: ChildProcess | undefined;
+  s.deps.makeProvider = () => ({
+    id: 'stuck',
+    capabilities: new Set(),
+    resolveModel: (m) => m,
+    launch: () => {
+      const c = spawn('sleep', ['30'], { stdio: 'ignore' });
+      child = c;
+      const result = new Promise<RunResult>((r) => c.on('exit', () => r({ usage: ZERO_USAGE, exitCode: 1, error: 'killed' })));
+      async function* events(): AsyncGenerator<NormalizedEvent> {
+        await result;
+      }
+      return { sessionId: Promise.resolve('s-1'), pid: Promise.resolve(c.pid!), events: events(), result, stop: () => {} }; // stop does nothing
+    },
+  });
+  t.after(() => child?.kill('SIGKILL'));
+  let clock = new Date(2026, 9, 18, 9, 5, 7).getTime();
+  s.deps.now = () => new Date(clock);
+  when(() => child !== undefined, () =>
+    setTimeout(() => {
+      s.signals.emit('SIGINT');
+      clock += 400;
+      s.signals.emit('SIGINT');
+    }, 100),
+  );
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 130);
+  assert.deepEqual([s.exits, child?.signalCode], [[130], 'SIGKILL']);
+});
+
+test('a spent budget takes down a gate prompt that is open, as Ctrl+C does', { timeout: 10_000 }, async () => {
+  const s = setup(`budget_usd: 0.25
+defaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 5 } }
+steps:
+  plan: { prompt: prompts/plan.md }
+  a: { prompt: prompts/a.md, gate: approval }
+  b: { prompt: prompts/b.md }
+edges:
+  - { from: plan, to: a }
+  - { from: plan, to: b }
+`, { b: ['slow'] });
+  let taken = false;
+  s.deps.answer = (_questions, signal) =>
+    new Promise((_resolve, reject) =>
+      signal.addEventListener('abort', () => {
+        taken = true;
+        reject(signal.reason);
+      }),
+    );
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  assert.equal(taken, true);
+  assert.ok(s.out.includes('-- the budget is spent: $0.30 of $0.25'), s.out.join('\n'));
+});
+
+
+// --- runtime: opensandbox, with a fake box: processes run on this machine, every box call is recorded.
+const BOXED = (flow: string) => flow.replace(HEAD, `${HEAD}sandbox: { runtime: opensandbox, image: lamproom-sandbox }\n`);
+
+function fakeBox(o: { missing?: string[]; gone?: boolean } = {}) {
+  const calls: string[] = [];
+  const box: Box = {
+    id: 'box-1',
+    token: 'tok-1',
+    missing: o.missing ?? [],
+    exec: ({ push }) => ({
+      ...hostExecHost,
+      id: 'container',
+      spawn: (command, args, opts) => {
+        calls.push(`spawn:push=${(push?.() ?? []).map((f) => basename(f)).sort().join(',')}`);
+        return hostExecHost.spawn(command, args, opts);
+      },
+      tunnel: async () => ({ close() {} }),
+      mapPath: (p) => p,
+    }),
+    pushDir: async () => void calls.push('push'),
+    pullFiles: async (files) => void calls.push(`pull:${files.map((f) => basename(f)).join(',')}`),
+    patch: async () => {
+      calls.push('patch');
+      return Buffer.from('diff --git a/x b/x\n');
+    },
+    allow: async (hosts) => void calls.push(`allow:${hosts.join(',')}`),
+    kill: async () => void calls.push('kill'),
+  };
+  const deps: Pick<RunDeps, 'openBox' | 'connectBox'> = {
+    openBox: async () => {
+      calls.push('open');
+      return box;
+    },
+    connectBox: async (id) => {
+      calls.push(`connect:${id}`);
+      if (o.gone) throw new Error(`sandbox ${id} is gone`);
+      return box;
+    },
+  };
+  return { calls, deps };
+}
+
+test('an opensandbox flow opens one box, syncs artifacts around each step and ends with changes.patch', async () => {
+  const s = setup(BOXED(LINEAR));
+  const fb = fakeBox();
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fb.deps }), 0, s.out.join('\n'));
+  // Each agent brings back only what it produces; the check gets every artifact the host has.
+  assert.deepEqual(fb.calls, ['open', 'pull:plan.md', 'pull:notes.md', 'spawn:push=notes.md,plan.md', 'patch', 'kill']);
+  assert.equal(readFileSync(join(s.runDir, 'changes.patch'), 'utf8'), 'diff --git a/x b/x\n');
+  assert.deepEqual(JSON.parse(readFileSync(join(s.runDir, 'sandbox.json'), 'utf8')), { id: 'box-1', token: 'tok-1' });
+  assert.equal(statSync(join(s.runDir, 'sandbox.json')).mode & 0o777, 0o600, 'it holds the relay token');
+  assert.ok(s.out.some((l) => l.startsWith('-- sandbox box-1: ')), s.out.join('\n'));
+  assert.ok(s.out.includes(`-- changes: ${join('runs', STAMPED, 'changes.patch')} (1 file); review it, then: git -C ${join(s.base, 'proj')} apply ${join(s.runDir, 'changes.patch')}`), s.out.join('\n'));
+});
+
+test('a paused opensandbox flow keeps its box and --resume reconnects to it', async () => {
+  const s = setup(BOXED(GATE), { review: ['none'] });
+  const fb = fakeBox();
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fb.deps }), 3);
+  assert.ok(!fb.calls.includes('kill'), fb.calls.join());
+  assert.ok(s.out.includes('-- sandbox box-1 kept for --resume'), s.out.join('\n'));
+  await runFlow(['--resume', join('runs', STAMPED)], { ...s.deps, ...fb.deps });
+  assert.ok(fb.calls.includes('connect:box-1'), fb.calls.join());
+});
+
+test('a failed sandboxed step can be retried with a host let through first, and the run pins that host', async () => {
+  const s = setup(BOXED(TIMEOUT));
+  const fb = fakeBox();
+  const asked: Question[][] = [];
+  s.deps.answer = async (questions) => {
+    asked.push(questions);
+    return asked.length === 1 ? { decision: 'retry', note: null, allow_host: 'Registry.npmjs.org ' } : { decision: 'fail', note: null, allow_host: null };
+  };
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fb.deps }), 1, s.out.join('\n'));
+  assert.ok(asked[0].some((q) => q.id === 'allow_host'), JSON.stringify(asked[0]));
+  assert.ok(fb.calls.includes('allow:registry.npmjs.org'), fb.calls.join());
+  assert.ok(s.out.includes('-- sandbox: egress now allows registry.npmjs.org'), s.out.join('\n'));
+  assert.ok(JSON.parse(readFileSync(join(s.runDir, 'flow.json'), 'utf8')).config.sandbox.egress.includes('registry.npmjs.org'));
+});
+
+test('--resume refuses when the box is gone', async () => {
+  const s = setup(BOXED(GATE), { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fakeBox().deps }), 3);
+  const gone = fakeBox({ gone: true });
+  assert.equal(await runFlow(['--resume', join('runs', STAMPED)], { ...s.deps, ...gone.deps }), 2);
+  assert.ok(s.err.includes(`${join('runs', STAMPED)}: cannot resume: sandbox box-1 is gone: its edits cannot be resumed; start the flow again`), s.err.join('\n'));
+});
+
+test('--resume refuses an opensandbox run whose box is not recorded, rather than run it on this machine', async () => {
+  const s = setup(BOXED(GATE), { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fakeBox().deps }), 3);
+  rmSync(join(s.runDir, 'sandbox.json'));
+  assert.equal(await runFlow(['--resume', join('runs', STAMPED)], { ...s.deps, ...fakeBox().deps }), 2);
+  assert.deepEqual(s.err, [`${join('runs', STAMPED)}: cannot resume: its OpenSandbox box is not recorded in sandbox.json; start the flow again`]);
+});
+
+test('a missing credential is a warning, not an error', async () => {
+  const s = setup(BOXED(LINEAR));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fakeBox({ missing: ['CLAUDE_CODE_OAUTH_TOKEN'] }).deps }), 0, s.out.join('\n'));
+  assert.ok(s.out.includes('-- warning: sandbox: CLAUDE_CODE_OAUTH_TOKEN is not set; steps that need it will fail'), s.out.join('\n'));
+});
+
+test('an artifact a running agent produces is never pushed over its copy in the box', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lr-push-'));
+  for (const f of ['plan.md', 'notes.md', 'check_output.md']) writeFileSync(join(dir, f), f);
+  mkdirSync(join(dir, '.outcomes'));
+  writeFileSync(join(dir, '.outcomes', '001-plan.json'), '{}');
+  assert.deepEqual(pushable(dir, new Set([join(dir, 'notes.md')])).map((f) => basename(f)).sort(), ['check_output.md', 'plan.md']);
+});
+
+test('a docker sandbox gives sandbox.env to agents only: a check gets none of it', () => {
+  process.env.LR_TEST_TOKEN = 'secret';
+  try {
+    const box = sandboxFor({ runtime: 'docker', image: 'x', env: ['LR_TEST_TOKEN'] }, '/art', tmpdir());
+    assert.deepEqual(box({ online: true }).profile?.env, { LR_TEST_TOKEN: 'secret' });
+    assert.deepEqual(box({}).profile?.env, {});
+  } finally {
+    delete process.env.LR_TEST_TOKEN;
+  }
+});
+
+test("a project's .lamproom.yaml sets every box's memory and CPUs, and the run pins them", async () => {
+  const s = setup(BOXED(LINEAR));
+  writeFileSync(join(s.base, 'proj', '.lamproom.yaml'), 'sandbox: { memory_mb: 3072, cpus: 1.5 }\n');
+  const fb = fakeBox();
+  const opened: unknown[] = [];
+  const openBox: RunDeps['openBox'] = async (o) => (opened.push(o.limits), fb.deps.openBox!(o));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fb.deps, openBox }), 0, s.out.join('\n'));
+  assert.deepEqual(opened, [{ memoryMb: 3072, cpus: 1.5 }]);
+  assert.ok(s.out.includes('-- sandbox limits: 3072 MB of memory, 1.5 CPUs (from .lamproom.yaml)'), s.out.join('\n'));
+  assert.deepEqual(JSON.parse(readFileSync(join(s.runDir, 'flow.json'), 'utf8')).config.sandbox.limits, { memoryMb: 3072, cpus: 1.5 });
+});
+
+test('a .lamproom.yaml lr-run-flow cannot read stops the run before it starts', async () => {
+  const s = setup(BOXED(LINEAR));
+  writeFileSync(join(s.base, 'proj', '.lamproom.yaml'), 'sandbox: { memory_mb: lots, swap: 1 }\n');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], { ...s.deps, ...fakeBox().deps }), 2);
+  const file = join(realpathSync(join(s.base, 'proj')), '.lamproom.yaml');
+  assert.deepEqual(s.err, [`${file}: sandbox.memory_mb: Invalid input: expected number, received string`, `${file}: sandbox.swap: unknown key`]);
+});
+
+test('a docker sandbox puts the run\'s limits on every container', () => {
+  const box = sandboxFor({ runtime: 'docker', image: 'x', env: [], limits: { memoryMb: 2048 } }, '/art', tmpdir());
+  assert.deepEqual(box({}).profile?.limits, { memoryMb: 2048 });
+  assert.deepEqual(box({ online: true }).profile?.limits, { memoryMb: 2048 });
+});
+
+test('LAMPROOM_RUNS_DIR names the folder run folders go in, as the runs page reads it', async () => {
+  const { deps, base } = setup(SHELL_ONLY);
+  process.env.LAMPROOM_RUNS_DIR = 'elsewhere';
+  try {
+    assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0);
+  } finally {
+    delete process.env.LAMPROOM_RUNS_DIR;
+  }
+  assert.ok(existsSync(join(base, 'elsewhere', STAMPED, 'state.json')));
+  assert.equal(existsSync(join(base, 'runs', STAMPED)), false);
+});
+
+// --- the project's isolation tier
+
+/** A stand-in Docker: `gvisor` says whether runsc is there, `notReady` what is missing; `calls` records each check. */
+function fakeDocker(o: { gvisor?: boolean; notReady?: string } = {}) {
+  const calls: string[] = [];
+  const docker: NonNullable<RunDeps['docker']> = {
+    gvisor: () => (calls.push('gvisor'), o.gvisor ?? false),
+    notReady: (image) => (calls.push(`notReady:${image}`), o.notReady),
+  };
+  return { calls, docker };
+}
+
+/** Sets the variable for the test, putting the old value back after. */
+function withEnv(t: { after: (fn: () => void) => void }, name: string, value: string | undefined) {
+  const old = process.env[name];
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+  t.after(() => (old === undefined ? delete process.env[name] : (process.env[name] = old)));
+}
+
+test('refuses a folder outside every project', async () => {
+  const { base, err, deps } = setup(SHELL_ONLY);
+  registerProject(base, join(base, 'proj'), null);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, [`${join(base, 'proj')}: not in a Lamproom project (none in ${join(base, 'data', 'projects.json')}); create one for this repo first`]);
+  assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+test("lr-run-flow reads Lamproom's own data folder, not data/ where it starts; LAMPROOM_DATA_DIR still wins", async (t) => {
+  withEnv(t, 'LAMPROOM_DATA_DIR', undefined);
+  const { base, err, deps } = setup(SHELL_ONLY); // registers proj in <base>/data, where lr-run-flow starts
+  delete deps.dataDir;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  const own = fileURLToPath(new URL('../../../data/projects.json', import.meta.url));
+  assert.deepEqual(err, [`${join(base, 'proj')}: not in a Lamproom project (none in ${own}); create one for this repo first`]);
+  withEnv(t, 'LAMPROOM_DATA_DIR', 'data');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, err.join('\n'));
+});
+
+test('--check needs no project', async () => {
+  const { base, deps } = setup(SHELL_ONLY);
+  registerProject(base, join(base, 'proj'), null);
+  assert.equal(await runFlow(['--check', 'flow.yaml'], deps), 0);
+  assert.equal(await runFlow(['--check', ...RUN, 'flow.yaml'], deps), 0);
+});
+
+test('a trusted project runs on this machine, and says so before the run starts', async () => {
+  const { out, deps, runDir } = setup(SHELL_ONLY);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.ok(out.includes('-- isolation: Trusted (host), from project proj; agents ask before edits and shell commands'), out.join('\n'));
+  const { config } = JSON.parse(readFileSync(join(runDir, 'flow.json'), 'utf8'));
+  assert.deepEqual([config.sandbox, config.isolation], [undefined, { projectId: 'p-1', trust: 'trusted', tier: 'host', approvals: true }]);
+});
+
+test('normal refuses when docker is not ready', async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const { base, err, deps } = setup(ONE_BUILD);
+  const proj = gitProj(base);
+  registerProject(base, proj, 'normal');
+  deps.docker = fakeDocker({ notReady: 'Docker is not running' }).docker;
+  assert.equal(await runFlow([...RUN, '--workspace', 't1', 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, ['Docker is not running']);
+  assert.equal(existsSync(join(base, 'runs')), false);
+  assert.equal(existsSync(join(proj, '.lamproom', 'worktrees')), false);
+});
+
+test('normal refuses a box without the login its agents need', async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', undefined);
+  withEnv(t, 'OPENROUTER_API_KEY', undefined);
+  const { base, err, deps } = setup(DELIVERY);
+  registerProject(base, join(base, 'proj'), 'normal');
+  deps.docker = fakeDocker().docker;
+  // The project from LAMPROOM_DATA_DIR, not deps.dataDir: that would also apply the app's OpenCode model rules,
+  // which refuse DELIVERY's unapproved OpenRouter model before the login is checked.
+  withEnv(t, 'LAMPROOM_DATA_DIR', join(base, 'data'));
+  delete deps.dataDir;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, [
+    "CLAUDE_CODE_OAUTH_TOKEN is not set: a container cannot use this machine's login. Run `claude setup-token` and set CLAUDE_CODE_OAUTH_TOKEN where Lamproom runs",
+    "OPENROUTER_API_KEY is not set: a container cannot use this machine's login. Set OPENROUTER_API_KEY where Lamproom runs",
+  ]);
+  assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+test('normal boxes a flow with no sandbox', async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const { base, out, deps, runDir, script } = setup(ONE_BUILD);
+  registerProject(base, join(base, 'proj'), 'normal');
+  const fd = fakeDocker();
+  deps.docker = fd.docker;
+  deps.dockerMemoryMb = () => undefined;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.deepEqual(fd.calls, ['notReady:lamproom-cli']);
+  const { config } = JSON.parse(readFileSync(join(runDir, 'flow.json'), 'utf8'));
+  assert.deepEqual(config.sandbox, { runtime: 'docker', image: 'lamproom-cli', env: ['CLAUDE_CODE_OAUTH_TOKEN'], limits: {} });
+  assert.deepEqual(config.isolation, { projectId: 'p-1', trust: 'normal', tier: 'container', approvals: false });
+  const i = out.indexOf('-- isolation: Normal (container), from project proj');
+  assert.ok(i !== -1 && out[i + 1].startsWith('-- sandbox limits: '), out.join('\n'));
+  assert.equal(script.specs[0].exec?.profile?.tier, 'container');
+});
+
+test('normal never asks', async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const { base, out, deps, script } = setup(ONE_BUILD);
+  registerProject(base, join(base, 'proj'), 'normal');
+  deps.docker = fakeDocker().docker;
+  deps.dockerMemoryMb = () => undefined;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 0, out.join('\n'));
+  assert.equal(script.specs[0].approve, undefined);
+});
+
+/** The first ask the page is offered, once there is one; none within 4 s is a failure. */
+async function pageAsk(runDir: string): Promise<{ id: string; heading: string; questions: Question[] }> {
+  for (let i = 0; i < 200; i++) {
+    const asks = existsSync(join(runDir, 'asks')) ? readdirSync(join(runDir, 'asks')) : [];
+    if (asks.length) return JSON.parse(readFileSync(join(runDir, 'asks', asks[0]), 'utf8'));
+    await delay(20);
+  }
+  throw new Error('the page was never asked');
+}
+
+test('trusted asks before an agent\'s shell command', { timeout: 10_000 }, async () => {
+  const s = setup(ONE_BUILD, { build: ['approve'] });
+  void pageAsk(s.runDir).then((ask) => writeFileSync(join(s.runDir, 'answers', `${ask.id}.json`), JSON.stringify({ approve: 'once' })));
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.deepEqual(s.script.approvals, [true]);
+  assert.ok(s.out.includes('-- build: allowed pnpm test'), s.out.join('\n'));
+});
+
+test("trusted never asks before an agent writes the run's own outputs", { timeout: 10_000 }, async () => {
+  const s = setup(ONE_PLAN, { plan: ['write-own'] });
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.deepEqual(s.script.approvals, [true]);
+  assert.equal(s.out.some((l) => l.includes('allowed')), false, s.out.join('\n'));
+});
+
+test('a trusted run with agents and no one to answer is refused, at start and at resume', { timeout: 10_000 }, async () => {
+  const NO_ONE = 'this project is Trusted, so agents ask before edits and shell commands, and no one can answer here; run it in a terminal or from the runs page';
+  const s = setup(ONE_BUILD);
+  s.deps.canAsk = false;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 2);
+  assert.deepEqual(s.err, [`flow.yaml: ${NO_ONE}`]);
+  assert.equal(existsSync(join(s.base, 'runs')), false);
+  // shell steps never ask, so a shell-only flow runs
+  const sh = setup(SHELL_ONLY);
+  sh.deps.canAsk = false;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], sh.deps), 0, sh.err.join('\n'));
+  const g = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], g.deps), 3, g.err.join('\n'));
+  g.deps.canAsk = false;
+  assert.equal(await runFlow(['--resume', RUN_DIR], g.deps), 2);
+  assert.deepEqual(g.err, [`${RUN_DIR}: cannot resume: ${NO_ONE}`]);
+});
+
+test('a stopped step withdraws its approval', { timeout: 10_000 }, async () => {
+  const s = setup(ONE_BUILD, { build: ['approve'] });
+  void pageAsk(s.runDir).then((ask) => {
+    assert.deepEqual([ask.heading, ask.questions[0].prompt], ['-- build asks:', 'Run pnpm test?']);
+    s.signals.emit('SIGINT');
+  });
+  assert.equal(await runFlow([...RUN, '--page', 'flow.yaml'], s.deps), 130, s.out.join('\n'));
+  assert.deepEqual(s.script.approvals, [false]);
+  assert.deepEqual(readdirSync(join(s.runDir, 'asks')), []);
+  assert.ok(s.out.some((l) => l.startsWith('-- flow stopped: ')), s.out.join('\n'));
+});
+
+test('untrusted refuses without gvisor', async () => {
+  const { base, err, deps } = setup(ONE_BUILD);
+  registerProject(base, join(base, 'proj'), 'untrusted');
+  deps.docker = fakeDocker({ gvisor: false }).docker;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], deps), 2);
+  assert.deepEqual(err, ["Untrusted runs need gVisor, and this machine's Docker has no runsc runtime; set the project to Normal, or run it on a Linux host with gVisor"]);
+  assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+test('resume refuses without its project', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  registerProject(s.base, join(s.base, 'proj'), null);
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: its project is gone`]);
+});
+
+const CHANGED = `${RUN_DIR}: cannot resume: its project's isolation changed since it started, or its flow.json was edited; start the flow again`;
+
+/** A GATE run paused at its gate in a Normal project, in a box: Docker and the token faked. */
+async function pausedNormal(t: { after: (fn: () => void) => void }) {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const s = setup(GATE, { review: ['none'] });
+  registerProject(s.base, join(s.base, 'proj'), 'normal');
+  const fd = fakeDocker();
+  s.deps.docker = fd.docker;
+  s.deps.dockerMemoryMb = () => 2048;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  s.deps.answer = deciding('approve').answer;
+  return { ...s, fd, pin: join(s.runDir, 'flow.json') };
+}
+
+test('a boxed run resumes in the box it started in, with Docker checked again', { timeout: 10_000 }, async (t) => {
+  const s = await pausedNormal(t);
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.err.join('\n'));
+  assert.deepEqual(s.fd.calls, ['notReady:lamproom-cli', 'notReady:lamproom-cli']);
+  assert.equal(s.script.specs.at(-1)?.exec?.profile?.tier, 'container');
+});
+
+test('a resume after the project\'s trust changed is refused', { timeout: 10_000 }, async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  registerProject(s.base, join(s.base, 'proj'), 'normal');
+  s.deps.docker = fakeDocker().docker;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+});
+
+test('a resume whose flow.json lost its isolation and sandbox is refused', { timeout: 10_000 }, async (t) => {
+  const s = await pausedNormal(t);
+  const pinned = JSON.parse(readFileSync(s.pin, 'utf8'));
+  delete pinned.config.isolation;
+  delete pinned.config.sandbox;
+  writeFileSync(s.pin, JSON.stringify(pinned));
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+  assert.ok(!s.script.timeline.includes('start:ship'));
+});
+
+/** Rewrites the paused run's pinned config with `change`. */
+function editPin(pin: string, change: (config: { sandbox?: unknown; isolation: Record<string, unknown> }) => void) {
+  const pinned = JSON.parse(readFileSync(pin, 'utf8'));
+  change(pinned.config);
+  writeFileSync(pin, JSON.stringify(pinned));
+}
+const ODD = { runtime: 'x', image: 'i', egress: [], credentials: [] };
+
+test('a resume whose pin names an unknown sandbox runtime is refused, in Normal', { timeout: 10_000 }, async (t) => {
+  const s = await pausedNormal(t);
+  editPin(s.pin, (c) => {
+    c.sandbox = ODD;
+    c.isolation.flowSandbox = ODD;
+    c.isolation.tier = 'opensandbox';
+  });
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+  assert.ok(!s.script.timeline.includes('start:ship'));
+});
+
+test('a resume whose pin names an unknown sandbox runtime is refused, in Untrusted with gVisor', { timeout: 10_000 }, async (t) => {
+  withEnv(t, 'CLAUDE_CODE_OAUTH_TOKEN', 'tok');
+  const s = setup(GATE, { review: ['none'] });
+  registerProject(s.base, join(s.base, 'proj'), 'untrusted');
+  s.deps.docker = fakeDocker({ gvisor: true }).docker;
+  s.deps.dockerMemoryMb = () => undefined;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  editPin(join(s.runDir, 'flow.json'), (c) => {
+    c.sandbox = { ...ODD, env: ['CLAUDE_CODE_OAUTH_TOKEN'], gvisor: true }; // what isolationFor would make of ODD
+    c.isolation.flowSandbox = ODD;
+  });
+  s.deps.answer = deciding('approve').answer;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+  assert.ok(!s.script.timeline.includes('start:ship'));
+});
+
+test('a resume whose pinned tier is not one of the four is refused', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  editPin(join(s.runDir, 'flow.json'), (c) => void (c.isolation.tier = 'none'));
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [CHANGED]);
+});
+
+test('a resume whose project no longer holds its folder is refused', { timeout: 10_000 }, async () => {
+  const s = setup(GATE, { review: ['none'] });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3);
+  registerProject(s.base, join(s.base, 'elsewhere'), 'trusted'); // the same project, p-1, moved to another repo
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: its folder is no longer in its project proj`]);
+});
+
+test("a docker box mounts the repo's git dir read-only over the folder, so host-side git never runs a box's hooks", () => {
+  const repo = realpathSync(mkdtempSync(join(tmpdir(), 'lr-gitdir-')));
+  execFileSync('git', ['init', '-q'], { cwd: repo });
+  const profile = sandboxFor({ runtime: 'docker', image: 'x', env: [] }, '/art', repo)({}).profile!;
+  const gitDir = join(repo, '.git');
+  assert.ok(profile.mounts?.some((m) => m.source === gitDir && m.target === gitDir && m.readOnly), JSON.stringify(profile.mounts));
+  const args = dockerArgs(profile, 'sh', [], repo, []);
+  assert.ok(args.indexOf(`${repo}:${repo}`) < args.indexOf(`${gitDir}:${gitDir}:ro`), args.join(' '));
+  // Not a repo: nothing to mount.
+  assert.deepEqual(sandboxFor({ runtime: 'docker', image: 'x', env: [] }, '/art', tmpdir())({}).profile?.mounts, [{ source: '/art', target: '/art' }]);
+});
+
+test('an untrusted sandbox runs its containers under gVisor', () => {
+  const box = sandboxFor({ runtime: 'docker', image: 'x', env: [], gvisor: true }, '/art', tmpdir());
+  assert.equal(box({}).profile?.tier, 'gvisor');
+  assert.equal(sandboxFor({ runtime: 'docker', image: 'x', env: [] }, '/art', tmpdir())({}).profile?.tier, 'container');
+});
+
+test('a .git a box planted in the folder refuses the run before anything runs, --allow-dirty or not, and its config never runs', async (t) => {
+  const { base, err, deps } = setup(SHELL_ONLY.replace("shell: 'exit 0'", "shell: 'touch ran'"));
+  t.after(() => rmSync(base, { recursive: true, force: true }));
+  const proj = gitProj(base);
+  const sub = join(proj, 'sub');
+  const marker = join(base, 'PWNED');
+  mkdirSync(sub);
+  git(sub, 'init', '-q');
+  git(sub, 'config', 'core.fsmonitor', `touch '${marker}'; false`);
+  const planted = `flow.yaml: --folder: ${join(sub, '.git')} was not made by git for ${proj}; a sandboxed step may have written it. Remove it and check the repo.`;
+  for (const extra of [[], ['--allow-dirty']]) {
+    assert.equal(await runFlow(['--folder', 'proj/sub', '--task', 'task.md', ...extra, 'flow.yaml'], deps), 2);
+    assert.deepEqual(err.splice(0), [planted]);
+  }
+  assert.equal(existsSync(marker), false);
+  assert.equal(existsSync(join(sub, 'ran')), false);
+  assert.equal(existsSync(join(base, 'runs')), false);
+});
+
+// --- the project's monthly cap
+
+/** Gives the fixture project a monthly cap, over its trust. */
+function capProject(s: ReturnType<typeof setup>, capUsd: number, onLimit: 'pause' | 'ask', alertAt = 80) {
+  const path = join(s.base, 'data', 'projects.json');
+  const [p] = JSON.parse(readFileSync(path, 'utf8'));
+  p.overrides.budget = { capUsd, alertAt, onLimit };
+  writeFileSync(path, JSON.stringify([p]));
+}
+/** Another run of the project, started `name` (a dated run folder name), that has spent `usd`. */
+function spentRun(s: ReturnType<typeof setup>, name: string, usd: number) {
+  const dir = join(s.base, 'runs', name);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'flow.json'), JSON.stringify({ version: 1, config: { name: 'other', folder: join(s.base, 'proj') } }));
+  writeFileSync(join(dir, 'state.json'), JSON.stringify({ status: 'done', runs: [{ costUsd: usd }] }));
+}
+const OVER = 'project proj has spent $1.05 of its $1.00 for October 2026; raise its monthly cap on the project page, or wait for November 2026';
+
+test('a project over its monthly cap refuses a new run (pause), and makes no run folder', async () => {
+  const s = setup(CHAIN('0'));
+  capProject(s, 1, 'pause');
+  spentRun(s, '2026-10-01T08-00-00-other', 1.05);
+  spentRun(s, '2026-09-30T08-00-00-other', 50); // September's does not count
+  assert.equal(await runFlow([...RUN, '--over-project-budget', 'flow.yaml'], s.deps), 2); // the flag is for ask me first only
+  assert.deepEqual(s.err, [OVER]);
+  assert.equal(existsSync(s.runDir), false);
+});
+
+test('ask me first refuses without --over-project-budget, and runs with it, capped by the flow alone', async () => {
+  const s = setup(CHAIN('0'));
+  capProject(s, 1, 'ask');
+  spentRun(s, '2026-10-01T08-00-00-other', 1.05);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 2);
+  assert.deepEqual(s.err, [`${OVER}; to run it anyway, add --over-project-budget`]);
+  assert.equal(await runFlow([...RUN, '--over-project-budget', 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.ok(s.out.includes('-- project budget: over its $1.00 for October 2026; running anyway (--over-project-budget)'), s.out.join('\n'));
+  assert.equal(s.script.specs[0].limits?.maxBudgetUsd, undefined);
+});
+
+test("the start line, the alert, each run capped at what the project has left, and a pause once it is spent", { timeout: 10_000 }, async () => {
+  const s = setup(CHAIN('0'));
+  capProject(s, 1, 'pause');
+  spentRun(s, '2026-10-01T08-00-00-other', 0.85);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  assert.ok(s.out.includes('-- project budget: $0.85 of $1.00 spent in October 2026'), s.out.join('\n'));
+  assert.ok(s.out.includes('-- warning: project proj has spent 85% of its $1.00 for October 2026'), s.out.join('\n'));
+  assert.ok(Math.abs((s.script.specs[0].limits?.maxBudgetUsd ?? 0) - 0.15) < 1e-9, JSON.stringify(s.script.specs[0].limits));
+  assert.ok(Math.abs((s.script.specs[1].limits?.maxBudgetUsd ?? 0) - 0.05) < 1e-9, JSON.stringify(s.script.specs[1].limits));
+  assert.deepEqual(s.out.slice(-3), [
+    '-- flow paused: 2 runs, $0.20 spent, $0.00 wasted',
+    "-- the project's budget for October 2026 is spent: $1.05 of $1.00",
+    `-- continue with: pnpm lr-run-flow --resume ${RUN_DIR}`,
+  ]);
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: ${OVER}`]);
+  capProject(s, 2, 'pause');
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+  assert.ok(s.out.includes('-- project budget: $1.05 of $2.00 spent in October 2026'), s.out.join('\n'));
+});
+
+test('ask me first: a run the cap paused resumes with --over-project-budget', { timeout: 10_000 }, async () => {
+  const s = setup(CHAIN('0'));
+  capProject(s, 1, 'ask');
+  spentRun(s, '2026-10-01T08-00-00-other', 0.85);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  assert.equal(s.out.at(-1), `-- continue with: pnpm lr-run-flow --resume ${RUN_DIR} --over-project-budget`);
+  assert.equal(await runFlow(['--resume', RUN_DIR, '--over-project-budget'], s.deps), 0, s.out.join('\n'));
+});
+
+test("another run's spend counts while this one runs", { timeout: 10_000 }, async () => {
+  const s = setup(CHAIN('0'), { plan: ['slow'] });
+  capProject(s, 1, 'pause');
+  when(() => s.script.timeline.includes('start:plan'), () => spentRun(s, '2026-10-02T08-00-00-other', 5));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  assert.deepEqual(s.script.timeline.filter((x) => x.startsWith('start:')), ['start:plan']);
+  assert.ok(s.out.includes("-- the project's budget for October 2026 is spent: $5.10 of $1.00"), s.out.join('\n'));
+});
+
+test('no cap: no project budget lines, whatever other runs spent', async () => {
+  const s = setup(CHAIN('0'));
+  spentRun(s, '2026-10-01T08-00-00-other', 500);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.equal(s.out.filter((l) => l.includes('project budget') || l.includes("project's budget")).length, 0, s.out.join('\n'));
+});
+
+test('a run the cap paused in one month, resumed in the next, is told its month and not to wait', { timeout: 10_000 }, async () => {
+  const s = setup(CHAIN('0'));
+  capProject(s, 1, 'pause');
+  spentRun(s, '2026-10-01T08-00-00-other', 0.85);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 3, s.out.join('\n'));
+  s.deps.now = () => new Date(2026, 10, 2, 9);
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 2);
+  assert.deepEqual(s.err, [`${RUN_DIR}: cannot resume: project proj has spent $1.05 of its $1.00 for October 2026, the month this run started; raise its monthly cap on the project page`]);
+});
+
+test('a cap raised on the project page while a run goes applies at once', { timeout: 10_000 }, async () => {
+  const s = setup(CHAIN('0'), { plan: ['slow'] });
+  capProject(s, 1, 'pause');
+  spentRun(s, '2026-10-01T08-00-00-other', 0.85);
+  when(() => s.script.timeline.includes('start:plan'), () => capProject(s, 5, 'pause'));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.out.join('\n'));
+  assert.ok(Math.abs((s.script.specs[1].limits?.maxBudgetUsd ?? 0) - 4.05) < 1e-9, JSON.stringify(s.script.specs[1].limits));
+});
+
+// --- knowledge assets
+
+/**
+ * The project's maps as a knowledge build leaves them in its repo, and the build's run on its record: `done` and its
+ * last line `built`, or one of the ways a build does not count.
+ */
+function builtMaps(base: string, ended: 'built' | 'failed' | 'none' = 'built') {
+  const proj = join(base, 'proj');
+  mkdirSync(join(proj, '.lamproom', 'knowledge', 'serena'), { recursive: true });
+  mkdirSync(join(proj, '.lamproom', 'knowledge', 'graphify-out'), { recursive: true });
+  writeFileSync(join(proj, '.lamproom', 'knowledge', 'serena', 'project.yml'), 'read_only: true\n');
+  writeFileSync(join(proj, '.lamproom', 'knowledge', 'graphify-out', 'GRAPH_REPORT.md'), '# report\n');
+  if (ended === 'none') return;
+  const name = '2026-10-18T09-00-00-knowledge-build';
+  const scratch = mkdtempSync(join(tmpdir(), 'lr-kb-'));
+  writeFileSync(join(scratch, 'task.md'), KNOWLEDGE_TASK);
+  writeFileSync(join(scratch, 'knowledge-build.yaml'), knowledgeFlowText('true'));
+  const loaded = loadFlow('knowledge-build.yaml', scratch, { folder: scratch, task: 'task.md' });
+  assert.ok(loaded.ok);
+  const dir = join(base, 'runs', name);
+  const artifactsDir = join(scratch, '.lamproom', name);
+  mkdirSync(dir, { recursive: true });
+  mkdirSync(artifactsDir, { recursive: true });
+  writeFileSync(join(dir, 'flow.json'), JSON.stringify({ version: 1, config: loaded.config, artifactsDir }));
+  writeFileSync(join(dir, 'state.json'), JSON.stringify({ status: 'done', steps: {}, runs: [] }));
+  writeFileSync(join(artifactsDir, 'build.md'), ended === 'built' ? '-- knowledge built at abc1234\n' : '-- knowledge build failed: serena: boom\n');
+  const file = join(base, 'data', 'projects.json');
+  const projects = JSON.parse(readFileSync(file, 'utf8'));
+  projects[0].knowledgeBuild = { run: name, commit: 'abc1234def' };
+  writeFileSync(file, JSON.stringify(projects));
+}
+
+const hasSerena = (spec: RunSpec) => !!spec.tools?.some((t) => t.name === 'serena');
+const hasMap = (spec: RunSpec) => /graphify/.test(spec.prompt.preamble);
+
+test("a repo's own files never reach the agents as Lamproom's maps: not a failed build's, not a planted project.local.yml, not tracked ones", async () => {
+  for (const ended of ['failed', 'none'] as const) {
+    const s = setup(ONE_BUILD);
+    builtMaps(s.base, ended);
+    assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+    assert.deepEqual([hasSerena(s.script.specs[0]), hasMap(s.script.specs[0])], [false, false], ended);
+  }
+  const local = setup(ONE_BUILD);
+  builtMaps(local.base);
+  writeFileSync(join(local.base, 'proj', '.lamproom', 'knowledge', 'serena', 'project.local.yml'), 'read_only: false\n');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], local.deps), 0, local.err.join('\n'));
+  assert.deepEqual([hasSerena(local.script.specs[0]), hasMap(local.script.specs[0])], [false, true]);
+  const tracked = setup(ONE_BUILD);
+  builtMaps(tracked.base);
+  const proj = join(tracked.base, 'proj');
+  for (const args of [['init', '-q', '-b', 'main'], ['add', '-f', '.lamproom/knowledge/graphify-out/GRAPH_REPORT.md'], ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'planted']]) spawnSync('git', args, { cwd: proj });
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], tracked.deps), 0, tracked.err.join('\n'));
+  assert.deepEqual([hasSerena(tracked.script.specs[0]), hasMap(tracked.script.specs[0])], [false, false]);
+});
+
+test("an agent step gets Serena and graphify's report once they are built, and only while the project has them on", async () => {
+  const s = setup(ONE_BUILD);
+  const proj = join(s.base, 'proj');
+  builtMaps(s.base);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  const spec = s.script.specs[0];
+  const serena = spec.tools?.find((t) => t.name === 'serena');
+  assert.equal(serena?.command, 'uvx'); // Trusted: on this machine
+  assert.deepEqual(serena?.args?.slice(0, 7), ['-q', '--from', 'git+https://github.com/oraios/serena@5e4f5cd173c7ff3eed37ee3f1de6c266b937c5dc', 'serena', 'start-mcp-server', '--project', proj]);
+  assert.equal(serena?.env?.SERENA_HOME, join(s.base, 'data', 'serena'));
+  assert.match(readFileSync(join(s.base, 'data', 'serena', 'serena_config.yml'), 'utf8'), /\.lamproom\/knowledge\/serena/);
+  assert.match(spec.prompt.preamble, new RegExp(`graphify, built at abc1234; it may be older than the code\\): ${proj}/\\.lamproom/knowledge/graphify-out/GRAPH_REPORT\\.md`));
+
+  const off = setup(ONE_BUILD);
+  builtMaps(off.base);
+  const projects = JSON.parse(readFileSync(join(off.base, 'data', 'projects.json'), 'utf8'));
+  projects[0].overrides.knowledge = { serena: false, graphify: false, rebuild: 'manual' };
+  writeFileSync(join(off.base, 'data', 'projects.json'), JSON.stringify(projects));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], off.deps), 0, off.err.join('\n'));
+  assert.equal(off.script.specs[0].tools?.some((t) => t.name === 'serena'), false);
+  assert.doesNotMatch(off.script.specs[0].prompt.preamble, /graphify/);
+
+  const unbuilt = setup(ONE_BUILD);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], unbuilt.deps), 0, unbuilt.err.join('\n'));
+  assert.equal(unbuilt.script.specs[0].tools?.some((t) => t.name === 'serena'), false);
+  assert.doesNotMatch(unbuilt.script.specs[0].prompt.preamble, /graphify/);
+});
+
+// --- project memory
+
+const VITEST = '- Tests use vitest, run with pnpm test';
+const MEMO = `${HEAD}steps:
+  plan: { prompt: prompts/plan.md }
+  review: { prompt: prompts/review.md, produces: [review_notes] }
+edges:
+  - { from: plan, to: review }
+`;
+/** A run of MEMO whose review writes VITEST, its project's memory `on` or not. */
+function memorySetup(on: boolean, plays: Record<string, Play[]> = { plan: ['ask'] }, yaml = MEMO, extra: Record<string, string> = {}) {
+  const s = setup(yaml, plays);
+  writeFileSync(join(s.base, 'prompts', 'review.md'), VITEST);
+  for (const [path, text] of Object.entries(extra)) {
+    mkdirSync(dirname(join(s.base, path)), { recursive: true });
+    writeFileSync(join(s.base, path), text);
+  }
+  const file = join(s.base, 'data', 'projects.json');
+  const projects = JSON.parse(readFileSync(file, 'utf8'));
+  projects[0].overrides.memory = on;
+  writeFileSync(file, JSON.stringify(projects));
+  s.deps.answer = async () => ({ colour: 'teal' });
+  const data = join(s.base, 'data');
+  return { ...s, data, memories: () => readMemories(data, 'p-1') };
+}
+
+test('memory: a done run of a project with memory on saves its review, not a typed answer, and the next run recalls it', { timeout: 10_000 }, async () => {
+  const s = memorySetup(true);
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  assert.ok(s.out.includes('-- memory: recalled 0 notes for plan'), s.out.join('\n'));
+  assert.ok(s.out.includes('-- memory: saved 1 note from this run'), s.out.join('\n')); // the typed answer (teal) is never kept
+  assert.equal(s.out.at(-1), '-- flow done: 2 runs, $0.20 spent, $0.00 wasted');
+  const ms = s.memories();
+  assert.deepEqual(ms.map((m) => m.text), ['Tests use vitest, run with pnpm test']);
+  assert.ok(ms.every((m) => m.source.run === STAMPED && m.source.trust === 'trusted'), JSON.stringify(ms));
+  // A note a contained run wrote never reaches this Trusted project's runs, whose agents run on this machine.
+  addMemories(s.data, 'p-1', [{ text: 'Tests in vitest run in parallel by default', source: { run: 'boxed', trust: 'normal' } }]);
+  assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt))); // nothing to recall in the first run
+
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  const review = s.script.specs[3];
+  assert.equal(review.prompt.template, VITEST);
+  assert.equal(review.prompt.memory, `${RECALL_HEAD}\n- Tests use vitest, run with pnpm test`);
+  const text = renderPrompt(review.prompt);
+  assert.ok(text.indexOf(VITEST) < text.indexOf(RECALL_HEAD) && text.indexOf(RECALL_HEAD) < text.indexOf(review.prompt.closing), text);
+  assert.ok(text.endsWith(review.prompt.closing));
+  assert.ok(s.out.includes('-- memory: recalled 1 note for review'), s.out.join('\n'));
+});
+
+test('memory: with memory off the prompt is what it was, and nothing is saved or said', { timeout: 10_000 }, async () => {
+  const s = memorySetup(false);
+  addMemories(s.data, 'p-1', [{ text: 'Tests use vitest, run with pnpm test', source: { run: 'old' } }]);
+  const before = readFileSync(memoryFile(s.data, 'p-1'), 'utf8');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  assert.equal(s.script.specs.length, 2);
+  assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt)));
+  assert.deepEqual(s.out.filter((l) => l.includes('memory')), []);
+  assert.equal(readFileSync(memoryFile(s.data, 'p-1'), 'utf8'), before);
+});
+
+test('memory: a failed or paused run saves nothing', { timeout: 10_000 }, async () => {
+  // review writes its notes, then build fails and the person fails the flow
+  const failed = memorySetup(true, { build: ['error'] }, `${HEAD}steps:\n  review: { prompt: prompts/review.md, produces: [review_notes] }\n  build: { prompt: prompts/build.md }\nedges:\n  - { from: review, to: build }\n`);
+  failed.deps.answer = deciding('fail').answer;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], failed.deps), 1, failed.out.join('\n'));
+  assert.ok(existsSync(join(failed.base, 'proj', '.lamproom', STAMPED, 'review_notes.md')));
+  assert.equal(existsSync(memoryFile(failed.data, 'p-1')), false);
+  assert.deepEqual(failed.out.filter((l) => l.startsWith('-- memory: saved')), []);
+
+  // review reports no outcome, so it waits at a gate nobody is there for
+  const paused = memorySetup(true, { [VITEST]: ['none'] }, GATE.replace('prompts/review.md }', 'prompts/review.md, produces: [review_notes] }'));
+  delete paused.deps.answer;
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], paused.deps), 3, paused.out.join('\n'));
+  assert.equal(existsSync(memoryFile(paused.data, 'p-1')), false);
+});
+
+test('memory: an unreadable store: the run goes on without memory, and its file is left alone', { timeout: 10_000 }, async () => {
+  const s = memorySetup(true);
+  mkdirSync(join(s.data, 'memory'));
+  writeFileSync(memoryFile(s.data, 'p-1'), '{oops');
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 0, s.err.join('\n'));
+  assert.ok(s.out.some((l) => /^-- memory: not read: .+; plan runs without it$/.test(l)), s.out.join('\n'));
+  assert.ok(s.out.some((l) => /^-- memory: not saved: .+/.test(l)), s.out.join('\n'));
+  assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt)));
+  assert.equal(readFileSync(memoryFile(s.data, 'p-1'), 'utf8'), '{oops');
+});
+
+test("memory: Lamproom's own runs neither recall nor save", { timeout: 10_000 }, async () => {
+  const s = memorySetup(true, {}, MEMO, { 'data/internal/x/flow.yaml': MEMO, 'data/internal/x/prompts/plan.md': 'plan', 'data/internal/x/prompts/review.md': VITEST });
+  addMemories(s.data, 'p-1', [{ text: 'Tests use vitest, run with pnpm test', source: { run: 'old' } }]);
+  const before = readFileSync(memoryFile(s.data, 'p-1'), 'utf8');
+  assert.equal(await runFlow([...RUN, 'data/internal/x/flow.yaml'], s.deps), 0, s.err.join('\n'));
+  assert.equal(s.script.specs.length, 2);
+  assert.ok(s.script.specs.every((sp) => !('memory' in sp.prompt)));
+  assert.deepEqual(s.out.filter((l) => l.includes('memory')), []);
+  assert.equal(readFileSync(memoryFile(s.data, 'p-1'), 'utf8'), before);
+});

@@ -15,7 +15,7 @@ sandboxing ([08](./08-sandboxing.md)), and settings ([15](./06-cost-and-platform
 
 ## Why — the cold-start gap
 
-FlowBoard is a **dataflow** system with a deliberate hole in it: state lives *inside* a task and dies with it.
+Lamproom is a **dataflow** system with a deliberate hole in it: state lives *inside* a task and dies with it.
 
 - **Artifacts** (§6) carry context *within* one task, as files on disk — the right design for that job, kept.
 - But **nothing crosses the task boundary.** A second task on the same repo re-learns its conventions. The
@@ -77,7 +77,7 @@ Neither happens *inside* the agent process — the **runner brokers both** (see 
    the outcome it set, the summary/review artifact it produced — to `write()`. With `local`, it is stored as
    written and recall prefers the newest. With Mem0, Mem0 does the
    **fact-extraction and contradiction-resolution**: it distils facts, and when a new fact contradicts an old
-   one ("now uses vitest, not jest") it supersedes rather than duplicates. FlowBoard never diffs memories by
+   one ("now uses vitest, not jest") it supersedes rather than duplicates. Lamproom never diffs memories by
    hand — that is the entire reason to take a memory layer off the shelf rather than grow tables.
 
 Commit reads from **declared artifacts and answers, never from raw agent chatter** — that is both a quality
@@ -88,10 +88,10 @@ choice (structured > stream-of-consciousness) and a safety one (below).
 Mem0 describes itself as a universal memory layer for agents — user / session / agent memory, fact extraction,
 contradiction resolution, with SDKs, a CLI, self-hosting, and a managed platform. The mapping is direct:
 
-- FlowBoard's `user` / `agent` scopes → Mem0's `user_id` / `agent_id`; `project` and `task` → a `run_id`/session
+- Lamproom's `user` / `agent` scopes → Mem0's `user_id` / `agent_id`; `project` and `task` → a `run_id`/session
   or a metadata namespace. One adapter method each way.
 - `recall` → Mem0 `search`; `write` → Mem0 `add` (which is where extraction + contradiction-resolution live).
-- **Self-hosted OSS is the default** (local vector store + SQLite history) — it keeps FlowBoard local-first:
+- **Self-hosted OSS is the default** (local vector store + SQLite history) — it keeps Lamproom local-first:
   your machine, your repos, your keys, no new service to depend on. The **managed platform** is the honest path
   to the *shared/remote tier* the pitch already flags as a later decision — the same seam, a different adapter
   id, nothing in core changes.
@@ -116,7 +116,7 @@ entirely.
 
 ## Schema — almost nothing new
 
-Mem0 owns the memories (vector store + history). FlowBoard adds only:
+Mem0 owns the memories (vector store + history). Lamproom adds only:
 
 - a `memory` block in `settings` — adapter id, endpoint (self-host URL / cloud key ref), enabled scopes,
   recall `limit`, `max_recall_chars`;
@@ -126,9 +126,9 @@ Mem0 owns the memories (vector store + history). FlowBoard adds only:
 Memory-layer calls have their own (small) token/API cost. Tag it separately so it never muddies the run cost
 rollups (§12); the point of memory is to *lower* run cost, and the ledger should be able to show that net.
 
-## Recommendation for FlowBoard
+## Recommendation for Lamproom
 
-1. **Adapter = `local` first** (an FTS5 table in `flowboard.db`: no embeddings, no extraction model, no extra
+1. **Adapter = `local` first** (an FTS5 table in `lamproom.db`: no embeddings, no extraction model, no extra
    container), default `none` until the first flow opts in. Move to self-hosted Mem0 only when the cost and inbox
    views show memory paying off and recall quality is the limit.
 2. **Recall the `user` scope into every run; `project`/`agent`/`task` per step.** The user scope is the cheapest,

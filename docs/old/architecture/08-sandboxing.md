@@ -14,7 +14,7 @@ AgentProvider ([5](./03-execution-substrate.md#5-agentprovider-abstraction)), th
 
 ## Why — the threat model
 
-FlowBoard runs agents **headless** with `permission_mode='bypassPermissions'` by default (PRD §5) — no human
+Lamproom runs agents **headless** with `permission_mode='bypassPermissions'` by default (PRD §5) — no human
 reviews each tool call. Those agents then read **untrusted content**: repo files, web pages, the backlog
 markdown, issue/PR text, prior artifacts. Any of it can carry a **prompt injection** that redirects the agent
 to exfiltrate secrets, corrupt the repo, or run arbitrary commands. On the host the blast radius *is* the host:
@@ -23,7 +23,7 @@ the whole filesystem, every network destination, and the user's credentials.
 The single most valuable control is **network egress restriction**, because it is enforced below the agent's
 reasoning: *prompt injection can change what the agent asks for, but it cannot change what the firewall
 permits.* [egress-audit] A default-deny egress allowlist holds even when tool-approval is bypassed — exactly
-FlowBoard's default posture.
+Lamproom's default posture.
 
 So **`bypassPermissions` and a sandbox are one package.** Fully-autonomous agents without one is the dangerous
 configuration. This mirrors Claude Code's own stance: its dev container runs Claude as non-root, confines
@@ -128,9 +128,9 @@ defense-in-depth.)
   default-deny egress, non-root, hardened base images; Docker Desktop's microVM-backed `docker sandbox` for
   stronger isolation. [docker][docker-sandbox]
 - **Managed sandbox platforms** — E2B and Daytona (Firecracker / container microVMs, ~90–150ms cold start),
-  Modal (gVisor): the cloud version of this, if FlowBoard ever grows a `remote` tier. [northflank-e2b]
+  Modal (gVisor): the cloud version of this, if Lamproom ever grows a `remote` tier. [northflank-e2b]
 
-## Recommendation for FlowBoard
+## Recommendation for Lamproom
 
 Single-user, local-first, mostly the user's own repos:
 

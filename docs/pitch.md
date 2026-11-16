@@ -44,7 +44,7 @@ below, not hidden.
 
 *(one paragraph, no jargon)*
 
-**FlowBoard turns running coding agents from babysitting one terminal into a board where a task flows through
+**Lamproom turns running coding agents from babysitting one terminal into a board where a task flows through
 automated stages — research, plan, build, review — each stage an agent with its own budget and guardrails, some
 stages pausing for a quick human yes/no.** It runs the independent stages in parallel, isolates each one in a
 sandbox, and shows exactly what every stage and every task costs. The point is not the board or the models; it
@@ -92,7 +92,7 @@ Within **[one quarter]** of v3 being usable:
 
 ## The ask
 
-**Fund ~[10–12] engineering-weeks this quarter to rebuild FlowBoard to daily-usable, then ~[0.1 FTE] to keep it
+**Fund ~[10–12] engineering-weeks this quarter to rebuild Lamproom to daily-usable, then ~[0.1 FTE] to keep it
 alive.** Concretely, three things:
 
 1. Approve the quarter of build time.
@@ -138,14 +138,14 @@ deterministic import contract, worker restart-recovery, and a written debt ledge
 again" — it is the same idea with the first attempt's failure modes turned into acceptance tests.
 
 **2. "Autonomous agents are too risky to run unattended."** That risk is real, and it is the strongest reason to
-*build this*, not to avoid it. FlowBoard makes the safe path the default: each step runs in a **sandbox** with
+*build this*, not to avoid it. Lamproom makes the safe path the default: each step runs in a **sandbox** with
 default-deny network egress (an allowlist the agent cannot talk its way around, even under prompt injection),
 non-root, dropped capabilities, and resource limits — and **bypassed permissions are refused unless the step is
 sandboxed.** It adds approval gates for the steps that need a human and an audit trail for every run. Today's
 "engineer watches the terminal" is *less* safe than this, not more. (Design + sources:
 [sandboxing](./architecture/08-sandboxing.md).)
 
-**3. "Why build this? Just use the vendor's own tool / the CLI directly."** FlowBoard doesn't compete with the
+**3. "Why build this? Just use the vendor's own tool / the CLI directly."** Lamproom doesn't compete with the
 model or replace the CLI — **every model call goes through the `claude` CLI**; it is the thin harness *around*
 it that a single terminal can't be: cost attribution, human-in-the-loop gating, parallel stages, and an audit
 trail. It is also **provider-agnostic by design** (Claude *and* Codex behind one seam), so we are not betting the
@@ -189,7 +189,7 @@ of the status quo — waste plus the expected value of one avoided incident plus
 
 ### Investment model
 
-FlowBoard is a **single-owner internal tool with the team as contributors**: one maintainer owns the engine and
+Lamproom is a **single-owner internal tool with the team as contributors**: one maintainer owns the engine and
 the roadmap; engineers contribute *flows, agents, and skills* (the seeded library shows the shape). This keeps
 governance light and ownership clear at our size. If adoption grows past a handful of teams, revisit whether the
 maintainer role needs to become a formal 0.5–1 FTE — a decision to make on evidence of use, not up front.

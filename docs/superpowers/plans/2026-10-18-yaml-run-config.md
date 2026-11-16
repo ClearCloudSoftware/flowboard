@@ -1,27 +1,27 @@
-# YAML Run Config and `run-agent` CLI Implementation Plan
+# YAML Run Config and `lr-run-agent` CLI Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** `pnpm run-agent <task.yaml>` reads one YAML file, validates it, launches the Claude Code or OpenCode provider in the named folder, prints events live and writes a JSONL log under `runs/`.
+**Goal:** `pnpm lr-run-agent <task.yaml>` reads one YAML file, validates it, launches the Claude Code or OpenCode provider in the named folder, prints events live and writes a JSONL log under `runs/`.
 
-**Architecture:** A new workspace package `packages/cli` (`@flowboard/cli`) with two modules: `config.ts` turns a YAML file into a validated `RunSpec` (or a list of error lines), and `run.ts` launches the provider, streams, logs and maps the result to an exit code. `main.ts` is a one-line entry point. Tests inject the provider (a `ReplayProvider`) so they spend nothing.
+**Architecture:** A new workspace package `packages/cli` (`@lamproom/cli`) with two modules: `config.ts` turns a YAML file into a validated `RunSpec` (or a list of error lines), and `run.ts` launches the provider, streams, logs and maps the result to an exit code. `main.ts` is a one-line entry point. Tests inject the provider (a `ReplayProvider`) so they spend nothing.
 
-**Tech Stack:** TypeScript on Node 24 type stripping, `node:test`, pnpm 10 workspaces, `yaml` 2.9.x, `zod` 4.6.x, `@flowboard/core`, `@flowboard/adapters`.
+**Tech Stack:** TypeScript on Node 24 type stripping, `node:test`, pnpm 10 workspaces, `yaml` 2.9.x, `zod` 4.6.x, `@lamproom/core`, `@lamproom/adapters`.
 
 **Spec:** `docs/superpowers/specs/2026-10-18-yaml-run-config-design.md`
 
 ## Global Constraints
 
-- Code rules: erasable syntax only, `import type` for types, `.ts` relative imports, tests with `node:test` + `node:assert/strict`; commands run from `code/flowboard/`.
-- Package: `code/flowboard/packages/cli`, name `@flowboard/cli` — never `runner` (architecture rule: *"core/ and runner/ must never import from adapters/"*).
-- Dependencies: `@flowboard/core` and `@flowboard/adapters` (`workspace:*`), `yaml` (^2.9.1), `zod` (^4.6.7). Nothing else.
+- Code rules: erasable syntax only, `import type` for types, `.ts` relative imports, tests with `node:test` + `node:assert/strict`; commands run from `code/lamproom/`.
+- Package: `code/lamproom/packages/cli`, name `@lamproom/cli` — never `runner` (architecture rule: *"core/ and runner/ must never import from adapters/"*).
+- Dependencies: `@lamproom/core` and `@lamproom/adapters` (`workspace:*`), `yaml` (^2.9.1), `zod` (^4.6.7). Nothing else.
 - Every relative path (the YAML path argument, `folder`, `prompt`, `plugins`, `runs/`) resolves against the folder `pnpm` was run from: `process.env.INIT_CWD ?? process.cwd()`. Absolute paths are used as written.
 - Error line format: `<yaml path as typed>: <field>: <message>`; bad config or bad usage → exit **2**, nothing launched.
 - Fixed prompt closing: `This is a headless run: there is no terminal to ask into. Do the task, then stop.`
 - Default `permissions.mode`: `acceptEdits`.
 - Unrestricted-shell message: `<yaml>: <field>: <what> lets shell commands write outside folder; set permissions.allow_unrestricted_shell: true to allow it`.
 - Exit codes: **0** result has no `error` and `exitCode` 0; **130** result `error === 'stopped'` (both providers report `{ exitCode: 130, error: 'stopped' }`); **1** otherwise.
-- Automated tests spend nothing; live tests only under `FLOWBOARD_LIVE=1`.
+- Automated tests spend nothing; live tests only under `LAMPROOM_LIVE=1`.
 - The runner never touches `.gitignore`.
 
 ## Review Focus
@@ -41,7 +41,7 @@
 - Test: `packages/cli/test/config.test.ts`
 
 **Interfaces:**
-- Consumes: `RunSpec`, `PermissionMode`, `Effort`, `CapabilityPack`, `DEFAULT_DENY_COMMANDS` from `@flowboard/core`.
+- Consumes: `RunSpec`, `PermissionMode`, `Effort`, `CapabilityPack`, `DEFAULT_DENY_COMMANDS` from `@lamproom/core`.
 - Produces:
   ```ts
   export type Adapter = 'claude-code' | 'opencode';
@@ -54,16 +54,16 @@
 
 - [ ] **Step 1: Create the package**
 
-`packages/cli/package.json`: `"name": "@flowboard/cli"`, `"private": true`, `"type": "module"`, dependencies as in Global Constraints. Run `pnpm install`. Expected: lockfile updated, `packages/cli/node_modules/yaml` exists.
+`packages/cli/package.json`: `"name": "@lamproom/cli"`, `"private": true`, `"type": "module"`, dependencies as in Global Constraints. Run `pnpm install`. Expected: lockfile updated, `packages/cli/node_modules/yaml` exists.
 
 - [ ] **Step 2: Write the failing tests**
 
-Each test builds a temp base dir (`mkdtempSync`) holding `proj/` (dir), `task.md` (`Fix the bug.`), `plugins/fbecho/` (dir) and writes `task.yaml`, then calls `loadConfig('task.yaml', base)`.
+Each test builds a temp base dir (`mkdtempSync`) holding `proj/` (dir), `task.md` (`Fix the bug.`), `plugins/lrecho/` (dir) and writes `task.yaml`, then calls `loadConfig('task.yaml', base)`.
 
 ```ts
 test('full YAML maps to the RunSpec', () => {
   // YAML: every field of the spec's example, with folder: proj, prompt: task.md,
-  // plugins: [plugins/fbecho], skill: /fbecho:echo, system_prompt: Be careful.,
+  // plugins: [plugins/lrecho], skill: /lrecho:echo, system_prompt: Be careful.,
   // effort: high, permissions {mode: dontAsk, allow: [Read, "Bash(pnpm *)"], deny: [WebFetch]},
   // guards {deny_paths: [docs/**], deny_commands: ['\bnpm\s+publish\b']},
   // limits {budget_usd: 0.5, max_turns: 20}
@@ -73,9 +73,9 @@ test('full YAML maps to the RunSpec', () => {
   assert.equal(r.config.yamlPath, join(base, 'task.yaml'));
   assert.deepEqual(r.config.spec, {
     model: 'sonnet', effort: 'high', cwd: join(base, 'proj'),
-    prompt: { preamble: 'Fix the bug.', inputs: [], outputs: [], invocation: '/fbecho:echo', closing: CLOSING },
+    prompt: { preamble: 'Fix the bug.', inputs: [], outputs: [], invocation: '/lrecho:echo', closing: CLOSING },
     systemPrompt: 'Be careful.',
-    capabilities: [{ id: 'fbecho', provider: 'claude-code', mount: { kind: 'plugin_dir', path: join(base, 'plugins/fbecho') } }],
+    capabilities: [{ id: 'lrecho', provider: 'claude-code', mount: { kind: 'plugin_dir', path: join(base, 'plugins/lrecho') } }],
     permissionMode: 'dontAsk',
     toolPolicy: { allow: ['Read', 'Bash(pnpm *)'], deny: ['WebFetch'] },
     guards: { writeRoots: [join(base, 'proj')], denyPaths: ['docs/**'], denyCommands: [...DEFAULT_DENY_COMMANDS, String.raw`\bnpm\s+publish\b`] },
@@ -193,12 +193,12 @@ git commit -m "feat(cli): validate the YAML run config with field-named errors"
 
 **Files:**
 - Create: `packages/cli/src/run.ts`, `packages/cli/src/main.ts`
-- Modify: `code/flowboard/package.json` (script `"run-agent": "node packages/cli/src/main.ts"`)
+- Modify: `code/lamproom/package.json` (script `"lr-run-agent": "node packages/cli/src/main.ts"`)
 - Delete: `packages/adapters/try.ts`
 - Test: `packages/cli/test/run.test.ts`
 
 **Interfaces:**
-- Consumes: `loadConfig`, `Adapter`, `RunConfig` (Task 1); `ClaudeCodeProvider`, `OpencodeProvider`, `ReplayProvider` from `@flowboard/adapters`.
+- Consumes: `loadConfig`, `Adapter`, `RunConfig` (Task 1); `ClaudeCodeProvider`, `OpencodeProvider`, `ReplayProvider` from `@lamproom/adapters`.
 - Produces:
   ```ts
   export interface RunDeps {
@@ -215,7 +215,7 @@ git commit -m "feat(cli): validate the YAML run config with field-named errors"
   `main.ts`: `process.exitCode = await runAgent(process.argv.slice(2), { cwd: process.env.INIT_CWD ?? process.cwd() });`
 
 Behaviour:
-- `args.length !== 1` → `printErr('usage: pnpm run-agent <task.yaml>')`, return 2.
+- `args.length !== 1` → `printErr('usage: pnpm lr-run-agent <task.yaml>')`, return 2.
 - Config errors → each line to `printErr`, return 2, no `runs/` created.
 - Log: `mkdirSync(<cwd>/runs, { recursive: true })`; name `<YYYY-MM-DDTHH-MM-SS>-<adapter>.jsonl` from `now()` in local time; if taken, `-2`, `-3`, … before `.jsonl` (open with flag `wx`). Every line written with `appendFileSync` as it happens: `{kind:'start', at, yaml, config: spec}`, `{kind:'event', at, event}` (with `raw`), `{kind:'result', at, result}`.
 - Header via `print`: `-- <adapter> <model> in <folder>`, `-- log <abs log path>`, and when `unrestrictedShell`: `-- warning: unrestricted shell: commands can write outside <folder>`.
@@ -266,7 +266,7 @@ test('the unrestricted-shell warning is printed', async () => { /* bypassPermiss
 Run: `node --test packages/cli/test/run.test.ts`
 Expected: FAIL — cannot find module `../src/run.ts`.
 
-- [ ] **Step 3: Implement `runAgent` in `packages/cli/src/run.ts` and `main.ts`; add the `run-agent` script; delete `packages/adapters/try.ts`**
+- [ ] **Step 3: Implement `runAgent` in `packages/cli/src/run.ts` and `main.ts`; add the `lr-run-agent` script; delete `packages/adapters/try.ts`**
 
 - [ ] **Step 4: Run to see them pass, then the whole suite**
 
@@ -275,14 +275,14 @@ Expected: all pass (adapters' 6 live tests skipped); no type errors.
 
 - [ ] **Step 5: Smoke the real entry point without spending**
 
-Run: `d=$(mktemp -d) && printf 'adapter: claude-code\n' > "$d/fb-bad.yaml" && (cd "$d" && pnpm --dir <abs path to code/flowboard> run-agent fb-bad.yaml); echo "exit $?"`
-Expected: `fb-bad.yaml: model: required` (and the other required fields), `exit 2` — proving `INIT_CWD` resolution.
+Run: `d=$(mktemp -d) && printf 'adapter: claude-code\n' > "$d/lr-bad.yaml" && (cd "$d" && pnpm --dir <abs path to code/lamproom> lr-run-agent lr-bad.yaml); echo "exit $?"`
+Expected: `lr-bad.yaml: model: required` (and the other required fields), `exit 2` — proving `INIT_CWD` resolution.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add packages/cli package.json packages/adapters/try.ts
-git commit -m "feat(cli): run-agent launches the configured provider, prints and logs the run"
+git commit -m "feat(cli): lr-run-agent launches the configured provider, prints and logs the run"
 ```
 
 ---
@@ -291,12 +291,12 @@ git commit -m "feat(cli): run-agent launches the configured provider, prints and
 
 **Files:**
 - Create: `packages/cli/test/cli-live.test.ts`
-- Modify: `code/flowboard/package.json` (`test:live` gains `packages/cli/test/cli-live.test.ts`)
+- Modify: `code/lamproom/package.json` (`test:live` gains `packages/cli/test/cli-live.test.ts`)
 
 **Interfaces:**
 - Consumes: `runAgent` (Task 3) with the default `makeProvider`.
 
-- [ ] **Step 1: Write the live tests** (`{ skip: !process.env.FLOWBOARD_LIVE, timeout: 180_000 }`)
+- [ ] **Step 1: Write the live tests** (`{ skip: !process.env.LAMPROOM_LIVE, timeout: 180_000 }`)
 
 ```ts
 test('claude-code: YAML run replies and logs a result', live, async () => {
@@ -305,13 +305,13 @@ test('claude-code: YAML run replies and logs a result', live, async () => {
   // → code 0; the log's last line is a result with exitCode 0 and no error; some event line has type assistant_text
 });
 test('opencode: YAML run replies and logs a result', live, async () => {
-  // same, adapter opencode, model process.env.FLOWBOARD_OPENCODE_MODEL ?? 'openrouter/deepseek/deepseek-v4.1-flash'
+  // same, adapter opencode, model process.env.LAMPROOM_OPENCODE_MODEL ?? 'openrouter/deepseek/deepseek-v4.1-flash'
 });
 ```
 
 - [ ] **Step 2: Run them**
 
-Run: `FLOWBOARD_LIVE=1 node --test packages/cli/test/cli-live.test.ts`
+Run: `LAMPROOM_LIVE=1 node --test packages/cli/test/cli-live.test.ts`
 Expected: 2/2 pass. (Spends Claude quota and a little OpenRouter credit.)
 
 - [ ] **Step 3: Confirm they skip by default**
@@ -323,5 +323,5 @@ Expected: all pass, live tests reported as skipped.
 
 ```bash
 git add packages/cli/test/cli-live.test.ts package.json
-git commit -m "test(cli): live-check run-agent on both adapters"
+git commit -m "test(cli): live-check lr-run-agent on both adapters"
 ```

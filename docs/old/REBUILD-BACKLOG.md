@@ -1,4 +1,4 @@
-# FlowBoard rebuild backlog
+# Lamproom rebuild backlog
 
 Derived from: `PRD.md`, the design handoff (`docs/design_handoff_vibe_kanban`), git history (15 commits, all 2026‑09‑07), the four Claude Code sessions (2026‑09‑07 build, 2026‑09‑07 design/flow follow‑ups, 2026‑09‑09 import debugging, nine headless `backlog-importer` runs), the live `data/vibe.db`, and a file‑level audit of the current code against the PRD.
 
@@ -37,7 +37,7 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 
 ### Story 0.3 Repo hygiene
 - [ ] Dev server on port 3111; README warns agents kill :3000. **FIX**
-- [ ] `.gitignore`: `data/*.db*`, `data/runs`, `.vibe-worktrees`. Installed plugins live in each managed project's `.flowboard/skills/`, which FlowBoard adds to that repo's `.git/info/exclude`. **FIX**
+- [ ] `.gitignore`: `data/*.db*`, `data/runs`, `.vibe-worktrees`. Installed plugins live in each managed project's `.lamproom/skills/`, which Lamproom adds to that repo's `.git/info/exclude`. **FIX**
 - [ ] Commit or drop the four dirty files before starting. **BUG**
 
 ---
@@ -212,7 +212,7 @@ Goal: nothing is assumed about the CLI; every later epic has a runnable check.
 ## Epic 7 — Library and import (M7)
 
 ### Story 7.1 Skills (library screen `/p/[slug]/library`)
-- [ ] Install a plugin from any git URL into `<repo_path>/.flowboard/skills/<plugin>/<commit>/` (add `.claude-plugin/plugin.json` when missing), parse every `skills/*/SKILL.md`; manual check for updates; update with an added/removed-skills preview; remove with confirm. **PRD/BUG**
+- [ ] Install a plugin from any git URL into `<repo_path>/.lamproom/skills/<plugin>/<commit>/` (add `.claude-plugin/plugin.json` when missing), parse every `skills/*/SKILL.md`; manual check for updates; update with an added/removed-skills preview; remove with confirm. **PRD/BUG**
 - [ ] Stop storing frontmatter: read `SKILL.md` from the plugin dir when shown. **GAP**
 - [ ] Loading/empty states. **BUG**
 

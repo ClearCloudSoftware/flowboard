@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>FlowBoard Task Detail</title>
+<title>Lamproom Task Detail</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
@@ -283,8 +283,8 @@ const dur = ms => { const s = Math.max(0, Math.round(ms/1000));
    Seeded at the review gate — the same task the monitor shows waiting.  */
 const BOOT = Date.now();
 const TASK = {
-  id:'auth-refactor', repo:'flowboard/api', branch:'flowboard/auth-refactor',
-  workspace:'~/.flowboard/ws/auth-refactor', owner:'you',
+  id:'auth-refactor', repo:'lamproom/api', branch:'lamproom/auth-refactor',
+  workspace:'~/.lamproom/ws/auth-refactor', owner:'you',
   flow:'Software delivery', flowAuthor:'@core', flowVer:4, flowLatest:5,
   created:'today 09:14', started:'today 09:21',
   steps:[
@@ -292,21 +292,21 @@ const TASK = {
       state:'done', ms:92000, cost:0.012, wasted:0, attempts:1, art:['brief.md','4.1 kB'],
       log:[['g','› read  src/auth/session.ts, src/auth/jwt.ts'],
            ['g','› read  docs/security/session-audit-sep.md (212 lines)'],
-           ['','› write .flowboard/auth-refactor/brief.md'],
+           ['','› write .lamproom/auth-refactor/brief.md'],
            ['ok','✓ brief written — 6 findings, 2 open questions']] },
     { id:'plan', label:'Plan', agent:'architect', model:'opus', effort:'high',
       state:'done', ms:250000, cost:0.585, wasted:0, attempts:1, art:['plan.md','11.7 kB'],
       ask:{ q:'Rotate on every use, or only when the refresh token is near expiry?',
             answered:'Every use', after:'2m 14s' },
-      log:[['g','› read  .flowboard/auth-refactor/brief.md'],
+      log:[['g','› read  .lamproom/auth-refactor/brief.md'],
            ['hold','? asked you 2 questions — paused, billing stopped'],
            ['ok','✓ resumed with your answers'],
-           ['','› write .flowboard/auth-refactor/plan.md'],
+           ['','› write .lamproom/auth-refactor/plan.md'],
            ['ok','✓ 3 work items with acceptance criteria']] },
     { id:'build', label:'Build', agent:'developer', model:'opus', effort:'high',
       state:'done', ms:480000, cost:1.120, wasted:0.480, attempts:2, art:['changes.patch','38.2 kB'],
       failed:'attempt 1 — egress denied: registry.npmjs.org was not in the step allowlist',
-      log:[['g','› read  .flowboard/auth-refactor/plan.md'],
+      log:[['g','› read  .lamproom/auth-refactor/plan.md'],
            ['','› edit  src/auth/jwt.ts'],
            ['','› edit  src/auth/family.ts'],
            ['','› edit  src/auth/metrics.ts'],
@@ -325,7 +325,7 @@ const TASK = {
       log:[['g','› read  plan.md, changes.patch, test-report.md'],
            ['hold','◆ item 2 deviates from the plan — revokes one token, not the family'],
            ['hold','◆ item 3 not implemented'],
-           ['','› write .flowboard/auth-refactor/review.md'],
+           ['','› write .lamproom/auth-refactor/review.md'],
            ['ok','✓ verdict: passed with 2 notes']] },
     { id:'summarize', label:'Summarize', agent:'scribe', model:'haiku', effort:'low',
       state:'pending', ms:0, cost:0, wasted:0, attempts:1, art:null, log:[] },
@@ -525,7 +525,7 @@ function filesHTML(){
       <span style="font-size:12px;color:var(--ink-3)">what each step produced — the contract the next step reads</span></div>
     ${TASK.steps.filter(s => s.art).map(s => `<div class="fl-r">
       <span style="color:var(--ink-3)">${ICON.file}</span>
-      <span class="p">.flowboard/auth-refactor/<b>${esc(s.art[0])}</b></span>
+      <span class="p">.lamproom/auth-refactor/<b>${esc(s.art[0])}</b></span>
       <span class="d" style="color:var(--ink-3)">${esc(s.label.toLowerCase())}</span>
       <span class="sz">${esc(s.art[1])}</span></div>`).join('')}
 
@@ -613,7 +613,7 @@ function startSummarize(){
   const s = TASK.steps.find(x => x.id === 'summarize');
   s.state = 'running'; s.start = Date.now(); s.planned = 7000;
   s.log = [['g','› read  review.md, plan.md, changes.patch'],
-           ['','› write .flowboard/auth-refactor/summary.md']];
+           ['','› write .lamproom/auth-refactor/summary.md']];
   open.add('summarize');
   ticker = setInterval(() => {
     s.ms = Date.now() - s.start;

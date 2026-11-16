@@ -4,18 +4,18 @@
 
 **Goal:** Ship the `AgentProvider` port, a replay test double, a host `ExecHost`, and a Claude Code provider built on `@anthropic-ai/claude-agent-sdk` that drives the locally installed `claude` CLI with the owner's subscription login.
 
-**Architecture:** Two workspace packages inside `code/flowboard`. `@flowboard/core` holds the port types and two provider-neutral helpers (prompt rendering, guard rules) and has no runtime dependencies. `@flowboard/adapters` holds the host exec, the replay provider and the Claude provider. The Claude provider is three units: `options.ts` maps `RunSpec` to SDK `Options` (pure), `normalize.ts` maps `SDKMessage` to `NormalizedEvent` (pure, stateful per run), and `provider.ts` wires them to `query()`, spawning the CLI through `RunSpec.exec`.
+**Architecture:** Two workspace packages inside `code/lamproom`. `@lamproom/core` holds the port types and two provider-neutral helpers (prompt rendering, guard rules) and has no runtime dependencies. `@lamproom/adapters` holds the host exec, the replay provider and the Claude provider. The Claude provider is three units: `options.ts` maps `RunSpec` to SDK `Options` (pure), `normalize.ts` maps `SDKMessage` to `NormalizedEvent` (pure, stateful per run), and `provider.ts` wires them to `query()`, spawning the CLI through `RunSpec.exec`.
 
 **Tech Stack:** TypeScript 5.9 run directly by Node 24 type stripping (no build step), `node:test`, pnpm 10 workspaces, `@anthropic-ai/claude-agent-sdk` 0.3.302.
 
-**Spec:** `docs/FlowBoard/Agent Providers/` — chiefly `AgentProvider Port.md`, `Run Spec.md`, `Agent Run Handle And Result.md`, `Normalized Event Envelope.md`, `Provider Capabilities.md`, `Claude Code Adapter.md`, `Stream Parsing And Normalization.md`, `Provider SDK Fit Analysis.md`. Reference code: `docs/old/reference/core/ports/*.ts`, `docs/old/reference/adapters/agent/replay/replay-provider.ts`. Recorded stream: `docs/old/stream-sample.jsonl`. Guard rules: `docs/FlowBoard/Execution/Run Guardrails At Launch.md`. Prompt order: `docs/FlowBoard/Execution/Prompt Assembly.md`.
+**Spec:** `docs/Lamproom/Agent Providers/` — chiefly `AgentProvider Port.md`, `Run Spec.md`, `Agent Run Handle And Result.md`, `Normalized Event Envelope.md`, `Provider Capabilities.md`, `Claude Code Adapter.md`, `Stream Parsing And Normalization.md`, `Provider SDK Fit Analysis.md`. Reference code: `docs/old/reference/core/ports/*.ts`, `docs/old/reference/adapters/agent/replay/replay-provider.ts`. Recorded stream: `docs/old/stream-sample.jsonl`. Guard rules: `docs/Lamproom/Execution/Run Guardrails At Launch.md`. Prompt order: `docs/Lamproom/Execution/Prompt Assembly.md`.
 
 ## Global Constraints
 
 - Work on branch `feature/agent-providers-claude`, branched from `dev`.
-- All commands run from `code/flowboard/` unless stated.
+- All commands run from `code/lamproom/` unless stated.
 - Node 24, no build step: only erasable TypeScript (no `enum`, no parameter properties, no `namespace`); type-only imports use `import type`; relative imports carry the `.ts` extension.
-- `@flowboard/core` has **no** `dependencies` and never imports `@flowboard/adapters` (the dependency rule in `Provider Boundary Rules.md`).
+- `@lamproom/core` has **no** `dependencies` and never imports `@lamproom/adapters` (the dependency rule in `Provider Boundary Rules.md`).
 - Tests use `node:test` and `node:assert/strict` only. No test framework.
 - Pin `@anthropic-ai/claude-agent-sdk` to exactly `0.3.302`. It bundles CLI `2.1.302`; the installed CLI at `/opt/homebrew/bin/claude` is `2.1.302`.
 - Auth: the provider runs the installed `claude` binary with the owner's login. Never pass `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` into a run; never set `CLAUDE_CONFIG_DIR`.
@@ -49,23 +49,23 @@ These settle Agent Providers Open Questions; Task 7 records them in the docs.
 
 ---
 
-### Task 1: Workspace and the `@flowboard/core` port
+### Task 1: Workspace and the `@lamproom/core` port
 
 **Files:**
-- Modify: `code/flowboard/pnpm-workspace.yaml`
-- Modify: `code/flowboard/tsconfig.json` (`exclude`)
-- Modify: `code/flowboard/package.json` (scripts, `@types/node`)
-- Create: `code/flowboard/packages/tsconfig.json`
-- Create: `code/flowboard/packages/core/package.json`
-- Create: `code/flowboard/packages/core/src/ports/agent-provider.ts`
-- Create: `code/flowboard/packages/core/src/ports/events.ts`
-- Create: `code/flowboard/packages/core/src/ports/exec-host.ts`
-- Create: `code/flowboard/packages/core/src/prompt.ts`
-- Create: `code/flowboard/packages/core/src/index.ts`
-- Test: `code/flowboard/packages/core/test/prompt.test.ts`
+- Modify: `code/lamproom/pnpm-workspace.yaml`
+- Modify: `code/lamproom/tsconfig.json` (`exclude`)
+- Modify: `code/lamproom/package.json` (scripts, `@types/node`)
+- Create: `code/lamproom/packages/tsconfig.json`
+- Create: `code/lamproom/packages/core/package.json`
+- Create: `code/lamproom/packages/core/src/ports/agent-provider.ts`
+- Create: `code/lamproom/packages/core/src/ports/events.ts`
+- Create: `code/lamproom/packages/core/src/ports/exec-host.ts`
+- Create: `code/lamproom/packages/core/src/prompt.ts`
+- Create: `code/lamproom/packages/core/src/index.ts`
+- Test: `code/lamproom/packages/core/test/prompt.test.ts`
 
 **Interfaces:**
-- Produces (all re-exported from `@flowboard/core`):
+- Produces (all re-exported from `@lamproom/core`):
   - Every type in the three reference port files, with the changes in *Port decisions*.
   - `type PermissionMode = 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'dontAsk' | 'auto'`
   - `interface GuardRules { writeRoots: string[]; denyPaths?: string[]; denyCommands?: string[] }` (in `agent-provider.ts`; doc comments: `writeRoots` absolute dirs writes may land in, `denyPaths` globs relative to `cwd` from the task's non-goals, `denyCommands` regex sources matched against Bash commands)
@@ -98,7 +98,7 @@ git switch -c feature/agent-providers-claude
 }
 ```
 
-`packages/core/package.json`: `"name": "@flowboard/core"`, `"private": true`, `"type": "module"`, `"exports": { ".": "./src/index.ts" }`, no dependencies.
+`packages/core/package.json`: `"name": "@lamproom/core"`, `"private": true`, `"type": "module"`, `"exports": { ".": "./src/index.ts" }`, no dependencies.
 
 - [ ] **Step 2: Write the failing test**
 
@@ -161,9 +161,9 @@ git commit -m "feat(core): add AgentProvider port and prompt renderer"
 ### Task 2: Guard rules
 
 **Files:**
-- Create: `code/flowboard/packages/core/src/guard.ts`
-- Modify: `code/flowboard/packages/core/src/index.ts` (re-export)
-- Test: `code/flowboard/packages/core/test/guard.test.ts`
+- Create: `code/lamproom/packages/core/src/guard.ts`
+- Modify: `code/lamproom/packages/core/src/index.ts` (re-export)
+- Test: `code/lamproom/packages/core/test/guard.test.ts`
 
 **Interfaces:**
 - Consumes: `GuardRules` (Task 1).
@@ -223,24 +223,24 @@ git commit -m "feat(core): add provider-neutral tool guard rules"
 
 ---
 
-### Task 3: `@flowboard/adapters` with host exec and the replay provider
+### Task 3: `@lamproom/adapters` with host exec and the replay provider
 
 **Files:**
-- Create: `code/flowboard/packages/adapters/package.json`
-- Create: `code/flowboard/packages/adapters/src/exec/host.ts`
-- Create: `code/flowboard/packages/adapters/src/agent/replay/replay-provider.ts`
-- Create: `code/flowboard/packages/adapters/src/index.ts`
-- Test: `code/flowboard/packages/adapters/test/replay.test.ts`
+- Create: `code/lamproom/packages/adapters/package.json`
+- Create: `code/lamproom/packages/adapters/src/exec/host.ts`
+- Create: `code/lamproom/packages/adapters/src/agent/replay/replay-provider.ts`
+- Create: `code/lamproom/packages/adapters/src/index.ts`
+- Test: `code/lamproom/packages/adapters/test/replay.test.ts`
 
 **Interfaces:**
-- Consumes: `AgentProvider`, `AgentRun`, `ExecHost`, `NormalizedEvent`, `ZERO_USAGE` from `@flowboard/core`.
+- Consumes: `AgentProvider`, `AgentRun`, `ExecHost`, `NormalizedEvent`, `ZERO_USAGE` from `@lamproom/core`.
 - Produces:
   - `hostExecHost: ExecHost` — `id: 'host'`; `spawn` calls `child_process.spawn(command, args, { cwd, env, stdio: 'pipe' })`.
   - `class ReplayProvider implements AgentProvider` with `constructor(script: ReplayScript)` and the reference `ReplayScript`; `pid` resolves to `script.pid ?? -1`.
 
 - [ ] **Step 1: Create the package**
 
-`package.json`: `"name": "@flowboard/adapters"`, `"private": true`, `"type": "module"`, `"exports": { ".": "./src/index.ts" }`, `"dependencies": { "@flowboard/core": "workspace:*" }`. Run `pnpm install`.
+`package.json`: `"name": "@lamproom/adapters"`, `"private": true`, `"type": "module"`, `"exports": { ".": "./src/index.ts" }`, `"dependencies": { "@lamproom/core": "workspace:*" }`. Run `pnpm install`.
 
 - [ ] **Step 2: Write the failing tests**
 
@@ -263,7 +263,7 @@ Expected: FAIL with `ERR_MODULE_NOT_FOUND`.
 
 - [ ] **Step 4: Port the replay provider and write `hostExecHost`**
 
-Copy the reference replay provider without its self-check block. Import `ZERO_USAGE` from `@flowboard/core` as a value import: this proves Node strips types through the workspace symlink. `src/index.ts` re-exports both modules.
+Copy the reference replay provider without its self-check block. Import `ZERO_USAGE` from `@lamproom/core` as a value import: this proves Node strips types through the workspace symlink. `src/index.ts` re-exports both modules.
 
 - [ ] **Step 5: Run them to verify they pass**
 
@@ -282,13 +282,13 @@ git commit -m "feat(adapters): add host exec and replay provider"
 ### Task 4: Claude message normalizer
 
 **Files:**
-- Modify: `code/flowboard/packages/adapters/package.json` (SDK dependency)
-- Create: `code/flowboard/packages/adapters/src/agent/claude/normalize.ts`
-- Create: `code/flowboard/packages/adapters/test/fixtures/claude-hello.jsonl` (copy of `docs/old/stream-sample.jsonl`)
-- Test: `code/flowboard/packages/adapters/test/claude-normalize.test.ts`
+- Modify: `code/lamproom/packages/adapters/package.json` (SDK dependency)
+- Create: `code/lamproom/packages/adapters/src/agent/claude/normalize.ts`
+- Create: `code/lamproom/packages/adapters/test/fixtures/claude-hello.jsonl` (copy of `docs/old/stream-sample.jsonl`)
+- Test: `code/lamproom/packages/adapters/test/claude-normalize.test.ts`
 
 **Interfaces:**
-- Consumes: `NormalizedEvent`, `Usage`, `ZERO_USAGE` from `@flowboard/core`; `SDKMessage` type from the SDK.
+- Consumes: `NormalizedEvent`, `Usage`, `ZERO_USAGE` from `@lamproom/core`; `SDKMessage` type from the SDK.
 - Produces:
   - `createNormalizer(): (msg: SDKMessage) => NormalizedEvent[]` — one normalizer per run; every returned event carries `raw: msg`.
   - `summarizeTool(name: string, input: unknown): string` — `Bash: <command>`; `<name> <file_path|notebook_path|pattern|url>` when the field exists; else `<name>`; truncated to 120 characters.
@@ -310,7 +310,7 @@ Usage field mapping: `input_tokens` → `input`, `output_tokens` → `output`, `
 
 - [ ] **Step 1: Add the SDK**
 
-Run: `pnpm --filter @flowboard/adapters add @anthropic-ai/claude-agent-sdk@0.3.302 && pnpm --filter @flowboard/adapters add -D @anthropic-ai/sdk @modelcontextprotocol/sdk zod`
+Run: `pnpm --filter @lamproom/adapters add @anthropic-ai/claude-agent-sdk@0.3.302 && pnpm --filter @lamproom/adapters add -D @anthropic-ai/sdk @modelcontextprotocol/sdk zod`
 Expected: `package.json` shows `"@anthropic-ai/claude-agent-sdk": "0.3.302"` with no caret. Remove a caret if pnpm adds one.
 
 - [ ] **Step 2: Write the failing tests**
@@ -374,11 +374,11 @@ git commit -m "feat(adapters): normalize Claude Agent SDK messages"
 ### Task 5: `RunSpec` → SDK options
 
 **Files:**
-- Create: `code/flowboard/packages/adapters/src/agent/claude/options.ts`
-- Test: `code/flowboard/packages/adapters/test/claude-options.test.ts`
+- Create: `code/lamproom/packages/adapters/src/agent/claude/options.ts`
+- Test: `code/lamproom/packages/adapters/test/claude-options.test.ts`
 
 **Interfaces:**
-- Consumes: `RunSpec`, `renderPrompt`, `checkToolCall` from `@flowboard/core`; `Options`, `SpawnOptions`, `SpawnedProcess` types from the SDK.
+- Consumes: `RunSpec`, `renderPrompt`, `checkToolCall` from `@lamproom/core`; `Options`, `SpawnOptions`, `SpawnedProcess` types from the SDK.
 - Produces: `buildQuery(spec: RunSpec, base: { claudePath: string; env: NodeJS.ProcessEnv; abortController: AbortController; spawnClaudeCodeProcess: (o: SpawnOptions) => SpawnedProcess }): { prompt: string; options: Options }` — `spec.model` is already resolved by the caller.
 
 Mapping (the inferred table in `Claude Code Adapter.md`, rewritten for the SDK):
@@ -402,7 +402,7 @@ Mapping (the inferred table in `Claude Code Adapter.md`, rewritten for the SDK):
 
 - [ ] **Step 1: Write the failing tests**
 
-Build one full `RunSpec` fixture (model `'sonnet'`, effort `'high'`, cwd `'/repo/wt'`, `toolPolicy: { allow: ['Read'], deny: ['WebFetch'] }`, `tools: [{ name: 'vibe', command: 'node', args: ['shim.js'] }]`, packs `plugin_dir '/plugins/fbecho'` and `system_prompt 'Be terse.'`, `systemPrompt: 'You are the planner.'`, `resume: { sessionId: 's1', fork: true }`, `limits: { maxTurns: 5, maxBudgetUsd: 2 }`, `guards: { writeRoots: ['/repo/wt'] }`, invocation `'/fbecho:echo'`).
+Build one full `RunSpec` fixture (model `'sonnet'`, effort `'high'`, cwd `'/repo/wt'`, `toolPolicy: { allow: ['Read'], deny: ['WebFetch'] }`, `tools: [{ name: 'vibe', command: 'node', args: ['shim.js'] }]`, packs `plugin_dir '/plugins/lrecho'` and `system_prompt 'Be terse.'`, `systemPrompt: 'You are the planner.'`, `resume: { sessionId: 's1', fork: true }`, `limits: { maxTurns: 5, maxBudgetUsd: 2 }`, `guards: { writeRoots: ['/repo/wt'] }`, invocation `'/lrecho:echo'`).
 
 ```ts
 test('maps a full RunSpec', () => {
@@ -411,13 +411,13 @@ test('maps a full RunSpec', () => {
   assert.deepEqual(o.allowedTools, ['Read', 'mcp__vibe__*']);
   assert.deepEqual(o.disallowedTools, ['WebFetch']);
   assert.deepEqual(o.mcpServers, { vibe: { type: 'stdio', command: 'node', args: ['shim.js'], env: undefined } });
-  assert.deepEqual(o.plugins, [{ type: 'local', path: '/plugins/fbecho' }]);
+  assert.deepEqual(o.plugins, [{ type: 'local', path: '/plugins/lrecho' }]);
   assert.deepEqual(o.systemPrompt, { type: 'preset', preset: 'claude_code', append: 'You are the planner.\n\nBe terse.' });
   assert.equal(o.resume, 's1'); assert.equal(o.forkSession, true);
   assert.equal(o.maxTurns, 5); assert.equal(o.maxBudgetUsd, 2);
 });
 test('puts the skill invocation first', () => {
-  assert.ok(buildQuery(spec, base).prompt.startsWith('/fbecho:echo\n\n'));
+  assert.ok(buildQuery(spec, base).prompt.startsWith('/lrecho:echo\n\n'));
 });
 test('strips API keys and isolates config', () => {
   const { options: o } = buildQuery(spec, { ...base, env: { PATH: '/bin', ANTHROPIC_API_KEY: 'k', ANTHROPIC_AUTH_TOKEN: 't' } });
@@ -462,12 +462,12 @@ git commit -m "feat(adapters): map RunSpec to Claude Agent SDK options"
 ### Task 6: `ClaudeCodeProvider`
 
 **Files:**
-- Create: `code/flowboard/packages/adapters/src/agent/claude/provider.ts`
-- Modify: `code/flowboard/packages/adapters/src/index.ts` (re-export)
-- Test: `code/flowboard/packages/adapters/test/claude-provider.test.ts`
+- Create: `code/lamproom/packages/adapters/src/agent/claude/provider.ts`
+- Modify: `code/lamproom/packages/adapters/src/index.ts` (re-export)
+- Test: `code/lamproom/packages/adapters/test/claude-provider.test.ts`
 
 **Interfaces:**
-- Consumes: `buildQuery` (Task 5), `createNormalizer` (Task 4), `hostExecHost` (Task 3), port types from `@flowboard/core`, `query` from the SDK.
+- Consumes: `buildQuery` (Task 5), `createNormalizer` (Task 4), `hostExecHost` (Task 3), port types from `@lamproom/core`, `query` from the SDK.
 - Produces:
   - `type QueryFn = (p: { prompt: string; options: Options }) => AsyncIterable<SDKMessage>`
   - `class ClaudeCodeProvider implements AgentProvider` with `constructor(opts?: { claudePath?: string; env?: NodeJS.ProcessEnv; query?: QueryFn })`; defaults are `'claude'`, `process.env` and the SDK's `query`.
@@ -545,17 +545,17 @@ git commit -m "feat(adapters): add ClaudeCodeProvider on the Agent SDK"
 ### Task 7: Live check against the installed CLI, and the docs
 
 **Files:**
-- Create: `code/flowboard/packages/adapters/test/fixtures/fbecho-plugin/.claude-plugin/plugin.json` (`{ "name": "fbecho", "version": "0.0.1", "description": "FlowBoard test plugin" }`)
-- Create: `code/flowboard/packages/adapters/test/fixtures/fbecho-plugin/skills/echo/SKILL.md` (frontmatter `name: echo`, `description: Replies with a fixed token`; body `Reply with exactly: ECHO-OK`)
-- Create: `code/flowboard/packages/adapters/test/claude-live.test.ts`
-- Modify: `code/flowboard/package.json` (script `"test:live": "FLOWBOARD_LIVE=1 node --test packages/adapters/test/claude-live.test.ts"`)
-- Modify: `docs/FlowBoard/Agent Providers/Claude Code Adapter.md`
-- Modify: `docs/FlowBoard/Agent Providers/Agent Providers Open Questions.md`
+- Create: `code/lamproom/packages/adapters/test/fixtures/lrecho-plugin/.claude-plugin/plugin.json` (`{ "name": "lrecho", "version": "0.0.1", "description": "Lamproom test plugin" }`)
+- Create: `code/lamproom/packages/adapters/test/fixtures/lrecho-plugin/skills/echo/SKILL.md` (frontmatter `name: echo`, `description: Replies with a fixed token`; body `Reply with exactly: ECHO-OK`)
+- Create: `code/lamproom/packages/adapters/test/claude-live.test.ts`
+- Modify: `code/lamproom/package.json` (script `"test:live": "LAMPROOM_LIVE=1 node --test packages/adapters/test/claude-live.test.ts"`)
+- Modify: `docs/Lamproom/Agent Providers/Claude Code Adapter.md`
+- Modify: `docs/Lamproom/Agent Providers/Agent Providers Open Questions.md`
 
 **Interfaces:**
 - Consumes: `ClaudeCodeProvider` (Task 6).
 
-These tests spend subscription quota, so each `test` passes `{ skip: !process.env.FLOWBOARD_LIVE }`. Each run uses `cwd` = a fresh `mkdtemp(join(tmpdir(), 'fb-live-'))` and model `'haiku'`.
+These tests spend subscription quota, so each `test` passes `{ skip: !process.env.LAMPROOM_LIVE }`. Each run uses `cwd` = a fresh `mkdtemp(join(tmpdir(), 'lr-live-'))` and model `'haiku'`.
 
 - [ ] **Step 1: Write the live tests**
 
@@ -567,11 +567,11 @@ test('hello on the installed CLI with the subscription login', live, async () =>
   // res.usage.output > 0; res.usage.costUsd > 0
 });
 test('mounts a plugin and runs its skill headless', live, async () => {
-  // capabilities [plugin_dir <abs path to fixtures/fbecho-plugin>], prompt.invocation '/fbecho:echo', limits { maxTurns: 2 }
+  // capabilities [plugin_dir <abs path to fixtures/lrecho-plugin>], prompt.invocation '/lrecho:echo', limits { maxTurns: 2 }
   // → some assistant_text includes 'ECHO-OK'
 });
 test('guard hook blocks a write outside the worktree under bypassPermissions', live, async () => {
-  // target = join(tmpdir(), `fb-guard-${randomUUID()}.txt`) (outside cwd)
+  // target = join(tmpdir(), `lr-guard-${randomUUID()}.txt`) (outside cwd)
   // preamble `Use the Write tool to create ${target} containing hi. Do not use Bash.`
   // permissionMode 'bypassPermissions', guards { writeRoots: [cwd] }, limits { maxTurns: 3 }
   // → existsSync(target) === false; some tool_result with ok === false
@@ -581,16 +581,16 @@ test('guard hook blocks a write outside the worktree under bypassPermissions', l
 - [ ] **Step 2: Run them**
 
 Run: `pnpm test:live`
-Expected: 3 tests pass. If the skill test fails, check the `system` event's `raw.plugins` and `raw.slash_commands` before changing code. A failure here means the slash-first rule or the plugin mount is wrong, and `Claude Code Adapter.md` must record the actual behaviour. Run `pnpm test:packages` and confirm the live tests show as skipped without `FLOWBOARD_LIVE`.
+Expected: 3 tests pass. If the skill test fails, check the `system` event's `raw.plugins` and `raw.slash_commands` before changing code. A failure here means the slash-first rule or the plugin mount is wrong, and `Claude Code Adapter.md` must record the actual behaviour. Run `pnpm test:packages` and confirm the live tests show as skipped without `LAMPROOM_LIVE`.
 
 - [ ] **Step 3: Update the docs**
 
-In `Claude Code Adapter.md`, add a section `## Built on the Agent SDK` (2026-10-18) that points to `code/flowboard/packages/adapters/src/agent/claude/` and replaces the inferred flag table with Task 5's mapping table. In `Agent Providers Open Questions.md`, append to #1, #4, #5, #7, #9, #20 and #33 a line `**Decided 2026-10-18** (Claude adapter implementation): <the row from *Port decisions*>.`, keeping the house style of the notes (cited, sentence case, `[[wikilinks]]`).
+In `Claude Code Adapter.md`, add a section `## Built on the Agent SDK` (2026-10-18) that points to `code/lamproom/packages/adapters/src/agent/claude/` and replaces the inferred flag table with Task 5's mapping table. In `Agent Providers Open Questions.md`, append to #1, #4, #5, #7, #9, #20 and #33 a line `**Decided 2026-10-18** (Claude adapter implementation): <the row from *Port decisions*>.`, keeping the house style of the notes (cited, sentence case, `[[wikilinks]]`).
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add packages/adapters package.json "../../docs/FlowBoard/Agent Providers"
+git add packages/adapters package.json "../../docs/Lamproom/Agent Providers"
 git commit -m "test(adapters): live-check the Claude provider; record port decisions"
 ```
 

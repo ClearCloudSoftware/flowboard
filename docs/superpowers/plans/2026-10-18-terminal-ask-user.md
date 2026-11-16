@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** During a `run-agent` run the agent can ask the owner questions through an `ask_user` / `ask_user_batch` MCP tool, answered in the terminal, and a YAML can mount standalone skill folders (`skills:`), so the owner's grill-me runs.
+**Goal:** During a `lr-run-agent` run the agent can ask the owner questions through an `ask_user` / `ask_user_batch` MCP tool, answered in the terminal, and a YAML can mount standalone skill folders (`skills:`), so the owner's grill-me runs.
 
-**Architecture:** FlowBoard's two halves. A new stdio MCP server, the shim (`packages/ask-user`), forwards each question over a per-run Unix socket to a broker. `run-agent` is the broker: it queues requests, asks them in the terminal with `@inquirer/prompts`, and replies. The question and protocol types live in `@flowboard/core`, so the worker broker later reuses them and the shim. The adapters lift their MCP tool-call time limits.
+**Architecture:** Lamproom's two halves. A new stdio MCP server, the shim (`packages/ask-user`), forwards each question over a per-run Unix socket to a broker. `lr-run-agent` is the broker: it queues requests, asks them in the terminal with `@inquirer/prompts`, and replies. The question and protocol types live in `@lamproom/core`, so the worker broker later reuses them and the shim. The adapters lift their MCP tool-call time limits.
 
 **Tech Stack:** TypeScript on Node 24 type stripping, `node:test`, pnpm workspaces, `@modelcontextprotocol/sdk` 1.32.x, `zod` 4.6.x, `@inquirer/prompts` 8.x, `node:net` Unix sockets.
 
@@ -12,19 +12,19 @@
 
 ## Global Constraints
 
-- Code rules: erasable syntax only, `import type` for types, `.ts` relative imports, `node:test` + `node:assert/strict`; commands run from `code/flowboard/`.
+- Code rules: erasable syntax only, `import type` for types, `.ts` relative imports, `node:test` + `node:assert/strict`; commands run from `code/lamproom/`.
 - Question shape exactly: `QuestionKind = 'yes_no' | 'single_select' | 'multi_select' | 'text' | 'number'`; `Question { id; prompt; help?; kind; options?: { value; label }[]; required? /* default true */ }`.
 - Answer values: `yes_no` → boolean, `single_select` → option `value`, `multi_select` → `string[]`, `text` → string, `number` → number, skipped optional → `null`.
-- Tool names `ask_user({ question })` and `ask_user_batch({ questions })`; both return `{ answers: { [id]: value } }`. MCP server name in `RunSpec.tools`: `flowboard`.
-- Socket env var: `FLOWBOARD_ASK_SOCKET`. Protocol: newline-delimited JSON, one request per connection, `{ "questions": Question[] }` → `{ "answers": {...} }` | `{ "error": "<message>" }` | any other object (relayed verbatim; the park reply is `{ "status": "no_answer_yet", "instruction": string }`).
+- Tool names `ask_user({ question })` and `ask_user_batch({ questions })`; both return `{ answers: { [id]: value } }`. MCP server name in `RunSpec.tools`: `lamproom`.
+- Socket env var: `LAMPROOM_ASK_SOCKET`. Protocol: newline-delimited JSON, one request per connection, `{ "questions": Question[] }` → `{ "answers": {...} }` | `{ "error": "<message>" }` | any other object (relayed verbatim; the park reply is `{ "status": "no_answer_yet", "instruction": string }`).
 - New closing line, verbatim: `You cannot talk to the user directly. When you need their input, ask with the ask_user tool, or ask_user_batch for several questions at once, and wait for the answer. Do the task, then stop.`
 - Withdrawn line, verbatim: `-- question withdrawn: the agent stopped waiting`. Non-terminal error, verbatim: `No one can answer questions in this run.`
 - Log lines: `{"kind":"question","at","questions"}`, `{"kind":"answer","at","answers"}`, `{"kind":"withdrawn","at"}`.
-- Temp dirs (socket, skills plugin) are created under `/tmp` (`mkdtempSync('/tmp/fb-')`) and used by their `realpathSync` path; deleted when the run ends.
+- Temp dirs (socket, skills plugin) are created under `/tmp` (`mkdtempSync('/tmp/lr-')`) and used by their `realpathSync` path; deleted when the run ends.
 - Standalone skills are copied (not linked) into `<temp>/local/skills/<name>/` and mounted as a `plugin_dir` named `local`.
 - Claude runs get `AskUserQuestion` appended to `toolPolicy.deny`; OpenCode runs do not (its `question` tool is already denied).
 - Tool-call limits lifted with `2147483647` ms: Claude env `MCP_TOOL_TIMEOUT`; OpenCode per-server `mcp.<name>.timeout` and `experimental.mcp_timeout`.
-- Automated tests spend nothing; live tests only under `FLOWBOARD_LIVE=1`.
+- Automated tests spend nothing; live tests only under `LAMPROOM_LIVE=1`.
 
 ## Review Focus
 
@@ -75,10 +75,10 @@ test('an empty prompt is refused', () => assert.equal(checkQuestions([{ id: 'a',
 
 ---
 
-### Task 2: The shim, `@flowboard/ask-user`
+### Task 2: The shim, `@lamproom/ask-user`
 
 **Files:**
-- Create: `packages/ask-user/package.json` (deps `@flowboard/core` `workspace:*`, `@modelcontextprotocol/sdk` `^1.32.1`, `zod` `^4.6.7`; `"exports": { ".": "./src/index.ts" }`)
+- Create: `packages/ask-user/package.json` (deps `@lamproom/core` `workspace:*`, `@modelcontextprotocol/sdk` `^1.32.1`, `zod` `^4.6.7`; `"exports": { ".": "./src/index.ts" }`)
 - Create: `packages/ask-user/src/broker-client.ts`, `src/server.ts`, `src/main.ts`, `src/index.ts`
 - Test: `packages/ask-user/test/shim.test.ts`
 
@@ -90,7 +90,7 @@ test('an empty prompt is refused', () => assert.equal(checkQuestions([{ id: 'a',
   export function askBroker(socketPath: string, request: AskRequest): Promise<AskReply>;
   // server.ts
   export function createAskServer(socketPath: string): McpServer; // registers ask_user and ask_user_batch
-  // main.ts — reads FLOWBOARD_ASK_SOCKET (exit 1 with a message on stderr if unset), connects createAskServer to StdioServerTransport
+  // main.ts — reads LAMPROOM_ASK_SOCKET (exit 1 with a message on stderr if unset), connects createAskServer to StdioServerTransport
   // index.ts
   export const SHIM_ENTRY: string; // absolute path of src/main.ts
   export { askBroker } from './broker-client.ts';
@@ -99,7 +99,7 @@ test('an empty prompt is refused', () => assert.equal(checkQuestions([{ id: 'a',
 
 - [ ] **Step 1: Write the failing tests**
 
-Each test starts a fake broker (`net.createServer` on a socket in `mkdtempSync('/tmp/fb-')`) that records requests and answers with a scripted reply, then connects an SDK `Client` through `StdioClientTransport({ command: process.execPath, args: [SHIM_ENTRY], env: { ...process.env, FLOWBOARD_ASK_SOCKET } })`.
+Each test starts a fake broker (`net.createServer` on a socket in `mkdtempSync('/tmp/lr-')`) that records requests and answers with a scripted reply, then connects an SDK `Client` through `StdioClientTransport({ command: process.execPath, args: [SHIM_ENTRY], env: { ...process.env, LAMPROOM_ASK_SOCKET } })`.
 
 ```ts
 test('lists ask_user and ask_user_batch', async () => { /* listTools → names deepEqual ['ask_user', 'ask_user_batch'] (sorted) */ });
@@ -186,7 +186,7 @@ test('skills: entries load and a plain skill name becomes /local:<name>', () => 
 
 **Files:**
 - Create: `packages/cli/src/ask/broker.ts`, `packages/cli/src/ask/terminal.ts`
-- Modify: `packages/cli/package.json` (deps `@inquirer/prompts` `^8.7.3`, `@flowboard/ask-user` `workspace:*`)
+- Modify: `packages/cli/package.json` (deps `@inquirer/prompts` `^8.7.3`, `@lamproom/ask-user` `workspace:*`)
 - Test: `packages/cli/test/broker.test.ts`, `packages/cli/test/terminal.test.ts`
 
 **Interfaces:**
@@ -216,7 +216,7 @@ test('skills: entries load and a plain skill name becomes /local:<name>', () => 
 
 - [ ] **Step 1: Write the failing tests**
 
-`broker.test.ts` (socket in `mkdtempSync('/tmp/fb-')`, client = `askBroker`):
+`broker.test.ts` (socket in `mkdtempSync('/tmp/lr-')`, client = `askBroker`):
 
 ```ts
 test('a request is answered by the answerer', async () => { /* answerer returns { a: 'x' } → reply { answers: { a: 'x' } }; events onQuestion, onAnswer, onDone in order */ });
@@ -262,15 +262,15 @@ test('noTerminal refuses with the fixed message', async () => {});
 **Interfaces:**
 - Consumes: Task 2 `SHIM_ENTRY`, `askBroker`; Task 4 `RunConfig.skills`; Task 5 `startBroker`, `terminalAnswerer`, `noTerminal`, `Answerer`.
 - Produces: `RunDeps.answer?: Answerer` (default `process.stdin.isTTY ? terminalAnswerer() : noTerminal`). Per run, before launch:
-  - `tmp = realpathSync(mkdtempSync('/tmp/fb-'))`; broker on `<tmp>/ask.sock`;
-  - `spec.tools = [...(spec.tools ?? []), { name: 'flowboard', command: process.execPath, args: [SHIM_ENTRY], env: { FLOWBOARD_ASK_SOCKET: <socket> } }]`;
+  - `tmp = realpathSync(mkdtempSync('/tmp/lr-'))`; broker on `<tmp>/ask.sock`;
+  - `spec.tools = [...(spec.tools ?? []), { name: 'lamproom', command: process.execPath, args: [SHIM_ENTRY], env: { LAMPROOM_ASK_SOCKET: <socket> } }]`;
   - for `claude-code`: `spec.toolPolicy = { ...spec.toolPolicy, deny: [...(spec.toolPolicy?.deny ?? []), 'AskUserQuestion'] }`;
   - when `skills` is non-empty: `cpSync(path, <tmp>/local/skills/<name>, { recursive: true })` each, and append capability `{ id: 'local', provider: adapter, mount: { kind: 'plugin_dir', path: <tmp>/local } }`.
   The `start` log line records the spec as launched (tools included). While a batch is on screen, event lines are held (logged at once, printed after `onDone`). `onQuestion`/`onAnswer`/`onWithdrawn` write the log lines; `onWithdrawn` prints the withdrawn line; `onInterrupt` runs the same handler as a SIGINT. In `finally`: `broker.close()`, then `rmSync(tmp, { recursive: true, force: true })`.
 
 - [ ] **Step 1: Write the failing tests**
 
-A test helper `askingProvider(questions, then)`: a fake `AgentProvider` whose `launch(spec)` finds the `flowboard` tool's `FLOWBOARD_ASK_SOCKET`, calls `askBroker`, and yields `assistant_text` with `JSON.stringify(reply)`, then a `result`.
+A test helper `askingProvider(questions, then)`: a fake `AgentProvider` whose `launch(spec)` finds the `lamproom` tool's `LAMPROOM_ASK_SOCKET`, calls `askBroker`, and yields `assistant_text` with `JSON.stringify(reply)`, then a `result`.
 
 ```ts
 test('the agent gets the answer and the log records question and answer', async () => {
@@ -278,7 +278,7 @@ test('the agent gets the answer and the log records question and answer', async 
   // → exit 0; an assistant_text line contains '"teal"'; log kinds include 'question' then 'answer' before 'result'
 });
 test('the shim is injected and Claude's built-in question tool is denied', async () => {
-  // start line config.tools[0] has name 'flowboard', args [SHIM_ENTRY]; config.toolPolicy.deny includes 'AskUserQuestion'
+  // start line config.tools[0] has name 'lamproom', args [SHIM_ENTRY]; config.toolPolicy.deny includes 'AskUserQuestion'
 });
 test('opencode runs get the shim but no AskUserQuestion deny', async () => {});
 test('events during a question print after it is answered', async () => {
@@ -304,7 +304,7 @@ test('without a terminal the agent is told no one can answer', async () => {
 - [ ] **Step 2: Run to see them fail** — `node --test packages/cli/test/run.test.ts`.
 - [ ] **Step 3: Implement in `run.ts`.**
 - [ ] **Step 4: Run the whole suite** — `pnpm -s typecheck:packages && pnpm -s test:packages` → `fail 0`.
-- [ ] **Step 5: Commit** — `feat(cli): run-agent answers ask_user questions in the terminal and mounts skills: folders`.
+- [ ] **Step 5: Commit** — `feat(cli): lr-run-agent answers ask_user questions in the terminal and mounts skills: folders`.
 
 ---
 
@@ -312,29 +312,29 @@ test('without a terminal the agent is told no one can answer', async () => {
 
 **Files:**
 - Create: `packages/cli/test/ask-live.test.ts`
-- Modify: `code/flowboard/package.json` (`test:live` gains the file)
-- Modify (vault): `docs/FlowBoard/Agent Providers/Run Config Reference.md`, `Testing The Run Agent CLI.md`, `Run Agent CLI Decisions.md`
+- Modify: `code/lamproom/package.json` (`test:live` gains the file)
+- Modify (vault): `docs/Lamproom/Agent Providers/Run Config Reference.md`, `Testing The Run Agent CLI.md`, `Run Agent CLI Decisions.md`
 
 **Interfaces:**
 - Consumes: `runAgent` with `deps.answer`.
 
-- [ ] **Step 1: Write the live tests** (`{ skip: !process.env.FLOWBOARD_LIVE, timeout: 600_000 }`)
+- [ ] **Step 1: Write the live tests** (`{ skip: !process.env.LAMPROOM_LIVE, timeout: 600_000 }`)
 
 ```ts
-for (const [adapter, model] of [['claude-code', 'haiku'], ['opencode', FLOWBOARD_OPENCODE_MODEL ?? 'openrouter/deepseek/deepseek-v4.1-flash']]) {
+for (const [adapter, model] of [['claude-code', 'haiku'], ['opencode', LAMPROOM_OPENCODE_MODEL ?? 'openrouter/deepseek/deepseek-v4.1-flash']]) {
   test(`${adapter}: the agent asks and uses the answer`, live, async () => {
     // task.md: 'Ask the user for their favourite colour with the ask_user tool (a text question, id "colour"), then reply with exactly that colour.'
     // deps.answer = async () => ({ colour: 'teal' }); limits { max_turns: 4, budget_usd: 0.2 }
     // → exit 0; log has a 'question' line; an assistant_text contains 'teal'
   });
 }
-test('claude-code: a question can wait six minutes', { ...live, skip: !process.env.FLOWBOARD_LIVE_SLOW, timeout: 900_000 }, async () => {
+test('claude-code: a question can wait six minutes', { ...live, skip: !process.env.LAMPROOM_LIVE_SLOW, timeout: 900_000 }, async () => {
   // same as above, answerer resolves after 360_000 ms → still exit 0 and 'teal'
 });
 // and the same slow test for opencode
 ```
 
-- [ ] **Step 2: Run them** — `FLOWBOARD_LIVE=1 node --test packages/cli/test/ask-live.test.ts` → 2/2 pass. Then `FLOWBOARD_LIVE=1 FLOWBOARD_LIVE_SLOW=1 node --test --test-name-pattern "six minutes" packages/cli/test/ask-live.test.ts` → 2/2 pass. If a slow test fails, the Task 3 setting is wrong for that CLI: find the right one, fix it test-first in Task 3's files, ledger a ruling.
+- [ ] **Step 2: Run them** — `LAMPROOM_LIVE=1 node --test packages/cli/test/ask-live.test.ts` → 2/2 pass. Then `LAMPROOM_LIVE=1 LAMPROOM_LIVE_SLOW=1 node --test --test-name-pattern "six minutes" packages/cli/test/ask-live.test.ts` → 2/2 pass. If a slow test fails, the Task 3 setting is wrong for that CLI: find the right one, fix it test-first in Task 3's files, ledger a ruling.
 - [ ] **Step 2b: Check the keys by hand** — the spec's `y` / `n` for `yes_no` and option numbers for `single_select` depend on what `@inquirer/prompts`' `select` supports; try them in a terminal against a small script calling `terminalAnswerer()`. If a key is missing, ledger a ruling (and note it in the Reference) rather than building a custom prompt.
 - [ ] **Step 3: Update the vault notes** — Reference: `skills:` row, colon-less `skill`, the new closing line, the three log kinds, a section *Asking the owner*; Testing: an example `grill-me.yaml` (skills + `skill: /grill-me`, Claude haiku) and scenario *Answering questions*; Decisions: rows for the calls in the spec marked *my call*.
 - [ ] **Step 4: Confirm skips by default** — `pnpm -s test:packages` → `fail 0`, live tests skipped.

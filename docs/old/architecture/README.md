@@ -1,4 +1,4 @@
-# FlowBoard — Architecture & Genericization
+# Lamproom — Architecture & Genericization
 
 Derived from [`../PRD.MD`](../PRD.MD) and [`../REBUILD-BACKLOG.md`](../REBUILD-BACKLOG.md).
 This set treats the spec as one concrete instance of a more general system and documents
@@ -7,7 +7,7 @@ not the substrate.
 
 ## The idea, in one paragraph
 
-FlowBoard is a **durable workflow engine + human-in-the-loop protocol + cost ledger**,
+Lamproom is a **durable workflow engine + human-in-the-loop protocol + cost ledger**,
 specialized to orchestrate *headless coding-agent CLIs*, wearing a Kanban board as its read model.
 A task flows through a **versioned DAG** where each node is an automated agent invocation with its own
 model/effort/permissions. Some nodes auto-advance; some park for approval or answers. Strip away the
@@ -15,7 +15,7 @@ Claude-specific plumbing and what remains is a general async workflow orchestrat
 
 ## The agentic graph
 
-The spine of FlowBoard is an **agentic graph** — a directed graph whose *nodes are AI invocations* and whose
+The spine of Lamproom is an **agentic graph** — a directed graph whose *nodes are AI invocations* and whose
 *edges carry artifacts*, not control flow alone. The spec names it **Flow** (PRD §4: "a versioned DAG of step
 definitions"); this section names the concept plainly, because it is the mental model everything else hangs off.
 
@@ -141,7 +141,7 @@ Each component is documented as **Role · Seam · Genericize · Composes with ·
 
 1. **StepExecutor generalization** (component 3): `shell` steps are now in scope (they are the mechanical
    check behind every pass/fail). Still open: make `step_defs.kind` an executor interface so a step can
-   also be an HTTP call, pure transform, or human task — turning FlowBoard
+   also be an HTTP call, pure transform, or human task — turning Lamproom
    into a general workflow engine that *ships* AI executors. Widens the engine's core interface. Documented
    as optional in [02](./02-core-and-engine.md#3-flow-execution-engine-write-model).
 2. **ACP + Codex spike before the port hardens.** First: could the AgentProvider port *be* the Agent Client

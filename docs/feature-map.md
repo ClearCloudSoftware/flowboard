@@ -1,13 +1,13 @@
-# FlowBoard — Component & Feature Map
+# Lamproom — Component & Feature Map
 
-A plain-English tour of everything FlowBoard does, broken into components, features, and the smaller
+A plain-English tour of everything Lamproom does, broken into components, features, and the smaller
 pieces inside them — and a place to **braindump** new ideas. The map is the current thinking from the
 PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 
 ## How to use this
 
 - Skim to find the part your idea touches, then drop a bullet under its **`💡 Ideas`** line.
-- A brand-new *component* idea (something FlowBoard doesn't do at all yet) goes in the
+- A brand-new *component* idea (something Lamproom doesn't do at all yet) goes in the
   [Parking lot](#parking-lot) at the bottom.
 - An idea that spans lots of components (safety, design, testing…) goes in
   [Across everything](#across-everything).
@@ -32,7 +32,7 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 ### 1. Projects
 *Your codebases and the settings for how agents work on each one.*
 
-- **Connect a codebase** — Point FlowBoard at a folder on your machine that holds a git repository. That's the code agents will read and change.
+- **Connect a codebase** — Point Lamproom at a folder on your machine that holds a git repository. That's the code agents will read and change.
 - **A home screen listing your projects** — The first screen shows each project as a card with how many tasks are in each state and how much you've spent this week.
 - **Create a new project** — A short form: name it and choose which recipe new tasks should follow (or start empty).
 - **A default recipe per project** — Each project remembers which recipe to use, so new work starts the right way without you picking every time.
@@ -46,14 +46,14 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 
 - **Steps** — Each step is one job for one agent: what to do, which AI model to use, how hard to think, how much it may spend, and whether it should pause for your approval.
   - *Skill or agent* — A step can run a saved **skill** (a packaged instruction, like a slash-command) or a defined **agent** (a role with its own personality and instructions).
-  - *Check steps* — A step can also run a plain command, like your linter and test suite, with no AI involved. If the command succeeds, the step passed. If it fails, the step failed, and the error output goes to the next attempt word for word. This is how FlowBoard knows the code works instead of taking an agent's word for it.
+  - *Check steps* — A step can also run a plain command, like your linter and test suite, with no AI involved. If the command succeeds, the step passed. If it fails, the step failed, and the error output goes to the next attempt word for word. This is how Lamproom knows the code works instead of taking an agent's word for it.
   - *Guardrails* — A spending cap, a limit on back-and-forth turns, which tools it's allowed, and how many times it may retry before giving up.
   - *Auto or approval* — Some steps move on by themselves when done; others stop and wait for your go-ahead.
 - **Connections between steps** — Steps are wired together ("after this, do that"). A connection can always fire, or only when the previous step passed, or only when it failed.
   - *Branching* — One step can kick off several next steps at once (for example, write code and write tests in parallel).
   - *Joining* — A step can wait for several earlier steps to all finish before it starts (review waits for both code and tests).
   - *Loops* — A failed review can send the task back to an earlier step to try again.
-- **Each step declares what it needs and what it makes** — So FlowBoard can check the whole recipe hangs together before you save it, and warn you if a step needs something no earlier step produces.
+- **Each step declares what it needs and what it makes** — So Lamproom can check the whole recipe hangs together before you save it, and warn you if a step needs something no earlier step produces.
 - **Versions** — Editing a recipe creates a new version instead of changing the old one, and any task already running keeps the version it started on — so edits never disrupt work in progress.
 - **A visual editor** — Build and rewire recipes on a canvas (drag steps, draw connections) or as a simple list, with a live warning if the recipe doesn't hold together.
 - **Ready-made recipes** — Ships with a couple of complete ones (a full software-development pipeline and a research pipeline) so you're not starting from a blank page. The development pipeline runs your tests before code review, so the reviewer never looks at code that doesn't pass.
@@ -115,13 +115,13 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 ## B. Running the agents
 
 ### 6. Agent providers
-*The layer that lets FlowBoard drive different AI coding tools (like Claude or Codex) interchangeably.* → [deep dive](./old/architecture/01-ports.md#agentprovider)
+*The layer that lets Lamproom drive different AI coding tools (like Claude or Codex) interchangeably.* → [deep dive](./old/architecture/01-ports.md#agentprovider)
 
-- **Swap the underlying AI** — A step doesn't care which vendor's tool runs it; FlowBoard translates its request into whatever that tool understands, so you're never locked to one vendor.
-- **Know each tool's abilities** — Tools differ in what they support (thinking effort, resuming a session, reporting cost). FlowBoard checks what each can do and adapts, hiding options a tool can't handle.
+- **Swap the underlying AI** — A step doesn't care which vendor's tool runs it; Lamproom translates its request into whatever that tool understands, so you're never locked to one vendor.
+- **Know each tool's abilities** — Tools differ in what they support (thinking effort, resuming a session, reporting cost). Lamproom checks what each can do and adapts, hiding options a tool can't handle.
 - **One shared format for results** — Whatever tool runs, its output (messages, tool calls, results, cost) is translated into one common format the rest of the app understands.
 - **A test stand-in** — A fake provider that replays a recorded session, so the whole system can be tested without spending real money.
-- ❓ Try FlowBoard against a second real tool (Codex) early, to be sure the "swap the AI" design actually holds — and check first whether an open standard for driving coding tools (the Agent Client Protocol) could do the translating for us.
+- ❓ Try Lamproom against a second real tool (Codex) early, to be sure the "swap the AI" design actually holds — and check first whether an open standard for driving coding tools (the Agent Client Protocol) could do the translating for us.
 
 **💡 Ideas:** _(add ideas)_
 
@@ -162,8 +162,8 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **A wall around the network** — By default the agent can't reach the internet at all, except a short allow-list of places it genuinely needs (the AI service, package registries). So even a tricked agent can't leak your secrets.
 - **Least privilege** — It runs as a limited user, can't gain new powers, gets a throwaway filesystem, and only ever sees the one task's files — never your keys or your other projects.
 - **Hard limits** — Ceilings on memory, processing, and time, so a runaway agent is stopped by the box, not just by its spending budget.
-- **The safety rule** — Fully-autonomous mode (no approval on each action) is only allowed when the agent is inside a box; otherwise FlowBoard refuses it.
-- **Your keys stay outside the box** — The agent never holds a real API key. Its requests go through FlowBoard's network gatekeeper, which adds the key on the way out. A tricked agent that dumps its settings finds nothing worth stealing.
+- **The safety rule** — Fully-autonomous mode (no approval on each action) is only allowed when the agent is inside a box; otherwise Lamproom refuses it.
+- **Your keys stay outside the box** — The agent never holds a real API key. Its requests go through Lamproom's network gatekeeper, which adds the key on the way out. A tricked agent that dumps its settings finds nothing worth stealing.
 - **Rules inside the agent too** — Besides the box, the agent's own tool calls are checked before they run: no writing outside the task's folder, no touching what the task lists as off-limits, no pushing code or destructive commands. The box limits what *can* happen; these checks block what *shouldn't*.
 - ❓ How strong a box to use by default, and how an agent asks you questions from inside a sealed box.
 
@@ -197,7 +197,7 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **A shared pool to claim from** — unassigned questions and gates sit in a team queue anyone can pick up, like support tickets.
 
 ### 13. Notifications
-*When a question sits unanswered, FlowBoard nudges you on another channel so nothing stalls silently.* → [deep dive](./old/architecture/04-hitl-and-notify.md#10-notification--escalation--notifier-port)
+*When a question sits unanswered, Lamproom nudges you on another channel so nothing stalls silently.* → [deep dive](./old/architecture/04-hitl-and-notify.md#10-notification--escalation--notifier-port)
 
 - **Escalate after a wait** — If a question isn't answered within a set time, it's posted to your chat tool with buttons to answer right there.
 - **Answer from anywhere** — Answer in chat and the web updates; answer on the web and the chat message updates to show it's handled — and whoever answers first wins.
@@ -225,7 +225,7 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 *The documents agents produce as they work — a research brief, a plan, a summary — kept as real files.* → [deep dive](./old/architecture/05-environment-and-registry.md#11-artifact-store--workspace--two-ports)
 
 - **Real files, not hidden in a database** — Everything an agent produces is a normal file in the task's workspace, tracked in git like any other change, so it's easy to read and review.
-- **A tidy hand-off** — Each step says what it produces, and FlowBoard automatically files away the matching outputs when the step finishes.
+- **A tidy hand-off** — Each step says what it produces, and Lamproom automatically files away the matching outputs when the step finishes.
 - **Read them nicely** — Open any artifact in a formatted viewer, and compare two of them (like the plan against the final summary) side by side.
 
 **💡 Ideas:**
@@ -235,7 +235,7 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 ### 16. The library
 *Your reusable building blocks: skills (packaged instructions) and agents (defined roles) that steps draw from.* → [deep dive](./old/architecture/05-environment-and-registry.md#13-skillagent-registry--capability-packs)
 
-- **Install skills** — Add a skill from a public repository; FlowBoard reads its description and makes it available to use in steps.
+- **Install skills** — Add a skill from a public repository; Lamproom reads its description and makes it available to use in steps.
 - **Define agents** — Create a named role with its own instructions, preferred AI model, and allowed tools, then reuse it across recipes.
 - **A starter set** — Comes with a handful of ready skills and agents so the sample recipes work out of the box.
 
@@ -245,7 +245,7 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 - **Team guardrails vs personal defaults** — the team can pin rules nobody can quietly lift (a review step must wait for approval, a budget cap holds), kept separate from each person's own preferences.
 
 ### 17. Importing work
-*Bring an existing backlog into FlowBoard from a document — and, later, from tools like GitHub or Linear.* → [deep dive](./old/architecture/05-environment-and-registry.md#14-ingestion--tasksource-port)
+*Bring an existing backlog into Lamproom from a document — and, later, from tools like GitHub or Linear.* → [deep dive](./old/architecture/05-environment-and-registry.md#14-ingestion--tasksource-port)
 
 - **From a document** — Paste or point at a markdown list and it becomes tasks, understanding both headings and bulleted lists.
 - **No duplicates** — Re-importing an edited file updates the existing tasks instead of making copies, because each task gets a stable identity worked out the same way every time.
@@ -293,12 +293,12 @@ PRD, the backlog, and `docs/architecture/`; the `💡` slots are yours to fill.
 ## F. What it remembers
 
 ### 21. Memory
-*What FlowBoard carries from one task to the next, so agents stop starting from scratch every time.* → [deep dive](./old/architecture/09-memory.md)
+*What Lamproom carries from one task to the next, so agents stop starting from scratch every time.* → [deep dive](./old/architecture/09-memory.md)
 
-- **Start warm, not cold** — Before a step runs, FlowBoard hands the agent the relevant things it has already learned: your standing preferences, this project's conventions, what worked (and what didn't) on earlier tasks. So it isn't re-discovering the same facts run after run. It hands over only the most relevant few, up to a fixed size, so remembering more never means a longer prompt.
-- **Remember your answers** — When you answer a question in the inbox, or reject a step with a reason, FlowBoard remembers it. The next task doesn't ask you the same thing again — the screen you live in gets quieter over time.
+- **Start warm, not cold** — Before a step runs, Lamproom hands the agent the relevant things it has already learned: your standing preferences, this project's conventions, what worked (and what didn't) on earlier tasks. So it isn't re-discovering the same facts run after run. It hands over only the most relevant few, up to a fixed size, so remembering more never means a longer prompt.
+- **Remember your answers** — When you answer a question in the inbox, or reject a step with a reason, Lamproom remembers it. The next task doesn't ask you the same thing again — the screen you live in gets quieter over time.
 - **Four kinds of memory** — About *you* (how you like things done), about a *project* (its quirks and layout), about an *agent or skill* (what that role has picked up), and within a *task* (so attempt 2 knows why attempt 1 failed).
-- **Starts simple** — The first version keeps memories in FlowBoard's own database and finds them by keyword, newest first: nothing extra to install or pay for.
+- **Starts simple** — The first version keeps memories in Lamproom's own database and finds them by keyword, newest first: nothing extra to install or pay for.
 - **It sorts itself out (later)** — Once memory has proven it earns its keep, a drop-in memory layer (Mem0) takes over: a new fact that contradicts an old one replaces it ("now uses vitest, not jest") instead of piling up, so the memory stays true without you curating it.
 - **Yours, on your machine** — Memory is self-hosted by default, right next to your repos and keys — nothing about how you work leaves your laptop. (A hosted option exists for a future shared setup, but that's a later, separate choice.)
 - **Off until you want it** — It's an add-on, not a requirement: every flow runs exactly as before with memory switched off. Turn it on and runs get cheaper (less re-deriving) and the inbox gets lighter — and both show up on the cost view and the inbox, so you can tell whether it's earning its keep.
@@ -336,7 +336,7 @@ Themes that touch many parts at once — dump ideas here when they don't belong 
 Whole new components that don't exist yet. Seeded with a few starters — add your own.
 
 - **💡 Run agents in the cloud, not just your laptop** — so a big job doesn't tie up your machine, and work can leave the desk.
-- **💡 Auto-pick the AI per step** — let FlowBoard choose the best or cheapest model for each step instead of you setting it by hand.
+- **💡 Auto-pick the AI per step** — let Lamproom choose the best or cheapest model for each step instead of you setting it by hand.
 - **💡 A shareable recipe library** — export a recipe and reuse it across projects, or share it with other people.
 - **💡 Kick off work from outside** — start a task straight from a GitHub issue, a Slack message, or on a schedule.
 - **💡 More steps that aren't AI** — plain commands are now in scope (see *Check steps* under [Flows](#2-flows)). A step could also call a service or be a simple human checklist. → [note](./old/architecture/02-core-and-engine.md#3-flow-execution-engine-write-model)
@@ -352,11 +352,11 @@ Whole new components that don't exist yet. Seeded with a few starters — add yo
 
 *Refining the "role packs" idea — and a shared reference for what each function actually does.*
 
-A predefined flow is just a **DAG**, and so is the way a role actually works: a handful of core responsibilities in a rough order, with a review or two and the odd loop back. So FlowBoard can ship a **starter pack per function** — the role's flow already wired, pre-loaded with the **skills, tools, and design system** that role reaches for, plus its sensible default models and guardrails. Assign a task (or a single step) to a function and its pack is waiting, instead of a blank canvas.
+A predefined flow is just a **DAG**, and so is the way a role actually works: a handful of core responsibilities in a rough order, with a review or two and the odd loop back. So Lamproom can ship a **starter pack per function** — the role's flow already wired, pre-loaded with the **skills, tools, and design system** that role reaches for, plus its sensible default models and guardrails. Assign a task (or a single step) to a function and its pack is waiting, instead of a blank canvas.
 
 What makes this more than a template gallery:
 
-- **Packs are seed flows, not screenshots.** Each DAG below is a candidate flow FlowBoard seeds — the same engine as the built-in dev pipeline, tuned per role — so it's versioned and editable like any recipe once you adopt it. It extends today's two ready-made recipes into a per-role library.
+- **Packs are seed flows, not screenshots.** Each DAG below is a candidate flow Lamproom seeds — the same engine as the built-in dev pipeline, tuned per role — so it's versioned and editable like any recipe once you adopt it. It extends today's two ready-made recipes into a per-role library.
 - **The arrows *between* roles are the handoffs.** One role's output — a signed-off story, a design spec, a verified build — becomes the next role's inbox item. That's exactly the [role-assigned routing](#2-flows) the teams feature adds; the last diagram shows the whole relay.
 - **The pack carries the role's toolbox.** UX gets the design-system skills and tokens; cloud gets the infra-as-code and deploy tools; the business analyst gets the requirements and story-writing skills — presented by function so nobody hunts for them.
 
@@ -390,7 +390,7 @@ flowchart LR
 ```
 
 ### Software developer
-*Owns turning the spec into working code.* **Top responsibilities:** plan the implementation · build the feature · write tests · pass code review · merge and integrate. (This is FlowBoard's own built-in pipeline — a fan-out to build and tests, a join at review, and a rework loop.)
+*Owns turning the spec into working code.* **Top responsibilities:** plan the implementation · build the feature · write tests · pass code review · merge and integrate. (This is Lamproom's own built-in pipeline — a fan-out to build and tests, a join at review, and a rework loop.)
 
 ```mermaid
 flowchart LR
@@ -442,7 +442,7 @@ flowchart LR
 ```
 
 ### Across the team — the handoff relay
-Packs together: each role's flow feeds the next, and FlowBoard routes the handoff into the next person's inbox. The back-edges are what make it a team, not a conveyor belt — QA bounces defects to dev, and market feedback re-opens analysis.
+Packs together: each role's flow feeds the next, and Lamproom routes the handoff into the next person's inbox. The back-edges are what make it a team, not a conveyor belt — QA bounces defects to dev, and market feedback re-opens analysis.
 
 ```mermaid
 flowchart LR

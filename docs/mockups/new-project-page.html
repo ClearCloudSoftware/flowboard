@@ -115,7 +115,7 @@ label.rr:hover{background:var(--surface-2)}
 </style>
 
 <header class="topbar">
-  <div class="brand">flowboard<em>/</em><span>projects</span><em>/</em><span>new</span></div>
+  <div class="brand">lamproom<em>/</em><span>projects</span><em>/</em><span>new</span></div>
   <span class="sp"></span>
   <button class="act">Cancel</button>
 </header>
@@ -136,7 +136,7 @@ const ICON = {
   check: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.3l3.1 3.1 6.1-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 
-/* What FlowBoard can make and where code can come from. Only the first of each is wired up. */
+/* What Lamproom can make and where code can come from. Only the first of each is wired up. */
 const TYPES = [
   { id: 'software', name: 'Software', icon: ICON.code, text: 'A codebase agents read, change and test. Flows run steps against a clone of the repo.' },
   { id: 'research', name: 'Research', icon: ICON.book, text: 'Questions answered from sources, with citations kept as artifacts.', soon: true },
@@ -150,21 +150,21 @@ const SOURCES = [
   { id: 'azure', name: 'Azure Repos', text: 'Azure DevOps', soon: true },
   { id: 'local', name: 'A folder on this machine', text: 'a git repository you already cloned', soon: true },
 ];
-/* Repos the connected GitHub account can read. `taken`: already a FlowBoard project. `exists`: the default folder is in use. */
+/* Repos the connected GitHub account can read. `taken`: already a Lamproom project. `exists`: the default folder is in use. */
 const REPOS = [
-  { owner: 'flowboard', name: 'api', text: 'REST handlers and the board projection', lang: 'TypeScript', pushed: '2 h ago', branch: 'main', mb: 48, objects: 18342, priv: true, check: 'pnpm lint && pnpm test', from: 'package.json + pnpm-lock.yaml' },
-  { owner: 'flowboard', name: 'runner', text: 'Runs one flow step in its sandbox', lang: 'TypeScript', pushed: 'yesterday', branch: 'main', mb: 31, objects: 9021, priv: true, check: 'pnpm test', from: 'package.json + pnpm-lock.yaml' },
-  { owner: 'flowboard', name: 'core', text: 'Engine, flow graph, guards', lang: 'TypeScript', pushed: '5 h ago', branch: 'main', mb: 12, objects: 4410, priv: true, taken: 'Core' },
-  { owner: 'flowboard', name: 'web', text: 'The Next.js app: board, inbox, designer', lang: 'TypeScript', pushed: '3 d ago', branch: 'main', mb: 112, objects: 40211, priv: true, exists: true, check: 'pnpm lint && pnpm test', from: 'package.json + pnpm-lock.yaml' },
-  { owner: 'flowboard', name: 'providers', text: 'Claude Code and OpenCode adapters', lang: 'TypeScript', pushed: '6 d ago', branch: 'main', mb: 9, objects: 3120, priv: false, check: 'pnpm test', from: 'package.json + pnpm-lock.yaml' },
-  { owner: 'flowboard', name: 'docs', text: 'The FlowBoard vault', lang: 'Markdown', pushed: '1 h ago', branch: 'main', mb: 21, objects: 6600, priv: false, check: null },
+  { owner: 'lamproom', name: 'api', text: 'REST handlers and the board projection', lang: 'TypeScript', pushed: '2 h ago', branch: 'main', mb: 48, objects: 18342, priv: true, check: 'pnpm lint && pnpm test', from: 'package.json + pnpm-lock.yaml' },
+  { owner: 'lamproom', name: 'runner', text: 'Runs one flow step in its sandbox', lang: 'TypeScript', pushed: 'yesterday', branch: 'main', mb: 31, objects: 9021, priv: true, check: 'pnpm test', from: 'package.json + pnpm-lock.yaml' },
+  { owner: 'lamproom', name: 'core', text: 'Engine, flow graph, guards', lang: 'TypeScript', pushed: '5 h ago', branch: 'main', mb: 12, objects: 4410, priv: true, taken: 'Core' },
+  { owner: 'lamproom', name: 'web', text: 'The Next.js app: board, inbox, designer', lang: 'TypeScript', pushed: '3 d ago', branch: 'main', mb: 112, objects: 40211, priv: true, exists: true, check: 'pnpm lint && pnpm test', from: 'package.json + pnpm-lock.yaml' },
+  { owner: 'lamproom', name: 'providers', text: 'Claude Code and OpenCode adapters', lang: 'TypeScript', pushed: '6 d ago', branch: 'main', mb: 9, objects: 3120, priv: false, check: 'pnpm test', from: 'package.json + pnpm-lock.yaml' },
+  { owner: 'lamproom', name: 'docs', text: 'The Lamproom vault', lang: 'Markdown', pushed: '1 h ago', branch: 'main', mb: 21, objects: 6600, priv: false, check: null },
   { owner: 'alex', name: 'billing-svc', text: 'Invoices, dunning and the Stripe webhook', lang: 'Go', pushed: '4 d ago', branch: 'trunk', mb: 27, objects: 7702, priv: true, check: 'go vet ./... && go test ./...', from: 'go.mod' },
   { owner: 'alex', name: 'dotfiles', text: 'zsh, tmux, nvim', lang: 'Shell', pushed: '2 mo ago', branch: 'main', mb: 1, objects: 380, priv: false, check: null },
   { owner: 'clearcloud-labs', name: 'ingest-pipeline', text: 'Nightly import of partner feeds', lang: 'Python', pushed: '9 d ago', branch: 'develop', mb: 64, objects: 12890, priv: true, check: 'uv run pytest', from: 'pyproject.toml + uv.lock' },
   { owner: 'clearcloud-labs', name: 'ops-runbooks', text: 'On-call runbooks', lang: 'Markdown', pushed: '1 mo ago', branch: 'main', mb: 3, objects: 900, priv: true, check: null },
 ];
-const OWNERS = ['alex', 'flowboard', 'clearcloud-labs'];
-const HOME = '~/FlowBoard/projects';
+const OWNERS = ['alex', 'lamproom', 'clearcloud-labs'];
+const HOME = '~/Lamproom/projects';
 
 
 /* Opens mid-flight: Software and GitHub answered, the account connected, choosing among alex's repositories. */
@@ -198,14 +198,14 @@ function typePanel() {
   return `<div class="choices">${TYPES.map((t) => `<button class="choice" data-type="${t.id}" aria-pressed="${st.type === t.id}" ${t.soon ? 'disabled' : ''}><b>${t.name}${t.soon ? '<span class="soon">soon</span>' : ''}</b><small>${t.text}</small></button>`).join('')}</div>`;
 }
 function sourcePanel() {
-  return `<p>FlowBoard clones the repository onto this machine and does every fetch and push itself; agents only see the clone.</p>
+  return `<p>Lamproom clones the repository onto this machine and does every fetch and push itself; agents only see the clone.</p>
     <div class="choices">${SOURCES.map((s) => `<button class="choice" data-src="${s.id}" aria-pressed="${st.source === s.id}" ${s.soon ? 'disabled' : ''}><b>${s.name}${s.soon ? '<span class="soon">soon</span>' : ''}</b><small>${s.text}</small></button>`).join('')}</div>`;
 }
 function repoPanel() {
   if (st.gh !== 'connected') {
     const waiting = st.gh === 'waiting';
-    return `<p>FlowBoard needs to read your repositories, and to push the <code>fb/task-*</code> branches it makes when you ask it to. The token stays in this machine's keychain; agents never get it.</p>
-      <div class="gh"><button class="act primary" data-connect ${waiting ? 'disabled' : ''}>${waiting ? 'Waiting for github.com…' : 'Connect GitHub'}</button><span class="note" style="margin:0">${waiting ? 'approve FlowBoard in the tab that opened' : 'opens github.com in a new tab'}</span></div>`;
+    return `<p>Lamproom needs to read your repositories, and to push the <code>lr/task-*</code> branches it makes when you ask it to. The token stays in this machine's keychain; agents never get it.</p>
+      <div class="gh"><button class="act primary" data-connect ${waiting ? 'disabled' : ''}>${waiting ? 'Waiting for github.com…' : 'Connect GitHub'}</button><span class="note" style="margin:0">${waiting ? 'approve Lamproom in the tab that opened' : 'opens github.com in a new tab'}</span></div>`;
   }
   const q = st.q.trim().toLowerCase();
   const list = REPOS.filter((r) => r.owner === st.owner && (!q || `${r.name} ${r.text}`.toLowerCase().includes(q)));
@@ -232,7 +232,7 @@ function clonePanel() {
       ${c.done ? `<div class="ready"><b>${r.name} is ready</b><span class="note" style="margin:0">${r.check ? `check command ${r.check}` : 'no check command found; set one on the project page'} · default flow delivery</span><span class="sp"></span><button class="act" data-again>Another</button><button class="act primary">Open ${r.name}</button></div>` : ''}`;
   }
   return `<div class="pathrow"><input class="path" id="path" value="${path()}" spellcheck="false" aria-label="Clone into">${st.path !== null ? `<button class="link" data-reset>back to ${defaultPath()}</button>` : ''}</div>
-    <p class="note">${st.path === null ? `FlowBoard's projects folder; change it here, or for every project in Settings` : 'a folder that does not exist yet, or an empty one'}</p>
+    <p class="note">${st.path === null ? `Lamproom's projects folder; change it here, or for every project in Settings` : 'a folder that does not exist yet, or an empty one'}</p>
     ${r.exists && st.path === null ? `<p class="warn">${HOME}/${r.name} already holds another clone, so this one gets the -2.</p>` : ''}
     ${pathOk() ? '' : '<p class="warn">a folder path: absolute, or starting with ~/</p>'}
     <div class="facts"><div><span class="lbl">from</span><b>github.com/${st.repo}</b></div><div><span class="lbl">branch</span><b>${r.branch}, the base branch</b></div><div><span class="lbl">size</span><b>about ${r.mb} MB</b></div></div>
@@ -256,7 +256,7 @@ function startClone() {
     const after = [
       `Resolving deltas: 100% (${Math.round(r.objects * 0.52)}/${Math.round(r.objects * 0.52)}), done.`,
       `<span class="fb">-- base branch ${r.branch}; worktrees branch from it</span>`,
-      `<span class="fb">-- added .flowboard/ to .git/info/exclude</span>`,
+      `<span class="fb">-- added .lamproom/ to .git/info/exclude</span>`,
       r.check ? `<span class="fb">-- found ${r.from}: check command ${r.check}</span>` : `<span class="fb">-- no package manifest: no check command</span>`,
       `<span class="fb">-- project ${r.name} registered, flow delivery</span>`,
     ];

@@ -1,0 +1,59 @@
+import { after, beforeEach, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { LamproomGuard } from '../src/agent/opencode/guard-plugin.ts';
+
+/** Temp folders made by this file's tests, removed once they are done. */
+const temps: string[] = [];
+after(() => temps.forEach((d) => rmSync(d, { recursive: true, force: true })));
+function tempDir(prefix: string) {
+  const dir = mkdtempSync(prefix);
+  temps.push(dir);
+  return dir;
+}
+
+beforeEach(() => {
+  process.env.LAMPROOM_GUARDS = JSON.stringify({ writeRoots: ['/repo/wt'], denyCommands: ['\\bgit\\s+push\\b'] });
+});
+
+const before = async () => (await LamproomGuard({ directory: '/repo/wt' }))['tool.execute.before'];
+
+test('blocks a write outside the worktree', async () => {
+  const hook = await before();
+  await assert.rejects(hook({ tool: 'write' }, { args: { filePath: '/etc/x' } }), /Write outside the worktree: \/etc\/x/);
+  await hook({ tool: 'edit' }, { args: { filePath: '/repo/wt/a.ts' } });
+});
+
+test('checks every path in an apply_patch', async () => {
+  const hook = await before();
+  const patchText = '*** Begin Patch\n*** Update File: src/a.ts\n@@\n*** Add File: /etc/evil\n+x\n*** End Patch';
+  await assert.rejects(hook({ tool: 'apply_patch' }, { args: { patchText } }), /Write outside the worktree: \/etc\/evil/);
+  await hook({ tool: 'apply_patch' }, { args: { patchText: '*** Begin Patch\n*** Update File: src/a.ts\n*** End Patch' } });
+});
+
+test('checks a bash command where its workdir puts it', async () => {
+  const hook = await before();
+  await assert.rejects(hook({ tool: 'bash' }, { args: { command: 'rm -rf foo', workdir: '/tmp' } }), /Recursive rm outside the worktree: foo/);
+  await hook({ tool: 'bash' }, { args: { command: 'rm -rf foo', workdir: 'src' } });
+});
+
+test('blocks a denied command', async () => {
+  const hook = await before();
+  await assert.rejects(hook({ tool: 'bash' }, { args: { command: 'git push origin main' } }), /Command blocked by policy/);
+  await hook({ tool: 'bash' }, { args: { command: 'pnpm test' } });
+});
+
+test('is a no-op without LAMPROOM_GUARDS', async () => {
+  delete process.env.LAMPROOM_GUARDS;
+  const hook = await before();
+  await hook({ tool: 'write' }, { args: { filePath: '/etc/x' } });
+});
+
+test('marks itself loaded in the run config home', async () => {
+  const home = tempDir(join(tmpdir(), 'lrtest-'));
+  process.env.XDG_CONFIG_HOME = home;
+  await LamproomGuard({ directory: '/repo/wt' });
+  assert.ok(existsSync(join(home, 'lamproom-guard.loaded')));
+});

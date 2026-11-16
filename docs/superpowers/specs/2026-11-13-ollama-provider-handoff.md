@@ -4,7 +4,7 @@ Written 2026-11-13 for the session that builds it. **Verify first (Part 1), buil
 
 ## What is wanted
 
-Let an OpenCode step in FlowBoard run on a model served by **Ollama on this machine**, governed by the same approval rules the OpenRouter models already follow. Alex decided:
+Let an OpenCode step in Lamproom run on a model served by **Ollama on this machine**, governed by the same approval rules the OpenRouter models already follow. Alex decided:
 
 | Question | Decision |
 |---|---|
@@ -13,15 +13,15 @@ Let an OpenCode step in FlowBoard run on a model served by **Ollama on this mach
 | Sandboxed runs (Docker, OpenSandbox) | **Must work in the first version** |
 | Where Ollama runs | **Only on this machine**, never another host |
 
-Out of scope: direct LLM calls from FlowBoard (no `complete()` service), Ollama on another machine, Ollama cloud models, per-project model lists.
+Out of scope: direct LLM calls from Lamproom (no `complete()` service), Ollama on another machine, Ollama cloud models, per-project model lists.
 
 ## Read these first
 
-- `docs/FlowBoard/Agent Providers/OpenRouter Models And Key.md`: the approved-models feature this extends. It covers the rules, the pages, where the check is enforced, the routes and the limits.
-- `docs/FlowBoard/Agent Providers/OpenCode Adapter.md`: how a run's OpenCode server is isolated.
-- `docs/FlowBoard/Sandboxing/OpenSandbox Runtime.md` and `docs/FlowBoard/Sandboxing/Sandboxing Testing.md`: the two sandbox runtimes and how to run them.
+- `docs/Lamproom/Agent Providers/OpenRouter Models And Key.md`: the approved-models feature this extends. It covers the rules, the pages, where the check is enforced, the routes and the limits.
+- `docs/Lamproom/Agent Providers/OpenCode Adapter.md`: how a run's OpenCode server is isolated.
+- `docs/Lamproom/Sandboxing/OpenSandbox Runtime.md` and `docs/Lamproom/Sandboxing/Sandboxing Testing.md`: the two sandbox runtimes and how to run them.
 - Code:
-  - `code/flowboard/packages/cli/src/openrouter.ts`: the key, the model list, `modelRules`, `prepareRun`.
+  - `code/lamproom/packages/cli/src/openrouter.ts`: the key, the model list, `modelRules`, `prepareRun`.
   - `packages/cli/src/settings.ts`: `ApprovedModel`, `APPROVED_MODELS_SCHEMA` (ids must start with `openrouter/`), `modelProblem`, `isFree`, `FREE_WARNING`.
   - `packages/cli/src/config.ts`: the check in `configFromObject`.
   - `packages/adapters/src/agent/opencode/options.ts`: `buildLaunch`; native packs are merged into OpenCode's config at line ~57.
@@ -38,15 +38,15 @@ Out of scope: direct LLM calls from FlowBoard (no `complete()` service), Ollama 
   - `qwen3-coder:30b`: tools; no `num_ctx` set, so it runs on Ollama's default window.
   - `nomic-embed-text`: embedding only.
 - **`/api/tags` already reports `capabilities`** (for example `["completion","tools",…]`) and `details.context_length`. That number is the model's **maximum** (262,144), not the window actually used. The window actually used is the `num_ctx` line in `/api/show`'s `parameters`. Without one, it is the server's `OLLAMA_CONTEXT_LENGTH`, or else Ollama's default.
-- **FlowBoard's OpenCode runs cannot use Ollama today.** Each run gets a fresh `XDG_CONFIG_HOME`, so Alex's `~/.config/opencode/opencode.json`, which has an `ollama` provider block, is never read. Run with an empty config folder, `opencode models ollama` prints `Provider not found: ollama`.
+- **Lamproom's OpenCode runs cannot use Ollama today.** Each run gets a fresh `XDG_CONFIG_HOME`, so Alex's `~/.config/opencode/opencode.json`, which has an `ollama` provider block, is never read. Run with an empty config folder, `opencode models ollama` prints `Provider not found: ollama`.
 - **Injecting the provider works for listing.** With `OPENCODE_CONFIG_CONTENT='{"provider":{"ollama":{"npm":"@ai-sdk/openai-compatible","name":"Ollama","options":{"baseURL":"http://127.0.0.1:11434/v1"},"models":{"gemma4:26b-64k":{"name":"gemma4 26b 64k","limit":{"context":65536,"output":8192}}}}}}'` and an empty `XDG_CONFIG_HOME`, `opencode models ollama` prints `ollama/gemma4:26b-64k`. A real run was **not** tried.
 - The adapter merges every `native` capability pack (`{ mount: { kind: 'native', config } }`) into OpenCode's config first, then sets its own keys over it. It never sets `provider`, so a native pack can carry the `provider.ollama` block **without any adapter change**.
-- The Docker sandbox runs `docker run` with the default bridge network for AI steps; only shell steps get `--network none`. Docker images `flowboard-sandbox:latest` and `flowboard-cli:latest` exist. OpenSandbox's server config is in `~/.config/flowboard/opensandbox/sandbox.toml`.
+- The Docker sandbox runs `docker run` with the default bridge network for AI steps; only shell steps get `--network none`. Docker images `lamproom-sandbox:latest` and `lamproom-cli:latest` exist. OpenSandbox's server config is in `~/.config/lamproom/opensandbox/sandbox.toml`.
 
 ## Ground rules for the session
 
 - Ollama runs are **local and free**, so live runs on Ollama are fine. **Never run anything on OpenRouter or Claude that costs money.** The live test suites (`pnpm test:live`) do; don't run them.
-- Don't edit `~/.config/opencode`, and don't touch Alex's real data folder (`code/flowboard/data/` in the main checkout). Use a scratch `FLOWBOARD_DATA_DIR`.
+- Don't edit `~/.config/opencode`, and don't touch Alex's real data folder (`code/lamproom/data/` in the main checkout). Use a scratch `LAMPROOM_DATA_DIR`.
 - Don't pull, delete or change Ollama models, and don't change `OLLAMA_*` settings, without asking Alex.
 - Other Claude sessions may be live. Run `ListAgents` before reusing any worktree.
 - Put throwaway spike scripts in your scratchpad, not in the repo.
@@ -79,9 +79,9 @@ In a fresh temp folder, with an empty `XDG_CONFIG_HOME`, `OPENCODE_DISABLE_PROJE
 
 **Passes when** step 2 works with `gemma4:26b-64k`. Record the qwen result whatever it is.
 
-### V3. Through FlowBoard's adapter, on the host
+### V3. Through Lamproom's adapter, on the host
 
-The approval check refuses `ollama/` ids today, so test below it. Write a scratch script that builds an `OpencodeProvider` from `@flowboard/adapters` and launches a `RunSpec` with:
+The approval check refuses `ollama/` ids today, so test below it. Write a scratch script that builds an `OpencodeProvider` from `@lamproom/adapters` and launches a `RunSpec` with:
 - `model: 'ollama/gemma4:26b-64k'`,
 - `capabilities: [{ id: 'ollama', provider: 'opencode', mount: { kind: 'native', config: { provider: { ollama: …the block… } } } }]`,
 - a temp `cwd`, `guards: { writeRoots: [cwd] }`, and `permissionMode: 'acceptEdits'`.
@@ -92,16 +92,16 @@ Use a prompt that writes a file. The test `packages/adapters/test/opencode-live.
 
 ### V4. In the Docker sandbox
 
-Same as V3, but with `spec.exec` from `dockerExecHost` (see `packages/cli/src/flow-run.ts` `sandboxFor` for the profile an AI step gets; image `flowboard-sandbox:latest`), and `baseURL` set to **`http://host.docker.internal:11434/v1`**.
+Same as V3, but with `spec.exec` from `dockerExecHost` (see `packages/cli/src/flow-run.ts` `sandboxFor` for the profile an AI step gets; image `lamproom-sandbox:latest`), and `baseURL` set to **`http://host.docker.internal:11434/v1`**.
 
-1. First, from a throwaway container: `docker run --rm flowboard-sandbox:latest sh -c 'curl -s http://host.docker.internal:11434/api/version'`, or `wget` if the image lacks curl. With Ollama on loopback only, this works only if Docker Desktop forwards `host.docker.internal` to the host's loopback.
+1. First, from a throwaway container: `docker run --rm lamproom-sandbox:latest sh -c 'curl -s http://host.docker.internal:11434/api/version'`, or `wget` if the image lacks curl. With Ollama on loopback only, this works only if Docker Desktop forwards `host.docker.internal` to the host's loopback.
 2. Then the full run. Watch for the provider-package download from V2.3: the box has network for AI steps, but check where OpenCode caches inside it.
 
 **Passes when** the run writes its file. **If step 1 fails, stop and report.** Making it work would mean binding Ollama beyond loopback (`OLLAMA_HOST`), which contradicts "only this machine" and is Alex's call.
 
 ### V5. In OpenSandbox
 
-Same again with the OpenSandbox runtime (`openBox` in `packages/adapters/src/exec/opensandbox/box.ts`; the server config is in `~/.config/flowboard/opensandbox/`). The box lets out only its `egress` host names; IP addresses are not supported.
+Same again with the OpenSandbox runtime (`openBox` in `packages/adapters/src/exec/opensandbox/box.ts`; the server config is in `~/.config/lamproom/opensandbox/`). The box lets out only its `egress` host names; IP addresses are not supported.
 
 1. Open a box with `egress: ['host.docker.internal']` and check that it reaches `http://host.docker.internal:11434/api/version` from inside. Find out whether the egress filter allows a port other than 443.
 2. Then the full run, with the provider block, as in V4.
@@ -150,13 +150,13 @@ Following `packages/cli/test/openrouter.test.ts`:
 - The `$0` message replaces "no price".
 - An existing `opencodeModels` entry with no `local` still reads.
 
-Add one **live** test, opt-in like the others (`FLOWBOARD_LIVE=1`), that skips when Ollama doesn't answer: a run on the first approved, tool-capable local model writes a file. Ask Alex before adding it to `test:live`.
+Add one **live** test, opt-in like the others (`LAMPROOM_LIVE=1`), that skips when Ollama doesn't answer: a run on the first approved, tool-capable local model writes a file. Ask Alex before adding it to `test:live`.
 
-Then run the app on a spare port with a scratch `FLOWBOARD_DATA_DIR`. Check both pages and the designer dropdown in a headless browser; the previous session drove Chrome over CDP for this. Run one real flow on `ollama/gemma4:26b-64k`: once on the host, once in each sandbox runtime.
+Then run the app on a spare port with a scratch `LAMPROOM_DATA_DIR`. Check both pages and the designer dropdown in a headless browser; the previous session drove Chrome over CDP for this. Run one real flow on `ollama/gemma4:26b-64k`: once on the host, once in each sandbox runtime.
 
 ### Docs
 
-- Widen `docs/FlowBoard/Agent Providers/OpenRouter Models And Key.md` to cover both sources. Rename it if it no longer fits, and fix the 10 links to it.
+- Widen `docs/Lamproom/Agent Providers/OpenRouter Models And Key.md` to cover both sources. Rename it if it no longer fits, and fix the 10 links to it.
 - Update `Running Agent Work.md` (the `/docs` page): how to approve an Ollama model, the context warning, and that only local models are offered.
 - Update the Settings Catalogue, the Roadmap row, OpenCode Adapter, and Providers And Sandboxing (how a box reaches Ollama).
 
@@ -181,12 +181,12 @@ Fresh `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_DATA_HOME` and `XDG_STATE_HOME`;
 2. `hello.txt` holds `ok` (no newline), written by a real `write` tool call, then the model replied in text.
 3. **No package download.** Afterwards the fresh cache held only `opencode/models.json` and an empty `opencode/bin`, with no `node_modules` and no `@ai-sdk/openai-compatible`. OpenCode 1.19.3 ships that provider built in. V5 also showed that a run with no internet beyond Ollama works, because `models.dev` was blocked there.
 4. `limit.context` / `limit.output` were accepted with no warning or error in `--print-logs`.
-5. **OpenCode's overhead: 6,816 prompt tokens** for the minimal run on gemma4 (7,123 on qwen3-coder, a different tokenizer). Through FlowBoard's adapter it was 6,829–6,845, because the guard plugin and the permission rules add a little. **The 32,768 threshold stands.** It leaves about 25k tokens for work after the overhead.
+5. **OpenCode's overhead: 6,816 prompt tokens** for the minimal run on gemma4 (7,123 on qwen3-coder, a different tokenizer). Through Lamproom's adapter it was 6,829–6,845, because the guard plugin and the permission rules add a little. **The 32,768 threshold stands.** It leaves about 25k tokens for work after the overhead.
 6. `qwen3-coder:30b` completed the task cleanly in about 33 s, wrote `ok` and replied, with no sign of truncation. That is expected given the 262,144 window it actually gets here (see V1).
 
-Side note: the first V2 attempt hung for 10 minutes after `init` and never contacted Ollama. The cause appears to be `opencode run` waiting on an open, non-TTY stdin. Re-runs with stdin closed, including one with a brand-new data folder, never hung. FlowBoard uses `opencode serve`, not `opencode run`, so this doesn't affect it.
+Side note: the first V2 attempt hung for 10 minutes after `init` and never contacted Ollama. The cause appears to be `opencode run` waiting on an open, non-TTY stdin. Re-runs with stdin closed, including one with a brand-new data folder, never hung. Lamproom uses `opencode serve`, not `opencode run`, so this doesn't affect it.
 
-### V3. Through FlowBoard's adapter, on the host: passed
+### V3. Through Lamproom's adapter, on the host: passed
 
 The scratch script built `new OpencodeProvider({ models: {} })` and launched `model: 'ollama/gemma4:26b-64k'`. The provider block went in as `capabilities: [{ id: 'ollama', provider: 'opencode', mount: { kind: 'native', config: { provider: { ollama: … } } } }]`, with a temp `cwd`, `guards: { writeRoots: [cwd] }`, `permissionMode: 'acceptEdits'` and `limits: { maxTurns: 6 }`. **The adapter was not changed.**
 
@@ -196,23 +196,23 @@ The scratch script built `new OpencodeProvider({ models: {} })` and launched `mo
 
 ### V4. In the Docker sandbox: passed
 
-1. `flowboard-sandbox:latest` has neither curl nor wget, so the check used Node: `docker run --rm --entrypoint node flowboard-sandbox:latest -e 'fetch("http://host.docker.internal:11434/api/version")…'` → `{"version":"0.40.16"}`. **Docker Desktop forwards `host.docker.internal` to the host's loopback,** so Ollama can stay on `127.0.0.1` and `OLLAMA_HOST` doesn't need to change.
-2. Full run as V3, but with `exec: dockerExecHost({ tier: 'container', image: 'flowboard-sandbox:latest', egressAllow: ['*'], mounts: [FlowBoard root, read-only] }, { tmpDir })` (the AI-step profile from `sandboxFor` / `flow-exec.ts:322`) and `baseURL: http://host.docker.internal:11434/v1`. Result: `exitCode 0`, `costUsd 0`, input 6,845, `hello.txt` = `ok`, about 44 s including container start.
+1. `lamproom-sandbox:latest` has neither curl nor wget, so the check used Node: `docker run --rm --entrypoint node lamproom-sandbox:latest -e 'fetch("http://host.docker.internal:11434/api/version")…'` → `{"version":"0.40.16"}`. **Docker Desktop forwards `host.docker.internal` to the host's loopback,** so Ollama can stay on `127.0.0.1` and `OLLAMA_HOST` doesn't need to change.
+2. Full run as V3, but with `exec: dockerExecHost({ tier: 'container', image: 'lamproom-sandbox:latest', egressAllow: ['*'], mounts: [Lamproom root, read-only] }, { tmpDir })` (the AI-step profile from `sandboxFor` / `flow-exec.ts:322`) and `baseURL: http://host.docker.internal:11434/v1`. Result: `exitCode 0`, `costUsd 0`, input 6,845, `hello.txt` = `ok`, about 44 s including container start.
 3. Cache inside the box: `HOME=/tmp` is a fresh tmpfs every run. That doesn't matter, because nothing is downloaded (V2.3).
 
 ### V5. In OpenSandbox: passed
 
-The server was started from `~/.config/flowboard/opensandbox/sandbox.toml`, which listens on **port 8091** (the README's example says 8080), so `OPENSANDBOX_DOMAIN=127.0.0.1:8091`. It was stopped afterwards.
+The server was started from `~/.config/lamproom/opensandbox/sandbox.toml`, which listens on **port 8091** (the README's example says 8080), so `OPENSANDBOX_DOMAIN=127.0.0.1:8091`. It was stopped afterwards.
 
 1. A box opened with `egress: ['host.docker.internal']` reached `http://host.docker.internal:11434/api/version` → `{"version":"0.40.16"}`. In the same box, `https://example.com` and `https://models.dev` failed with `ENOTFOUND`. **The egress filter (dns+nft) allows an allowed host on port 11434,** not only 443, and a host name is enough; no IP address is needed.
-2. Full run with `openBox({ image: 'flowboard-sandbox:latest', egress: ['host.docker.internal'], credentials: [] })`, `box.exec({ tmpDir })` and the provider block with the `host.docker.internal` baseURL: `exitCode 0`, `costUsd 0`, input 6,843, and `hello.txt` = `ok` pulled back from the box. About 86 s including box creation. **`host.docker.internal` is the only egress an Ollama step needs.** OpenCode got by without `models.dev`.
+2. Full run with `openBox({ image: 'lamproom-sandbox:latest', egress: ['host.docker.internal'], credentials: [] })`, `box.exec({ tmpDir })` and the provider block with the `host.docker.internal` baseURL: `exitCode 0`, `costUsd 0`, input 6,843, and `hello.txt` = `ok` pulled back from the box. About 86 s including box creation. **`host.docker.internal` is the only egress an Ollama step needs.** OpenCode got by without `models.dev`.
 
 ### V6. Report
 
 All of V1–V5 passed. Part 2 can go ahead as designed, with one question first.
 
 **Open question for Alex (affects the context warning).** For a model without `num_ctx`, the window it actually gets is Ollama's memory-based default. On this machine that is the model's full maximum, 262,144 for qwen3-coder. The API doesn't report that default for a model that isn't loaded. Options:
-- **(a) Recommended.** Window = `num_ctx` if set, else `OLLAMA_CONTEXT_LENGTH` if FlowBoard can see it, else `/api/ps`'s `context_length` if the model is loaded, else "Ollama's default", shown as unknown with **no** warning. Only a known window below 32,768 warns.
+- **(a) Recommended.** Window = `num_ctx` if set, else `OLLAMA_CONTEXT_LENGTH` if Lamproom can see it, else `/api/ps`'s `context_length` if the model is loaded, else "Ollama's default", shown as unknown with **no** warning. Only a known window below 32,768 warns.
 - (b) Treat an unknown window as small and warn. On this machine that would be a false alarm for qwen3-coder.
 - (c) Load the model briefly to measure it. That costs memory and seconds on every page open, so not recommended.
 
@@ -221,23 +221,23 @@ Also for Part 2: the provider block's `limit.context` should be the same window,
 **Decided 2026-11-15: option (a).** Alex: "yes with a, make sure to document this for later". The rule Part 2 builds, in order:
 
 1. `num_ctx` in `/api/show`'s `parameters` → that is the window (source `num_ctx`).
-2. Else `OLLAMA_CONTEXT_LENGTH` in FlowBoard's own environment → that number (source `OLLAMA_CONTEXT_LENGTH`). FlowBoard only sees it if it runs with the same environment as the Ollama server; the Ollama app on macOS doesn't share it, so this is best effort.
+2. Else `OLLAMA_CONTEXT_LENGTH` in Lamproom's own environment → that number (source `OLLAMA_CONTEXT_LENGTH`). Lamproom only sees it if it runs with the same environment as the Ollama server; the Ollama app on macOS doesn't share it, so this is best effort.
 3. Else, if `/api/ps` lists the model as loaded → its `context_length` (source `loaded`). That is what Ollama really picked, but it is a snapshot: it changes if Ollama reloads the model with other settings.
 4. Else → **unknown** (source `default`): the page says "Ollama's default" and **no warning** is shown.
 
-Only a known window (1–3) below **32,768** warns. For OpenCode's `limit.context`, an unknown window uses `details.context_length` (the model's maximum). **Revisit** if a machine with less memory gets false "fine" readings: Ollama then picks a small default (for example 4,096) that FlowBoard can't see, and an agent may lose its prompt without a warning. The fix then is to set `num_ctx` on the model, which rule 1 reads. The Part 2 docs (`Ollama Models.md` or its successor, and `Running Agent Work.md`) repeat this rule.
+Only a known window (1–3) below **32,768** warns. For OpenCode's `limit.context`, an unknown window uses `details.context_length` (the model's maximum). **Revisit** if a machine with less memory gets false "fine" readings: Ollama then picks a small default (for example 4,096) that Lamproom can't see, and an agent may lose its prompt without a warning. The fix then is to set `num_ctx` on the model, which rule 1 reads. The Part 2 docs (`Ollama Models.md` or its successor, and `Running Agent Work.md`) repeat this rule.
 
 ## Part 2: built 2026-11-15
 
-On `feature/ollama-models`, not merged. The whole feature is documented in `docs/FlowBoard/Agent Providers/OpenCode Models.md` (renamed from *OpenRouter Models And Key*). Departures from the design above:
+On `feature/ollama-models`, not merged. The whole feature is documented in `docs/Lamproom/Agent Providers/OpenCode Models.md` (renamed from *OpenRouter Models And Key*). Departures from the design above:
 
 - **No `models/` folder or source interface.** `openrouter.ts` keeps the key and OpenRouter's list, `ollama.ts` is new, and `models.ts` builds both sources' rules and `prepareRun`. The source is the id's prefix. Two modules didn't need a shared shape.
 - **`ModelRules.free` became `ModelRules.warning`**, one sentence per model: the free-model privacy warning, or the context warning.
 - **`/api/openrouter` (GET) became `/api/models`**, since it now carries both sources; `/api/openrouter/key` stays. `app/settings/openrouter.tsx` became `app/settings/models.tsx`.
-- **`ExecHost.hostName`** (core) is how a sandboxed process reaches this machine: `host.docker.internal` from `dockerExecHost` and from an OpenSandbox box's `exec`. The native pack is added in `execAi` once `spec.exec` is set (`ExecContext.opencodeConfig`), and in `run.ts` for run-agent.
+- **`ExecHost.hostName`** (core) is how a sandboxed process reaches this machine: `host.docker.internal` from `dockerExecHost` and from an OpenSandbox box's `exec`. The native pack is added in `execAi` once `spec.exec` is set (`ExecContext.opencodeConfig`), and in `run.ts` for lr-run-agent.
 - **The pack is read from the saved list** (`opencodeConfigFor(dataDir)`), so a resumed run, which skips the model check, still gets the provider.
-- **Live test** `packages/cli/test/ollama-live.test.ts`: opt-in with `FLOWBOARD_LIVE=1`, skips when Ollama does not answer. Passed on gemma4 (25 s). Added to `test:live` on 2026-11-16 at Alex's word.
+- **Live test** `packages/cli/test/ollama-live.test.ts`: opt-in with `LAMPROOM_LIVE=1`, skips when Ollama does not answer. Passed on gemma4 (25 s). Added to `test:live` on 2026-11-16 at Alex's word.
 
-Verified 2026-11-15: package tests, the app's typecheck, and the touched files' lint all pass. The app ran on port 3117 with a scratch data folder, and headless Chrome checked Connections → Ollama, the Ollama tab of OpenCode models (window `64k / num_ctx` for gemma4, `default / unknown` for qwen3-coder, and a Remove banner for an approved model no longer in Ollama), and the designer's picker (`ollama/gemma4:26b-64k · local`). One real one-step flow on `ollama/gemma4:26b-64k` ran on the host, in Docker (`flowboard-cli`) and in OpenSandbox (`flowboard-sandbox`, egress `host.docker.internal` only). Each wrote its artifact at $0 and printed the "runs locally at $0" line.
+Verified 2026-11-15: package tests, the app's typecheck, and the touched files' lint all pass. The app ran on port 3117 with a scratch data folder, and headless Chrome checked Connections → Ollama, the Ollama tab of OpenCode models (window `64k / num_ctx` for gemma4, `default / unknown` for qwen3-coder, and a Remove banner for an approved model no longer in Ollama), and the designer's picker (`ollama/gemma4:26b-64k · local`). One real one-step flow on `ollama/gemma4:26b-64k` ran on the host, in Docker (`lamproom-cli`) and in OpenSandbox (`lamproom-sandbox`, egress `host.docker.internal` only). Each wrote its artifact at $0 and printed the "runs locally at $0" line.
 
 Found on the way, fixed apart on `fix/sandbox-ripgrep` (`76c5c92`, Alex asked 2026-11-15): **neither sandbox image had ripgrep**, so OpenCode's `glob` and `grep` tools fail in a box (`ripgrep execution failed`) whatever the model. A first Docker run that searched before writing ran out of turns. The fix adds `ripgrep` to `docker/Dockerfile`; both images on this machine are rebuilt with it.

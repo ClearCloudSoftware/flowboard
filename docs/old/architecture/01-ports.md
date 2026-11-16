@@ -252,5 +252,5 @@ interface MemoryStore {
 
 **Recall** (before `launch()`) turns the scope union into a 7th prompt part — *background context, not
 instructions*. **Write** (after a run succeeds) commits salient output distilled from **declared artifacts and
-answers only**; the adapter resolves contradictions so FlowBoard never diffs facts by hand. The port is queried
+answers only**; the adapter resolves contradictions so Lamproom never diffs facts by hand. The port is queried
 by the runner, never from a route ([06 §15](./06-cost-and-platform.md#15-settings-draft-mode-api)).

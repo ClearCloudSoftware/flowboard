@@ -2,17 +2,17 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Fix the eight deferred issues the owner can hit while using `run-agent` today: a linked `folder`, stuck processes, OpenCode reading `.env`, split `rm` flags, unbounded OpenCode subagents, a late server error, stack traces at run setup, and wrong number-key docs.
+**Goal:** Fix the eight deferred issues the owner can hit while using `lr-run-agent` today: a linked `folder`, stuck processes, OpenCode reading `.env`, split `rm` flags, unbounded OpenCode subagents, a late server error, stack traces at run setup, and wrong number-key docs.
 
 **Architecture:** Small, independent fixes in the places each issue names. No new modules. Each fix gets a test that fails first.
 
-**Tech Stack:** TypeScript on Node 24 type stripping, `node:test`, pnpm workspaces (`code/flowboard/packages/{core,adapters,cli}`).
+**Tech Stack:** TypeScript on Node 24 type stripping, `node:test`, pnpm workspaces (`code/lamproom/packages/{core,adapters,cli}`).
 
-**Spec:** the deferred-issue rows in `docs/FlowBoard/Agent Providers/Run Agent CLI Decisions.md` and `Provider Implementation Decisions.md`, plus the "group 1" list agreed in chat on 2026-10-18 (the `/tmp` link item was found in a real run and never recorded).
+**Spec:** the deferred-issue rows in `docs/Lamproom/Agent Providers/Run Agent CLI Decisions.md` and `Provider Implementation Decisions.md`, plus the "group 1" list agreed in chat on 2026-10-18 (the `/tmp` link item was found in a real run and never recorded).
 
 ## Global Constraints
 
-- Code rules: erasable syntax only, `import type`, `.ts` relative imports, `node:test` + `node:assert/strict`; commands run from `code/flowboard/`.
+- Code rules: erasable syntax only, `import type`, `.ts` relative imports, `node:test` + `node:assert/strict`; commands run from `code/lamproom/`.
 - Kill grace before `SIGKILL`: `5000` ms by default, overridable per provider with a `killGraceMs` constructor option (tests use `200`).
 - OpenCode `.env` rules mirror OpenCode's own defaults: `read` of `*.env` and `*.env.*` → `ask`; `*.env.example` → `allow`. In a headless run `ask` is refused unless the mode is `bypassPermissions` or `auto`.
 - OpenCode step limit goes on agents `build`, `plan`, `general` and `explore`.
@@ -194,7 +194,7 @@ test('an unreadable prompt creates no runs/ log', async () => { /* via runAgent:
 
 ### Task 7: Docs
 
-**Files:** Modify `docs/FlowBoard/Agent Providers/Run Config Reference.md`, `Run Agent CLI Decisions.md`, `Provider Implementation Decisions.md`, `OpenCode Adapter.md`.
+**Files:** Modify `docs/Lamproom/Agent Providers/Run Config Reference.md`, `Run Agent CLI Decisions.md`, `Provider Implementation Decisions.md`, `OpenCode Adapter.md`.
 
 - [ ] **Step 1:** Reference, *Asking the owner*: "pick one: … or type the option's number" → "…or type the option's number, then Enter". Decisions R27 likewise ("option numbers move the cursor; Enter confirms").
 - [ ] **Step 2:** Decisions notes: remove the eight fixed rows from the deferred tables and add one decision row per fix (next free `R`/`C`/`O` numbers), each with *why* and *cost if wrong*; record the `/tmp` link item as found in the 2026-10-18 test run. `OpenCode Adapter.md`: add the `.env` rules to the `toolPolicy, permissionMode` row and the four agents to the `limits.maxTurns` row.

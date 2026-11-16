@@ -1,0 +1,13 @@
+{
+  "name": "@lamproom/ask-user",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@lamproom/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.7"
+  }
+}

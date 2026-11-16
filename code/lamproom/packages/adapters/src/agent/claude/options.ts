@@ -1,0 +1,106 @@
+/**
+ * RunSpec -> Claude Agent SDK query input. Pure: the provider supplies the
+ * process plumbing in `base`.
+ *
+ * See docs/Lamproom/Agent Providers/Claude Code Adapter.md.
+ */
+import { checkToolCall, renderPrompt } from '@lamproom/core';
+import type { ApprovalCall, RunSpec } from '@lamproom/core';
+import type { HookCallback, Options, SpawnedProcess, SpawnOptions } from '@anthropic-ai/claude-agent-sdk';
+
+/** The largest timer Node accepts (about 24.8 days); in practice, no limit. */
+export const NO_TIME_LIMIT_MS = 2147483647;
+
+export interface QueryBase {
+  claudePath: string;
+  env: NodeJS.ProcessEnv;
+  abortController: AbortController;
+  spawnClaudeCodeProcess: (o: SpawnOptions) => SpawnedProcess;
+}
+
+/** `spec.model` must already be resolved by the caller. */
+export function buildQuery(spec: RunSpec, base: QueryBase): { prompt: string; options: Options } {
+  const { invocation, ...parts } = spec.prompt;
+  const rest = renderPrompt(parts);
+  // The CLI only treats a leading `/` as a slash command, so the skill goes first.
+  const prompt = invocation ? `${invocation}\n\n${rest}` : rest;
+
+  // Runs use the installed CLI's own login: an inherited API key would silently switch billing.
+  const { ANTHROPIC_API_KEY: _key, ANTHROPIC_AUTH_TOKEN: _token, ...env } = base.env;
+
+  const packs = spec.capabilities ?? [];
+  const append = [
+    spec.systemPrompt,
+    ...packs.map((p) => (p.mount.kind === 'system_prompt' ? p.mount.text : undefined)),
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  const tools = spec.tools ?? [];
+  const allow = spec.toolPolicy?.allow;
+  const permissionMode = spec.permissionMode ?? 'dontAsk';
+
+  const options: Options = {
+    model: spec.model,
+    effort: spec.effort,
+    cwd: spec.cwd,
+    pathToClaudeCodeExecutable: base.claudePath,
+    abortController: base.abortController,
+    spawnClaudeCodeProcess: base.spawnClaudeCodeProcess,
+    // A tool call may wait on a human (ask_user) for as long as they take: no MCP time limit.
+    env: { ...env, CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1', MCP_TOOL_TIMEOUT: String(NO_TIME_LIMIT_MS) },
+    settingSources: [],
+    strictMcpConfig: true,
+    includePartialMessages: true,
+    systemPrompt: append ? { type: 'preset', preset: 'claude_code', append } : { type: 'preset', preset: 'claude_code' },
+    permissionMode,
+    allowDangerouslySkipPermissions: permissionMode === 'bypassPermissions',
+    // Injected tool servers (ask_user) are always pre-approved, or dontAsk would deny every HITL call.
+    allowedTools: allow || tools.length ? [...(allow ?? []), ...tools.map((t) => `mcp__${t.name}__*`)] : undefined,
+    disallowedTools: spec.toolPolicy?.deny,
+    mcpServers: Object.fromEntries(
+      tools.map((t) => [t.name, { type: 'stdio' as const, command: t.command, args: t.args, env: t.env }]),
+    ),
+    plugins: packs.flatMap((p) => (p.mount.kind === 'plugin_dir' ? [{ type: 'local' as const, path: p.mount.path }] : [])),
+    resume: spec.resume?.sessionId,
+    forkSession: spec.resume?.fork ?? false,
+    maxTurns: spec.limits?.maxTurns,
+    maxBudgetUsd: spec.limits?.maxBudgetUsd,
+  };
+
+  const { guards, approve } = spec;
+  if (guards || approve) {
+    const guard: HookCallback = async (input) => {
+      if (input.hook_event_name !== 'PreToolUse') return {};
+      const deny = (reason: string) => ({
+        hookSpecificOutput: { hookEventName: 'PreToolUse' as const, permissionDecision: 'deny' as const, permissionDecisionReason: reason },
+      });
+      // input.cwd is where the shell is now: a cd persists between Bash calls.
+      const reason = guards && checkToolCall(guards, input.tool_name, input.tool_input, spec.cwd, input.cwd);
+      if (reason) return deny(reason); // a guard deny never reaches the owner
+      if (!approve || !ASKED.has(input.tool_name)) return {};
+      const call = approvalCall(input.tool_name, input.tool_input);
+      if (!call) return deny('the project owner denied this'); // an asked tool with no usable target fails closed
+      try {
+        return (await approve(call)) ? {} : deny('the project owner denied this');
+      } catch (e) {
+        // A throw would reach the CLI as a hook error, which does not block the tool: fail closed.
+        return deny(`the project owner's approval could not be asked: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    };
+    options.hooks = { PreToolUse: [{ hooks: [guard] }] };
+  }
+
+  return { prompt, options };
+}
+
+/** Tools that edit files or run a shell command: each is asked, never waved through. */
+const ASKED = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Bash', 'Monitor']);
+
+/** The owner-facing call for an asked tool; undefined when its path or command is missing. */
+function approvalCall(tool: string, input: unknown): ApprovalCall | undefined {
+  const i = (input ?? {}) as Record<string, unknown>;
+  if (tool === 'Bash' || tool === 'Monitor') return typeof i.command === 'string' ? { kind: 'shell', command: i.command } : undefined;
+  const path = tool === 'NotebookEdit' ? i.notebook_path : i.file_path;
+  return typeof path === 'string' ? { kind: 'edit', tool, path } : undefined;
+}

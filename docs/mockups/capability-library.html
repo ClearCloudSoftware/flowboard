@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>FlowBoard Capability Library</title>
+<title>Lamproom Capability Library</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
@@ -169,7 +169,7 @@ input,select,textarea{font:inherit;color:inherit;border-radius:0}
 
 <div class="app">
   <header class="topbar">
-    <div class="brand">flowboard<em>/</em><span>library</span></div>
+    <div class="brand">lamproom<em>/</em><span>library</span></div>
     <span class="lbl" id="counts"></span>
     <span class="sp"></span>
     <button class="act" id="defineAgent">+ Define agent</button>
@@ -209,27 +209,27 @@ const PROVIDERS = [['claude','Claude Code'], ['codex','Codex CLI']];
    one provider. Same capability, one pack per provider.                */
 const C = (o) => o;
 const LIB = [
-  C({ id:'code-review', kind:'skill', author:'@flowboard/core', seeded:true,
+  C({ id:'code-review', kind:'skill', author:'@lamproom/core', seeded:true,
     desc:'Read the diff against the plan, then call set_outcome with a verdict and its reasoning.',
     packs:{ claude:{ ver:'2.1', at:'12 Sep' }, codex:{ ver:'0.4', at:'14 Sep' } },
-    src:'github.com/flowboard/capabilities', commit:'a91c4f2',
+    src:'github.com/lamproom/capabilities', commit:'a91c4f2',
     command:'/code-review', tools:['Read','Grep'],
     manifest:[['k','name:'],['s','code-review'],['k','\ndescription:'],['','Review a diff against the plan it came from.'],
               ['k','\ninvokes:'],['s','set_outcome'],['k','\nallowed-tools:'],['','Read, Grep']],
     used:[['Software delivery','@core v4','review'],['Code review','@core v7','review'],
           ['Code review','@team-sec v2','review'],['Test and triage','@core v4','triage']] }),
-  C({ id:'grill-me', kind:'skill', author:'@flowboard/core', seeded:true,
+  C({ id:'grill-me', kind:'skill', author:'@lamproom/core', seeded:true,
     desc:'Pose a batch of questions in one go and honour no_answer_yet so the run parks instead of hanging.',
     packs:{ claude:{ ver:'1.4', at:'12 Sep' } },
-    src:'github.com/flowboard/capabilities', commit:'a91c4f2',
+    src:'github.com/lamproom/capabilities', commit:'a91c4f2',
     command:'/grill-me', tools:['Read'],
     manifest:[['k','name:'],['s','grill-me'],['k','\ndescription:'],['','Batch open questions to the operator.'],
               ['k','\ninvokes:'],['s','ask_user_batch'],['k','\nhonours:'],['s','no_answer_yet']],
     used:[['Discovery to stories','@core v3','elicit'],['Story refinement','@core v5','refine']] }),
-  C({ id:'plan-implementation', kind:'skill', author:'@flowboard/core', seeded:true,
+  C({ id:'plan-implementation', kind:'skill', author:'@lamproom/core', seeded:true,
     desc:'Turn a research brief into numbered work items, each with an acceptance criterion.',
     packs:{ claude:{ ver:'3.0', at:'12 Sep' }, codex:{ ver:'1.1', at:'14 Sep' } },
-    src:'github.com/flowboard/capabilities', commit:'a91c4f2',
+    src:'github.com/lamproom/capabilities', commit:'a91c4f2',
     command:'/plan-implementation', tools:['Read','Write'],
     manifest:[['k','name:'],['s','plan-implementation'],['k','\ndescription:'],['','Brief in, numbered plan out.'],
               ['k','\nproduces:'],['s','plan.md'],['k','\nallowed-tools:'],['','Read, Write']],
@@ -239,7 +239,7 @@ const LIB = [
     desc:'Sweep the diff for credentials, tokens and private keys before a human ever reads it.',
     packs:{ claude:{ ver:'1.3', at:'2 Sep' } }, update:{ ver:'1.5',
       note:'Adds detection for cloud provider session tokens, and stops flagging example keys in docs.' },
-    src:'github.com/team-sec/fb-secret-scan', commit:'7d3e0b1',
+    src:'github.com/team-sec/lr-secret-scan', commit:'7d3e0b1',
     command:'/secret-scan', tools:['Read','Grep'],
     manifest:[['k','name:'],['s','secret-scan'],['k','\ndescription:'],['','Find credentials in a diff.'],
               ['k','\ninvokes:'],['s','set_outcome'],['k','\nallowed-tools:'],['','Read, Grep']],
@@ -247,7 +247,7 @@ const LIB = [
   C({ id:'threat-model', kind:'skill', author:'@team-sec',
     desc:'Draw the trust boundaries a change crosses and name what an attacker gains at each one.',
     packs:{ claude:{ ver:'1.0', at:'2 Sep' } },
-    src:'github.com/team-sec/fb-threat-model', commit:'4a8811c',
+    src:'github.com/team-sec/lr-threat-model', commit:'4a8811c',
     command:'/threat-model', tools:['Read','Grep'],
     manifest:[['k','name:'],['s','threat-model'],['k','\ndescription:'],['','Trust boundaries and attacker gains.'],
               ['k','\nproduces:'],['s','threats.md']],
@@ -255,7 +255,7 @@ const LIB = [
   C({ id:'domain-model', kind:'skill', author:'@alex',
     desc:'Turn a transcript into entities, events and the invariants that must hold between them.',
     packs:{ claude:{ ver:'0.3', at:'8 Sep' } },
-    src:'github.com/alex/fb-domain-model', commit:'2f19ade',
+    src:'github.com/alex/lr-domain-model', commit:'2f19ade',
     command:'/domain-model', tools:['Read','Write'],
     manifest:[['k','name:'],['s','domain-model'],['k','\ndescription:'],['','Entities, events, invariants.'],
               ['k','\nproduces:'],['s','domain.md']],
@@ -263,38 +263,38 @@ const LIB = [
   C({ id:'release-notes', kind:'skill', author:'@growth',
     desc:'Draft user-facing release notes from a set of merged summaries.',
     packs:{ claude:{ ver:'0.9', at:'20 Aug' } },
-    src:'github.com/growth/fb-release-notes', commit:'ce40772',
+    src:'github.com/growth/lr-release-notes', commit:'ce40772',
     command:'/release-notes', tools:['Read','Write'],
     manifest:[['k','name:'],['s','release-notes'],['k','\ndescription:'],['','Summaries in, release notes out.']],
     used:[] }),
 
-  C({ id:'architect', kind:'agent', author:'@flowboard/core', seeded:true,
+  C({ id:'architect', kind:'agent', author:'@lamproom/core', seeded:true,
     desc:'Plans before it types. Reads the brief and the codebase, writes numbered work items, never edits code.',
     packs:{ claude:{ ver:'—', at:'12 Sep' }, codex:{ ver:'—', at:'12 Sep' } },
     model:'opus', effort:'high', tools:['Read','Grep','Write'],
     prompt:'You plan implementations. Read the brief and the existing code, then write a numbered plan where every item has an acceptance criterion someone else could check. You do not edit source files.',
     used:[['Software delivery','@core v4','plan'],['Software delivery','@alex v2','plan'],['Design handoff','@core v2','plan']] }),
-  C({ id:'developer', kind:'agent', author:'@flowboard/core', seeded:true,
+  C({ id:'developer', kind:'agent', author:'@lamproom/core', seeded:true,
     desc:'Implements one plan item at a time and stops when the acceptance criterion is met.',
     packs:{ claude:{ ver:'—', at:'12 Sep' }, codex:{ ver:'—', at:'12 Sep' } },
     model:'opus', effort:'high', tools:['Read','Write','Edit','Bash'],
     prompt:'You implement the plan you are given, item by item. If an item cannot be built, say so in your output and move on rather than inventing a substitute.',
     used:[['Software delivery','@core v4','build'],['Software delivery','@alex v2','build'],
           ['Code review','@team-sec v2','implement'],['Release and rollback','@core v6','deploy']] }),
-  C({ id:'reviewer', kind:'agent', author:'@flowboard/core', seeded:true,
+  C({ id:'reviewer', kind:'agent', author:'@lamproom/core', seeded:true,
     desc:'Compares the diff to the plan and reports a verdict with its reasoning. Reads only.',
     packs:{ claude:{ ver:'—', at:'12 Sep' }, codex:{ ver:'—', at:'14 Sep' } },
     model:'sonnet', effort:'medium', tools:['Read','Grep'],
     prompt:'You review a change against the plan it came from. Report each plan item as met, deviated or missing, and say which files are the evidence.',
     used:[['Software delivery','@core v4','review'],['Code review','@core v7','review'],
           ['Code review','@team-sec v2','review'],['Test and triage','@core v4','sign-off']] }),
-  C({ id:'tester', kind:'agent', author:'@flowboard/core', seeded:true,
+  C({ id:'tester', kind:'agent', author:'@lamproom/core', seeded:true,
     desc:'Writes and runs tests against the acceptance criteria, and reports coverage gaps rather than hiding them.',
     packs:{ claude:{ ver:'—', at:'12 Sep' } },
     model:'sonnet', effort:'medium', tools:['Read','Write','Bash'],
     prompt:'You write tests for the acceptance criteria in the plan. If a criterion cannot be tested, name it explicitly in your report.',
     used:[['Software delivery','@core v4','tests'],['Software delivery','@alex v2','tests'],['Test and triage','@core v4','execute']] }),
-  C({ id:'scout', kind:'agent', author:'@flowboard/core', seeded:true,
+  C({ id:'scout', kind:'agent', author:'@lamproom/core', seeded:true,
     desc:'Reads widely and cheaply, then condenses. The first step of most flows.',
     packs:{ claude:{ ver:'—', at:'12 Sep' }, codex:{ ver:'—', at:'12 Sep' } },
     model:'haiku', effort:'low', tools:['Read','Grep','WebFetch'],
@@ -308,7 +308,7 @@ const LIB = [
     model:'sonnet', effort:'high', tools:['Read','Grep'],
     prompt:'You analyse security impact. For each trust boundary the change crosses, state what an attacker gains if it fails.',
     used:[['Code review','@team-sec v2','threat-model']] }),
-  C({ id:'scribe', kind:'agent', author:'@flowboard/core', seeded:true,
+  C({ id:'scribe', kind:'agent', author:'@lamproom/core', seeded:true,
     desc:'Writes the closing summary: what changed, what it cost, what to know next time.',
     packs:{ claude:{ ver:'—', at:'12 Sep' } },
     model:'haiku', effort:'low', tools:['Read','Write'],
@@ -316,10 +316,10 @@ const LIB = [
     used:[['Software delivery','@core v4','summarize'],['Story refinement','@core v5','publish'],
           ['Launch campaign','@core v2','measure'],['Release and rollback','@core v6','notify']] }),
 
-  C({ id:'Delivery pack', kind:'pack', author:'@flowboard/core', seeded:true,
+  C({ id:'Delivery pack', kind:'pack', author:'@lamproom/core', seeded:true,
     desc:'The starter set. Everything the built-in software pipeline needs, installed as one unit.',
     packs:{ claude:{ ver:'1.0', at:'12 Sep' }, codex:{ ver:'0.5', at:'14 Sep' } },
-    src:'github.com/flowboard/capabilities', commit:'a91c4f2',
+    src:'github.com/lamproom/capabilities', commit:'a91c4f2',
     contains:{ skills:['code-review','grill-me','plan-implementation'],
                agents:['architect','developer','reviewer','tester','scout','scribe'],
                flows:['Software delivery','Code review'] },
@@ -327,14 +327,14 @@ const LIB = [
   C({ id:'Security pack', kind:'pack', author:'@team-sec',
     desc:'What the security team expects on anything touching auth or payments.',
     packs:{ claude:{ ver:'2.0', at:'2 Sep' } },
-    src:'github.com/team-sec/fb-security-pack', commit:'7d3e0b1',
+    src:'github.com/team-sec/lr-security-pack', commit:'7d3e0b1',
     contains:{ skills:['secret-scan','threat-model'], agents:['sec-analyst'],
                flows:['Code review','Incident response'] },
     used:[['Code review','@team-sec v2','—'],['Incident response','@team-sec v3','—']] }),
   C({ id:'Marketing pack', kind:'pack', author:'@growth',
     desc:'Positioning, content and launch, with the channel briefs the growth team uses.',
     packs:{ claude:{ ver:'1.2', at:'20 Aug' } },
-    src:'github.com/growth/fb-marketing-pack', commit:'ce40772',
+    src:'github.com/growth/lr-marketing-pack', commit:'ce40772',
     contains:{ skills:['release-notes'], agents:['scout','scribe'],
                flows:['Launch campaign','Positioning sprint'] },
     used:[['Launch campaign','@growth v4','—']] }),
@@ -342,11 +342,11 @@ const LIB = [
 
 /* what a fresh clone from GitHub turns out to contain */
 const CANDIDATE = {
-  url:'https://github.com/acme-sec/fb-dependency-audit',
+  url:'https://github.com/acme-sec/lr-dependency-audit',
   id:'dependency-audit', kind:'skill', author:'@acme-sec',
   desc:'Audit the dependency tree for known advisories and versions that are not pinned.',
   packs:{ claude:{ ver:'1.0.2', at:'just now' } },
-  src:'github.com/acme-sec/fb-dependency-audit', commit:'b62f10d',
+  src:'github.com/acme-sec/lr-dependency-audit', commit:'b62f10d',
   command:'/dependency-audit', tools:['Read','Bash','WebFetch'],
   manifest:[['k','name:'],['s','dependency-audit'],['k','\nversion:'],['','1.0.2'],
             ['k','\ndescription:'],['','Audit dependencies for advisories and unpinned versions.'],
@@ -417,7 +417,7 @@ function drawDetail(){
     <div class="dt-h">
       <h1>${esc(c.id)}</h1>
       <span class="dt-kind ${c.kind}">${c.kind}</span>
-      <span class="lbl" style="letter-spacing:.04em">${c.author}${c.seeded ? ' · ships with FlowBoard' : ''}</span>
+      <span class="lbl" style="letter-spacing:.04em">${c.author}${c.seeded ? ' · ships with Lamproom' : ''}</span>
     </div>
     <p class="dt-desc">${esc(c.desc)}</p>
 
@@ -507,7 +507,7 @@ function drawOverlay(){
           ${stage === 'url' ? '' : 'readonly'} aria-label="Repository URL">
         <button class="act primary" type="submit"${stage === 'url' ? '' : ' disabled'}>Fetch</button>
       </form>
-      ${stage === 'url' ? `<p class="empty" style="margin-top:12px">FlowBoard clones the repository into its
+      ${stage === 'url' ? `<p class="empty" style="margin-top:12px">Lamproom clones the repository into its
         capability store, reads the manifest, and shows you what it found before anything is installed.</p>`
       : `<div class="steps">${STAGES.map(([k, d], i) => {
           const done = at > i + 1, running = at === i + 1;
@@ -566,7 +566,7 @@ function drawChrome(){
     `<b style="color:${ups ? 'var(--wait)' : 'inherit'}">${ups}</b> update${ups === 1 ? '' : 's'} available<span class="sep">·</span>` +
     `<b>${orphan}</b> used by nothing<span class="sep">·</span>` +
     `codex packs for <b>${codex}</b> of ${LIB.length}<span class="sep">·</span>` +
-    `store <b>~/.flowboard/capabilities</b></span>` +
+    `store <b>~/.lamproom/capabilities</b></span>` +
     `<span class="sp"></span><span><span class="kbd">esc</span> close</span>`;
 }
 const render = () => { drawRail(); drawDetail(); drawChrome(); drawOverlay(); };

@@ -19,20 +19,20 @@ component used by the wizard, the project page and a new `/settings` page.
 and the handoff decisions copied into Global Constraints below.
 
 **Not in this plan (one plan each, written when reached, after reading their vault notes):** 3. sandbox tier and
-project budget enforced in run-flow; 4. the analysis agent and its proposals (check command, network hosts); 5. knowledge
+project budget enforced in lr-run-flow; 4. the analysis agent and its proposals (check command, network hosts); 5. knowledge
 assets (Serena, graphify, rebuilds); 6. escalation to Slack; 7. memory. This plan stores and shows those settings; it
 does not act on them. The clone view ends at "registered" and the proposals panel arrives with plan 4.
 
 ## Global Constraints
 
-- All paths below are under `code/flowboard/` unless they start with `docs/`. Run commands from `code/flowboard/`.
+- All paths below are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
 - Branch `feature/projects-impl`; do not merge into `dev`.
 - Pin new dependencies to exact versions at least two weeks old. Expected: none needed (shadcn components are added
   with `pnpm dlx shadcn@4.23.0 add <name>`, which only writes into `components/ui/`).
 - Light only, zero border-radius, house tokens from `app/globals.css`; icons from `lucide-react`.
 - Keep shadcn UI outside `.fd` (`app/flows/flows.css` resets `button` there without a layer).
 - Close any Radix dialog before `router.push`; scope Playwright locators to `main:visible`.
-- GitHub = the installed `gh` CLI and its login. No tokens stored by FlowBoard, no OAuth app of our own.
+- GitHub = the installed `gh` CLI and its login. No tokens stored by Lamproom, no OAuth app of our own.
 - Fixed by the repo, never asked: name = repo name; slug = `slugify(name)`, or `slugify(owner-name)` when taken, then
   numbered (`-2`) if that is taken too; base branch = GitHub's default branch; flows = the type's flows; check command =
   proposed after cloning (plan 4), never asked in the wizard.
@@ -40,16 +40,16 @@ does not act on them. The clone view ends at "registered" and the proposals pane
   rebuild: 'push' }`. Research, Writing, Data: shown, "coming soon", disabled. Sources: GitHub enabled; GitLab,
   Bitbucket, Azure Repos, "A folder on this machine": "coming soon".
 - App defaults (the mockup's `APP`, minus its demo values): `projectsFolder: null`, `trust: 'normal'`,
-  `budget: { capUsd: null, alertAt: 80, onLimit: 'pause' }`, `escalation: { channel: '#flowboard', nudgeMin: 5 }`,
+  `budget: { capUsd: null, alertAt: 80, onLimit: 'pause' }`, `escalation: { channel: '#lamproom', nudgeMin: 5 }`,
   `memory: false`, `knowledge: { serena: false, graphify: false, rebuild: 'manual' }`, `draft: false`.
 - Precedence app → type → project (flow and step levels come with plan 3). Presence of a key in `overrides` = overridden.
-- Storage split: limits and check command in the repo's `.flowboard.yaml`; trust, budget, escalation, memory,
-  knowledge, draft in the project record. A repo's `.flowboard.yaml` can never set trust, network or budget.
+- Storage split: limits and check command in the repo's `.lamproom.yaml`; trust, budget, escalation, memory,
+  knowledge, draft in the project record. A repo's `.lamproom.yaml` can never set trust, network or budget.
 - Validation messages, verbatim from the mockup: cap `a dollar amount above 0`; alertAt `alert at 1 to 100 percent`;
   channel `a Slack channel, like #billing-alerts` (regex `^#[a-z0-9][a-z0-9_-]*$`); nudge `1 to 120 minutes`;
   memoryMb `a whole number of MB, 64 or more`; cpus `more than 0; 1.5 is a CPU and a half`; clone folder
   `a folder path: absolute, or starting with ~/`.
-- Clone destination: `app.projectsFolder ?? ~/FlowBoard/projects`, or a folder for this project only; optionally saved
+- Clone destination: `app.projectsFolder ?? ~/Lamproom/projects`, or a folder for this project only; optionally saved
   as the new `projectsFolder`. `<parent>/<name>` that exists and is not empty → `<name>-2`, `-3`, …
 - Every copy string not listed here: take it from the mockup.
 
@@ -78,7 +78,7 @@ does not act on them. The clone view ends at "registered" and the proposals pane
    repositories". Test: Task 4 `repos: a restricted org says so`.
 3. **Destination already taken, repo already a project, or Clone pressed twice** → `-2` folder; repo row disabled
    "already the project X" and a 409 from the server; the second clone of a repo in flight is a 409. Tests: Task 5.
-4. **A cloned repo whose `.flowboard.yaml` names `trust`, `network` or `budget`** → the file is reported as invalid on
+4. **A cloned repo whose `.lamproom.yaml` names `trust`, `network` or `budget`** → the file is reported as invalid on
    the project, and the record's settings are untouched. Test: Task 3.
 5. **Name and owner-name slug both taken** → numbered slug, never a 409. Test: Task 3.
 
@@ -113,7 +113,7 @@ does not act on them. The clone view ends at "registered" and the proposals pane
   export type From = 'app' | 'type' | 'project';
   export type Resolved = { [K in SettingKey]: { value: Settings[K]; from: From } };
   export function resolveSettings(app: AppSettings, type: ProjectTypeId, ov: Overrides): Resolved;
-  export const DEFAULT_PROJECTS_FOLDER = '~/FlowBoard/projects';
+  export const DEFAULT_PROJECTS_FOLDER = '~/Lamproom/projects';
   ```
   `Result` is imported from `projects.ts` with `import type` (projects.ts imports settings.ts). Types are plain TS so `app/` can import them (`import type`), as
   `app/projects/api.ts` does today.
@@ -164,7 +164,7 @@ test('overrides: every rule the wizard checks, with its message', () => {
 
 ---
 
-### Task 2: Limits written to the repo's `.flowboard.yaml`
+### Task 2: Limits written to the repo's `.lamproom.yaml`
 
 **Files:**
 - Modify: `packages/cli/src/project.ts` (beside `setCheckCommand`, `:44-60`)
@@ -185,7 +185,7 @@ test('limits go into the repo file next to the check command, and an empty one i
   assert.deepEqual(projectSettings(r), { ok: true, settings: { limits: { memoryMb: 2048, cpus: 1.5 }, checkCommand: 'node --test' } });
   value(asResult(setLimits(r, {})));
   value(asResult(setCheckCommand(r, undefined)));
-  assert.equal(existsSync(join(r, '.flowboard.yaml')), false);
+  assert.equal(existsSync(join(r, '.lamproom.yaml')), false);
 });
 
 ```
@@ -197,7 +197,7 @@ test('limits go into the repo file next to the check command, and an empty one i
 
 - [ ] **Step 4: Run** — Expected: PASS.
 
-- [ ] **Step 5: Commit** `feat(project): write sandbox limits to .flowboard.yaml`
+- [ ] **Step 5: Commit** `feat(project): write sandbox limits to .lamproom.yaml`
 
 ---
 
@@ -229,15 +229,15 @@ test('limits go into the repo file next to the check command, and an empty one i
 ```ts
 test('a project gets its type: the type’s first flow, its source, and no overrides unless given', () => {
   const data = temp();
-  const p = value(createProject(data, flows(), { name: 'api', repoPath: repo(), type: 'software', source: { kind: 'github', repo: 'flowboard/api' } }));
-  assert.deepEqual([p.type, p.defaultFlow, p.source, p.overrides], ['software', 'delivery', { kind: 'github', repo: 'flowboard/api' }, {}]);
+  const p = value(createProject(data, flows(), { name: 'api', repoPath: repo(), type: 'software', source: { kind: 'github', repo: 'lamproom/api' } }));
+  assert.deepEqual([p.type, p.defaultFlow, p.source, p.overrides], ['software', 'delivery', { kind: 'github', repo: 'lamproom/api' }, {}]);
   assert.deepEqual(createProject(data, flows(), { name: 'x', repoPath: repo(), type: 'research' }), { ok: false, status: 400, error: 'Research projects are coming soon' });
 });
 
 test('the slug: the name, else owner-name, else numbered; never a 409 for a clash', () => {
   const data = temp();
-  const make = () => value(createProject(data, flows(), { name: 'web', owner: 'flowboard', repoPath: repo(), type: 'software' })).slug;
-  assert.deepEqual([make(), make(), make()], ['web', 'flowboard-web', 'flowboard-web-2']);
+  const make = () => value(createProject(data, flows(), { name: 'web', owner: 'lamproom', repoPath: repo(), type: 'software' })).slug;
+  assert.deepEqual([make(), make(), make()], ['web', 'lamproom-web', 'lamproom-web-2']);
 });
 
 test('overrides and limits: kept on create, changed on edit, refused when invalid', () => {
@@ -252,7 +252,7 @@ test('overrides and limits: kept on create, changed on edit, refused when invali
 
 test('a repo cannot grant itself trust, network or budget: its file is refused, the record is not touched', () => {
   const r = repo();
-  writeFileSync(join(r, '.flowboard.yaml'), 'trust: trusted\nnetwork: [evil.example]\nbudget_usd: 1000\n');
+  writeFileSync(join(r, '.lamproom.yaml'), 'trust: trusted\nnetwork: [evil.example]\nbudget_usd: 1000\n');
   const s = projectSettings(r);
   assert.equal(s.ok, false);
   const p = value(createProject(temp(), flows(), { name: 'R', repoPath: r, type: 'software' }));
@@ -377,15 +377,15 @@ test('the target: the repo name in the parent, -2 when that holds something, an 
 });
 
 test('a clone registers the project when git is done, with its overrides, and can save the parent as the default', async () => {
-  const job = value(startClone(data, lib, { repo: 'flowboard/api', type: 'software', parent, makeDefault: true, overrides: { draft: true }, limits: {} }, fakeGh));
+  const job = value(startClone(data, lib, { repo: 'lamproom/api', type: 'software', parent, makeDefault: true, overrides: { draft: true }, limits: {} }, fakeGh));
   const done = await until(() => cloneJob(job.id)!.phase === 'done');
-  assert.deepEqual([done.project!.source, done.project!.overrides, done.project!.baseBranch], [{ kind: 'github', repo: 'flowboard/api' }, { draft: true }, 'main']);
+  assert.deepEqual([done.project!.source, done.project!.overrides, done.project!.baseBranch], [{ kind: 'github', repo: 'lamproom/api' }, { draft: true }, 'main']);
   assert.equal(readAppSettings(data).projectsFolder, parent);
   assert.ok(done.lines.some((l) => l.includes('registered at /p/api')));
 });
 
 test('refused before cloning: a repo already a project, one being cloned, a bad repo name, a relative folder, bad overrides', () => {
-  // 409 'flowboard/api is already the project api'; 409 'flowboard/api is being cloned'; 400 for 'a/--upload-pack=x';
+  // 409 'lamproom/api is already the project api'; 409 'lamproom/api is being cloned'; 400 for 'a/--upload-pack=x';
   // 400 'a folder path: absolute, or starting with ~/'; 400 'a dollar amount above 0'
 });
 
@@ -397,9 +397,9 @@ test('a failed clone says why and registers nothing', async () => { /* fake exit
   `gh repo clone <repo> <folder> -- --progress` (async `spawn`); split stderr on `\r` and `\n`, replace the last line
   while it starts with the same git phase word, take `pct` from `Receiving objects: NN%`. On exit 0: `excludeFromGit`,
   `createProject({ name, owner, repoPath: folder, type, source, overrides, limits })`, `makeDefault` →
-  `updateAppSettings({ projectsFolder: parent })`, then push the mockup's `-- …` lines (`added .flowboard/ to
+  `updateAppSettings({ projectsFolder: parent })`, then push the mockup's `-- …` lines (`added .lamproom/ to
   .git/info/exclude`, `project X registered at /p/slug: Software, Normal: container`, the overrides line, and
-  `wrote .flowboard.yaml: sandbox limits …` when limits were given). Jobs in `globalThis.__fbClones ??= new Map()`;
+  `wrote .lamproom.yaml: sandbox limits …` when limits were given). Jobs in `globalThis.__fbClones ??= new Map()`;
   mark it `ponytail:` with the restart ceiling.
 - [ ] **Step 4: Run** — Expected: PASS.
 - [ ] **Step 5: Commit** `feat(projects): clone a GitHub repo and register it`
@@ -452,7 +452,7 @@ test('a failed clone says why and registers nothing', async () => { /* fake exit
 **Interfaces:**
 - Consumes: Task 6 `/api/settings`, `appSettingsQuery`, `updateAppSettings`, `SettingPage` in `mode: 'app'`.
 
-- [ ] **Step 1:** The page: three sections. *Projects folder* (input, placeholder `~/FlowBoard/projects`, same path
+- [ ] **Step 1:** The page: three sections. *Projects folder* (input, placeholder `~/Lamproom/projects`, same path
   rule as the clone folder). *Connections → GitHub* (the `gh` status in words, the logged-in accounts, the commands from
   Decision 2, "Check again"). *Defaults* (the settings pages of Task 6 in app mode: no override switch, `from` = app).
 - [ ] **Step 2: Verify** in the browser (Task 9's setup): `/settings` shows `connected as alextiboldi`; setting the
@@ -511,14 +511,14 @@ test('a failed clone says why and registers nothing', async () => { /* fake exit
   server's call: add `GET /api/projects/clone?parent=&name=` → `{ folder }` from `cloneTarget`.
 - [ ] **Step 3:** Clone view: progress bar + phase, the log (auto-scrolled, `aria-live="polite"`), "closing this dialog
   does not stop it"; when done, the done box and "Create another" / "Open <name>" (close first, then `router.push`).
-  Reopening the wizard while a job runs shows that job. A 404 job → "FlowBoard restarted during the clone; the folder
+  Reopening the wizard while a job runs shows that job. A 404 job → "Lamproom restarted during the clone; the folder
   may hold a partial clone".
 - [ ] **Step 4: Verify end to end.** In the worktree:
-  `mkdir -p <scratch>/data && cp -R flows <scratch>/flows && FLOWBOARD_DATA_DIR=<scratch>/data FLOWBOARD_FLOWS_DIR=<scratch>/flows npx next dev -p 3117`,
+  `mkdir -p <scratch>/data && cp -R flows <scratch>/flows && LAMPROOM_DATA_DIR=<scratch>/data LAMPROOM_FLOWS_DIR=<scratch>/flows npx next dev -p 3117`,
   set the projects folder to `<scratch>/projects` on `/settings`, then a Playwright script (import from
   `~/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs`) creates a project from `alextiboldi/planning`
   with a $150 budget override and 2048 MB memory: expects the done box, `/p/planning` lists `budget · this project`,
-  `<scratch>/projects/planning/.flowboard.yaml` holds `memory_mb: 2048`, and a second run of the same flow shows the
+  `<scratch>/projects/planning/.lamproom.yaml` holds `memory_mb: 2048`, and a second run of the same flow shows the
   repo row disabled. Screenshot each step into the scratchpad and look at them against the mockup.
 - [ ] **Step 5:** `pnpm lint && pnpm typecheck:packages && pnpm test:packages && pnpm test:app` — Expected: clean except
   the known `flow-start` failure.
@@ -529,9 +529,9 @@ test('a failed clone says why and registers nothing', async () => { /* fake exit
 ### Task 10: Docs
 
 **Files:**
-- Modify: `docs/FlowBoard/Projects/Projects Index.md` ("Built" callout), `docs/FlowBoard/Agent Providers/Run Flow Reference.md`
+- Modify: `docs/Lamproom/Projects/Projects Index.md` ("Built" callout), `docs/Lamproom/Agent Providers/Run Flow Reference.md`
   (project file: `sandbox.memory_mb`/`cpus` written by the wizard; trust/budget/network never read from it),
-  `docs/FlowBoard/Projects/Project Record.md` (type, source, overrides), `docs/mockups/README.md` (wizard: built,
+  `docs/Lamproom/Projects/Project Record.md` (type, source, overrides), `docs/mockups/README.md` (wizard: built,
   phases 1–2).
 
 - [ ] **Step 1:** Update the notes; list Decisions 1–7 under the Projects Index callout as "open to review".

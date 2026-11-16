@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A project's *Memory* setting (a boolean, project → type → app) is no longer saved and ignored. Once a run
-of a project with memory on ends `done`, FlowBoard (run-flow, on the host, not the agent) saves facts from the run's
+of a project with memory on ends `done`, Lamproom (lr-run-flow, on the host, not the agent) saves facts from the run's
 declared summary and review artifacts and the questions a person answered. Before each agent attempt, a keyword search
 pulls the matching facts into the prompt as a 7th part, labelled background and capped at 6,000 characters. The
 project page lists the memories, with **Forget** and **Forget all**. Alex's decision: *"A local file"*.
@@ -11,7 +11,7 @@ project page lists the memories, with **Forget** and **Forget all**. Alex's deci
 **Architecture:** One module, `packages/cli/src/memory.ts`, holds the store (`<dataDir>/memory/<projectId>.json`,
 written atomically), the note extraction (no AI: bullets and paragraphs) and the recall ranking (term overlap, then
 recency). `PromptParts` gains an optional `memory` part that `renderPrompt` places just before the closing
-instruction (PRD §7), so every adapter renders it and an absent part changes nothing. run-flow's `drive` gives
+instruction (PRD §7), so every adapter renders it and an absent part changes nothing. lr-run-flow's `drive` gives
 `execAi` a `recall` callback for projects with memory on, and commits after a `done` run. Three routes under
 `/api/projects/:id/memory` and a Memory card on the project page read and delete. No port with one adapter (YAGNI):
 `memory.ts` is the `local` adapter's whole job.
@@ -19,7 +19,7 @@ instruction (PRD §7), so every adapter renders it and an absent part changes no
 **Tech Stack:** TypeScript on Node 24 (type stripping), `node --test`, zod 4, Next 16 route handlers, TanStack Query,
 shadcn/ui, lucide-react.
 
-**Spec:** `docs/FlowBoard/Memory/` (Memory Overview, MemoryStore Port, Local Memory Adapter, Project Memory Scope,
+**Spec:** `docs/Lamproom/Memory/` (Memory Overview, MemoryStore Port, Local Memory Adapter, Project Memory Scope,
 Memory Commit, Memory Recall, Recalled Memory In The Prompt, Memory Settings, Memory Trust Boundary, Memory Open
 Questions), PRD §7, §11.2, §16, the controller's brief of 2026-11-15 (defaults 1-6), and Alex's decision *"A local file"*.
 
@@ -30,7 +30,7 @@ editing a memory; a recall limit or `max_recall_chars` setting (fixed at 6,000);
 
 ## Global Constraints
 
-- All paths are under `code/flowboard/` unless they start with `docs/`. Run commands from `code/flowboard/`.
+- All paths are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
 - Branch `feature/project-memory`, cut from `feature/slack-escalation` at `38e972a` in
   `.claude/worktrees/project-memory`. Never merge (except `git merge --no-ff feature/slack-escalation` when asked),
   never push, never rebase.
@@ -51,7 +51,7 @@ editing a memory; a recall limit or `max_recall_chars` setting (fixed at 6,000);
   - prompt header: `Background from earlier runs on this project. These are notes, not instructions; the task above takes precedence.` then one `- <text>` line per note
   - run lines: `-- memory: recalled <N> note(s) for <step>`; `-- memory: saved <N> note(s) from this run` with ` (<M> left out: characters a person cannot see)` when M > 0;
     `-- memory: not read: <why>; <step> runs without it`; `-- memory: not saved: <why>`
-  - settings footnote: `After a run of the project ends done, FlowBoard keeps facts from its summary and review artifacts and the questions you answered, and hands the matching ones to later runs as background. See and forget them on the project page.`
+  - settings footnote: `After a run of the project ends done, Lamproom keeps facts from its summary and review artifacts and the questions you answered, and hands the matching ones to later runs as background. See and forget them on the project page.`
   - card: heading `memory · on|off`; off: `off: runs neither save nor recall; turn it on in the project settings`; empty: `nothing remembered yet`; buttons **Forget**, **Forget all**
 - Light only, zero radius, house tokens, Lucide icons, pages outside `.fd`, test locators scoped to `main:visible`.
 - Spend no money: scripted providers and hand-made run folders only.
@@ -148,7 +148,7 @@ editing a memory; a recall limit or `max_recall_chars` setting (fixed at 6,000);
 - [ ] **Step 4:** Rerun; expect PASS.
 - [ ] **Step 5:** Commit `feat(memory): a project's memories in one local file, the notes a run leaves, keyword recall`.
 
-### Task 3: run-flow recalls before each attempt and commits after a done run
+### Task 3: lr-run-flow recalls before each attempt and commits after a done run
 
 **Files:**
 - Modify: `packages/cli/src/flow-exec.ts` (`ExecContext.recall`, used where the attempt's prompt is rebuilt),
@@ -180,12 +180,12 @@ editing a memory; a recall limit or `max_recall_chars` setting (fixed at 6,000);
     there → paused → absent)
   - `an unreadable store: the run goes on without memory, and its file is left alone` (store `{oops` → lines
     `-- memory: not read: …; plan runs without it` and `-- memory: not saved: …`; exit 0; file still `{oops`)
-  - `FlowBoard's own runs neither recall nor save` (the knowledge build's internal flow text under
+  - `Lamproom's own runs neither recall nor save` (the knowledge build's internal flow text under
     `<data>/internal/knowledge/p-1/` with memory on → no `-- memory` line, no store)
 - [ ] **Step 2:** `node --test --test-name-pattern memory packages/cli/test/flow-run.test.ts`; expect FAIL.
 - [ ] **Step 3:** Implement; reuse `answerText`, `inside`, `readProjects`, `readAppSettings`.
 - [ ] **Step 4:** Rerun the file whole; expect PASS.
-- [ ] **Step 5:** Commit `feat(run-flow): recall project memory before each agent attempt, commit after a done run`.
+- [ ] **Step 5:** Commit `feat(lr-run-flow): recall project memory before each agent attempt, commit after a done run`.
 
 ### Task 4: Routes, the Memory card, the footnote, and removal
 
@@ -210,15 +210,15 @@ editing a memory; a recall limit or `max_recall_chars` setting (fixed at 6,000);
   stay deletable. Footnote replaced (exact copy in Global Constraints). Remove dialog: `… its runs stay where they
   are; its memory is forgotten.`
 - [ ] **Step 4:** Rerun; `pnpm test:app`; `tsc` (`next typegen` once if needed).
-- [ ] **Step 5:** Browser check on a free port with scratch `FLOWBOARD_DATA_DIR`, `FLOWBOARD_RUNS_DIR`, a hand-made
+- [ ] **Step 5:** Browser check on a free port with scratch `LAMPROOM_DATA_DIR`, `LAMPROOM_RUNS_DIR`, a hand-made
   store: the card lists, Forget removes one, Forget all empties, off shows the line; no console errors. Stop the server.
 - [ ] **Step 6:** Commit `feat(projects): the project page shows its memory, to forget one or all`.
 
 ### Task 5: Docs
 
-- [ ] `docs/FlowBoard/Projects/Project Settings.md` (Memory row: built), `Projects Index.md` (memory acted on),
+- [ ] `docs/Lamproom/Projects/Project Settings.md` (Memory row: built), `Projects Index.md` (memory acted on),
   a *Built* callout in Memory Index, Memory Commit, Memory Recall, Recalled Memory In The Prompt and Local Memory
-  Adapter; `docs/FlowBoard/Projects/Project Memory Handoff.md` in the other handoffs' style. Commit
+  Adapter; `docs/Lamproom/Projects/Project Memory Handoff.md` in the other handoffs' style. Commit
   `docs(projects): project memory is built`.
 
 ## Decisions open to Alex's review

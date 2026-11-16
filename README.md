@@ -1,8 +1,8 @@
-# FlowBoard
+# Lamproom
 
 **A local-first control room for the AI coding agents you already run.**
 
-FlowBoard is a Kanban board where each column isn't a human workflow stage ("In Progress") but an
+Lamproom is a Kanban board where each column isn't a human workflow stage ("In Progress") but an
 **automated AI‑agent step** — "Research", "Plan", "Build", "Review". A task flows through a graph of these
 steps, each one a headless coding‑agent session with its own model, budget, and guardrails. Some steps
 advance on their own; others pause for your approval or a quick question. It runs on your machine, over your
