@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Copy, FolderGit2, GitBranch, GitMerge, Play, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { cleanUp, cli, rememberedFolder, workspacesQuery } from './api.ts';
 import type { ActResult, WorkspaceRow, WorkspaceState } from './api.ts';
 
@@ -68,17 +68,19 @@ export function Workspaces() {
   }
   const cleanable = (r: WorkspaceRow) => r.state !== 'running' && r.state !== 'broken';
 
+  // An effect event reads the latest state, so the listener is added once rather than on every render.
+  const keys = useEffectEvent((e: KeyboardEvent) => {
+    if ((e.target as HTMLElement).closest('input, textarea, select, dialog') || e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = ordered.findIndex((r) => r.id === pickedId);
+    if (e.key === 'j' || e.key === 'k') setPicked(ordered[Math.max(0, Math.min(ordered.length - 1, k + (e.key === 'j' ? 1 : -1)))]?.id ?? '');
+    else if (e.key === 'Escape') setPicked('');
+    else if (e.key === 'c' && picked && cleanable(picked) && !busy) void clean(picked, false);
+  });
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest('input, textarea, select, dialog') || e.metaKey || e.ctrlKey || e.altKey) return;
-      const k = ordered.findIndex((r) => r.id === pickedId);
-      if (e.key === 'j' || e.key === 'k') setPicked(ordered[Math.max(0, Math.min(ordered.length - 1, k + (e.key === 'j' ? 1 : -1)))]?.id ?? '');
-      else if (e.key === 'Escape') setPicked('');
-      else if (e.key === 'c' && picked && cleanable(picked) && !busy) void clean(picked, false);
-    };
+    const onKey = (e: KeyboardEvent) => keys(e);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  });
+  }, []);
 
   const needs = ordered.filter((r) => NEEDS.has(r.state));
   const rest = ordered.filter((r) => !NEEDS.has(r.state));

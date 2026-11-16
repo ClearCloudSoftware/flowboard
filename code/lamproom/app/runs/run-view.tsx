@@ -1,6 +1,6 @@
 'use client';
 /** One run (docs/mockups/run-viewer.html): its summary, flow bar, what waits on you, its log, and the side panel. */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Question } from '../../packages/core/src/hitl/question.ts';
 import type { PageAsk } from '../../packages/cli/src/ask/page.ts';
@@ -186,16 +186,18 @@ function Gate({ run, ask, logs, keys, onCompare }: { run: RunDetail; ask: PageAs
   const evidence = instance?.gate?.evidence ?? [];
   const decide = (value: string) =>
     answer.mutate({ id: ask.id, answers: { decision: value, ...(noteQ && { note: note || null }), ...(hostQ && { allow_host: value === 'retry' && host.trim() ? host.trim() : null }) } });
+  // An effect event reads the latest note and host, so the listener is added once rather than on every render.
+  const press = useEffectEvent((e: KeyboardEvent) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.metaKey || e.ctrlKey) return;
+    const hit = decision.options?.find((o) => DECISION[o.value]?.key === e.key);
+    if (hit) decide(hit.value);
+  });
   useEffect(() => {
     if (!keys) return; // with several gates open, only the first takes keys: one press decides one gate
-    const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.metaKey || e.ctrlKey) return;
-      const hit = decision.options?.find((o) => DECISION[o.value]?.key === e.key);
-      if (hit) decide(hit.value);
-    };
+    const onKey = (e: KeyboardEvent) => press(e);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  });
+  }, [keys]);
   return (
     <div className={`rv-banner${kind === 'run_failed' || kind === 'escalation' ? ' bad' : ''}`}>
       <b>{step}</b>

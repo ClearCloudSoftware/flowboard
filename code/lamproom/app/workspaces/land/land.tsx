@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowLeft, Check, GitBranch, GitCommitHorizontal, GitMerge, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { cleanUp, cli, diffQuery, dryRun, landBranch, reviewQuery, updateFromBase } from '../api.ts';
 import type { ActResult, Commit, DryRun, Review, Strategy } from '../api.ts';
 import { Diff } from '../diff.tsx';
@@ -43,14 +43,16 @@ export function Land() {
   const [landed, setLanded] = useState<{ head: string; strategy: Strategy; note?: string } | undefined>();
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['workspace', folder, id] }).then(() => queryClient.invalidateQueries({ queryKey: ['workspace-diff', folder, id] }));
 
+  // An effect event reads the latest state, so the listener is added once rather than on every render.
+  const keys = useEffectEvent((e: KeyboardEvent) => {
+    if ((e.target as HTMLElement).closest('input, textarea, select') || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === '1' || (e.key === '2' && !skipped) || (e.key === '3' && (landed || skipped))) setStage(Number(e.key) as Stage);
+  });
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest('input, textarea, select') || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === '1' || (e.key === '2' && !skipped) || (e.key === '3' && (landed || skipped))) setStage(Number(e.key) as Stage);
-    };
+    const onKey = (e: KeyboardEvent) => keys(e);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  });
+  }, []);
 
   const r = rv.data;
   const stages: Array<[Stage, string, boolean]> = [
@@ -138,15 +140,16 @@ function ReviewStage({ r, folder, onLand, onSkip }: { r: Review; folder: string;
   const isOpen = (path: string) => open[key(path)] ?? view !== '';
   const allOpen = files.length > 0 && files.every((f) => isOpen(f.path));
   const expandAll = () => setOpen((o) => ({ ...o, ...Object.fromEntries(files.map((f) => [key(f.path), !allOpen])) }));
+  const keys = useEffectEvent((e: KeyboardEvent) => {
+    if ((e.target as HTMLElement).closest('input, textarea, select') || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === '[' || e.key === ']') step(e.key === '[' ? -1 : 1);
+    else if (e.key === 'e') expandAll();
+  });
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest('input, textarea, select') || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === '[' || e.key === ']') step(e.key === '[' ? -1 : 1);
-      else if (e.key === 'e') expandAll();
-    };
+    const onKey = (e: KeyboardEvent) => keys(e);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  });
+  }, []);
 
   const picked = [...r.commits, ...r.baseCommits].find((c) => c.sha === view);
   const onBase = !!picked && r.baseCommits.includes(picked);
