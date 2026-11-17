@@ -11,7 +11,7 @@ How to check `pnpm lr-run-flow`, the command that runs several agent and shell s
 - the live test (a fraction of a cent);
 - hand-run scenarios with your own flow files. Most use shell steps only, and cost nothing.
 
-Every field is described in [[Run Flow Reference]], and what is left for later is in [[Run Flow Deferred Issues]]. Single agent runs are tested as in [[Testing The Run Agent CLI]].
+Every field is described in [[Run Flow Reference]], and what is left for later is in [[Deferred Work#Run flow engine]]. Single agent runs are tested as in [[Testing The Run Agent CLI]].
 
 ## Before you start
 
@@ -334,6 +334,6 @@ A run that crashed or was stopped still has every line up to that point, and `--
 
 - [[Run Flow Reference]]
 - [[Run Flow Review Loop]]
-- [[Run Flow Deferred Issues]]
+- [[Deferred Work#Run flow engine]]
 - [[Testing The Run Agent CLI]]
 - [[Agent Providers Index]]

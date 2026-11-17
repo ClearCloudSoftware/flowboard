@@ -7,7 +7,7 @@ date: 2026-10-21
 
 This audit checks what the docs say about running flows against what `feature/flow-orchestration` actually does at commit `44dd03d`. The docs come in two kinds:
 - the design docs: every note in [[Execution Index|Execution]] and [[Flow Design Index|Flow Design]];
-- the docs written with the implementation: [[Run Flow Reference]], [[Testing The Run Flow CLI]], [[Run Flow Deferred Issues]], [[Run Flow Review Loop]] and [[Run Flow Monitor Readiness]], plus the [[Multi-Agent Orchestration Analysis]].
+- the docs written with the implementation: [[Run Flow Reference]], [[Testing The Run Flow CLI]], [[Deferred Work#Run flow engine|Run Flow Deferred Issues]], [[Run Flow Review Loop]] and [[Run Flow Monitor Readiness]], plus the [[Multi-Agent Orchestration Analysis]].
 
 Every finding, with its evidence, is in [[Flow Orchestration Conformance Findings]]. The five Run Flow notes live on `feature/flow-orchestration`, so their links resolve once it merges.
 
@@ -123,7 +123,7 @@ Found while building them, and fixed with tests:
 ### Still open
 
 - **Your review** of the decisions above, D1 to D22, and of the details of Alex's three calls.
-- **Known ceilings, recorded in [[Run Flow Deferred Issues]]:**
+- **Known ceilings, recorded in [[Deferred Work#Run flow engine|Run Flow Deferred Issues]]:**
   - runs launched together may each spend all that is left of the budget;
   - a run whose cost is unknown, or an OpenCode model with no price, adds nothing to what is spent;
   - an agent is stopped by its CLI's pid, and what that CLI started and left behind is not reached;
@@ -192,7 +192,7 @@ Take `draft → judge`, `judge → critique` on fail, and `critique → draft`: 
 
 Commit `148d7a6` added the fallback after the plan was written. The plan's own rule, "the step no edge points to", would have refused this flow.
 
-**Fix.** Add an `entry:` key, as [[Run Flow Deferred Issues]] already proposes. Until then, have `--check` print the step a flow will start at and warn whenever the fallback chose it. Add the loop-through-a-helper case to `flow.test.ts`.
+**Fix.** Add an `entry:` key, as [[Deferred Work#Run flow engine|Run Flow Deferred Issues]] already proposes. Until then, have `--check` print the step a flow will start at and warn whenever the fallback chose it. Add the loop-through-a-helper case to `flow.test.ts`.
 
 ### 3. A shell step's output survives only as its first produces artifact
 
@@ -269,7 +269,7 @@ So every run cut short is recorded at $0: timed out, stopped with Ctrl+C, supers
 *Findings H-13, C-19, E-12, J-19, I-02, E-10, E-11, E-13 and F-37.*
 
 Every gate asks *Note for the next attempt (optional)*, but a note reaches a run only after a Retry or after a Reject into a rework. Five cases lose it:
-- **Approve, or a Reject whose `on_fail` route goes forward.** Already an open decision in [[Run Flow Deferred Issues]]. The Reference still promises "A note goes into the prompt of the next run it starts".
+- **Approve, or a Reject whose `on_fail` route goes forward.** Already an open decision in [[Deferred Work#Run flow engine|Run Flow Deferred Issues]]. The Reference still promises "A note goes into the prompt of the next run it starts".
 - **A Reject whose rework escalates because the loop is spent or stuck.** The note is stored nowhere, and a later Retry runs without it (I-02, E-10).
 - **Retry at a *run failed* gate.** It replaces the attempt's note with the gate's, often empty (`core/src/flow/engine.ts:166`), while `resume` keeps it (`:178`). The fix is one line: `event.note ?? inst.note`.
 - **A Retry whose rerun is a shell step.** `execShell` never reads the note. Testing scenario 5 asks for a note in exactly this case.
@@ -341,7 +341,7 @@ The code differs from the design here, or the design never said, and nothing rec
 - **Plain `pnpm test:live` runs nine other live tests, not twelve**; it is twelve only with `LAMPROOM_OPENCODE_MODEL` set (H-28).
 - **Scenario 14's note ends the preamble, not the prompt** (H-32).
 
-**[[Run Flow Deferred Issues]]**
+**[[Deferred Work#Run flow engine|Run Flow Deferred Issues]]**
 - **Add these rows:**
   - shell output without `produces` (I-03);
   - checks orphaned by `kill -9`, which agent pids would not reach (I-05);
@@ -430,5 +430,5 @@ All 71 assigned notes were reported: 60 in full, 8 in part and 3 as not applicab
 
 - [[Flow Orchestration Conformance Findings]]
 - [[Multi-Agent Orchestration Analysis]]
-- [[Run Flow Reference]], [[Run Flow Deferred Issues]], [[Testing The Run Flow CLI]], [[Run Flow Review Loop]], [[Run Flow Monitor Readiness]]
+- [[Run Flow Reference]], [[Deferred Work#Run flow engine|Run Flow Deferred Issues]], [[Testing The Run Flow CLI]], [[Run Flow Review Loop]], [[Run Flow Monitor Readiness]]
 - [[Execution Index]], [[Flow Design Index]]

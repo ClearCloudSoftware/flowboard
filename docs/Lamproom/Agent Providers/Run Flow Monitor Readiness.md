@@ -112,7 +112,7 @@ Each is small: the host stamps the event, and the engine stores it.
 - **A live feed.** No API and no SSE ([[Monitor API And Routes]], #30). Nothing outside the terminal can watch a run except by reading its files.
 - **Pushing a long wait to another channel.** No escalation timers, and no gate times to base them on ([[Waiting And Escalation]]).
 - **Automatic retries of passing failures**, such as rate limits (PRD §7). `lr-run-flow` has none, so every rate limit would land in Needs You (#37).
-- **Safe to leave running.** What a crashed or killed host left running is stopped only when a `lr-run-flow` next starts in its folder, or resumes its run: it stops each run whose log has a `pid` line and no `result`, while the process's start time still matches the log (Alex's call, 2026-10-23; the start-time check is Claude's, open to Alex's review). Until then those agents and checks keep running, and an agent's CLI is stopped without what it started ([[Run Flow Deferred Issues]]). Resuming takes a manual `--resume`, and every run works in the one folder, with no workspace per task.
+- **Safe to leave running.** What a crashed or killed host left running is stopped only when a `lr-run-flow` next starts in its folder, or resumes its run: it stops each run whose log has a `pid` line and no `result`, while the process's start time still matches the log (Alex's call, 2026-10-23; the start-time check is Claude's, open to Alex's review). Until then those agents and checks keep running, and an agent's CLI is stopped without what it started ([[Deferred Work#Run flow engine]]). Resuming takes a manual `--resume`, and every run works in the one folder, with no workspace per task.
 - **Flow versions.** Each run pins its own copy of the flow in `flow.json`, but there's no version number for the topbar's `v4` (#3). Now that a flow file is a reusable recipe, a hash of it would name its version; none is recorded until the flow library or the Monitor reads one (Claude's call, 2026-10-23, open to Alex's review).
 
 ### Where `lr-run-flow` breaks the Monitor's design
@@ -135,7 +135,7 @@ Each is small: the host stamps the event, and the engine stores it.
 ## Related
 
 - [[Run Flow Reference]]
-- [[Run Flow Deferred Issues]]
+- [[Deferred Work#Run flow engine]]
 - [[Monitor Index]]
 - [[Monitor Open Questions]]
 - [[Agent Providers Index]]

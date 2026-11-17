@@ -16,9 +16,7 @@ This note is the state of branch `feature/lr-doctor` on 2026-11-17: cut from `de
 
 - [[#How it works]], in brief.
 - [[#Calls made without asking]]: the decisions taken while designing and building, each with what it costs if wrong.
-- [[#Deferred minor issues]]: small problems the final review found and left unfixed, each ready to pick up.
-- [[#Known problems outside the doctor]]: two things found along the way.
-- [[#Next steps]].
+- [[#Left for later]]: the next steps, the minor problems the final review left unfixed, and two things found along the way.
 
 The design is `docs/superpowers/specs/2026-11-17-lr-doctor-design.md` and the plan is
 `docs/superpowers/plans/2026-11-17-lr-doctor.md`.
@@ -82,83 +80,7 @@ so they run one after another first; everything else then runs at once, each wit
 | 11 | With no project yet, a flow's agents (OpenRouter, Ollama) are only needed for new projects. | The bundled flows use OpenRouter, which made a fresh clone "Not ready". | None. |
 | 12 | The Claude token and the OpenRouter key's container rule are worked out per flow: needed when a step that uses them runs in a container. | It follows `isolate` in `flow-run.ts`; before this, any Docker flow made the token needed for all of them. | None. |
 
-## Deferred minor issues
+## Left for later
 
-None of these blocks merging. Each names the file, what's wrong, and a fix. Line numbers are at `2eab770`.
+What this work left unfixed or open is in [[Deferred Work#Machine doctor]], the one list of deferred work.
 
-1. **The image check can demand `lamproom:cli` when no run uses it.**
-   - **Where:** `doctor-needs.ts:121`.
-   - **What's wrong:** `boxImage()` is added whenever a Normal or Untrusted project exists, even if every flow brings
-     its own `sandbox: { runtime: docker, image }`. `isolationFor` then never uses `lamproom:cli`, but the doctor
-     fails the image check.
-   - **Fix:** add `boxImage()` only when some flow without a docker sandbox runs on a boxed project. A setup where
-     every flow sets its own image is rare today.
-2. **An OpenCode step on another provider makes `opencode` look unneeded.**
-   - **Where:** `doctor-needs.ts:135`.
-   - **What's wrong:** `opencode` is needed only through flows that use OpenRouter or Ollama. An `adapter: opencode`
-     step on another provider, where `agentNeeds` returns nothing, still runs `opencode` on a Trusted host. `claude`
-     is keyed by adapter, so the two are inconsistent.
-   - **Fix:** in `readSetup`, also record each flow's adapters (`st.run.adapter`). Key `opencode` on the adapter, and
-     `openrouter`/`ollama` on the model.
-3. **The OpenSandbox default address is a second copy.**
-   - **Where:** `doctor.ts:348`, copied from `packages/adapters/src/exec/opensandbox/box.ts:71`.
-   - **What's wrong:** `'127.0.0.1:8080'` appears in both files. If one changes, the doctor probes the wrong address.
-   - **Fix:** export the default (for example `OPENSANDBOX_DEFAULT_DOMAIN`) from `box.ts` through `@lamproom/adapters`
-     and import it.
-4. **The OpenSandbox fix line is wrong in two cases.**
-   - **Where:** `doctor.ts:351`.
-   - **What's wrong:** the fix always says to build `lamproom:sandbox`, whichever image is missing. With Docker down,
-     the missing images read as "not built".
-   - **Fix:** build the fix line per missing image, as the `docker.image` check does. Check `dockerDown()` first and
-     skip with its reason.
-5. **A Docker check that timed out reads as "Docker is not running".**
-   - **Where:** `doctor.ts:199-201`.
-   - **What's wrong:** `dockerDown` maps anything that isn't ok or "not installed" to "Docker is not running". The
-     image and gVisor checks then repeat that, though Docker may be up but slow.
-   - **Fix:** pass the Docker check's own detail through, for example "Docker did not answer in 30 s".
-6. **Ollama is probed when nothing needs it, and that creates `data/`.**
-   - **Where:** `doctor.ts:316`.
-   - **What's wrong:** on a fresh clone with Ollama running, the `refreshOllama` cache write creates the data folder,
-     while the `data` check in the same report says "no data folder yet".
-   - **Fix:** skip the Ollama probe when its need is `no`, as `opensandbox` does. Or run the `data` check before the
-     others.
-7. **The header can print a long relative path.**
-   - **Where:** `doctor-cli.ts:28`.
-   - **What's wrong:** `relative(process.cwd(), dataDir)` prints `../../..` chains when the data folder is outside the
-     current folder.
-   - **Fix:** print the absolute path when the relative one starts with `..`.
-
-Also found, not fixed: an unparseable Node version string grades as `ok`, because `NaN` comparisons are false
-(`doctor.ts`, the `node` check). `process.version` is always well formed, so this can't happen in practice; a guard
-would only matter if `nodeVersion` came from somewhere else.
-
-## Known problems outside the doctor
-
-- **The app doesn't get the Claude token from your shell.**
-  - **What happens:** `electron/path.js` copies only `PATH` from your login shell. A `CLAUDE_CODE_OAUTH_TOKEN`
-    exported in `.zshrc` reaches terminal runs, but not the app opened from Finder or Explorer. The terminal doctor
-    says the token is set while the app's Normal runs are refused.
-  - **What the doctor does:** the report records which environment it checked (`runner`), and the token line says
-    "checked in this terminal".
-  - **Proposed fix:** keep the token in `secrets.json` like the OpenRouter key: cross-platform, no keychain (see the
-    project's CLAUDE.md).
-- **Some existing tests are flaky under load.** These files time out or hang when the whole suite runs at full
-  parallelism, and pass when run alone:
-  - `packages/adapters/test/opensandbox-relay.test.ts`
-  - `packages/adapters/test/opencode-provider.test.ts` (the `stop()` test)
-  - `packages/cli/test/clone.test.ts`
-
-  The doctor branch doesn't touch them. A run with `--test-concurrency=4` passes: 729 tests, 704 pass, 0 fail, 25
-  live tests skipped.
-
-## Next steps
-
-1. **The UI page.**
-   - Add `app/api/doctor/route.ts`, behind `refused(request)` like the other routes, returning
-     `Response.json(await runDoctor({ runner: 'app' }))`.
-   - Add a status page, or a block on Settings → General, keyed on the check ids.
-   - The Docker, gVisor and `gh` probes still block while they run; make them async before they run inside the
-     Next server.
-2. **The token gap above**, so the app and the terminal agree.
-3. **Packaging the Electron app** (option 2 in the design), which drops `node` and `pnpm` from the list.
-4. **The deferred minor issues above**, in any order.
