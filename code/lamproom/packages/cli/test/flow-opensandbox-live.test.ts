@@ -31,7 +31,7 @@ test('a flow in an OpenSandbox box leaves the folder alone and hands back change
   writeFileSync(
     join(base, 'flow.yaml'),
     `budget_usd: 1
-sandbox: { runtime: opensandbox, image: lamproom-sandbox }
+sandbox: { runtime: opensandbox, image: lamproom:sandbox }
 defaults: { limits: { max_turns: 8, budget_usd: 0.3 }, permissions: { mode: acceptEdits } }
 steps:
   claude: { adapter: claude-code, model: haiku, prompt: claude.md, produces: [claude_notes] }

@@ -110,7 +110,7 @@ Backlog D5: *"Hook isolation for headless runs"*, default *"Empty `--settings` f
 
 As built in lr-run-flow (2026-11-10), it depends on the runtime:
 
-- **Trusted, no `sandbox:`.** As above: host processes with the owner's credentials, and agents ask before file edits and shell commands. Normal with no key is `runtime: docker` with `lamproom-cli`; Untrusted is Docker under gVisor ([[Repository Trust And Sandboxing#Built]]).
+- **Trusted, no `sandbox:`.** As above: host processes with the owner's credentials, and agents ask before file edits and shell commands. Normal with no key is `runtime: docker` with `lamproom:cli`; Untrusted is Docker under gVisor ([[Repository Trust And Sandboxing#Built]]).
 - **`runtime: docker`.** Agent containers get the real values of the variables `sandbox.env` names, such as `CLAUDE_CODE_OAUTH_TOKEN`, passed by name (`-e K`), and an open network: with no egress proxy, a docker sandbox takes no `egress` key (`sandbox.egress: only for runtime opensandbox`), and the container `ExecHost` refuses any list but `[]` or `['*']`. `--check` and the start warn: `sandbox: ai steps have open network access and the variables in sandbox.env`. Check containers get neither.
 - **`runtime: opensandbox`.** The box holds a fake of each credential, and the server's credential vault puts in the real value on requests to that credential's host. Egress is denied except for `sandbox.egress`. This is the [[Credential Injecting Proxy]] design, delivered by OpenSandbox rather than through `ANTHROPIC_BASE_URL` ([[OpenSandbox Runtime]]).
 

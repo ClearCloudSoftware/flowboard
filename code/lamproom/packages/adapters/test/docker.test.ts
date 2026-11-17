@@ -18,6 +18,10 @@ test('dockerArgs: offline, no capabilities, non-root, cwd at the same path, env 
   assert.ok(!dockerArgs({ ...PROFILE, nonRoot: false }, 'sh', [], '/w', []).includes('--user'));
 });
 
+test('dockerArgs: every box is in the "lamproom" compose project, so Docker Desktop shows them as one entry', () => {
+  assert.ok(dockerArgs(PROFILE, 'sh', [], '/w', []).join(' ').includes('--label com.docker.compose.project=lamproom'));
+});
+
 test("dockerArgs: ['*'] is the open network; ports are published on loopback only", () => {
   const a = dockerArgs({ ...PROFILE, egressAllow: ['*'] }, 'x', [], '/w', [], [4096]).join(' ');
   assert.ok(!a.includes('--network'));

@@ -38,7 +38,7 @@ before(async () => {
   git(folder, 'add', '-A');
   git(folder, 'commit', '-qm', 'base');
   writeFileSync(join(folder, 'b.txt'), 'not committed\n');
-  box = await openBox({ image: 'lamproom-sandbox', repo: folder, folder, egress: ['api.anthropic.com'], credentials: ['CLAUDE_CODE_OAUTH_TOKEN'], timeoutSeconds: 900 });
+  box = await openBox({ image: 'lamproom:sandbox', repo: folder, folder, egress: ['api.anthropic.com'], credentials: ['CLAUDE_CODE_OAUTH_TOKEN'], timeoutSeconds: 900 });
 });
 after(async () => {
   if (!skip) await box?.kill().catch(() => {});
@@ -98,13 +98,13 @@ test('patch keeps a deleted file and a binary file', { skip }, async () => {
 test('connectBox finds a live box and refuses a gone one', { skip }, async () => {
   const again = await connectBox(box.id, { folder, token: box.token });
   assert.equal((await sh('echo again', again)).out, 'again');
-  const other = await openBox({ image: 'lamproom-sandbox', repo: folder, folder, egress: [], credentials: [], timeoutSeconds: 300 });
+  const other = await openBox({ image: 'lamproom:sandbox', repo: folder, folder, egress: [], credentials: [], timeoutSeconds: 300 });
   await other.kill();
   await assert.rejects(connectBox(other.id, { folder, token: other.token }), new RegExp(`sandbox ${other.id} is gone`));
 });
 
 test('a step whose box was killed ends with an error', { skip }, async () => {
-  const doomed = await openBox({ image: 'lamproom-sandbox', repo: folder, folder, egress: [], credentials: [], timeoutSeconds: 300 });
+  const doomed = await openBox({ image: 'lamproom:sandbox', repo: folder, folder, egress: [], credentials: [], timeoutSeconds: 300 });
   const c = doomed.exec({}).spawn('sleep', ['30'], { cwd: folder });
   const ended = run(c);
   await new Promise((r) => setTimeout(r, 1500));

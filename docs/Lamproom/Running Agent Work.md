@@ -528,7 +528,7 @@ Sandboxing runs agent and shell steps inside a security boundary, a container or
 
 ### How it works
 
-A run must start in a folder a Lamproom project owns, and the project's trust decides the sandbox (`cli/src/isolation.ts`): Trusted with no `sandbox:` key leaves `RunSpec.exec` unset, so both provider adapters spawn on the host with `hostExecHost` (`adapters/src/exec/host.ts`), a shell check is a plain host process, and an agent's file edits and shell commands ask you first. Normal with no key runs `{ runtime: docker, image: lamproom-cli }`. Untrusted runs Docker under gVisor, or is refused. A flow's own `sandbox:` key replaces the default when it is as strong. Whenever there is a sandbox, lr-run-flow (`cli/src/flow-exec.ts`) sets `spec.exec` for every agent run and sends shell checks through the same `ExecHost`. See [[Repository Trust And Sandboxing#Built]].
+A run must start in a folder a Lamproom project owns, and the project's trust decides the sandbox (`cli/src/isolation.ts`): Trusted with no `sandbox:` key leaves `RunSpec.exec` unset, so both provider adapters spawn on the host with `hostExecHost` (`adapters/src/exec/host.ts`), a shell check is a plain host process, and an agent's file edits and shell commands ask you first. Normal with no key runs `{ runtime: docker, image: lamproom:cli }`. Untrusted runs Docker under gVisor, or is refused. A flow's own `sandbox:` key replaces the default when it is as strong. Whenever there is a sandbox, lr-run-flow (`cli/src/flow-exec.ts`) sets `spec.exec` for every agent run and sends shell checks through the same `ExecHost`. See [[Repository Trust And Sandboxing#Built]].
 
 ```mermaid
 flowchart LR
@@ -569,7 +569,7 @@ To run a flow in OpenSandbox, follow these steps:
 
    ```yaml
    budget_usd: 1
-   sandbox: { runtime: opensandbox, image: lamproom-sandbox }
+   sandbox: { runtime: opensandbox, image: lamproom:sandbox }
    steps:
      implement: { adapter: claude-code, model: sonnet, prompt: implement.md, produces: [notes] }
      check: { shell: pnpm test, produces: [check_output] }
@@ -594,7 +594,7 @@ To choose which keys are injected, set `sandbox.credentials`. Only `CLAUDE_CODE_
 
 To unblock a denied host during an OpenSandbox run, answer the **run failed** or escalation gate at the terminal prompt `Host to allow before the retry`, or on the runs page if you started the run with `--page`. On the page, enter the host in the host field, which comes pre-filled with the host the failed run most likely needed, and then click **Allow host & retry**. The live box can reach the host at once, and lr-run-flow adds it to `sandbox.egress` in the run's `flow.json`, never to the recipe.
 
-A Normal project already runs each step in a local container (`lamproom-cli`) with no `sandbox:` key. To choose the image or the variables yourself, or to run a Trusted project's steps in one, set `sandbox: { runtime: docker }` with an `image`, and list in `env` the variables agent containers need. `egress` and `credentials` are errors under Docker, and `env` is an error under OpenSandbox. If the flow has an agent step, `--check` and every start print `-- warning: sandbox: ai steps have open network access and the variables in sandbox.env`. Under OpenSandbox, they print `-- warning: sandbox: agents' edits stay in the sandbox; the run ends with changes.patch to review` instead.
+A Normal project already runs each step in a local container (`lamproom:cli`) with no `sandbox:` key. To choose the image or the variables yourself, or to run a Trusted project's steps in one, set `sandbox: { runtime: docker }` with an `image`, and list in `env` the variables agent containers need. `egress` and `credentials` are errors under Docker, and `env` is an error under OpenSandbox. If the flow has an agent step, `--check` and every start print `-- warning: sandbox: ai steps have open network access and the variables in sandbox.env`. Under OpenSandbox, they print `-- warning: sandbox: agents' edits stay in the sandbox; the run ends with changes.patch to review` instead.
 
 ### Limits and status
 

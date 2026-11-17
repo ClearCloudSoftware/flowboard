@@ -422,7 +422,7 @@ test('stopping a sandboxed check ends it as stopped', { skip: noDocker }, async 
   assert.deepEqual(await run.ended, { costUsd: 0, error: 'stopped' });
 });
 
-const noImage = noDocker || (spawnSync('docker', ['image', 'inspect', 'lamproom-cli'], { stdio: 'ignore' }).status !== 0 && 'no lamproom-cli image');
+const noImage = noDocker || (spawnSync('docker', ['image', 'inspect', 'lamproom:cli'], { stdio: 'ignore' }).status !== 0 && 'no lamproom:cli image');
 
 test('a shim in an agent box reaches the host broker over TCP, through Lamproom code mounted at its host path', { skip: noImage }, async () => {
   const { events } = { events: { onQuestion() {}, onAnswer() {}, onWithdrawn() {}, onDone() {}, onInterrupt() {} } };
@@ -431,7 +431,7 @@ test('a shim in an agent box reaches the host broker over TCP, through Lamproom 
     const root = resolve(SHIM_ENTRY, '../../../..');
     const client = join(root, 'packages/ask-user/src/broker-client.ts');
     const script = `import { askBroker } from '${client}'; console.log(JSON.stringify(await askBroker('host.docker.internal:${broker.port}', { questions: [{ id: 'a', prompt: 'a?', kind: 'text' }] })));`;
-    const host = dockerExecHost({ tier: 'container', image: 'lamproom-cli', egressAllow: ['*'], mounts: [{ source: root, target: root, readOnly: true }] });
+    const host = dockerExecHost({ tier: 'container', image: 'lamproom:cli', egressAllow: ['*'], mounts: [{ source: root, target: root, readOnly: true }] });
     const child = host.spawn('node', ['--input-type=module', '-e', script], { cwd: tmp('box'), env: { ...process.env, LAMPROOM_ASK_TOKEN: 't0k' } });
     child.stdin.end();
     let out = '';

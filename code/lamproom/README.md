@@ -50,5 +50,5 @@ The project was FlowBoard until 2026-11-16. Nothing reads the old names, so an e
 - `~/.config/flowboard/` → `~/.config/lamproom/`.
 - In each project repo: `.flowboard.yaml` → `.lamproom.yaml`, `.flowboard/` → `.lamproom/`. Task branches are now `lr/task-<id>`; existing `fb/task-<id>` branches and worktrees are no longer listed.
 - Environment variables `FLOWBOARD_*` → `LAMPROOM_*`.
-- Docker images: rebuild as `lamproom-cli` and `lamproom-sandbox` (see `docker/README.md`).
+- Docker images: rebuild as `lamproom:cli` and `lamproom:sandbox` (see `docker/README.md`).
 - Commands: `pnpm run-agent`, `run-flow`, `clean-workspace` → `pnpm lr-run-agent`, `lr-run-flow`, `lr-clean-workspace`. The MCP tools are `mcp__lamproom__*`.

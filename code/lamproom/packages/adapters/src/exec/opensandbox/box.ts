@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { DEFAULT_RESOURCE_LIMITS, Sandbox } from '@alibaba-group/opensandbox';
 import type { ExecHost } from '@lamproom/core';
 import { hostGit } from '../../workspace/host-git.ts';
-import { DOCKER_HOST_NAME } from '../docker.ts';
+import { COMPOSE_PROJECT_LABEL, DOCKER_HOST_NAME } from '../docker.ts';
 import { relayExecHost } from './relay-host.ts';
 
 export interface BoxOptions {
@@ -51,7 +51,7 @@ export interface Box {
 }
 
 const RELAY = fileURLToPath(new URL('./relay.cjs', import.meta.url));
-/** code/lamproom on this machine; the lamproom-cli image keeps the same tree at /opt/lamproom. */
+/** code/lamproom on this machine; the lamproom:cli image keeps the same tree at /opt/lamproom. */
 // A plain path, not `new URL('../…', import.meta.url)`: bundlers (Next's Turbopack) read that as an asset import.
 const LAMPROOM_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../..');
 const IN_IMAGE = '/opt/lamproom';
@@ -246,7 +246,7 @@ export async function openBox(o: BoxOptions): Promise<Box> {
     env: { HOME: '/tmp', ...Object.fromEntries(known.map((c) => [c, KNOWN[c]!.fake])) },
     networkPolicy: { defaultAction: 'deny', egress: o.egress.map((target) => ({ action: 'allow' as const, target })) },
     credentialProxy: { enabled: true },
-    metadata: { lamproom: 'run' },
+    metadata: { lamproom: 'run', [COMPOSE_PROJECT_LABEL]: 'lamproom' }, // one "lamproom" entry in Docker Desktop
   });
   try {
     if (present.length) {

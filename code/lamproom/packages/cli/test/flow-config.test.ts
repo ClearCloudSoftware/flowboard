@@ -190,14 +190,14 @@ test('sandbox: every step goes in the image; a flow with ai steps is warned they
   assert.ok(!bad.ok && bad.errors.some((e) => e.endsWith('sandbox.network: unknown key')), JSON.stringify(bad));
 });
 
-const osb = (extra = '') => flowProject(`sandbox: { runtime: opensandbox, image: lamproom-sandbox${extra} }\n${DELIVERY}`);
+const osb = (extra = '') => flowProject(`sandbox: { runtime: opensandbox, image: lamproom:sandbox${extra} }\n${DELIVERY}`);
 
 test('opensandbox derives egress and credentials from the steps adapters', () => {
   const r = loadFlow('flow.yaml', osb());
   assert.ok(r.ok, JSON.stringify(r));
   assert.deepEqual(r.config.sandbox, {
     runtime: 'opensandbox',
-    image: 'lamproom-sandbox',
+    image: 'lamproom:sandbox',
     egress: ['api.anthropic.com', 'openrouter.ai'],
     credentials: ['CLAUDE_CODE_OAUTH_TOKEN', 'OPENROUTER_API_KEY'],
   });
