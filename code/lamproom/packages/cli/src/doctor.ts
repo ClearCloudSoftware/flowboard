@@ -80,7 +80,7 @@ const exec = promisify(execFile);
 const VERSION = /\d+\.\d+(?:\.\d+)?/;
 const NOT_RUNNING = 'Docker is not running';
 
-// ponytail: docker, gvisor and gh are the existing spawnSync probes: they block the parallel ones; make them async if the doctor gets slow
+// ponytail: docker, gvisor and gh are the existing spawnSync probes, run one after another before the rest (runDoctor); make them async if the doctor gets slow
 export const realProbes: Probes = {
   async version(bin) {
     try {
@@ -302,7 +302,7 @@ export async function runDoctor(o: DoctorOptions): Promise<DoctorReport> {
           if (needs.openrouter === 'no') return notNeeded('openrouter');
           const fix = 'Settings → LLM Provider, or export OPENROUTER_API_KEY';
           // A run on this machine falls back to OpenCode's own login; a container gets only the key (flow-run's refusal).
-          const own = needs.container !== 'yes' && (await opencodeStatus.catch(() => undefined));
+          const own = !needs.openrouterInBox && (await opencodeStatus.catch(() => undefined));
           if (own && own.installed && own.signIn.ok) return degraded("no key saved or exported: runs on this machine use OpenCode's own login, containers can't", fix);
           return broken('no key saved or exported', fix);
         }
@@ -354,12 +354,18 @@ export async function runDoctor(o: DoctorOptions): Promise<DoctorReport> {
     },
   };
 
-  const results = await Promise.all(CHECK_IDS.map((id) => (id === 'docker' ? dockerRun : timed(specs[id].run))));
+  // The spawnSync probes block the event loop: run them one after another first, so their blocking cannot expire the
+  // async probes' timers; then the rest at once.
+  const first = new Map<CheckId, Awaited<typeof dockerRun>>([['docker', await dockerRun]]);
+  for (const id of ['docker.gvisor', 'github'] as const) first.set(id, await timed(specs[id].run));
+  const results = await Promise.all(CHECK_IDS.map((id) => first.get(id) ?? timed(specs[id].run)));
   const checks: Check[] = CHECK_IDS.map((id, i) => {
     const s = specs[id];
     const { out, ms } = results[i];
     const status = grade(s.need, out);
-    const detail = status === 'warn' && out.health === 'broken' && s.need === 'no' ? `${out.detail} (optional)` : out.detail;
+    // A broken check that only warns says why it is not a failure.
+    const because = s.need === 'new' ? ' (needed for new projects)' : ` (optional: ${s.why})`;
+    const detail = status === 'warn' && out.health === 'broken' ? `${out.detail}${because}` : out.detail;
     return { id, group: s.group, label: s.label, status, needed: s.need === 'yes', why: s.why, detail, ...(out.fix && { fix: out.fix }), ...(out.version && { version: out.version }), ms };
   });
   const count = (st: Status) => checks.filter((c) => c.status === st).length;

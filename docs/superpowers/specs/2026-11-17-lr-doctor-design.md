@@ -212,7 +212,7 @@ Colour only on a TTY and without `NO_COLOR`. `✓ ✗ ! –` as the marks.
 
 ```
 pnpm lr-doctor          # the table above
-pnpm lr-doctor --json   # DoctorReport on stdout, nothing else
+pnpm -s lr-doctor --json   # DoctorReport on stdout, nothing else (-s keeps pnpm's banner out)
 ```
 
 Exit `0` when `ready`, `1` when any check is `fail`, `2` on a bad argument or the doctor itself crashing. Warnings

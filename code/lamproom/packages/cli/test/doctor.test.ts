@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import type { Sandbox } from '../src/flow-config.ts';
 import type { Knowledge, Trust } from '../src/settings.ts';
 import { doctorNeeds, readSetup, type FlowNeed, type Setup } from '../src/doctor-needs.ts';
-import { type Check, CHECK_IDS, type DoctorReport, type Probes, runDoctor } from '../src/doctor.ts';
+import { type Check, CHECK_IDS, type DoctorReport, type Probes, realProbes, runDoctor } from '../src/doctor.ts';
 import { doctorCli, renderReport } from '../src/doctor-cli.ts';
 
 // --- needs --------------------------------------------------------------------------------------------------------
@@ -360,4 +360,54 @@ test('renderReport: Core gets no needed line', () => {
   const r = sampleReport();
   r.checks[0] = { ...r.checks[0], needed: true, why: 'Lamproom and its CLIs run on it' };
   assert.match(renderReport(r, false), /^Core$/m);
+});
+
+// --- final review fixes -------------------------------------------------------------------------------------------
+
+test('runDoctor: a blocking (spawnSync-like) probe does not time out the async ones', async () => {
+  const busy = (ms: number) => { const end = Date.now() + ms; while (Date.now() < end); };
+  const r = await runDoctor({
+    runner: 'terminal', dataDir: data(), flowsDir: flows(), env: {}, timeoutMs: 1000,
+    probes: fakeProbes({
+      version: realProbes.version, // a real child process: its answer is I/O, delivered after expired timers
+      gh: async () => { busy(1500); return { state: 'connected', login: 'alex', accounts: ['alex'] }; },
+    }),
+  });
+  assert.doesNotMatch(byId(r, 'git').detail, /did not answer/);
+  assert.doesNotMatch(byId(r, 'node').detail, /did not answer/);
+});
+
+test('doctorNeeds: with no project yet, OpenRouter and Ollama are only needed for new projects', () => {
+  const n = doctorNeeds(setup({ flows: [flow('o', ['openrouter', 'ollama'])] }));
+  assert.equal(n.openrouter, 'new');
+  assert.equal(n.ollama, 'new');
+});
+
+test('runDoctor: fresh clone with the bundled flows is ready', async () => {
+  const r = await runDoctor({ runner: 'terminal', dataDir: '/no/such', flowsDir: flows(['openrouter']), env: {},
+    probes: fakeProbes({ harness: async (id) => ({ program: id, installed: false }), docker: async () => ({ up: false, error: 'Docker is not running' }) }) });
+  assert.equal(r.summary.ready, true);
+  assert.equal(byId(r, 'openrouter').status, 'warn');
+});
+
+test('runDoctor: a warning says why it is not a failure', async () => {
+  const r = await runDoctor({ runner: 'terminal', dataDir: '/no/such', flowsDir: '/no/such', env: {},
+    probes: fakeProbes({ docker: async () => ({ up: false, error: 'Docker is not running' }), harness: async (id) => ({ program: id, installed: false }) }) });
+  assert.match(byId(r, 'docker').detail, /\(needed for new projects/);
+  assert.match(byId(r, 'opencode').detail, /\(optional: no flow uses OpenCode\)/);
+});
+
+test('doctorNeeds: an unrelated docker-sandbox flow does not make the Claude token needed', () => {
+  const n = doctorNeeds(setup({ newProject: { trust: 'trusted', knowledge: KN }, projects: [proj('s', 'trusted')],
+    flows: [flow('a', ['claude']), flow('b', ['openrouter'], { runtime: 'docker', image: 'my:img', env: [] })] }));
+  assert.equal(n.container, 'yes');
+  assert.equal(n.tokenClaude, 'no');
+  assert.equal(n.openrouterInBox, true);
+});
+
+test('doctorNeeds: a docker-sandbox flow that uses claude needs the token', () => {
+  const n = doctorNeeds(setup({ newProject: { trust: 'trusted', knowledge: KN }, projects: [proj('s', 'trusted')],
+    flows: [flow('b', ['claude'], { runtime: 'docker', image: 'my:img', env: [] })] }));
+  assert.equal(n.tokenClaude, 'yes');
+  assert.equal(n.openrouterInBox, false);
 });

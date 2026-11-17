@@ -43,6 +43,8 @@ export interface Needs {
   /** Docker images to check, each once, Lamproom's own first. */
   images: string[];
   opensandboxImages: string[];
+  /** Some run puts an OpenRouter step in a container, which gets only the key, never OpenCode's own login. */
+  openrouterInBox: boolean;
   /** Check id → why it is needed, as shown beside it. */
   why: Record<string, string>;
 }
@@ -121,8 +123,10 @@ export function doctorNeeds(s: Setup, image = boxImage()): Needs {
   const gvisor: Need = untrusted.length ? 'yes' : newT === 'untrusted' ? 'new' : 'no';
   why['docker.gvisor'] = untrusted.length ? `${are(untrusted, 'Untrusted')}: their containers run under gVisor` : gvisor === 'new' ? forNew : 'no Untrusted project';
 
-  const tokenClaude: Need = uses('claude') ? container : 'no';
-  why['token.claude'] = tokenClaude === 'no' ? (uses('claude') ? 'no project runs in containers' : 'no flow uses claude') : `containers can't use this machine's claude login (flows: ${by('claude')})`;
+  // As `isolate` (flow-run.ts) asks: a credential is needed in a container when a step that uses it runs in one.
+  const inBox = (n: FlowNeed) => (boxed.length > 0 && uses(n)) || dockerFlows.some((f) => f.needs.includes(n));
+  const tokenClaude: Need = inBox('claude') ? 'yes' : uses('claude') && newT !== 'trusted' ? 'new' : 'no';
+  why['token.claude'] = tokenClaude === 'no' ? (uses('claude') ? 'no claude step runs in a container' : 'no flow uses claude') : `containers can't use this machine's claude login (flows: ${by('claude')})`;
 
   const host: Need = trusted.length ? 'yes' : newT === 'trusted' ? 'new' : 'no';
   const hostWhy = trusted.length ? `${are(trusted, 'Trusted')}: their agents run on this machine` : host === 'new' ? forNew : 'no Trusted project';
@@ -136,14 +140,16 @@ export function doctorNeeds(s: Setup, image = boxImage()): Needs {
   const uv: Need = knowing.length ? 'yes' : newT === 'trusted' && newKnows ? 'new' : 'no';
   why.uv = knowing.length ? `${are(knowing, 'Trusted')} with knowledge assets on: built here with uvx` : uv === 'new' ? forNew : 'no Trusted project builds knowledge assets';
 
-  const openrouter: Need = uses('openrouter') ? 'yes' : 'no';
+  // With no project yet, nothing runs a flow: what flows use is only needed for new projects.
+  const some: Need = s.projects.length ? 'yes' : 'new';
+  const openrouter: Need = uses('openrouter') ? some : 'no';
   why.openrouter = openrouter === 'yes' ? `flows ${by('openrouter')} use OpenRouter models` : 'no flow uses OpenRouter';
-  const ollama: Need = uses('ollama') || s.localModelApproved ? 'yes' : 'no';
+  const ollama: Need = uses('ollama') || s.localModelApproved ? some : 'no';
   why.ollama = uses('ollama') ? `flows ${by('ollama')} use local models` : s.localModelApproved ? 'a local model is approved for OpenCode' : 'no flow uses a local model';
 
   const opensandbox: Need = osbFlows.length ? 'yes' : 'no';
   why.opensandbox = osbFlows.length ? `flows ${names(osbFlows)} use runtime: opensandbox` : 'no flow uses runtime: opensandbox';
   const opensandboxImages = [...new Set(osbFlows.map((f) => f.sandbox!.image))];
 
-  return { container, gvisor, tokenClaude, claude, opencode, uv, openrouter, ollama, opensandbox, images, opensandboxImages, why };
+  return { container, gvisor, tokenClaude, claude, opencode, uv, openrouter, ollama, opensandbox, images, opensandboxImages, openrouterInBox: inBox('openrouter'), why };
 }

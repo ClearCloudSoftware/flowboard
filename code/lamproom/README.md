@@ -4,7 +4,7 @@ Lamproom's code: the packages (`packages/`: the flow engine, the agent providers
 
 ```bash
 pnpm lr-doctor          # what your projects need, what's up, and how to fix what isn't
-pnpm lr-doctor --json   # the same report as JSON; exit 0 ready, 1 something needed is broken, 2 bad argument
+pnpm -s lr-doctor --json   # the same report as JSON (-s: without pnpm's own banner); exit 0 ready, 1 something needed is broken, 2 bad argument
 ```
 
 ## The flow designer
