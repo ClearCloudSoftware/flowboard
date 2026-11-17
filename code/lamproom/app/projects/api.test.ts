@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ApiError } from '../flows/api.ts';
-import { cloneJobQuery, cloneLost } from './api.ts';
+import { cloneJobQuery, cloneLost, doctorQuery } from './api.ts';
 
 test('a clone is polled until it ends, through a passing error; only a 404 means Lamproom forgot it', () => {
   const q = cloneJobQuery('j');
@@ -13,4 +13,10 @@ test('a clone is polled until it ends, through a passing error; only a 404 means
   assert.equal(cloneLost(new ApiError(404, {})), true);
   assert.equal(cloneLost(new ApiError(500, {})), false);
   assert.equal(cloneLost(null), false);
+});
+
+test('doctorQuery: runs again every time the page opens, never on focus or a timer', () => {
+  assert.equal(doctorQuery.refetchOnMount, 'always');
+  assert.equal(doctorQuery.refetchOnWindowFocus, false);
+  assert.equal(doctorQuery.staleTime, Infinity);
 });

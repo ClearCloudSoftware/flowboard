@@ -67,8 +67,8 @@ export const cloneJobQuery = (id: string) =>
 /** Each agent CLI on this machine (`/api/agents`); slow-ish, as it runs each CLI. */
 export const agentsQuery = queryOptions({ queryKey: ['agents'], queryFn: () => call<Record<Harness, HarnessStatus>>('/api/agents') });
 
-/** The doctor's report on this machine (`/api/doctor`): a couple of seconds and a few network calls, so it runs on open and on request only. */
-export const doctorQuery = queryOptions({ queryKey: ['doctor'], queryFn: () => call<DoctorReport>('/api/doctor'), staleTime: Infinity, refetchOnWindowFocus: false, retry: false });
+/** The doctor's report on this machine (`/api/doctor`): a couple of seconds and a few network calls, so it runs each time the page opens (showing the last report meanwhile) and on request, never on focus. */
+export const doctorQuery = queryOptions({ queryKey: ['doctor'], queryFn: () => call<DoctorReport>('/api/doctor'), staleTime: Infinity, refetchOnMount: 'always', refetchOnWindowFocus: false, retry: false });
 
 /**
  * OpenCode's models (`/api/models`): the OpenRouter key runs would use (never the key) and OpenRouter's list, Ollama
