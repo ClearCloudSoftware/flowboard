@@ -8,6 +8,7 @@ import type { Knowledge, Trust } from '../src/settings.ts';
 import { doctorNeeds, readSetup, type FlowNeed, type Setup } from '../src/doctor-needs.ts';
 import { type Check, CHECK_IDS, type DoctorReport, type Probes, realProbes, runDoctor } from '../src/doctor.ts';
 import { doctorCli, renderReport } from '../src/doctor-cli.ts';
+import { summaryLine } from '../src/doctor-view.ts';
 
 // --- needs --------------------------------------------------------------------------------------------------------
 
@@ -410,4 +411,10 @@ test('doctorNeeds: a docker-sandbox flow that uses claude needs the token', () =
     flows: [flow('b', ['claude'], { runtime: 'docker', image: 'my:img', env: [] })] }));
   assert.equal(n.tokenClaude, 'yes');
   assert.equal(n.openrouterInBox, false);
+});
+
+test('summaryLine: the CLI summary, shared with the page', () => {
+  assert.equal(summaryLine({ ok: 5, warn: 0, fail: 0, skip: 0, ready: true }), 'Ready.');
+  assert.equal(summaryLine({ ok: 5, warn: 1, fail: 0, skip: 0, ready: true }), 'Ready: 1 warning.');
+  assert.equal(summaryLine({ ok: 1, warn: 2, fail: 2, skip: 0, ready: false }), 'Not ready: 2 problems stop runs, 2 warnings.');
 });

@@ -1,11 +1,12 @@
 'use client';
 /** The settings sidebar: one entry per section, the one shown marked; a section with pages lists them under it while open. */
-import { Bot, BrainCircuit, Cog, type LucideIcon, Plug, Settings, SlidersHorizontal, Workflow } from 'lucide-react';
+import { Activity, Bot, BrainCircuit, Cog, type LucideIcon, Plug, Settings, SlidersHorizontal, Workflow } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 export const SECTIONS: { href: string; title: string; icon: LucideIcon; pages?: { href: string; title: string }[] }[] = [
   { href: '/settings', title: 'General', icon: Settings },
+  { href: '/settings/status', title: 'System status', icon: Activity },
   {
     href: '/settings/connections',
     title: 'Connections',
