@@ -14,6 +14,11 @@
 - `pnpm test:live` calls real providers: OpenRouter costs money and Claude uses the subscription login. Run it only when asked.
 - `pnpm lr-run-flow <flow.yaml>`: run a flow from the CLI.
 
+## UI
+- Build UI from shadcn/ui components in `components/ui/`. When one is missing, add it with `pnpm dlx shadcn@latest add <name>` (configured in `components.json`) instead of hand-rolling it.
+- Use TanStack for app state and data: Query for server data, Form for forms, Store for shared client state, Pacer for debounce and throttle. Use React Flow (`@xyflow/react`) for graphs.
+- Icons come from `lucide-react` only.
+
 ## Workflow
 - New work goes on a branch cut from `dev`, in its own worktree under `.claude/worktrees/`.
 - Other sessions merge into the shared `dev` checkout. List `origin/dev..dev` just before pushing.
