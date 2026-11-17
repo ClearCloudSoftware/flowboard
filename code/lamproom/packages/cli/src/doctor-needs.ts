@@ -4,14 +4,14 @@
  * doctor (`doctor.ts`) turns each need into how a broken check counts: `yes` fails, `new` and `no` only warn.
  */
 import { readdirSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readAppSettings } from './app-settings.ts';
 import { isDir } from './config.ts';
 import { agentNeeds, loadFlow, NEEDS, type Sandbox } from './flow-config.ts';
 import { boxImage } from './isolation.ts';
 import { readProjects } from './projects.ts';
-import { type AppSettings, isLocal, type Knowledge, resolveSettings, TRUST, type Trust } from './settings.ts';
+import { APP_DEFAULTS, type AppSettings, isLocal, type Knowledge, resolveSettings, TRUST, type Trust } from './settings.ts';
 
 /** `new`: only the tier a new project gets needs it, so a broken one warns and never fails. */
 export type Need = 'yes' | 'new' | 'no';
@@ -26,6 +26,8 @@ export interface Setup {
   agents: AppSettings['agents'];
   dataDir: string;
   flowsDir: string;
+  /** settings.json or projects.json did not parse: the defaults and no projects are used instead. */
+  dataError?: string;
 }
 
 export interface Needs {
@@ -52,8 +54,17 @@ export const defaultFlowsDir = () =>
 const FLOW_NEEDS = Object.entries(NEEDS) as [FlowNeed, (typeof NEEDS)[FlowNeed]][];
 
 export function readSetup(dataDir: string, flowsDir: string): Setup {
-  const app = readAppSettings(dataDir);
-  const projects = readProjects(dataDir).map((p) => {
+  let dataError: string | undefined;
+  const read = <T>(file: string, fn: () => T, fallback: T): T => {
+    try {
+      return fn();
+    } catch (e) {
+      dataError ??= `${join(dataDir, file)} does not parse: ${(e as Error).message}`;
+      return fallback;
+    }
+  };
+  const app = read('settings.json', () => readAppSettings(dataDir), APP_DEFAULTS);
+  const projects = read('projects.json', () => readProjects(dataDir), []).map((p) => {
     const r = resolveSettings(app, p.type, p.overrides);
     return { id: p.id, name: p.name, trust: r.trust.value, knowledge: r.knowledge.value };
   });
@@ -80,6 +91,7 @@ export function readSetup(dataDir: string, flowsDir: string): Setup {
     agents: app.agents,
     dataDir,
     flowsDir,
+    ...(dataError && { dataError }),
   };
 }
 
