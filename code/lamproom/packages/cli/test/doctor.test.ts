@@ -6,7 +6,8 @@ import { join } from 'node:path';
 import type { Sandbox } from '../src/flow-config.ts';
 import type { Knowledge, Trust } from '../src/settings.ts';
 import { doctorNeeds, readSetup, type FlowNeed, type Setup } from '../src/doctor-needs.ts';
-import { CHECK_IDS, type DoctorReport, type Probes, runDoctor } from '../src/doctor.ts';
+import { type Check, CHECK_IDS, type DoctorReport, type Probes, runDoctor } from '../src/doctor.ts';
+import { doctorCli, renderReport } from '../src/doctor-cli.ts';
 
 // --- needs --------------------------------------------------------------------------------------------------------
 
@@ -257,4 +258,106 @@ test('runDoctor: slack with a bot token but no app token warns', async () => {
   const r = await runDoctor({ runner: 'terminal', dataDir: dir, flowsDir: flows(), env: {}, probes: fakeProbes() });
   assert.equal(byId(r, 'slack').status, 'warn');
   assert.doesNotMatch(JSON.stringify(r), /xoxb-1234567890/);
+});
+
+// --- the CLI ------------------------------------------------------------------------------------------------------
+
+const chk = (id: string, group: Check['group'], label: string, status: Check['status'], detail: string, fix?: string): Check =>
+  ({ id, group, label, status, needed: status === 'fail', why: id === 'docker' ? 'api, web are Normal: their steps run in containers' : 'x', detail, ...(fix && { fix }), ms: 1 });
+const sampleReport = (): DoctorReport => ({
+  schema: 1, at: '2026-11-17T08:00:00Z', runner: 'terminal', host: { platform: 'darwin', arch: 'arm64' },
+  context: { dataDir: '/d', flowsDir: '/f', defaultTrust: 'normal', projects: [{ id: 'a', name: 'api', trust: 'normal' }], flowNeeds: ['claude'], opensandboxFlows: [], unreadableFlows: [] },
+  summary: { ok: 2, warn: 1, fail: 1, skip: 1, ready: false },
+  checks: [
+    chk('git', 'core', 'git', 'ok', '2.47.1'),
+    { ...chk('docker', 'container', 'Docker', 'ok', '28.1.1, 7.6 GB memory'), needed: true },
+    chk('docker.image', 'container', 'Image', 'fail', 'lamproom:cli is not built', 'cd code/lamproom && docker build -f docker/Dockerfile -t lamproom:cli .'),
+    chk('docker.gvisor', 'container', 'gVisor', 'skip', 'not needed: no Untrusted project'),
+    chk('opencode', 'agents', 'opencode', 'warn', 'not installed (optional)', 'install OpenCode'),
+  ],
+});
+const cap = () => {
+  const c = { out: '', err: '', io: { out: (s: string) => void (c.out += s + '\n'), err: (s: string) => void (c.err += s + '\n') } };
+  return c;
+};
+
+test('renderReport: groups, marks and summary as in the spec sample', () => {
+  const t = renderReport(sampleReport(), false);
+  assert.match(t, /^Lamproom doctor · macOS arm64 · data /m);
+  assert.match(t, /^Projects: api \(Normal\) · new projects: Normal$/m);
+  assert.match(t, /^Containers +needed: api, web are Normal/m);
+  assert.match(t, /^ {2}✗ Image {8}lamproom:cli is not built$/m);
+  assert.match(t, /^ {17}→ cd code\/lamproom && docker build/m);
+  assert.match(t, /^ {2}– gVisor/m);
+  assert.match(t, /^ {2}! opencode/m);
+  assert.match(t, /^Not ready: 1 problem stops runs, 1 warning\.$/m);
+});
+
+test('renderReport: ready summaries', () => {
+  const r = sampleReport();
+  r.summary = { ok: 5, warn: 0, fail: 0, skip: 0, ready: true };
+  assert.match(renderReport(r, false), /^Ready\.$/m);
+  r.summary.warn = 2;
+  assert.match(renderReport(r, false), /^Ready: 2 warnings\.$/m);
+});
+
+test('renderReport: colour only when asked', () => {
+  assert.doesNotMatch(renderReport(sampleReport(), false), /\x1b\[/);
+  assert.match(renderReport(sampleReport(), true), /\x1b\[/);
+});
+
+test('doctorCli: exit 0 when ready, 1 on a fail, 2 on an unknown flag', async () => {
+  const run = async (args: string[], projects: ReturnType<typeof pj>[], probes = fakeProbes()) => {
+    const c = cap();
+    const code = await doctorCli(args, { ...c.io, tty: false, env: {} }, { probes, dataDir: data(projects), flowsDir: flows() });
+    return { code, ...c };
+  };
+  assert.equal((await run([], [])).code, 0);
+  assert.equal((await run([], [pj('api', 'normal')], fakeProbes({ image: async () => null }))).code, 1);
+  const bad = await run(['--nope'], []);
+  assert.equal(bad.code, 2);
+  assert.match(bad.err, /usage: lr-doctor \[--json\]/);
+  assert.equal(bad.out, '');
+});
+
+test('doctorCli --json: stdout is one JSON document, no ANSI', async () => {
+  const c = cap();
+  const code = await doctorCli(['--json'], { ...c.io, tty: true, env: {} }, { probes: fakeProbes(), dataDir: data(), flowsDir: flows() });
+  assert.equal(code, 0);
+  assert.equal(JSON.parse(c.out).schema, 1);
+  assert.doesNotMatch(c.out, /\x1b\[/);
+});
+
+test('doctorCli: no secret appears in table or JSON', async () => {
+  const env = { OPENROUTER_API_KEY: 'sk-or-v1-SECRETSECRETSECRET1234', CLAUDE_CODE_OAUTH_TOKEN: 'sk-ant-oat01-TOKENTOKENTOKEN' };
+  for (const args of [[], ['--json']]) {
+    const c = cap();
+    await doctorCli(args, { ...c.io, tty: false, env }, { env, probes: fakeProbes(), dataDir: data([pj('api', 'normal')]), flowsDir: flows(['claude', 'openrouter']) });
+    assert.doesNotMatch(c.out, /SECRETSECRET|TOKENTOKEN/);
+    assert.match(c.out, /1234/); // the last 4 only
+  }
+});
+
+test('doctorCli: a crash is exit 2 with the message', async () => {
+  const c = cap();
+  const opts = { probes: fakeProbes(), get dataDir(): string { throw new Error('boom'); } };
+  assert.equal(await doctorCli([], { ...c.io, tty: false, env: {} }, opts), 2);
+  assert.match(c.err, /boom/);
+});
+
+test("runDoctor: no OpenRouter key warns when OpenCode's own login carries host runs", async () => {
+  const r = await runDoctor({ runner: 'terminal', dataDir: data([pj('s', 'trusted')]), flowsDir: flows(['openrouter']), env: {}, probes: fakeProbes() });
+  assert.equal(byId(r, 'openrouter').status, 'warn');
+  assert.match(byId(r, 'openrouter').detail, /OpenCode's own login/);
+});
+
+test('runDoctor: no OpenRouter key fails when containers need it', async () => {
+  const r = await runDoctor({ runner: 'terminal', dataDir: data([pj('api', 'normal')]), flowsDir: flows(['openrouter']), env: {}, probes: fakeProbes() });
+  assert.equal(byId(r, 'openrouter').status, 'fail');
+});
+
+test('renderReport: Core gets no needed line', () => {
+  const r = sampleReport();
+  r.checks[0] = { ...r.checks[0], needed: true, why: 'Lamproom and its CLIs run on it' };
+  assert.match(renderReport(r, false), /^Core$/m);
 });

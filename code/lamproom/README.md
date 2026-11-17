@@ -1,5 +1,12 @@
 Lamproom's code: the packages (`packages/`: the flow engine, the agent providers, and the `lr-run-agent` and `lr-run-flow` commands) and the web app (`app/`, Next.js).
 
+## Check your machine
+
+```bash
+pnpm lr-doctor          # what your projects need, what's up, and how to fix what isn't
+pnpm lr-doctor --json   # the same report as JSON; exit 0 ready, 1 something needed is broken, 2 bad argument
+```
+
 ## The flow designer
 
 ```bash

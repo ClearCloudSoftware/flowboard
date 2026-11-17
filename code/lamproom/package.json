@@ -15,6 +15,7 @@
     "lr-run-agent": "node packages/cli/src/main.ts",
     "lr-run-flow": "node packages/cli/src/flow-main.ts",
     "lr-clean-workspace": "node packages/cli/src/workspace-main.ts",
+    "lr-doctor": "node packages/cli/src/doctor-main.ts",
     "test:app": "node --test \"app/**/*.test.ts\"",
     "electron": "electron .",
     "electron:dev": "electron . --dev"

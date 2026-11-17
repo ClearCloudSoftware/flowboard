@@ -201,6 +201,8 @@ export async function runDoctor(o: DoctorOptions): Promise<DoctorReport> {
     return out.health === 'ok' ? undefined : out.detail === 'not installed' ? 'Docker is not installed' : NOT_RUNNING;
   };
 
+  // One opencode probe for both its own check and the OpenRouter key's fallback.
+  const opencodeStatus = p.harness('opencode', setup.agents.opencode.path);
   const terminalNote = o.runner === 'terminal' ? '; checked in this terminal: the app opened from Finder or Explorer may not have it' : '';
   const orKey = env.OPENROUTER_API_KEY || savedKey(dataDir);
   const slack = slackTokens(dataDir);
@@ -287,7 +289,7 @@ export async function runDoctor(o: DoctorOptions): Promise<DoctorReport> {
     opencode: {
       group: 'agents', label: 'opencode', need: needs.opencode, why: needs.why.opencode,
       run: async () => {
-        const s = await p.harness('opencode', setup.agents.opencode.path);
+        const s = await opencodeStatus;
         // Runs give OpenCode the OpenRouter key themselves (applySavedKey), so its own login decides nothing.
         return s.installed ? ok(`${s.version}, ${s.signIn.text}`, s.version) : broken(s.error ?? 'not installed', 'install OpenCode');
       },
@@ -296,7 +298,14 @@ export async function runDoctor(o: DoctorOptions): Promise<DoctorReport> {
     openrouter: {
       group: 'models', label: 'OpenRouter', need: needs.openrouter, why: needs.why.openrouter,
       run: async () => {
-        if (!orKey) return needs.openrouter === 'no' ? notNeeded('openrouter') : broken('no key saved or exported', 'Settings → LLM Provider, or export OPENROUTER_API_KEY');
+        if (!orKey) {
+          if (needs.openrouter === 'no') return notNeeded('openrouter');
+          const fix = 'Settings → LLM Provider, or export OPENROUTER_API_KEY';
+          // A run on this machine falls back to OpenCode's own login; a container gets only the key (flow-run's refusal).
+          const own = needs.container !== 'yes' && (await opencodeStatus.catch(() => undefined));
+          if (own && own.installed && own.signIn.ok) return degraded("no key saved or exported: runs on this machine use OpenCode's own login, containers can't", fix);
+          return broken('no key saved or exported', fix);
+        }
         const view = keyView(dataDir, env);
         const which = `${view.source} key …${view.last4}`;
         const r = await p.openrouter(orKey);
