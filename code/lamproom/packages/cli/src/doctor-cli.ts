@@ -4,21 +4,13 @@
  */
 import { relative } from 'node:path';
 import { parseArgs } from 'node:util';
-import { type Check, type DoctorOptions, type DoctorReport, type Group, runDoctor, type Status } from './doctor.ts';
+import { type Check, type DoctorOptions, type DoctorReport, runDoctor, type Status } from './doctor.ts';
+import { GROUPS, summaryLine } from './doctor-view.ts';
 import { TRUST } from './settings.ts';
-
-const GROUPS: [Group, string][] = [
-  ['core', 'Core'],
-  ['container', 'Containers'],
-  ['agents', 'Agents on this machine'],
-  ['models', 'Models'],
-  ['connections', 'Connections'],
-];
 const OS: Partial<Record<NodeJS.Platform, string>> = { darwin: 'macOS', linux: 'Linux', win32: 'Windows' };
 const MARK: Record<Status, [string, string]> = { ok: ['✓', '32'], fail: ['✗', '31'], warn: ['!', '33'], skip: ['–', '2'] };
 const LABEL = 13;
 const NEEDED_AT = 44;
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export function renderReport(r: DoctorReport, color: boolean): string {
   const paint = (code: string, s: string) => (color ? `\x1b[${code}m${s}\x1b[0m` : s);
@@ -36,11 +28,7 @@ export function renderReport(r: DoctorReport, color: boolean): string {
     lines.push(needed ? `${name.padEnd(NEEDED_AT)}${paint('2', `needed: ${needed.why}`)}` : name);
     for (const ch of checks) lines.push(...checkLines(ch, paint));
   }
-  const warnings = plural(s.warn, 'warning');
-  lines.push(
-    '',
-    s.ready ? (s.warn ? `Ready: ${warnings}.` : 'Ready.') : `Not ready: ${plural(s.fail, 'problem stops', 'problems stop')} runs, ${warnings}.`,
-  );
+  lines.push('', summaryLine(s));
   return lines.join('\n');
 }
 

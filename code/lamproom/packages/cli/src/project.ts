@@ -2,7 +2,7 @@
  * A project's own settings: `.lamproom.yaml` in the folder a flow runs in, committed with the repo. What a
  * step may use depends on the repo (its test suite) and the machine, not on the recipe, so no flow sets these.
  */
-import { spawnSync } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type Document, isMap, parseDocument } from 'yaml';
@@ -91,25 +91,58 @@ export function setLimits(folder: string, limits: Limits): { ok: true } | { ok: 
  */
 // ponytail: a quarter, whatever the fan-out; four parallel steps at their limit can still fill Docker's memory
 export function dockerDefaultMemoryMb(docker = 'docker'): number | undefined {
-  const r = spawnSync(docker, ['info', '--format', '{{.MemTotal}}'], { encoding: 'utf8', timeout: 10_000 });
-  const total = Number(r.stdout?.trim());
-  return r.status === 0 && total > 0 ? Math.floor(total / 4 / 2 ** 20) : undefined;
+  return memoryOf(runSync(docker, MEM_TOTAL));
+}
+export async function dockerDefaultMemoryMbAsync(docker = 'docker'): Promise<number | undefined> {
+  return memoryOf(await runAsync(docker, MEM_TOTAL));
 }
 
 /** Whether Docker has gVisor's `runsc` runtime installed (the Untrusted isolation tier needs it). */
 export function dockerHasGvisor(docker = 'docker'): boolean {
-  const r = spawnSync(docker, ['info', '--format', '{{json .Runtimes}}'], { encoding: 'utf8', timeout: 10_000 });
+  return gvisorIn(runSync(docker, RUNTIMES));
+}
+export async function dockerHasGvisorAsync(docker = 'docker'): Promise<boolean> {
+  return gvisorIn(await runAsync(docker, RUNTIMES));
+}
+
+/** Why a step cannot run in `image` yet, or undefined when Docker is up and has the image. */
+export function dockerNotReady(image: string, docker = 'docker'): string | undefined {
+  if (runSync(docker, ['image', 'inspect', image]).status === 0) return undefined;
+  return runSync(docker, ['info']).status === 0 ? noImage(image) : NOT_RUNNING;
+}
+/** `dockerNotReady` without blocking: what a page's server calls. */
+export async function dockerNotReadyAsync(image: string, docker = 'docker'): Promise<string | undefined> {
+  if ((await runAsync(docker, ['image', 'inspect', image])).status === 0) return undefined;
+  return (await runAsync(docker, ['info'])).status === 0 ? noImage(image) : NOT_RUNNING;
+}
+
+// --- each docker probe runs sync (a run starting) or async (a page's server) over one parser ----------------------
+
+/** What a `docker` call said: its exit status (null when it could not run) and its stdout. */
+type Ran = { status: number | null; stdout: string };
+const DOCKER_TIMEOUT_MS = 10_000;
+const runSync = (docker: string, args: string[]): Ran => {
+  const r = spawnSync(docker, args, { encoding: 'utf8', timeout: DOCKER_TIMEOUT_MS });
+  return { status: r.status, stdout: r.stdout ?? '' };
+};
+const runAsync = (docker: string, args: string[]): Promise<Ran> =>
+  new Promise((done) => execFile(docker, args, { encoding: 'utf8', timeout: DOCKER_TIMEOUT_MS }, (err, stdout) => done({ status: err ? null : 0, stdout: stdout ?? '' })));
+
+const MEM_TOTAL = ['info', '--format', '{{.MemTotal}}'];
+const RUNTIMES = ['info', '--format', '{{json .Runtimes}}'];
+const NOT_RUNNING = 'Docker is not running';
+const noImage = (image: string) => `no image ${image}; build it from code/lamproom: docker build -f docker/Dockerfile -t ${image} .`;
+
+function memoryOf(r: Ran): number | undefined {
+  const total = Number(r.stdout.trim());
+  return r.status === 0 && total > 0 ? Math.floor(total / 4 / 2 ** 20) : undefined;
+}
+
+function gvisorIn(r: Ran): boolean {
   if (r.status !== 0) return false;
   try {
     return 'runsc' in JSON.parse(r.stdout);
   } catch {
     return false;
   }
-}
-
-/** Why a step cannot run in `image` yet, or undefined when Docker is up and has the image. */
-export function dockerNotReady(image: string, docker = 'docker'): string | undefined {
-  const run = (...args: string[]) => spawnSync(docker, args, { stdio: 'ignore', timeout: 10_000 }).status === 0;
-  if (run('image', 'inspect', image)) return undefined;
-  return run('info') ? `no image ${image}; build it from code/lamproom: docker build -f docker/Dockerfile -t ${image} .` : 'Docker is not running';
 }

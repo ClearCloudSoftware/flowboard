@@ -217,19 +217,17 @@ From [[Slack Escalation Handoff]].
 
 ## Machine doctor
 
-From [[Machine Doctor Handoff]] (`pnpm lr-doctor`, merged into dev 1988916). Paths are under `code/lamproom/`; bare file names such as `doctor.ts` are in `packages/cli/src/`.
+From [[Machine Doctor Handoff]] (`pnpm lr-doctor`, merged into dev 1988916) and the System status page (`/settings/status`, branch `feature/doctor-page`, 2026-11-17). Paths are under `code/lamproom/`; bare file names such as `doctor.ts` are in `packages/cli/src/`. The calls made while building `lr-doctor` itself are in [[Machine Doctor Handoff#Calls made without asking]].
 
 ### Doctor next steps
 
-1. **The UI page.**
-   - Add `app/api/doctor/route.ts`, behind `refused(request)` like the other routes, returning
-     `Response.json(await runDoctor({ runner: 'app' }))`.
-   - Add a status page, or a block on Settings → General, keyed on the check ids.
-   - The Docker, gVisor and `gh` probes still block while they run; make them async before they run inside the
-     Next server.
-2. **The token gap above**, so the app and the terminal agree.
-3. **Packaging the Electron app** (option 2 in the design), which drops `node` and `pnpm` from the list.
-4. **The doctor's minor issues below**, in any order.
+1. **The token gap** (in [[#Found outside the doctor]]), so the app and the terminal agree. The System status page
+   already shows it: the page checks the app's environment, so it says whether the app has the token.
+2. **Packaging the Electron app** (option 2 in the design), which drops `node` and `pnpm` from the list.
+3. **The minor issues below**, the doctor's and the page's, in any order.
+
+The UI page, the first next step until 2026-11-17, is built: **Settings → System status** at `/settings/status`,
+from `GET /api/doctor`, with non-blocking Docker and `gh` probes.
 
 ### Doctor minor issues
 
@@ -281,6 +279,60 @@ Also found, not fixed: an unparseable Node version string grades as `ok`, becaus
 (`doctor.ts`, the `node` check). `process.version` is always well formed, so this can't happen in practice; a guard
 would only matter if `nodeVersion` came from somewhere else.
 
+### System status page calls
+
+Decisions taken while building the page (`feature/doctor-page`, 2026-11-17) without asking, open to Alex's review.
+Spec: `docs/superpowers/specs/2026-11-17-doctor-page-design.md`; plan: `docs/superpowers/plans/2026-11-17-doctor-page.md`.
+
+| # | Call | Why | Cost if wrong |
+|---|---|---|---|
+| 1 | The section is **System status** at `/settings/status`, second in the sidebar, lucide `Activity` icon. Shown to Alex as the proposal; he approved the design. | The page shows which systems are up; "Doctor" reads oddly in Settings. | A rename. |
+| 2 | The checks run when the page opens (every time, showing the last report meanwhile) and on **Check again**, never on focus or a timer (`doctorQuery`: `staleTime: Infinity`, `refetchOnMount: 'always'`, `refetchOnWindowFocus: false`). | Each run takes a couple of seconds and calls OpenRouter, Slack and GitHub. | A stale screen if something changes while the page stays open. |
+| 3 | The Docker, gVisor and `gh` probes got async twins (`dockerNotReadyAsync`, `dockerHasGvisorAsync`, `dockerDefaultMemoryMbAsync`, `ghStatusAsync`) sharing one parser with the sync ones; the sync callers (`flow-run.ts`, `/api/settings`, `/api/github`) are unchanged. | `spawnSync` in the Next server would freeze every request, up to about 20 s with Docker stuck. | None found. |
+| 4 | The async `gh` runner maps `execFile`'s result to `spawnSync`'s shape: a non-zero exit is a status, a missing binary or a timeout is an error. | One parser serves both. | A rare error reads differently (see the page's minor issues). |
+| 5 | `GROUPS` and `summaryLine` moved to `doctor-view.ts`, which has no Node imports; the CLI and the page both use it. | The terminal and the page always say the same; a client component can import it. | None. |
+| 6 | The route calls `refused(request)` before `await connection()`. | A refused request never waits. Both end prerendering (Next 16 route-handler guide), so the route is never cached. | None. |
+| 7 | No unit test for the route: plain `node --test` can't load `next/server` (see [[#Found outside the doctor]]). `refused` is tested in `app/api/flows/local.test.ts`, and a foreign `Host` got 403 against the dev server. | The plan foresaw it. | A later edit that drops the refusal isn't caught by a test. |
+| 8 | **Check again** sits in the summary bar, not beside the title as the design's sketch showed. | `Head`, the full-width hairline header every section uses, stays unchanged. | A layout tweak. |
+| 9 | Details and fixes wrap with `overflow-wrap: anywhere`. | The browser check found a long path pushing the detail past the card and hiding the copy button; `break-all` split words at phone width. | None. |
+| 10 | A corrupt `secrets.json` makes the page show its error line and **Check again**, not a red data check (`savedKey` and `slackTokens` parse outside the timed checks). | The spec kept what the doctor checks unchanged. | It reads as "the check failed" instead of naming the file. |
+| 11 | The page leaves out the CLI's `Projects: … · new projects: …` line. | Each group's `needed:` line gives the reason. | A little less context. |
+| 12 | Two open tabs each run their own checks, and leaving the page doesn't cancel a check in progress. | Harmless: a few child processes until their timeouts. | Some extra work. |
+| 13 | Status icons carry lucide's `aria-label` but no `role="img"`. | The detail text beside each icon says the same. | A small accessibility gap. |
+| 14 | The app type check (`tsc --noEmit -p .`) shows one error, `LayoutProps` in `app/layout.tsx`, a type `next typegen` makes. It is not in the page's files; the dev server compiled and served them. | Not this work's to fix. | None. |
+
+### System status page minor issues
+
+Found by the page's final review and left unfixed. None blocks merging. Line numbers are at `3b4d76d`.
+
+1. **Docker, gVisor and `gh` still run one after another before the other checks.**
+   - **Where:** `doctor.ts:359-360`.
+   - **What's wrong:** the real probes are all async now; the serial phase only guards an injected sync probe (the
+     test `runDoctor: a blocking (spawnSync-like) probe does not time out the async ones`). With Docker stuck, the
+     page waits about 20 s (`image inspect` then `info`) plus 10 s (gVisor) before the other checks start.
+   - **Fix:** start `github` with the rest; keep only the checks that wait on `dockerRun` behind it. Or accept it and
+     say so in a `ponytail:` comment.
+2. **The async `gh` twin words some errors differently.**
+   - **Where:** `github.ts:31-36` (`runAsync`).
+   - **What's wrong:** the state matches the sync `ghStatus` in every case tried, but a timeout reads
+     `Command failed: <path> auth status --json hosts` instead of `spawnSync … ETIMEDOUT`, and a process killed by a
+     signal reads `did not answer: Command failed: …` instead of `gh exited null`. The doctor's own 30 s timer
+     usually wins, so this rarely shows.
+   - **Fix:** when `e.killed`, pass ``new Error(`timed out after ${timeout / 1000} s`)``; add a timeout case to the
+     test `ghStatusAsync answers as ghStatus`, comparing `.state`.
+3. **No test that the Docker twins don't block.**
+   - **Where:** `packages/cli/test/isolation.test.ts:123`; `gh` has one at `packages/cli/test/github.test.ts:87`.
+   - **Fix:** the same test with a fake `docker` that runs `sleep 1`.
+4. **Two docs nits in [[Running Agent Work]].**
+   - Line 10 still says the page reflects the notes "as of 2026-11-13"; *Check your machine* is from 2026-11-17.
+   - Line 123 lists each check's fields as always including `fix`; `fix` appears only when there is one, and the
+     optional `version` is left out.
+5. **Copying a fix can fail silently.**
+   - **Where:** `app/settings/status.tsx:27`.
+   - **What's wrong:** `navigator.clipboard.writeText` isn't caught; a denied clipboard is an unhandled rejection with
+     no feedback.
+   - **Fix:** catch it, and show "Couldn't copy" in place of the check mark.
+
 ### Found outside the doctor
 
 - **The app doesn't get the Claude token from your shell.**
@@ -299,6 +351,12 @@ would only matter if `nodeVersion` came from somewhere else.
 
   The doctor branch doesn't touch them. A run with `--test-concurrency=4` passes: 729 tests, 704 pass, 0 fail, 25
   live tests skipped.
+- **A route handler can't be unit tested with plain `node --test`.** A route that imports from `next/server` fails to
+  load with `ERR_MODULE_NOT_FOUND` for the bare specifier, so `app/api/doctor/route.ts` has no test of its own (see
+  the page's call 7). Anything that tests a route module directly hits the same wall; test the helpers it calls
+  instead, or find a loader that resolves `next/server`.
+- **`next dev` once exited with code 1 to show an upgrade notice** for a security advisory on Next 16.4.1, before
+  serving anything; starting it again served normally. Worth checking whether Next has a patched release.
 
 ## Desktop app on Windows
 

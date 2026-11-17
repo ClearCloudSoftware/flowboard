@@ -7,6 +7,7 @@ import type { AppSettings, ApprovedModel, Catalogue, Harness } from '../../packa
 import type { KeyTest, KeyView } from '../../packages/cli/src/openrouter.ts';
 import type { OllamaState } from '../../packages/cli/src/ollama.ts';
 import type { HarnessStatus } from '../../packages/cli/src/harnesses.ts';
+import type { DoctorReport } from '../../packages/cli/src/doctor.ts';
 import type { SocketState } from '../../packages/cli/src/slack.ts';
 import type { Memory } from '../../packages/cli/src/memory.ts';
 import { ApiError, call } from '../flows/api.ts';
@@ -65,6 +66,9 @@ export const cloneJobQuery = (id: string) =>
 
 /** Each agent CLI on this machine (`/api/agents`); slow-ish, as it runs each CLI. */
 export const agentsQuery = queryOptions({ queryKey: ['agents'], queryFn: () => call<Record<Harness, HarnessStatus>>('/api/agents') });
+
+/** The doctor's report on this machine (`/api/doctor`): a couple of seconds and a few network calls, so it runs each time the page opens (showing the last report meanwhile) and on request, never on focus. */
+export const doctorQuery = queryOptions({ queryKey: ['doctor'], queryFn: () => call<DoctorReport>('/api/doctor'), staleTime: Infinity, refetchOnMount: 'always', refetchOnWindowFocus: false, retry: false });
 
 /**
  * OpenCode's models (`/api/models`): the OpenRouter key runs would use (never the key) and OpenRouter's list, Ollama
