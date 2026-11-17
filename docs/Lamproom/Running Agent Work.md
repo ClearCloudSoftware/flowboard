@@ -1,10 +1,10 @@
 ---
-tags: [lamproom, guide, agent-providers, capability-library, flow-design, execution, sandboxing]
+tags: [lamproom, guide, doctor, agent-providers, capability-library, flow-design, execution, sandboxing]
 ---
 
 # Running agent work in Lamproom
 
-This page explains how Lamproom turns a task into finished work by running AI coding agents and shell checks through a flow. It covers five components on one page: Flow Design, Execution, Agent Providers, Capability Library, and Sandboxing. Each section distills the component's folder of notes. To go deeper, follow the links at the end of each section.
+This page explains how Lamproom turns a task into finished work by running AI coding agents and shell checks through a flow. It starts with how to check that your machine is ready, then covers five components on one page: Flow Design, Execution, Agent Providers, Capability Library, and Sandboxing. Each section distills the component's folder of notes. To go deeper, follow the links at the end of each section.
 
 > [!note] Design versus build
 > Much of Lamproom is designed further than it's built. Each section marks what is built, with the date it was built or corrected, and what is still design only. This page reflects the notes as of 2026-11-13. Where a note and the code disagree, the code-checked note wins.
@@ -41,13 +41,99 @@ Three rules hold across every component:
 
 Gate decisions carry different labels in the two places you answer them. The terminal shows `Approve (pass)`, `Reject (fail)`, `Retry this step`, and `Fail the flow`; the runs page shows **Approve**, **Send back**, **Retry**, and **Fail**. This page uses the terminal labels.
 
-The sections follow one step from recipe to process:
+Start by checking your machine, then follow one step from recipe to process:
 
-1. [Flow Design](#flow-design): the recipe.
-2. [Execution](#execution): how a task moves through it.
-3. [Agent Providers](#agent-providers): how each agent step launches.
-4. [Capability Library](#capability-library): the skills and roles a step uses.
-5. [Sandboxing](#sandboxing): where the process runs.
+1. [Check your machine](#check-your-machine): what your projects need, and whether it's up.
+2. [Flow Design](#flow-design): the recipe.
+3. [Execution](#execution): how a task moves through it.
+4. [Agent Providers](#agent-providers): how each agent step launches.
+5. [Capability Library](#capability-library): the skills and roles a step uses.
+6. [Sandboxing](#sandboxing): where the process runs.
+
+## Check your machine
+
+Before you run a flow, check that this machine has what your projects need. `lr-doctor` lists every system Lamproom uses: Docker and its image, the agent CLIs and their logins, the agents' tokens, the model providers, GitHub, Slack and OpenSandbox. For each one it says whether it is installed, running and signed in, and gives the command that fixes whatever isn't. The **System status** page in Settings runs the same checks inside the app.
+
+### Key concepts
+
+| Term | Meaning |
+|---|---|
+| Needed | Something your projects use now: a broken needed check is a `fail`, and runs that use it are refused or fail. |
+| Needed for new projects | Something only the trust level a new project gets would use (Normal today). A broken one is a `warn`, so a fresh clone with no projects is still ready. |
+| Optional | Something nothing uses yet, such as GitHub for the New Project wizard. A broken one is a `warn`, never a `fail`. |
+| Status | `ok`, `warn`, `fail`, or `skip`. `skip` means the check wasn't run, because it isn't needed or because something it depends on is down (no image check while Docker is down); the detail says which. |
+| Ready | No check is `fail`. Warnings don't change it. |
+
+### How it works
+
+The doctor first works out what your setup needs, from what Lamproom already knows:
+
+- **Your projects' trust.** A Normal or Untrusted project runs its steps in containers, so it needs Docker, the `lamproom:cli` image and `CLAUDE_CODE_OAUTH_TOKEN`. An Untrusted one also needs gVisor. A Trusted project runs its agents on this machine, so it needs the agent CLIs, and `uv` if its knowledge assets are on.
+- **The trust a new project gets.** What only that would need is a warning.
+- **Your flows.** The agents the flows in the flows folder use decide whether OpenRouter, Ollama, Claude Code and OpenCode count. A flow's own `sandbox:` counts as it does when a run starts: a Docker sandbox makes Docker needed and adds its image, and a credential is needed in a container only when a step that uses it runs in one. A flow file that doesn't load is listed and skipped.
+
+Then it runs 16 checks, each through the function the runs or the Settings pages already use, each with a 30-second timeout:
+
+| Group | Check | What it probes |
+|---|---|---|
+| Core | `node`, `pnpm`, `git` | The version. Node below 22.18 fails, below 24 warns. pnpm warns when its major version isn't the pinned one. |
+| Core | `data` | The data folder exists and is writable, and `settings.json` and `projects.json` parse. |
+| Containers | `docker` | Docker is installed and its daemon answers; shows Docker's memory. |
+| Containers | `docker.image` | Each image a run would use exists: `lamproom:cli` (or `LAMPROOM_IMAGE`) and any image a flow's `sandbox:` names. |
+| Containers | `docker.gvisor` | Docker has the `runsc` runtime. Never on macOS. |
+| Containers | `token.claude` | `CLAUDE_CODE_OAUTH_TOKEN` is set and has the shape `claude setup-token` makes. Never shown. |
+| Agents on this machine | `claude` | Installed and logged in (`claude auth status`). |
+| Agents on this machine | `opencode` | Installed. Its own login is shown but doesn't decide the status, because runs give it the OpenRouter key. |
+| Agents on this machine | `uv` | Installed. Trusted projects build their knowledge assets with `uvx`. |
+| Models | `openrouter` | The key (exported or saved in Settings) is accepted, and shows the credit left. Without a key, runs on this machine fall back to OpenCode's own login, so it only warns unless a container needs the key. |
+| Models | `ollama` | The server answers, and shows its models. |
+| Connections | `github` | `gh` is logged in. |
+| Connections | `slack` | The saved bot token is accepted. Skipped when no tokens are saved. |
+| Connections | `opensandbox` | The server at `OPENSANDBOX_DOMAIN` answers and its images exist, when a flow uses `runtime: opensandbox`. |
+
+The doctor changes nothing: it doesn't install, build, log in or edit a file. The one exception is the Ollama model list it refreshes in the data folder, as the Models page does. Keys and tokens appear only as "set" or their last four characters.
+
+### Configure and use
+
+To check your machine from a terminal, run this from `code/lamproom`:
+
+```sh
+pnpm lr-doctor
+```
+
+The output groups the checks and puts the fix under each problem:
+
+```
+Containers                                  needed: api is Normal: its steps run in containers
+  ✓ Docker       29.8.0, 7.7 GB memory
+  ✓ Image        lamproom:cli, built 2026-11-16, 2.11 GB
+  – gVisor       not needed: no Untrusted project
+  ✗ Claude token CLAUDE_CODE_OAUTH_TOKEN is not set; checked in this terminal: the app opened from Finder or Explorer may not have it
+                 → claude setup-token, then export CLAUDE_CODE_OAUTH_TOKEN where Lamproom runs
+```
+
+It exits `0` when the machine is ready, `1` when a needed check fails, and `2` for a bad argument or a crash, so a script can gate on it.
+
+To get the report as JSON, add `--json` and run pnpm silently, so its own banner stays out of the output:
+
+```sh
+pnpm -s lr-doctor --json | jq '.summary'
+```
+
+The report has `schema: 1`, the context it worked from (projects, the trust for new projects, what the flows use), a summary, and every check in a fixed order. Each check has `id`, `group`, `label`, `status`, `needed`, `why`, `detail`, `fix` and `ms`.
+
+To check from the app, open **Settings → System status**. The page runs the checks when it opens; click **Check again** to run them again, and the copy button beside a fix to copy it. The app checks its own environment, which can differ from your terminal's. The desktop app opened from Finder or Explorer gets your shell's `PATH` but not its other variables, so a `CLAUDE_CODE_OAUTH_TOKEN` you exported in `.zshrc` shows as set in the terminal and missing in the app. The page is the one that matches the app's runs.
+
+### Limits and status
+
+- **Built 2026-11-17:** `lr-doctor` with `--json`, and the System status page (`/settings/status`, from `GET /api/doctor`). The Docker and GitHub probes don't block, so the page never freezes the app while it checks.
+- **Not checked:** whether the app server is up, whether the image is older than its Dockerfile, egress, and Codex (no adapter yet).
+- **Known small gaps,** listed with fixes in [[Machine Doctor Handoff#Deferred minor issues]]: for example, a Normal project requires `lamproom:cli` even when every flow brings its own image.
+
+### Related notes
+
+- [[Machine Doctor Handoff|What was built, the calls made, and what's deferred]]
+- The design: `docs/superpowers/specs/2026-11-17-lr-doctor-design.md` and `docs/superpowers/specs/2026-11-17-doctor-page-design.md`
 
 ## Flow Design
 

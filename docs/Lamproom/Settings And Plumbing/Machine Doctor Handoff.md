@@ -153,12 +153,12 @@ would only matter if `nodeVersion` came from somewhere else.
 
 ## Next steps
 
-1. **The UI page.**
-   - Add `app/api/doctor/route.ts`, behind `refused(request)` like the other routes, returning
-     `Response.json(await runDoctor({ runner: 'app' }))`.
-   - Add a status page, or a block on Settings → General, keyed on the check ids.
-   - The Docker, gVisor and `gh` probes still block while they run; make them async before they run inside the
-     Next server.
+1. **The UI page. Done 2026-11-17** on `feature/doctor-page`:
+   - **Settings → System status** (`/settings/status`) shows the report from `GET /api/doctor`.
+   - The page runs `runDoctor({ runner: 'app' })` in the app's own environment and folders.
+   - The Docker, gVisor and `gh` probes now have async twins (`dockerNotReadyAsync`, `dockerHasGvisorAsync`,
+     `dockerDefaultMemoryMbAsync`, `ghStatusAsync`) sharing their parsing, so the page never blocks the server.
+   - The `/docs` page documents the doctor in **Check your machine**.
 2. **The token gap above**, so the app and the terminal agree.
 3. **Packaging the Electron app** (option 2 in the design), which drops `node` and `pnpm` from the list.
 4. **The deferred minor issues above**, in any order.
