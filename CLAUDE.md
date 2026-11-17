@@ -7,6 +7,7 @@
 ## Layout
 - `code/lamproom/`: Next.js 16 app (`app/`, `components/`) plus pnpm workspace packages in `packages/` (core, adapters, cli, ask-user); `electron/` is the desktop shell.
 - `docs/Lamproom/`: design and handoff notes, one folder per area.
+- `docs/Lamproom/Deferred Work.md`: the only list of work left for later (unfixed findings, known problems, open questions). Add leftovers there, not in handoff notes; remove an item when it is fixed.
 
 ## Commands (run in `code/lamproom`, pnpm 10, Node 24 runs `.ts` directly)
 - `pnpm dev`: the web app. `pnpm electron:dev`: the desktop shell.

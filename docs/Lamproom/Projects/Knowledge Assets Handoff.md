@@ -12,7 +12,7 @@ This note is the state of branch `feature/knowledge-assets` on 2026-11-15: cut f
 - [[#How it works]], in brief.
 - [[#Decisions open to your review]]: the six choices that shape the feature.
 - [[#Rulings made on your behalf]]: the smaller decisions taken while building, with what each costs if wrong.
-- [[#Known problems]]: what is left unfixed.
+- [[#Left for later]]: what is left unfixed.
 
 The plan is `docs/superpowers/plans/2026-11-15-knowledge-assets.md`.
 
@@ -87,7 +87,7 @@ A fresh reviewer read `098340e..87f0f70`. No critical findings; three important 
 2. **A build that timed out or couldn't start held the wizard and the folder lock for good**, at a `run_failed` gate. Ruling 21.
 3. **Agents were pointed at any `GRAPH_REPORT.md` as Lamproom's map**, including a repo's own or a failed build's. Rulings 5 and 22.
 
-Its five minor findings are in [[#Known problems]]. It declined to judge:
+Its five minor findings are in [[Deferred Work#Knowledge assets]]. It declined to judge:
 
 - Trusted builds running repo code on this machine (allowed by design: Trusted means that).
 - Whether Serena's read-only tools can read files outside the repo (not tested).
@@ -95,20 +95,9 @@ Its five minor findings are in [[#Known problems]]. It declined to judge:
 - The image's size.
 - graphify's report repeating the repo's own text, which reaches the agents' context.
 
-## Known problems
+## Left for later
 
-- **Agents in a task worktree get neither map** (decision 6). Most real work runs in a worktree, so this limits the value of the feature most.
-- **The wizard can wait minutes** on a large repo's Serena index (decision 4). The build's shell step stops at 20 minutes.
-- **The image is 4 GB**, about 0.9 GB more than before, and building it from scratch took over 40 minutes on this network, most of it the existing `pnpm install` layer.
-- **The analysis card offers *Analyse*** while a clone is still building its maps, though the analyst will start on its own; clicking it is refused by the folder lock.
-- **A repo with no code reads as *build failed*:** graphify says *"No code files found"* (seen cloning `octocat/Hello-World`).
-- **The seeded *Scratch* project gets built on its own.** It is a Trusted Software project, so the scheduler's first pass builds its maps on this machine, which downloads graphify, Serena and its language servers through `uvx` once. Free, but it uses the network.
-- **A committed symlink at `.lamproom/knowledge`, `stamp.json` or a `.log` could steer a Trusted build's writes** (review m1), a scheduled one included, to a file such as `~/.zshrc`. Deleting the folder first covers a symlink at `.lamproom/knowledge` itself and anything inside it. Left: a symlink at `.lamproom` (the build writes through it) and any file a run makes appear between the delete and the write. Runs also refuse the maps when git tracks anything under `.lamproom/`, but the build itself doesn't check.
-- **The repo's `uv.toml` or `pyproject.toml` `[tool.uv]` steers a Trusted build's `uvx`** (m2), since it runs in the repo's folder. Fix: `--no-config`, run from the data folder.
-- **A flow with its own Docker image gets `/usr/local/bin/lr-serena`**, which that image doesn't have (m3); its agents then lack Serena's tools.
-- **The scheduler retries refused starts every 10 minutes forever** (m4): an Untrusted project on macOS, or a spent budget.
-- **A committed `project.yml` naming other languages** (m5) is covered: the build deletes the folder and writes its own, and runs refuse the maps while git tracks anything under `.lamproom/`.
-- **A Serena index outlives turning Serena off.** The files stay in `.lamproom/knowledge/` until removed by hand; runs stop getting Serena at once.
+What this work left unfixed or open is in [[Deferred Work#Knowledge assets]], the one list of deferred work.
 
 ## Related
 

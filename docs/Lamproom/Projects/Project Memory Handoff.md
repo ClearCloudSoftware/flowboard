@@ -13,7 +13,7 @@ This note is the state of branch `feature/project-memory` on 2026-11-15: cut fro
 - [[#What was checked]].
 - [[#Decisions open to your review]]: the choices that shape the feature.
 - [[#Rulings made on your behalf]]: the smaller decisions taken while building, with what each costs if wrong.
-- [[#Known problems]]: what is left unfixed.
+- [[#Left for later]]: what is left unfixed.
 - [[#Review]]: what the review found, and what was fixed.
 
 The plan is `docs/superpowers/plans/2026-11-15-project-memory.md`.
@@ -69,18 +69,9 @@ All with scripted agents and hand-made folders; no real agent ran.
 | 11 | The secret screen is a few known shapes, built on shell steps' `SECRET_NAME` rule | flow-exec's `SECRET` matches variable names, not values, so it is reused as one rule of several | A secret of another shape gets through; prose like *token: refresh* is dropped |
 | 8 | Times on the card are the browser's local time | As the other pages show times | None |
 
-## Known problems
+## Left for later
 
-- **Two commits ending in the same instant can lose one's notes.** The store is read, changed and written with no lock. Two runs of one project that end within milliseconds can lose one side's notes, and a **Forget** racing a commit brings the forgotten notes back (m6).
-- **A corrupt store hides Forget all** (m1, `app/projects/memory.tsx`): the card shows the read error and no list, so the button isn't there; delete `<data>/memory/<id>.json` by hand.
-- **An edited pin on resume can move a nested run's memory to the outer project** (m2, `flow-run.ts` resume): resume checks only that the project still `owns()` the folder, and takes the project id from the pin.
-- **Keyword stuffing wins recall** (m3): ranking is a raw count of shared words, so a hostile note listing many common words outranks real ones.
-- **Forged answers** (m5): a Trusted agent's shell can write its step logs, so a forged question and choice is saved as *your answer*.
-- **With memory off, an unreadable `projects.json` or app settings file prints a `-- memory: not read` line** (m7), where before this branch nothing was said.
-- **The page shows the artifact through `readArtifact` in `flow-logs.ts`, which follows links.** That's from before this branch, not memory's path: the commit opens artifacts without following links.
-- **Keyword recall is crude.** No stemming (`test` and `tests` are different words), no synonyms, and a long preamble matches broadly. Fine for 500 short notes; Mem0 or FTS5 is the upgrade.
-- **There's no measure of whether memory pays** (Measuring Memory Payoff): no inbox-repeats meter, and part 7's tokens are billed inside the run.
-- **Never run with a real agent.** The commit and recall paths ran with scripted agents only.
+What this work left unfixed or open is in [[Deferred Work#Project memory]], the one list of deferred work.
 
 ## Review
 
@@ -90,7 +81,7 @@ A fresh reviewer read `6842f67..fcc3bf5`: no Critical, two Important, and one Mi
 - **I2, notes written by a contained run were recalled into a host-tier run after a trust raise.** Each note now keeps its run's trust, and recall takes only notes written at the run's trust or a less contained one; notes from before count as Untrusted. The page shows it. Tests: *a note is recalled only into runs at its tier or a stricter one…*, and the lr-run-flow test seeds a Normal note that a Trusted run no longer recalls.
 - **I3, free-text answers became memory with no warning.** Only choices are kept now, and every note, answer or artifact chunk, goes through `looksSecret`. Tests: *a run leaves its chosen answers… never typed answers*, *a note that looks like it holds a secret is left out*.
 
-The minors left unfixed are m1, m2, m3, m5, m6 and m7 in [[#Known problems]].
+The minors left unfixed are m1, m2, m3, m5, m6 and m7 in [[Deferred Work#Project memory]].
 
 The reviewer declined to judge these, which stand as they are:
 

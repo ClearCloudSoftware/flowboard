@@ -12,8 +12,7 @@ This note is the state of branch `feature/project-budget` on 2026-11-13: cut fro
 - [[#How the cap works]], in brief.
 - [[#Decisions open to your review]]: the four choices that shape the feature.
 - [[#Rulings made on your behalf]]: every smaller decision taken while building, with what it costs if wrong.
-- [[#Open questions]]: what the review set aside for you.
-- [[#Deferred findings]]: minor problems left unfixed.
+- [[#Left for later]]: what the review set aside for you, and minor problems left unfixed.
 
 The behaviour in full is in [[Run Flow Reference#Stopping and resuming]]. The plan is `docs/superpowers/plans/2026-11-13-project-budget.md`.
 
@@ -31,7 +30,7 @@ These shape what the feature does. Each was taken to keep the first version smal
 
 | # | Decision | Why | What changing it takes |
 |---|---|---|---|
-| 1 | The month is the calendar month in local time, and a run's whole cost counts in the month it started, read from its run folder's name | The cards' *this week* already counts a run on the day it started; one rule for both | A run resumed in a later month still spends against its start month's cap (see [[#Open questions]] #1). Counting by when money is spent needs per-call timestamps in `state.json` |
+| 1 | The month is the calendar month in local time, and a run's whole cost counts in the month it started, read from its run folder's name | The cards' *this week* already counts a run on the day it started; one rule for both | A run resumed in a later month still spends against its start month's cap (see [[Deferred Work#Project budget]], open question 1). Counting by when money is spent needs per-call timestamps in `state.json` |
 | 2 | *Ask me first* is a refusal with a **Start anyway** / **Resume anyway** button, asked again on every start and resume | There is no notifier yet; a button is the smallest way to ask | When escalation is built, the question can go to chat instead |
 | 3 | The alert shows on a run's start line and on the project's card and page; a run crossing it midway says nothing until the next start | A mid-run line would need a crossing check at every agent call | A line printed once when the spend crosses `alertAt` |
 | 4 | Runs going at once may together pass the cap: each agent call is capped at what is left as it starts | Reserving money per call would need a shared ledger between lr-run-flow processes | A lock file or a reservation per call |
@@ -57,25 +56,9 @@ The decisions taken while building, in the order they were made.
 | 13 | After review: a run resumed after its month is over is told *"…for October 2026, the month this run started; raise its monthly cap on the project page"*, without *"or wait for November"* | Waiting never helps such a run | A wording change |
 | 14 | After review: when `runs/` sits inside the project's folder, agents may not write any of it, other runs' folders included, not only their own run's | Other runs' `state.json` is what the cap adds up; an agent could zero it and spend more | An agent can't write under `runs/` in that layout |
 
-## Open questions
+## Left for later
 
-The final review set these aside as yours to decide.
-
-1. **Which month does a resumed run spend against?** Today, its start month (decision 1). A run that paused on Oct 31 and resumes in November is refused against October's cap until that cap is raised. The alternative is to check a resume against the current month, counting the run's earlier spend in October and its new spend in November.
-2. **Should *Start anyway* lift the cap for the rest of that run?** Today it does: after *anyway*, only the flow's own budget limits that run until it next pauses. The alternative is to let it through and then pause again at the next agent call.
-3. **Should runs outside the app's `runs/` folder count?** A run started from the command line in another folder, without `LAMPROOM_RUNS_DIR`, writes its run folder elsewhere, and the cap never sees it. The runs folder layout predates this branch.
-4. **Should the analysis agent's cost count?** The budget page used to say so. It will, once the analysis agent (phase 4) writes run folders like any flow; nothing is built for it yet.
-
-## Deferred findings
-
-Minor problems the review found and that were left unfixed.
-
-- **The overshoot bound in the docs is too small.** Parallel steps inside one run each get all that is left, so the cap can be passed by one agent call per call running at once, not one per run.
-- **Every check reads every run folder.** `listRuns` also checks each run's status (a second `state.json` read, `host.json`, a process probe), plus a `realpath` per run, on every pass of `drive`'s loop. Fine at hundreds of runs; a lighter reader, or a cache by modification time, past that.
-- **Both budgets spent at once.** The end line then names only the flow's budget and suggests `--budget-usd`, and the resume is refused by the project's cap.
-- **The *anyway* check is a text match.** lr-run-flow's usage error now contains the flag too; the page can't trigger one today. A separate exit code would be sturdier.
-- **The Projects Index overstates the card.** It says the card shows the month's spend; the card shows the week's, plus the problem line past the alert.
-- **Week and month figures count nested repos differently.** The week's spend and the run counts use `owns`, so an outer project includes a nested project's runs; the month's spend uses `ownerOf`, so it doesn't.
+What this work left unfixed or open is in [[Deferred Work#Project budget]], the one list of deferred work.
 
 ## Related
 
