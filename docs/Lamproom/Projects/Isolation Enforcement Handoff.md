@@ -14,7 +14,7 @@ This work was built on branch `feature/isolation-enforcement` (cut from `dev` at
 - [[#Fixed: the .git escape]]: Lamproom's own git calls no longer run config a box wrote; what that does not cover.
 - [[#What happens when a run starts]].
 - [[#Rulings made on your behalf]]: every decision taken while building, with what it costs if wrong.
-- [[#Deferred findings]].
+- [[#Left for later]].
 
 The design and the code-level details are in [[Repository Trust And Sandboxing#Built]]. The plan is `docs/superpowers/plans/2026-11-13-isolation-enforcement.md`.
 
@@ -110,7 +110,7 @@ A `-c` blocklist was not enough: a git dir the box controls controls all of git'
 
 ### What it does not cover
 
-- **Your own git.** A `.git` a box planted or rewrote stays on disk. Git you run in that folder uses it and runs its config: a shell prompt that runs `git status`, an IDE's git extension, a `git commit` you type in the workspace. Lamproom refuses such a folder and says so, but it does not remove the `.git` or warn after a run. A scan after each run that warns about such entries is a follow-up, not built.
+- **Your own git.** A `.git` a box planted or rewrote stays on disk. Git you run in that folder uses it and runs its config: a shell prompt that runs `git status`, an IDE's git extension, a `git commit` you type in the workspace. Lamproom refuses such a folder and says so, but it does not remove the `.git` or warn after a run. A scan after each run that warns about such entries is not built ([[Deferred Work#Isolation enforcement]]).
 - **git-lfs and other global filters.** A box can write a `.gitattributes` with `filter=lfs`. A git-lfs filter installed in your global config then runs on Lamproom's `git status`. That is your own tool, not the box's code.
 
 ## What happens when a run starts
@@ -245,17 +245,9 @@ These are the decisions taken while building, in the order they were made. They 
 | 28 | A squash land compares the staged tree with HEAD before committing, rather than `git diff --cached --quiet` | A commit with nothing staged prints a status that enters submodules; the diff would miss a submodule-only change | None |
 | 29 | Registration checks git's answer: the folder must be inside the toplevel git names, and the git dir must be `<top>/.git`, compared in on-disk letter case | A planted `.git` with `core.worktree` could steer registration to another repo | None |
 
-## Deferred findings
+## Left for later
 
-These are lower priority, kept for later. The full list is in the ledger.
-
-- **Plugin tools.** On Claude, a plugin's tool that writes files passes without asking. Only the listed edit and shell tools ask.
-- **"Every file edit" plus a saved script prefix.** Together, rules like "every file edit" and `pnpm test` let an agent run anything: it edits `package.json`, then runs the script.
-- **Resume of a gone OpenSandbox box** from the page still fails silently.
-- **`projects.json` locking.** Both the app and lr-run-flow write it with no lock, so a rare simultaneous write could be lost.
-- **Containerised lr-run-flow.** lr-run-flow started from the Docker image now needs `LAMPROOM_DATA_DIR`.
-- **Letter case in `--folder`.** On macOS, a `--folder` typed in a different case than on disk finds no project and is refused. The app always passes exact paths.
-- **Cloning into a registered repo.** The wizard clones first and only then refuses a parent folder inside a registered project's repo, leaving the clone on disk.
+What this work left unfixed or open is in [[Deferred Work#Isolation enforcement]], the one list of deferred work.
 
 ## Related
 

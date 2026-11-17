@@ -1591,7 +1591,7 @@ None: every finding a skeptic checked held up, in full or as corrected.
 | G | [[Execution Testing]] | full |  |
 | H | [[Run Flow Reference]] | full | Every section checked against the code. The shell parts were run; the agent-only parts were checked by reading the code and running the engine from scratch scripts. |
 | H | [[Testing The Run Flow CLI]] | partial | Free scenarios 1-11 were all run: 5 and 6 in a pseudo-terminal through expect, hang and timeout bounded to sleep 1 loops, the git case staged instead of committed. The live test and agent scenarios 1… |
-| I | [[Run Flow Deferred Issues]] | full | All 23 rows checked against code at 44dd03d (code unchanged since 20e6f7a); the six review fixes it lists exist as test-backed commits. Rows not given their own finding were confirmed from code: back… |
+| I | [[Deferred Work#Run flow engine|Run Flow Deferred Issues]] | full | All 23 rows checked against code at 44dd03d (code unchanged since 20e6f7a); the six review fixes it lists exist as test-backed commits. Rows not given their own finding were confirmed from code: back… |
 | I | [[Run Flow Review Loop]] | full | Its YAML and a flow combining all three variations validated with --check; the loop was driven through advance() in a scratch script. |
 | I | [[Run Flow Monitor Readiness]] | full | Claims about recorded data were checked against code and a shell-only run's state.json, flow.jsonl and run log. Monitor-side claims were checked against the Monitor notes. 'Order to build it in' is a… |
 | J | [[Execution Open Questions]] | full | All 72 classified: 52 have their own finding (J-01 to J-53); the 19 web app, workspace, sandbox, queue and Slack questions share J-54. |
@@ -1608,5 +1608,5 @@ None: every finding a skeptic checked held up, in full or as corrected.
 
 - [[Flow Orchestration Conformance Audit]]
 - [[Multi-Agent Orchestration Analysis]]
-- [[Run Flow Reference]], [[Run Flow Deferred Issues]]
+- [[Run Flow Reference]], [[Deferred Work#Run flow engine|Run Flow Deferred Issues]]
 - [[Execution Index]], [[Flow Design Index]]

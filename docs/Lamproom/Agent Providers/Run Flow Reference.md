@@ -352,7 +352,7 @@ Left for later, as the lr-run-flow plan's *Left out* list has it: the worker, qu
 
 - [[Testing The Run Flow CLI]]
 - [[Run Flow Review Loop]]
-- [[Run Flow Deferred Issues]]
+- [[Deferred Work#Run flow engine]]
 - [[Run Flow Monitor Readiness]]
 - [[Run Config Reference]]
 - [[Multi-Agent Orchestration Analysis]]

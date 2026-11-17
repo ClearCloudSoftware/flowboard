@@ -13,7 +13,7 @@ This note is the state of branch `feature/slack-escalation` on 2026-11-15: cut f
 - [[#Setting up Slack]]: the app manifest, and where the tokens go.
 - [[#Decisions open to your review]]: the choices that shape the feature.
 - [[#Rulings made on your behalf]]: the smaller decisions taken while building, with what each costs if wrong.
-- [[#Known problems]]: what is left unfixed.
+- [[#Left for later]]: what is left unfixed.
 - [[#Review]]: what the whole-branch review found, what was fixed, and what it left to judgement.
 
 The plan is `docs/superpowers/plans/2026-11-15-slack-escalation.md`.
@@ -106,23 +106,9 @@ All against a **fake Slack**; Alex has no tokens yet, so nothing has run against
 | 14 | An ask file must pass a shape check (string ids, heading, prompt, help and option labels; known kinds; selects with options; ids once) to be shown or escalated; a missing `at` reads as `''` and never escalates; an empty batch still counts | An agent on this machine can write its run folder; phase 5's stuck-gate check reads asks without `at` | A malformed ask is invisible on the page too, and its run reads *running*, not *waiting* |
 | 15 | The Socket Mode watchdog looks every 10 s, takes a gap over 60 s as a sleep, and replaces a socket once it is an hour old | Node's `WebSocket` sends no pings, and Lamproom only writes acks, so a dead socket raises no event | A reconnect each hour; a click in the second it takes is redelivered by Slack |
 
-## Known problems
+## Left for later
 
-- **Never run against a real Slack workspace.** Everything was checked against a fake that follows Slack's documented shapes. The first real setup may find a Block Kit field Slack refuses; the post's error then shows as a problem on the Connections page.
-- **The two tokens are not checked to belong to the same app.** If the app-level token is another app's, the socket connects and **Answer** clicks on the bot's messages never arrive.
-- **Two Lamproom servers on one data folder both post.** The `globalThis` guard is per process.
-- **A question asked before the server started** is posted on the first check after it, however long it waited.
-- **Answers from Slack need the server's socket.** While it reconnects, a click or a submission is delivered again by Slack on the next connection, or lost after Slack's retries.
-- **Agents' questions in runs started without `--page`** (a terminal-only `pnpm lr-run-flow`) have no asks file and never escalate.
-
-- **Minors from the review, not fixed:**
-  - **m1:** a paused run with a leftover ask file can still open the modal before the repaint: `closedText` treats `closed.by === null` as open, so the answer is written to a dead run. Fix: `if (closed) return by ? … : 'No longer waiting.'`.
-  - **m2:** an answer that arrives while `chat.postMessage` is awaiting is credited to the terminal, because the post's update overwrites `closed` (against ruling 6).
-  - **m3:** `void noteAnswered(...)` in `onInteraction` has no `.catch`, so a full disk (ENOSPC) can surface as an unhandled rejection.
-  - **m4:** an ask with more than 99 questions dead-ends in the modal when a question past the 99th is required.
-  - **m5:** a select with no options makes Slack refuse `views.open`, which is only logged.
-  - **m6:** a bad bot token (`invalid_auth`, `token_revoked`) is filed as a channel problem and retried each minute per ask, not shown as a connection problem.
-  - **m7:** the page's 409 says only *already answered*, not by whom; PRD §10 wants *"already answered by <channel>"*.
+What this work left unfixed or open is in [[Deferred Work#Slack escalation]], the one list of deferred work.
 
 ## Review
 
