@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Sandbox } from '../src/flow-config.ts';
 import { findProject, isolationFor } from '../src/isolation.ts';
-import { dockerHasGvisor, dockerNotReady } from '../src/project.ts';
+import { dockerDefaultMemoryMb, dockerDefaultMemoryMbAsync, dockerHasGvisor, dockerHasGvisorAsync, dockerNotReady, dockerNotReadyAsync } from '../src/project.ts';
 
 /** A stand-in `docker`: an executable that prints `runtimes` for `info`, and exits `info`/`inspect` as told. */
 function fakeDocker(o: { runtimes?: string; info?: number; inspect?: number }): string {
@@ -118,4 +118,19 @@ test('the box image is LAMPROOM_IMAGE when set, else lamproom:cli', (t) => {
   assert.deepEqual(isolationFor('normal', undefined, [], false), { sandbox: { runtime: 'docker', image: 'lamproom:cli', env: [] }, tier: 'container', approvals: false });
   process.env.LAMPROOM_IMAGE = 'lamproom:cli-knowledge';
   assert.equal((isolationFor('normal', undefined, [], false) as { sandbox: Sandbox }).sandbox.image, 'lamproom:cli-knowledge');
+});
+
+test('dockerNotReadyAsync, dockerHasGvisorAsync and dockerDefaultMemoryMbAsync answer as their sync twins', async () => {
+  assert.equal(await dockerNotReadyAsync('lamproom:cli', fakeDocker({})), undefined);
+  assert.equal(await dockerNotReadyAsync('lamproom:cli', fakeDocker({ inspect: 1 })), dockerNotReady('lamproom:cli', fakeDocker({ inspect: 1 })));
+  assert.equal(await dockerNotReadyAsync('lamproom:cli', fakeDocker({ inspect: 1, info: 1 })), 'Docker is not running');
+  assert.equal(await dockerNotReadyAsync('lamproom:cli', '/no/such/docker'), 'Docker is not running');
+  assert.equal(await dockerHasGvisorAsync(fakeDocker({ runtimes: '{"runc":{},"runsc":{}}' })), true);
+  assert.equal(await dockerHasGvisorAsync(fakeDocker({ runtimes: '{"runc":{}}' })), false);
+  assert.equal(await dockerHasGvisorAsync(fakeDocker({ runtimes: '{"runsc":{}}', info: 1 })), false);
+  assert.equal(await dockerHasGvisorAsync('/no/such/docker'), false);
+  const mem = fakeDocker({ runtimes: String(8 * 2 ** 30) });
+  assert.equal(await dockerDefaultMemoryMbAsync(mem), dockerDefaultMemoryMb(mem));
+  assert.equal(await dockerDefaultMemoryMbAsync(mem), 2048);
+  assert.equal(await dockerDefaultMemoryMbAsync('/no/such/docker'), undefined);
 });

@@ -3,7 +3,7 @@
  * installed `claude` login: Lamproom keeps no token of its own. Every call runs `gh` with its arguments as a list,
  * never through a shell, and a name from a request is checked before it becomes one of them.
  */
-import { spawnSync } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
 
 export type GhStatus =
   | { state: 'connected'; login: string; accounts: string[] }
@@ -23,16 +23,36 @@ export const GH_REQUEST_ACCESS_URL = 'https://github.com/settings/connections/ap
 export const loginOk = (name: string) => /^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(name);
 const badLogin = (name: string) => `not a GitHub account name: ${name}`;
 
-const run = (gh: string, args: string[], timeout = 30_000) => spawnSync(gh, args, { encoding: 'utf8', timeout, env: { ...process.env, GH_PROMPT_DISABLED: '1', NO_COLOR: '1' } });
+const GH_ENV = () => ({ ...process.env, GH_PROMPT_DISABLED: '1', NO_COLOR: '1' });
+/** What a `gh` call said, as spawnSync reports it: `error` only when gh could not run or did not finish. */
+type Ran = { status: number | null; stdout: string; stderr: string; error?: Error };
+const run = (gh: string, args: string[], timeout = 30_000): Ran => spawnSync(gh, args, { encoding: 'utf8', timeout, env: GH_ENV() });
+/** `run` without blocking, in the same shape: a non-zero exit is a status, not an error. */
+const runAsync = (gh: string, args: string[], timeout = 30_000): Promise<Ran> =>
+  new Promise((done) =>
+    execFile(gh, args, { encoding: 'utf8', timeout, env: GH_ENV() }, (err, stdout, stderr) => {
+      const e = err as (NodeJS.ErrnoException & { killed?: boolean }) | null;
+      const ranAndExited = e && typeof e.code === 'number' && !e.killed;
+      done({ status: e ? (ranAndExited ? (e.code as unknown as number) : null) : 0, stdout, stderr, ...(e && !ranAndExited && { error: e }) });
+    }),
+  );
 /** What went wrong, in gh's words: the last line it wrote that says anything. */
-const why = (r: ReturnType<typeof run>) => (r.error ? r.error.message : (r.stderr || r.stdout).trim().split('\n').filter(Boolean).at(-1) ?? `gh exited ${r.status}`);
+const why = (r: Ran) => (r.error ? r.error.message : (r.stderr || r.stdout).trim().split('\n').filter(Boolean).at(-1) ?? `gh exited ${r.status}`);
 
 /** GitHub turning the token down, as opposed to not being reached. */
 const AUTH = /\b401\b|bad credentials|token|unauthori[sz]ed/i;
 
 /** Who `gh` is logged in as on github.com, and every account it holds there. */
 export function ghStatus(gh = 'gh', timeoutMs = 30_000): GhStatus {
-  const r = run(gh, ['auth', 'status', '--json', 'hosts'], timeoutMs);
+  return statusOf(run(gh, STATUS, timeoutMs));
+}
+/** `ghStatus` without blocking: what a page's server calls. */
+export async function ghStatusAsync(gh = 'gh', timeoutMs = 30_000): Promise<GhStatus> {
+  return statusOf(await runAsync(gh, STATUS, timeoutMs));
+}
+
+const STATUS = ['auth', 'status', '--json', 'hosts'];
+function statusOf(r: Ran): GhStatus {
   if (r.error) return (r.error as NodeJS.ErrnoException).code === 'ENOENT' ? { state: 'missing' } : { state: 'error', message: `the GitHub CLI did not answer: ${r.error.message}` };
   let hosts: { login: string; active: boolean; state: string; error?: string }[] = [];
   try {

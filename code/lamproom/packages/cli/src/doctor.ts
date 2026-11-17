@@ -11,12 +11,12 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { defaultDataDir } from './app-settings.ts';
 import { defaultFlowsDir, doctorNeeds, type FlowNeed, type Need, readSetup } from './doctor-needs.ts';
-import { type GhStatus, ghStatus } from './github.ts';
+import { type GhStatus, ghStatusAsync } from './github.ts';
 import { type HarnessStatus, harnessStatus } from './harnesses.ts';
 import { boxImage } from './isolation.ts';
 import { type OllamaState, refreshOllama } from './ollama.ts';
 import { keyView, type KeyTest, savedKey, testKey } from './openrouter.ts';
-import { dockerDefaultMemoryMb, dockerHasGvisor, dockerNotReady } from './project.ts';
+import { dockerDefaultMemoryMbAsync, dockerHasGvisorAsync, dockerNotReadyAsync } from './project.ts';
 import type { Harness, Trust } from './settings.ts';
 import { type SlackAnswer, slackCall, slackTokens } from './slack.ts';
 
@@ -80,7 +80,7 @@ const exec = promisify(execFile);
 const VERSION = /\d+\.\d+(?:\.\d+)?/;
 const NOT_RUNNING = 'Docker is not running';
 
-// ponytail: docker, gvisor and gh are the existing spawnSync probes, run one after another before the rest (runDoctor); make them async if the doctor gets slow
+// The docker and gh probes are the async twins of the run's own checks, so a page's server never blocks on them.
 export const realProbes: Probes = {
   async version(bin) {
     try {
@@ -93,8 +93,8 @@ export const realProbes: Probes = {
     }
   },
   async docker() {
-    if (dockerNotReady(boxImage()) === NOT_RUNNING) return { up: false, error: NOT_RUNNING };
-    const quarter = dockerDefaultMemoryMb(); // a step's default limit: a quarter of Docker's memory
+    if ((await dockerNotReadyAsync(boxImage())) === NOT_RUNNING) return { up: false, error: NOT_RUNNING };
+    const quarter = await dockerDefaultMemoryMbAsync(); // a step's default limit: a quarter of Docker's memory
     return { up: true, ...(quarter && { memoryMb: quarter * 4 }) };
   },
   async image(name) {
@@ -106,11 +106,11 @@ export const realProbes: Probes = {
       return null;
     }
   },
-  gvisor: async () => dockerHasGvisor(),
+  gvisor: () => dockerHasGvisorAsync(),
   harness: harnessStatus,
   openrouter: (key) => testKey(key),
   ollama: (dataDir) => refreshOllama(dataDir),
-  gh: async () => ghStatus(),
+  gh: () => ghStatusAsync(),
   slack: (bot) => slackCall(bot, 'auth.test'),
   async reach(url) {
     try {
@@ -354,8 +354,8 @@ export async function runDoctor(o: DoctorOptions): Promise<DoctorReport> {
     },
   };
 
-  // The spawnSync probes block the event loop: run them one after another first, so their blocking cannot expire the
-  // async probes' timers; then the rest at once.
+  // Docker, gVisor and gh first, one after another: an injected probe that blocks (a sync one) then cannot expire the
+  // other probes' timers. The real ones are async; this keeps the guarantee whatever is passed in.
   const first = new Map<CheckId, Awaited<typeof dockerRun>>([['docker', await dockerRun]]);
   for (const id of ['docker.gvisor', 'github'] as const) first.set(id, await timed(specs[id].run));
   const results = await Promise.all(CHECK_IDS.map((id) => first.get(id) ?? timed(specs[id].run)));

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fakeGh } from './fake-gh.ts';
-import { ghOwners, ghRepos, ghStatus, ghSwitch, loginOk } from '../src/github.ts';
+import { ghOwners, ghRepos, ghStatus, ghStatusAsync, ghSwitch, loginOk } from '../src/github.ts';
 
 const host = (login: string, active: boolean, state = 'success', error = '') =>
   ({ state, ...(error && { error }), active, host: 'github.com', login, tokenSource: 'keyring', gitProtocol: 'https' });
@@ -71,4 +71,25 @@ test('status: what is not about the login is not reported as one', () => {
   assert.deepEqual(ghStatus(offline), { state: 'error', message: 'dial tcp: lookup api.github.com: no such host' });
   const slow = fakeGh({ 'auth status --json hosts': 'sleep 5' });
   assert.equal(ghStatus(slow, 200).state, 'error');
+});
+
+test('ghStatusAsync answers as ghStatus', async () => {
+  const fakes = [
+    fakeGh({ 'auth status --json hosts': statusOf(host('alex-work', false), host('alex', true)) }),
+    '/nonexistent/gh',
+    fakeGh({ 'auth status --json hosts': `${statusOf()}; echo 'You are not logged into any GitHub hosts.' >&2; exit 1` }),
+    fakeGh({ 'auth status --json hosts': statusOf(host('bob', true, 'error', 'HTTP 401: Bad credentials (https://api.github.com/)')) }),
+    fakeGh({ 'auth status --json hosts': `echo 'unknown flag: --json' >&2; exit 1` }),
+  ];
+  for (const gh of fakes) assert.deepEqual(await ghStatusAsync(gh), ghStatus(gh), gh);
+});
+
+test('ghStatusAsync: does not block the event loop', async () => {
+  const gh = fakeGh({ 'auth status --json hosts': `sleep 1; ${statusOf()}` });
+  let ticked = false;
+  setTimeout(() => (ticked = true), 50);
+  const p = ghStatusAsync(gh);
+  await new Promise((r) => setTimeout(r, 200));
+  assert.equal(ticked, true);
+  assert.deepEqual(await p, { state: 'signed-out' });
 });
