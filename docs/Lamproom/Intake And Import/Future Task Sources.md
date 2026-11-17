@@ -5,6 +5,14 @@ module: Intake And Import
 
 # Future Task Sources
 
+> [!success] 2026-11-17 — GitHub Issues landed
+> The GitHub Issues adapter shipped as part of the TaskSource port plan.
+> It lives at `packages/adapters/src/ticket/github/` with
+> PAT auth, pagination, rate-limit handling, retry with `Retry-After`
+> support and token redaction. Still pending for Jira, Linear, webhooks and
+> OAuth — see the "What this plan does not finish" section of the
+> [plan](../../superpowers/plans/2026-11-14-task-source-port-markdown-and-github.md).
+
 Sources beyond a markdown file. None is in v1.
 
 > **Room for other sources** — *"Built so future sources (issue trackers, webhooks) can plug into the same path."* — feature map §17

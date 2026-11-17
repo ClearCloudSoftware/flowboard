@@ -358,9 +358,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { EnvFileCredentialResolver } from '../src/credentials/env-file-resolver.ts';
 
-test('resolves github_pat from .flowboard/credentials.json', async () => {
+test('resolves github_pat from .lamproom/credentials.json', async () => {
   const root = await mkdtemp(join(tmpdir(), 'cred-'));
-  await writeFile(join(root, '.flowboard/credentials.json'), JSON.stringify({ github: { kind: 'github_pat', token: 'ghp_xxx' } }), { mode: 0o600 });
+  await writeFile(join(root, '.lamproom/credentials.json'), JSON.stringify({ github: { kind: 'github_pat', token: 'ghp_xxx' } }), { mode: 0o600 });
   const r = new EnvFileCredentialResolver({ root });
   const got = await r.resolve('github', 'default');
   assert.deepEqual(got, { kind: 'github_pat', token: 'ghp_xxx' });
@@ -374,14 +374,14 @@ test('returns { kind: "none" } when the file is missing', async () => {
 
 test('returns { kind: "none" } when the source is not configured', async () => {
   const root = await mkdtemp(join(tmpdir(), 'cred-'));
-  await writeFile(join(root, '.flowboard/credentials.json'), JSON.stringify({}), { mode: 0o600 });
+  await writeFile(join(root, '.lamproom/credentials.json'), JSON.stringify({}), { mode: 0o600 });
   const r = new EnvFileCredentialResolver({ root });
   assert.deepEqual(await r.resolve('github', 'default'), { kind: 'none' });
 });
 
 test('refuses to read a file with mode broader than 0600', async () => {
   const root = await mkdtemp(join(tmpdir(), 'cred-'));
-  const path = join(root, '.flowboard/credentials.json');
+  const path = join(root, '.lamproom/credentials.json');
   await writeFile(path, '{}', { mode: 0o644 });
   await chmod(path, 0o644);
   const r = new EnvFileCredentialResolver({ root });
@@ -394,7 +394,7 @@ test('refuses to read a file with mode broader than 0600', async () => {
 - [ ] **Step 3: Implement**
 
 Behaviour:
-- Default path: `${root}/.flowboard/credentials.json`. Project-scoped variant (via `projectIdToDir`) lands later; v1 reads the single root-scoped file.
+- Default path: `${root}/.lamproom/credentials.json`. Project-scoped variant (via `projectIdToDir`) lands later; v1 reads the single root-scoped file.
 - On Windows, skip the mode check (NTFS perms don't map); on POSIX, `statSync` and reject if `(mode & 0o077) !== 0`.
 - Parse JSON; return the entry for `sourceId`, or `{ kind: 'none' }` when missing. Return `{ kind: 'none' }` on `ENOENT`.
 - Never log the token. Errors mention the path and the reason (`'file mode broader than 0600'`, `'JSON parse failed'`) but never a value.
@@ -892,7 +892,7 @@ git commit -m "feat(adapters): GithubTaskSource with PAT auth, retry and paginat
 - Create: `packages/adapters/test/github-live.test.ts`
 - Create: `packages/adapters/test/markdown-live.test.ts` (round-trip against the backlog-importer skill's own sample if it has one, otherwise a fixture)
 - Modify: `package.json` — add github + markdown lanes to `test:live`
-- Create: `README.task-sources.md` — one-page operator guide (how to put a PAT in `.flowboard/credentials.json`, how to run a fetch from the CLI, what rate-limit headers to watch)
+- Create: `README.task-sources.md` — one-page operator guide (how to put a PAT in `.lamproom/credentials.json`, how to run a fetch from the CLI, what rate-limit headers to watch)
 - Modify: `docs/Lamproom/Intake And Import/TaskSource Port.md` — port decisions row, implementation status
 - Modify: `docs/Lamproom/Intake And Import/Markdown Task Source.md` — point at the new package path
 - Modify: `docs/Lamproom/Intake And Import/Future Task Sources.md` — mark GitHub as shipped, note the webhook deferral
@@ -932,7 +932,7 @@ test('live GitHub fetch returns real issues', { skip: !live }, async () => {
 - [ ] **Step 3: Run once against a real repo**
 
 ```bash
-echo '{"github":{"kind":"github_pat","token":"ghp_xxx"}}' > .flowboard/credentials.json && chmod 600 .flowboard/credentials.json
+echo '{"github":{"kind":"github_pat","token":"ghp_xxx"}}' > .lamproom/credentials.json && chmod 600 .lamproom/credentials.json
 FLOWBOARD_LIVE_GITHUB_REPO=octokit/octokit.js pnpm test:live
 ```
 

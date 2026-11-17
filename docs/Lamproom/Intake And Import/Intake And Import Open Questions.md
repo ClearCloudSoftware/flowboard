@@ -5,6 +5,29 @@ module: Intake And Import
 
 # Intake And Import Open Questions
 
+> [!success] 2026-11-17 — port + markdown + GitHub plan resolved several
+> * **#1 explicit id syntax** — `{#slug}` per task becomes the `importKey`
+>   directly, bypassing `deriveImportKey`. Front-matter is not read. A
+>   duplicate explicit id throws a file-level error.
+> * **#2 acceptance_criteria / non_goals** — first-class fields on
+>   `ParsedTask`, gated by the `acceptance_criteria` capability.
+> * **#4 title edits** — resolved for `stable_upstream_key` sources
+>   (GitHub keys like `github-42` stay stable across title edits). Still
+>   open for markdown without `{#slug}` and for Jira/Linear (follow-up
+>   plans).
+> * **#10 repeated titles in one file** — within-batch `deriveImportKey`
+>   appends `-2`, `-3` suffixes; markdown adapter throws on a duplicate
+>   explicit `{#slug}`.
+> * **#22 port shape** — `SourceId` is an open string; `ParsedTask` gained
+>   `acceptanceCriteria`, `nonGoals`, `labels`, `assignees`, `extras`,
+>   `_hint`.
+> * **#25 (parts)** — push vs pull: `ingest()` is on the port interface;
+>   credentials + egress: `SourceCredentialResolver` port + env-file
+>   resolver. Webhook ingest implementations and OAuth are deferred.
+>
+> See [plan](../../superpowers/plans/2026-11-14-task-source-port-markdown-and-github.md)
+> and [spec](../../superpowers/specs/2026-11-14-task-source-port-design.md).
+
 Every place the sources disagree or leave a gap. Proposals are marked; none is in a source. Rows marked *observed* were found by running the reference code (`markdown-source.ts`, Node 24.11), not stated in a source. Some questions are shared with [[Execution Open Questions]], [[Flow Design Open Questions]], [[Monitor Open Questions]], [[Task Detail Open Questions]], [[Projects Open Questions]], [[Workspaces Open Questions]], [[Agent Providers Open Questions]] and [[Settings And Plumbing Open Questions]]; those are linked rather than repeated.
 
 | Theme | Questions |

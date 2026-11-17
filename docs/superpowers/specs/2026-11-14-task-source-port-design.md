@@ -242,7 +242,7 @@ Three disciplines every adapter follows (lifted straight from `claude/options.ts
 2. **Strip inherited keys from spawned-process env.** If an adapter ever spawns (`gh`, `jira-cli`), remove `GITHUB_TOKEN`, `GH_TOKEN`, `JIRA_API_TOKEN`, `ATLASSIAN_API_TOKEN` from the inherited env before passing it on.
 3. **Never log a token.** Error messages redact anything that looks like `ghp_[A-Za-z0-9]{36,}` or similar.
 
-The first resolver adapter is `EnvFileCredentialResolver` — reads a `.flowboard/credentials.json` scoped by project, with the schema `{ [sourceId]: SourceCredentials }`. The file is `.gitignore`d and has mode `0600` enforced at read time.
+The first resolver adapter is `EnvFileCredentialResolver` — reads a `.lamproom/credentials.json` scoped by project, with the schema `{ [sourceId]: SourceCredentials }`. The file is `.gitignore`d and has mode `0600` enforced at read time.
 
 v1 only: `kind: 'github_pat'` and `kind: 'none'`. OAuth variants land in their own plans.
 

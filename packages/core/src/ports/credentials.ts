@@ -12,7 +12,7 @@
  *
  * The first resolver adapter is `EnvFileCredentialResolver` under
  * `adapters/src/credentials/env-file-resolver.ts`. It reads
- * `.flowboard/credentials.json` with POSIX mode `0600` enforced.
+ * `.lamproom/credentials.json` with POSIX mode `0600` enforced.
  *
  * See docs/superpowers/specs/2026-11-14-task-source-port-design.md, section
  * "Credentials".

@@ -1,8 +1,8 @@
 /**
  * EnvFileCredentialResolver — the first SourceCredentialResolver adapter.
  *
- * Reads `.flowboard/credentials.json` under a configurable root (usually the
- * FlowBoard installation root, not the project repo). The file is a plain
+ * Reads `.lamproom/credentials.json` under a configurable root (usually the
+ * Lamproom installation root, not the project repo). The file is a plain
  * JSON object keyed by SourceId, with each value a SourceCredentials union
  * member:
  *
@@ -17,7 +17,7 @@
  *      editing the file in an editor that doesn't preserve permissions.
  *   2. The parsed value's `kind` MUST be known to this resolver (v1: 'none',
  *      'github_pat'). An unknown kind is refused with an error naming the
- *      kind — this catches a config written for a later version of FlowBoard
+ *      kind — this catches a config written for a later version of Lamproom
  *      that this build does not yet understand.
  *
  * Errors mention the file path and the reason. They NEVER include a token
@@ -34,7 +34,7 @@ import type { SourceCredentials, SourceCredentialResolver, SourceId } from '@lam
 const KNOWN_KINDS: ReadonlySet<string> = new Set(['none', 'github_pat']);
 
 export interface EnvFileCredentialResolverOptions {
-  /** Directory that contains the `.flowboard/credentials.json` file. */
+  /** Directory that contains the `.lamproom/credentials.json` file. */
   root: string;
 }
 
@@ -42,7 +42,7 @@ export class EnvFileCredentialResolver implements SourceCredentialResolver {
   private readonly path: string;
 
   constructor(opts: EnvFileCredentialResolverOptions) {
-    this.path = join(opts.root, '.flowboard', 'credentials.json');
+    this.path = join(opts.root, '.lamproom', 'credentials.json');
   }
 
   async resolve(sourceId: SourceId, _projectId: string): Promise<SourceCredentials> {

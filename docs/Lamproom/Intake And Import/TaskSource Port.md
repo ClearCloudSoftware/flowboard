@@ -5,6 +5,16 @@ module: Intake And Import
 
 # TaskSource Port
 
+> [!success] 2026-11-17 — port landed in code
+> The port lives at `packages/core/src/ports/task-source.ts`
+> with the envelope in `ticket.ts` and credentials in `credentials.ts`. The
+> type `Capability` is named `SourceCapability` in code to avoid collision
+> with `AgentProvider.Capability`. See the
+> [plan](../../superpowers/plans/2026-11-14-task-source-port-markdown-and-github.md)
+> and
+> [spec](../../superpowers/specs/2026-11-14-task-source-port-design.md).
+> The reference sketches below are preserved as historical context.
+
 The seam between "where tasks come from" and the rest of Lamproom. Architecture component **#14, *Ingestion → TaskSource port*** (`05` §14).
 
 > *"Ingestion. Markdown import today; the `backlog-importer` agent is the "messy file" adapter. All adapters normalize through one **server-derived** `import_key` (`frontmatter.id` → else `slugify(title)`) — never trust an agent-derived key (the backlog's duplicate-import root cause)."* — `01-ports.md`

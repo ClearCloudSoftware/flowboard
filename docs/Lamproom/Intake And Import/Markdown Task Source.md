@@ -5,6 +5,18 @@ module: Intake And Import
 
 # Markdown Task Source
 
+> [!success] 2026-11-17 — adapter landed
+> The markdown adapter lives at
+> `packages/adapters/src/ticket/markdown/` as three files
+> (`options.ts`, `normalize.ts`, `provider.ts`) backed by `unified` +
+> `remark-parse`. Bodies are sliced verbatim from the source via mdast
+> position offsets — never re-serialised. The `{#slug}` syntax is the
+> explicit-id override (bypasses `deriveImportKey`); a file with two
+> `{#same}` throws. The "category heading with bold bullets" shape from the
+> v1 reference is NOT supported — this build takes the simpler "only `##`
+> opens a task" rule. See
+> [plan](../../superpowers/plans/2026-11-14-task-source-port-markdown-and-github.md).
+
 The v1 [[TaskSource Port]] adapter: a deterministic parser that turns a markdown backlog into tasks. Its runnable reference is `docs/old/reference/adapters/source/markdown/markdown-source.ts`.
 
 > *"The whole point is the two rules the old build got wrong three times (backlog Story 7.3): 1. ONE parser, BOTH shapes — `##`/`###` heading-as-task, and a category heading whose `- **Title** …` bullets are the tasks. 2. `import_key` is ALWAYS server-derived (explicit `{#slug}` wins, else slugify(title)). Never trust an upstream/agent key — an unstable key is what duplicated tasks across runs."* — `markdown-source.ts` header
