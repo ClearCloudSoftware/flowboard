@@ -128,11 +128,12 @@ To check from the app, open **Settings → System status**. The page runs the ch
 
 - **Built 2026-11-17:** `lr-doctor` with `--json`, and the System status page (`/settings/status`, from `GET /api/doctor`). The Docker and GitHub probes don't block, so the page never freezes the app while it checks.
 - **Not checked:** whether the app server is up, whether the image is older than its Dockerfile, egress, and Codex (no adapter yet).
-- **Known small gaps,** listed with fixes in [[Machine Doctor Handoff#Deferred minor issues]]: for example, a Normal project requires `lamproom:cli` even when every flow brings its own image.
+- **Known small gaps,** listed with fixes in [[Deferred Work#Machine doctor]]: for example, a Normal project requires `lamproom:cli` even when every flow brings its own image.
 
 ### Related notes
 
-- [[Machine Doctor Handoff|What was built, the calls made, and what's deferred]]
+- [[Machine Doctor Handoff|What was built and the calls made]]
+- [[Deferred Work#Machine doctor|What's left for later]]
 - The design: `docs/superpowers/specs/2026-11-17-lr-doctor-design.md` and `docs/superpowers/specs/2026-11-17-doctor-page-design.md`
 
 ## Flow Design
