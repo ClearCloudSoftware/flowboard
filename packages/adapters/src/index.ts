@@ -21,3 +21,4 @@ export {
   CredentialMissingError as JiraCredentialMissingError,
   redactTokens as redactJiraTokens,
 } from './ticket/jira/auth.ts';
+export * from './ticket/jira/oauth.ts';
