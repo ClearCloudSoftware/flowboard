@@ -13,3 +13,6 @@ export * from './ticket/replay/replay-source.ts';
 export * from './ticket/markdown/provider.ts';
 export * from './ticket/github/provider.ts';
 export * from './ticket/github/auth.ts';
+export * from './mcp/client.ts';
+export * from './mcp/errors.ts';
+export * from './mcp/transport.ts';

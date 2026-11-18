@@ -102,6 +102,9 @@ importers:
       '@lamproom/core':
         specifier: workspace:*
         version: link:../core
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.32.1
+        version: 1.32.1(zod@4.6.7)
       '@octokit/graphql':
         specifier: 8.1.1
         version: 8.1.1
@@ -118,9 +121,6 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.135.0
         version: 0.135.0(zod@4.6.7)
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.32.1
-        version: 1.32.1(zod@4.6.7)
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -139,6 +139,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@inquirer/prompts':
+        specifier: ^8.7.3
+        version: 8.7.3(@types/node@24.19.2)
       '@lamproom/adapters':
         specifier: workspace:*
         version: link:../adapters
@@ -148,9 +151,6 @@ importers:
       '@lamproom/core':
         specifier: workspace:*
         version: link:../core
-      '@inquirer/prompts':
-        specifier: ^8.7.3
-        version: 8.7.3(@types/node@24.19.2)
       yaml:
         specifier: ^2.9.1
         version: 2.9.1
