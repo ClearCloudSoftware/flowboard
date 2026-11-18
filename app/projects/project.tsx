@@ -29,6 +29,7 @@ import { PROJECT_TYPES, resolveSettings, ruleText } from '../../packages/cli/src
 import { appSettingsQuery, inProject, newRunHref, projectsQuery, removeProject, updateProject, usd } from './api.ts';
 import type { ProjectView } from './api.ts';
 import { Analysis } from './analysis.tsx';
+import { ImportFromJira } from './import-jira.tsx';
 import { Knowledge } from './knowledge.tsx';
 import { Memory } from './memory.tsx';
 import { FlowSelect } from './flow-select.tsx';
@@ -296,6 +297,7 @@ export function ProjectPage() {
         {p && (
           <>
             <Remove p={p} live={live} />
+            <ImportFromJira projectId={p.id} projectSlug={p.slug} />
             <Button size="sm" asChild>
               <Link href={newRunHref(p)}>
                 <Play aria-hidden /> New run

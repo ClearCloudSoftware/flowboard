@@ -12,6 +12,37 @@ import type { SocketState } from '../../packages/cli/src/slack.ts';
 import type { Memory } from '../../packages/cli/src/memory.ts';
 import { ApiError, call } from '../flows/api.ts';
 
+/**
+ * Mirrors `JiraStatus` and `ImportRow` from `packages/cli/src/{jira,schema}.ts`.
+ * Inlined here because a bare `import type` from those files drags server-only
+ * modules (`node:fs`, drizzle-orm's SQLite core) into the client build and
+ * sends Next.js HMR into a reload loop.
+ */
+export interface JiraStatus {
+  connected: boolean;
+  kind?: 'atlassian_oauth' | 'atlassian_api_token';
+  siteName?: string;
+  baseUrl?: string;
+  email?: string;
+  expiresAt?: string;
+  defaultJql?: string;
+}
+
+export type ImportState = 'running' | 'done' | 'failed' | 'cancelled';
+export interface ImportRow {
+  id: string;
+  projectId: string;
+  sourceId: string;
+  startedAt: string;
+  endedAt: string | null;
+  state: ImportState;
+  created: number;
+  updated: number;
+  skipped: number;
+  pages: number;
+  error: string | null;
+}
+
 export type { AppSettings, CloneJob, GhRepo, GhStatus, Project, ProjectView };
 
 /** Every project with its run counts and week's spend, polled so a run started elsewhere shows up. */
@@ -81,6 +112,21 @@ export const refreshModels = () => call<ModelsView>('/api/models?refresh=1');
 export const saveOpenRouterKey = (key: string) => call<KeyView>('/api/openrouter/key', { method: 'PUT', body: JSON.stringify({ key }) });
 export const removeOpenRouterKey = () => call<KeyView>('/api/openrouter/key', { method: 'DELETE', body: '{}' });
 export const testOpenRouterKey = () => call<KeyTest>('/api/openrouter/key', { method: 'POST', body: '{}' });
+
+/** Whether a Jira credential is configured (used to decide if the "Import from Jira" button is enabled). */
+export const jiraStatusQuery = queryOptions({ queryKey: ['jira', 'auth-status'], queryFn: () => call<JiraStatus>('/api/jira/auth/status'), refetchInterval: 30_000 });
+
+/** Kick off a Jira import for a project; returns the id so the UI can poll `importQuery`. */
+export const startJiraImport = (projectId: string) =>
+  call<{ importId: string; reused: boolean }>(`/api/import/jira?project=${encodeURIComponent(projectId)}`, { method: 'POST', body: '{}' });
+
+/** One import row, polled every 1.5s while running; the poll stops once state leaves 'running'. */
+export const importQuery = (importId: string) =>
+  queryOptions({
+    queryKey: ['import', importId],
+    queryFn: () => call<ImportRow>(`/api/imports/${importId}`),
+    refetchInterval: (q) => (q.state.data && q.state.data.state !== 'running' ? false : 1500),
+  });
 
 /** Slack for escalation (`/api/slack`): which tokens are saved (never the tokens), the socket, the refused channels. */
 export interface SlackView { bot: boolean; app: boolean; socket: SocketState | { state: 'off' }; problems: string[]; address: string }
