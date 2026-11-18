@@ -59,6 +59,20 @@ export interface RunIntakeResult {
 const DEFAULT_BUDGET: IntakeBudget = { maxTasks: 500, maxMs: 5 * 60 * 1000 };
 
 export async function runIntake(db: LamproomDb, opts: RunIntakeOptions): Promise<RunIntakeResult> {
+  const { importId, finished } = startIntake(db, opts);
+  return finished;
+}
+
+/**
+ * Same loop as `runIntake`, but returns the recorded importId synchronously
+ * (before the first page is fetched) plus a promise for the eventual
+ * RunIntakeResult. API routes use this to return the id immediately so the
+ * UI can start polling.
+ */
+export function startIntake(
+  db: LamproomDb,
+  opts: RunIntakeOptions,
+): { importId: string; finished: Promise<RunIntakeResult> } {
   const budget = opts.budget ?? DEFAULT_BUDGET;
   const nowFn = opts.nowFn ?? (() => new Date());
   const redactFn = opts.redactFn ?? ((m) => m);
@@ -69,10 +83,23 @@ export async function runIntake(db: LamproomDb, opts: RunIntakeOptions): Promise
 
   const startedAt = nowFn();
   const importRow = recordImport(db, opts.projectId, opts.sourceId, startedAt);
+  const finished = driveLoop(db, opts, importRow.id, startedAt, budget, nowFn, redactFn);
+  return { importId: importRow.id, finished };
+}
+
+async function driveLoop(
+  db: LamproomDb,
+  opts: RunIntakeOptions,
+  importId: string,
+  startedAt: Date,
+  budget: IntakeBudget,
+  nowFn: () => Date,
+  redactFn: (m: string) => string,
+): Promise<RunIntakeResult> {
 
   let totalCreated = 0;
   let totalUpdated = 0;
-  let totalSkipped = 0;
+  const totalSkipped = 0;
   let pages = 0;
   let cursor: string | undefined = opts.input.cursor;
 
@@ -96,16 +123,16 @@ export async function runIntake(db: LamproomDb, opts: RunIntakeOptions): Promise
       );
       totalCreated += created;
       totalUpdated += updated;
-      updateImportProgress(db, importRow.id, { created, updated, pages: 1 });
+      updateImportProgress(db, importId, { created, updated, pages: 1 });
 
       if (result.nextCursor === undefined) break;
       if (totalCreated + totalUpdated >= budget.maxTasks) break;
       cursor = result.nextCursor;
     }
 
-    finishImport(db, importRow.id, 'done');
+    finishImport(db, importId, 'done');
     return {
-      importId: importRow.id,
+      importId,
       state: 'done',
       created: totalCreated,
       updated: totalUpdated,
@@ -115,9 +142,9 @@ export async function runIntake(db: LamproomDb, opts: RunIntakeOptions): Promise
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const redacted = redactFn(message);
-    finishImport(db, importRow.id, 'failed', { error: redacted });
+    finishImport(db, importId, 'failed', { error: redacted });
     return {
-      importId: importRow.id,
+      importId,
       state: 'failed',
       created: totalCreated,
       updated: totalUpdated,

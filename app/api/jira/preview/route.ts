@@ -15,17 +15,14 @@ import {
   McpClient,
   redactJiraTokens,
 } from '../../../../packages/adapters/src/index.ts';
-import { ATLASSIAN_CLIENT_ID, refreshIfNeeded } from '../../../../packages/adapters/src/ticket/jira/oauth.ts';
-import { restTransport } from '../../../../packages/adapters/src/ticket/jira/rest-transport.ts';
-import { readJira, writeJira, type JiraCredential } from '../../../../packages/cli/src/jira.ts';
-import type { SourceCredentialResolver, SourceCredentials } from '../../../../packages/core/src/index.ts';
-import { dataDir, refused } from '../../flows/local.ts';
+import { buildJiraTransport, collectJiraTokens, makeRefreshOAuthFn, readJiraSettings, staticResolver } from '../_lib.ts';
+import { refused } from '../../flows/local.ts';
 
 export async function GET(request: Request) {
   const no = refused(request);
   if (no) return no;
 
-  const settings = readJira(dataDir());
+  const settings = readJiraSettings();
   if (settings.credential === undefined) {
     return Response.json({ error: 'no credentials configured' }, { status: 400 });
   }
@@ -39,30 +36,15 @@ export async function GET(request: Request) {
     return Response.json({ error: 'no JQL provided and no default saved' }, { status: 400 });
   }
 
-  const cred: JiraCredential = settings.credential;
-  const resolver: SourceCredentialResolver = {
-    resolve: async (): Promise<SourceCredentials> => cred,
-  };
-
-  const transport = buildTransport(cred);
-  const mcpClient = new McpClient(transport);
+  const cred = settings.credential;
+  const mcpClient = new McpClient(buildJiraTransport(cred));
 
   try {
     const src = new JiraTaskSource({
-      resolver,
+      resolver: staticResolver(cred),
       defaultJql,
       mcpClient,
-      refreshOAuthFn: async (c) => {
-        const refreshed = await refreshIfNeeded(
-          c,
-          ATLASSIAN_CLIENT_ID,
-          new Date(),
-          fetch,
-          process.env['ATLASSIAN_CLIENT_SECRET'],
-        );
-        writeJira(dataDir(), { ...settings, credential: refreshed });
-        return refreshed;
-      },
+      refreshOAuthFn: makeRefreshOAuthFn(settings),
     });
     const result = await src.fetch({ pageSize });
     return Response.json({ tasks: result.tasks, nextCursor: result.nextCursor, usage: result.usage });
@@ -71,25 +53,6 @@ export async function GET(request: Request) {
       return Response.json({ error: 'credentials missing' }, { status: 401 });
     }
     const message = err instanceof Error ? err.message : String(err);
-    const tokens = collectTokens(cred);
-    return Response.json({ error: redactJiraTokens(message, ...tokens) }, { status: 502 });
+    return Response.json({ error: redactJiraTokens(message, ...collectJiraTokens(cred)) }, { status: 502 });
   }
-}
-
-function buildTransport(cred: JiraCredential) {
-  // Rovo MCP currently refuses third-party OAuth apps ("We couldn't verify
-  // your access") and API tokens outright. For now Lamproom uses direct
-  // Jira REST, which honours the same OAuth and API-token credentials. The
-  // transport returns the same envelope shape so JiraTaskSource stays
-  // unchanged. When Rovo opens to third parties, swap for httpTransport.
-  if (cred.kind === 'atlassian_oauth') {
-    return restTransport({ cloudId: cred.cloudId, authorization: `Bearer ${cred.accessToken}` });
-  }
-  const basic = Buffer.from(`${cred.email}:${cred.token}`).toString('base64');
-  return restTransport({ cloudId: cred.baseUrl, authorization: `Basic ${basic}` });
-}
-
-function collectTokens(cred: JiraCredential): Array<string | undefined> {
-  if (cred.kind === 'atlassian_oauth') return [cred.accessToken, cred.refreshToken];
-  return [cred.token];
 }

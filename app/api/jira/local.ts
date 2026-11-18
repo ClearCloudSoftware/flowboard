@@ -22,3 +22,12 @@ export function sweepStates(now = Date.now()): void {
     if (now - entry.createdAt > TEN_MINUTES_MS) pendingStates.delete(state);
   }
 }
+
+/**
+ * Running intake imports, keyed by `${projectId}:${sourceId}`. Used by
+ * /api/import/jira to dedup concurrent starts and let the UI poll progress
+ * from the DB alongside. Promises are kept so a hot reload doesn't orphan
+ * the work; lifetime ties to the Next.js worker's module scope.
+ */
+export const runningImports = new Map<string, { importId: string; promise: Promise<unknown> }>();
+export const runningKey = (projectId: string, sourceId: string) => `${projectId}:${sourceId}`;
