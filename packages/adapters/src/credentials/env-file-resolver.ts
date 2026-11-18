@@ -31,7 +31,12 @@ import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { SourceCredentials, SourceCredentialResolver, SourceId } from '@lamproom/core';
 
-const KNOWN_KINDS: ReadonlySet<string> = new Set(['none', 'github_pat']);
+const KNOWN_KINDS: ReadonlySet<string> = new Set([
+  'none',
+  'github_pat',
+  'atlassian_oauth',
+  'atlassian_api_token',
+]);
 
 export interface EnvFileCredentialResolverOptions {
   /** Directory that contains the `.lamproom/credentials.json` file. */
@@ -94,11 +99,64 @@ export class EnvFileCredentialResolver implements SourceCredentialResolver {
       throw new Error(`credentials.json: unknown kind '${kind}' at ${this.path}`);
     }
     if (kind === 'none') return { kind: 'none' };
-    // kind === 'github_pat'
+    if (kind === 'github_pat') return this.validateGithubPat(entry);
+    if (kind === 'atlassian_oauth') return this.validateAtlassianOAuth(entry);
+    if (kind === 'atlassian_api_token') return this.validateAtlassianApiToken(entry);
+    // Unreachable if KNOWN_KINDS is in sync with the switch above.
+    throw new Error(`credentials.json: internal error validating kind '${kind}' at ${this.path}`);
+  }
+
+  private validateGithubPat(entry: unknown): SourceCredentials {
     const token = (entry as { token?: unknown }).token;
     if (typeof token !== 'string' || token === '') {
       throw new Error(`credentials.json: github_pat entry missing non-empty "token" at ${this.path}`);
     }
     return { kind: 'github_pat', token };
+  }
+
+  private validateAtlassianOAuth(entry: unknown): SourceCredentials {
+    const e = entry as Record<string, unknown>;
+    const required: Array<'accessToken' | 'refreshToken' | 'expiresAt' | 'cloudId' | 'siteName'> = [
+      'accessToken',
+      'refreshToken',
+      'expiresAt',
+      'cloudId',
+      'siteName',
+    ];
+    for (const field of required) {
+      if (typeof e[field] !== 'string' || e[field] === '') {
+        throw new Error(
+          `credentials.json: atlassian_oauth entry missing non-empty "${field}" at ${this.path}`,
+        );
+      }
+    }
+    return {
+      kind: 'atlassian_oauth',
+      accessToken: e['accessToken'] as string,
+      refreshToken: e['refreshToken'] as string,
+      expiresAt: e['expiresAt'] as string,
+      cloudId: e['cloudId'] as string,
+      siteName: e['siteName'] as string,
+    };
+  }
+
+  private validateAtlassianApiToken(entry: unknown): SourceCredentials {
+    const e = entry as Record<string, unknown>;
+    const baseUrl = e['baseUrl'];
+    if (typeof baseUrl !== 'string' || baseUrl === '') {
+      throw new Error(`credentials.json: atlassian_api_token entry missing non-empty "baseUrl" at ${this.path}`);
+    }
+    if (!baseUrl.startsWith('https://')) {
+      throw new Error(`credentials.json: atlassian_api_token entry "baseUrl" must start with https:// at ${this.path}`);
+    }
+    const email = e['email'];
+    if (typeof email !== 'string' || email === '') {
+      throw new Error(`credentials.json: atlassian_api_token entry missing non-empty "email" at ${this.path}`);
+    }
+    const token = e['token'];
+    if (typeof token !== 'string' || token === '') {
+      throw new Error(`credentials.json: atlassian_api_token entry missing non-empty "token" at ${this.path}`);
+    }
+    return { kind: 'atlassian_api_token', baseUrl, email, token };
   }
 }

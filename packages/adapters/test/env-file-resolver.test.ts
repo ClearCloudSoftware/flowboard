@@ -58,7 +58,69 @@ test('throws on parse failure, mentioning the path, never the content', async ()
 });
 
 test('rejects an entry with an unknown kind, naming the kind', async () => {
-  const root = await makeStore({ github: { kind: 'github_oauth', token: 'x' } });
+  const root = await makeStore({ github: { kind: 'github_app_installation', token: 'x' } });
   const r = new EnvFileCredentialResolver({ root });
-  await assert.rejects(r.resolve('github', 'default'), /github_oauth/);
+  await assert.rejects(r.resolve('github', 'default'), /github_app_installation/);
+});
+
+test('resolves atlassian_oauth from credentials.json', async () => {
+  const root = await makeStore({
+    jira: {
+      kind: 'atlassian_oauth',
+      accessToken: 'eyJHEADER.eyJPAYLOAD.SIGNATURE',
+      refreshToken: 'ref-xxx',
+      expiresAt: '2026-12-01T12:00:00Z',
+      cloudId: '11111111-2222-3333-4444-555555555555',
+      siteName: 'acme',
+    },
+  });
+  const r = new EnvFileCredentialResolver({ root });
+  const got = await r.resolve('jira', 'default');
+  assert.equal(got.kind, 'atlassian_oauth');
+  assert.equal((got as { cloudId: string }).cloudId, '11111111-2222-3333-4444-555555555555');
+  assert.equal((got as { siteName: string }).siteName, 'acme');
+});
+
+test('rejects atlassian_oauth missing required fields', async () => {
+  const root = await makeStore({
+    jira: { kind: 'atlassian_oauth', accessToken: 'eyJ...' },
+  });
+  const r = new EnvFileCredentialResolver({ root });
+  await assert.rejects(r.resolve('jira', 'default'), /atlassian_oauth.*(refreshToken|expiresAt|cloudId|siteName)/);
+});
+
+test('resolves atlassian_api_token from credentials.json', async () => {
+  const root = await makeStore({
+    jira: {
+      kind: 'atlassian_api_token',
+      baseUrl: 'https://acme.atlassian.net',
+      email: 'alice@acme.com',
+      token: 'ATATT3xFfGF0APITOKEN',
+    },
+  });
+  const r = new EnvFileCredentialResolver({ root });
+  const got = await r.resolve('jira', 'default');
+  assert.equal(got.kind, 'atlassian_api_token');
+  assert.equal((got as { email: string }).email, 'alice@acme.com');
+});
+
+test('rejects atlassian_api_token missing baseUrl', async () => {
+  const root = await makeStore({
+    jira: { kind: 'atlassian_api_token', email: 'alice@acme.com', token: 't' },
+  });
+  const r = new EnvFileCredentialResolver({ root });
+  await assert.rejects(r.resolve('jira', 'default'), /atlassian_api_token.*baseUrl/);
+});
+
+test('rejects atlassian_api_token with non-https baseUrl', async () => {
+  const root = await makeStore({
+    jira: {
+      kind: 'atlassian_api_token',
+      baseUrl: 'http://acme.atlassian.net',
+      email: 'alice@acme.com',
+      token: 't',
+    },
+  });
+  const r = new EnvFileCredentialResolver({ root });
+  await assert.rejects(r.resolve('jira', 'default'), /baseUrl.*https/);
 });

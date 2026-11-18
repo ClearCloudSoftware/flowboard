@@ -29,10 +29,34 @@ import type { SourceId } from './task-source.ts';
  * absent. Adapters whose source always needs auth (github, jira, linear)
  * throw a `CredentialMissingError` at the top of `fetch()` when they see
  * `none`, BEFORE any network call.
+ *
+ * `atlassian_oauth` stores an access token plus refresh token plus the
+ * `cloudId` selected during sign-in. The `cloudId` is sent as the
+ * `X-Atlassian-Cloud-Id` header on every Rovo MCP call. `expiresAt` is
+ * checked before every call; when within 60s, the adapter refreshes the
+ * token BEFORE opening a transport.
+ *
+ * `atlassian_api_token` is the simpler Basic-auth path. `baseUrl` is the
+ * full Atlassian site URL (https only). The token is sent as part of a
+ * `Basic base64(email:token)` Authorization header.
  */
 export type SourceCredentials =
   | { readonly kind: 'none' }
-  | { readonly kind: 'github_pat'; readonly token: string };
+  | { readonly kind: 'github_pat'; readonly token: string }
+  | {
+      readonly kind: 'atlassian_oauth';
+      readonly accessToken: string;
+      readonly refreshToken: string;
+      readonly expiresAt: string;
+      readonly cloudId: string;
+      readonly siteName: string;
+    }
+  | {
+      readonly kind: 'atlassian_api_token';
+      readonly baseUrl: string;
+      readonly email: string;
+      readonly token: string;
+    };
 
 /**
  * Resolve credentials for a given source and project.
