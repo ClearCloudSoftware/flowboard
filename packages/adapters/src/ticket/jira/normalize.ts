@@ -71,6 +71,8 @@ export interface RovoJiraIssue {
 
 export interface RovoJiraSearchResult {
   issues: RovoJiraIssue[];
+  /** Rovo v2 names it camelCase; fixture uses snake_case (legacy Rovo v1 shape). We accept both. */
+  nextPageToken?: string;
   next_page_token?: string;
 }
 
@@ -120,8 +122,9 @@ export interface PageInfo {
 
 export function extractPageInfo(payload: RovoJiraSearchResult): PageInfo {
   const result: PageInfo = { usage: { requests: 1 } };
-  if (payload.next_page_token !== undefined && payload.next_page_token !== '') {
-    result.nextCursor = payload.next_page_token;
+  const cursor = payload.nextPageToken ?? payload.next_page_token;
+  if (cursor !== undefined && cursor !== '') {
+    result.nextCursor = cursor;
   }
   return result;
 }

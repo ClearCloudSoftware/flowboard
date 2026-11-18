@@ -140,11 +140,12 @@ export class JiraTaskSource implements TaskSource {
         const ac = new AbortController();
         const timer = setTimeout(() => ac.abort(), this.callTimeoutMs);
         try {
-          return (await this.mcpClient.callTool<RovoJiraSearchResult>(
+          const raw = await this.mcpClient.callTool<unknown>(
             call.name,
             call.arguments as unknown as Record<string, unknown>,
             { signal: ac.signal },
-          ));
+          );
+          return unwrapRovoResponse(raw);
         } finally {
           clearTimeout(timer);
         }
@@ -172,6 +173,32 @@ export class JiraTaskSource implements TaskSource {
     if (expiresAtMs - nowMs > REFRESH_WINDOW_MS) return cred;
     return await this.refreshOAuthFn(cred);
   }
+}
+
+/**
+ * Rovo MCP wraps every response in `{ content: [{ type: 'text', text: '<JSON string>' }], isError?: boolean }`.
+ * Unwrap it to the inner JSON. `isError: true` with a text payload means the
+ * tool rejected the call (bad JQL, missing scope, etc.); surface that message
+ * so the caller sees Rovo's words, not a Lamproom-internal one.
+ */
+function unwrapRovoResponse(raw: unknown): RovoJiraSearchResult {
+  const envelope = raw as { content?: Array<{ type?: string; text?: string }>; isError?: boolean };
+  const first = envelope.content?.[0];
+  const text = first?.text;
+  if (typeof text !== 'string') {
+    throw new Error('jira source: Rovo returned no text content');
+  }
+  let inner: unknown;
+  try {
+    inner = JSON.parse(text);
+  } catch {
+    throw new Error(`jira source: Rovo returned non-JSON text: ${text.slice(0, 200)}`);
+  }
+  if (envelope.isError === true) {
+    const msg = (inner as { message?: string }).message ?? text.slice(0, 500);
+    throw new Error(`jira source: ${msg}`);
+  }
+  return inner as RovoJiraSearchResult;
 }
 
 function reThrowRedacted(

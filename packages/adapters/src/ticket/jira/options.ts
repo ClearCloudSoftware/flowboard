@@ -27,12 +27,14 @@ export interface JiraTarget {
 }
 
 export interface JiraMcpToolCall {
-  name: 'jira_search';
+  name: 'searchJiraIssuesUsingJql';
   arguments: {
+    cloudId: string;
     jql: string;
-    next_page_token?: string;
-    limit?: number;
+    nextPageToken?: string;
+    maxResults?: number;
     fields?: string[];
+    view?: 'compact' | 'evidence' | 'full';
   };
 }
 
@@ -54,7 +56,7 @@ const FIELDS: readonly string[] = [
 export function buildIssuesCall(
   input: SourceInput,
   defaultJql: string,
-  _target: JiraTarget,
+  target: JiraTarget,
 ): JiraMcpToolCall {
   const base = input.query ?? defaultJql;
   if (base.trim() === '') {
@@ -65,17 +67,42 @@ export function buildIssuesCall(
     throw new Error(`jira source: pageSize must be a positive integer, got ${input.pageSize}`);
   }
 
+  const cloudId = resolveCloudId(target);
+  if (cloudId === undefined) {
+    throw new Error('jira source: cloudId or baseUrl is required on the JiraTarget');
+  }
+
   const jql = input.since !== undefined ? injectUpdatedSince(base, input.since) : base;
 
   return {
-    name: 'jira_search',
+    name: 'searchJiraIssuesUsingJql',
     arguments: {
+      cloudId,
       jql,
-      ...(input.cursor !== undefined ? { next_page_token: input.cursor } : {}),
-      limit: Math.min(input.pageSize ?? 50, 50),
+      ...(input.cursor !== undefined ? { nextPageToken: input.cursor } : {}),
+      maxResults: Math.min(input.pageSize ?? 50, 100),
       fields: [...FIELDS],
+      view: 'full',
     },
   };
+}
+
+/**
+ * The cloudId Rovo accepts: an Atlassian UUID, a site hostname, or a URL.
+ * For OAuth we store the UUID from accessible-resources. For API token we
+ * extract the hostname from baseUrl (Rovo's schema accepts "hostname" per
+ * its description).
+ */
+function resolveCloudId(target: JiraTarget): string | undefined {
+  if (target.cloudId !== undefined && target.cloudId !== '') return target.cloudId;
+  if (target.baseUrl !== undefined && target.baseUrl !== '') {
+    try {
+      return new URL(target.baseUrl).hostname;
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
 }
 
 /**

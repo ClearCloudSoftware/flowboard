@@ -15,6 +15,11 @@ async function fixturePayload(): Promise<RovoJiraSearchResult> {
   return JSON.parse(await readFile(join(here, 'fixtures/jira/search-page1.json'), 'utf8')) as RovoJiraSearchResult;
 }
 
+/** Wrap a plain JSON payload in Rovo's response envelope: { content: [{ type: 'text', text: '<json>' }] } */
+function rovoEnvelope(payload: unknown): unknown {
+  return { content: [{ type: 'text', text: JSON.stringify(payload) }] };
+}
+
 function fakeClient(responses: Array<unknown | Error>, opsRef?: string[]): McpClient {
   let i = 0;
   const ops = opsRef ?? [];
@@ -24,7 +29,9 @@ function fakeClient(responses: Array<unknown | Error>, opsRef?: string[]): McpCl
       const r = responses[i++];
       if (r === undefined) throw new Error('fake transport: script exhausted');
       if (r instanceof Error) throw r;
-      return r;
+      // Payloads passed to fakeClient are the INNER JSON (what Rovo text would parse to).
+      // Wrap them so the provider's unwrapper sees the real Rovo shape.
+      return rovoEnvelope(r);
     },
     async listTools() { return []; },
     async close() { ops.push('close'); },
