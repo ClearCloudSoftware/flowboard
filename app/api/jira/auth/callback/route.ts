@@ -38,13 +38,20 @@ export async function GET(request: Request) {
 
   const redirectUri = `${url.origin}/api/jira/auth/callback`;
 
+  const clientSecret = process.env['ATLASSIAN_CLIENT_SECRET'];
+  if (clientSecret === undefined || clientSecret === '') {
+    console.error('[jira/auth/callback] ATLASSIAN_CLIENT_SECRET not set; Atlassian 3LO requires it');
+    return redirectWith(url.origin, 'no_secret');
+  }
+
   try {
     const tokens = await exchangeCode(
-      { clientId: ATLASSIAN_CLIENT_ID, scopes: SCOPES },
+      { clientId: ATLASSIAN_CLIENT_ID, clientSecret, scopes: SCOPES },
       { code, verifier: pending.codeVerifier, redirectUri },
     );
     const sites = await listAccessibleResources(tokens.accessToken);
     if (sites.length === 0) {
+      console.error('[jira/auth/callback] no accessible resources returned');
       return redirectWith(url.origin, 'no_sites');
     }
     const site = sites[0]!;
@@ -60,8 +67,11 @@ export async function GET(request: Request) {
         siteName: site.name,
       },
     });
+    console.log('[jira/auth/callback] OAuth stored for site', site.name, site.id);
     return redirectWith(url.origin, 'ok');
-  } catch {
+  } catch (err) {
+    console.error('[jira/auth/callback] exchange failed:', err instanceof Error ? err.message : String(err));
+    if (err instanceof Error && err.cause) console.error('  cause:', err.cause);
     return redirectWith(url.origin, 'exchange');
   }
 }

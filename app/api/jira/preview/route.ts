@@ -53,7 +53,13 @@ export async function GET(request: Request) {
       defaultJql,
       mcpClient,
       refreshOAuthFn: async (c) => {
-        const refreshed = await refreshIfNeeded(c, ATLASSIAN_CLIENT_ID, new Date());
+        const refreshed = await refreshIfNeeded(
+          c,
+          ATLASSIAN_CLIENT_ID,
+          new Date(),
+          fetch,
+          process.env['ATLASSIAN_CLIENT_SECRET'],
+        );
         writeJira(dataDir(), { ...settings, credential: refreshed });
         return refreshed;
       },

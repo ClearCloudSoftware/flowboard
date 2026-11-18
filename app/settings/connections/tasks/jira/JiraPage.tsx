@@ -115,7 +115,8 @@ function AuthStatusBanner({ status }: { status: JiraStatus }) {
     );
   }
   if (auth === 'state') return <p className={warnBox}>OAuth was refused: state did not match. Try again.</p>;
-  if (auth === 'exchange') return <p className={warnBox}>OAuth was refused: Atlassian would not exchange the code.</p>;
+  if (auth === 'no_secret') return <p className={warnBox}>OAuth cannot run: ATLASSIAN_CLIENT_SECRET environment variable is not set. Restart the dev server with it defined.</p>;
+  if (auth === 'exchange') return <p className={warnBox}>OAuth was refused: Atlassian would not exchange the code. Check that the Client Secret is current.</p>;
   if (auth === 'no_sites') return <p className={warnBox}>Signed in, but your account has no Jira sites.</p>;
   if (auth === 'missing') return <p className={warnBox}>Sign-in was cancelled.</p>;
   return <p className="m-0 font-sans text-xs text-[var(--ink-2)]">Not connected. Pick a path below.</p>;

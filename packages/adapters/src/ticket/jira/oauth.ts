@@ -42,6 +42,8 @@ export const ATLASSIAN_RESOURCES_URL = 'https://api.atlassian.com/oauth/token/ac
 
 export interface AtlassianOAuthConfig {
   clientId: string;
+  /** Required for Atlassian 3LO — they're confidential clients even with PKCE. */
+  clientSecret?: string;
   scopes: readonly string[];
   /** 0 = pick a free port; any other value = bind to that port. */
   loopbackPort?: number;
@@ -112,6 +114,7 @@ export async function exchangeCode(
   const body = JSON.stringify({
     grant_type: 'authorization_code',
     client_id: cfg.clientId,
+    ...(cfg.clientSecret !== undefined ? { client_secret: cfg.clientSecret } : {}),
     code: args.code,
     code_verifier: args.verifier,
     redirect_uri: args.redirectUri,
@@ -148,12 +151,14 @@ export async function refreshIfNeeded(
   clientId: string,
   now: Date,
   fetchFn: typeof fetch = fetch,
+  clientSecret?: string,
 ): Promise<OAuthCred> {
   const expiresAtMs = Date.parse(creds.expiresAt);
   if (expiresAtMs - now.getTime() > REFRESH_WINDOW_MS) return creds;
   const body = JSON.stringify({
     grant_type: 'refresh_token',
     client_id: clientId,
+    ...(clientSecret !== undefined ? { client_secret: clientSecret } : {}),
     refresh_token: creds.refreshToken,
   });
   const response = await fetchFn(ATLASSIAN_TOKEN_URL, {
