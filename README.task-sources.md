@@ -4,9 +4,9 @@ Lamproom's `TaskSource` port pulls work items (issues, tickets, markdown
 backlog entries) into the board. Each source is an adapter under
 `@lamproom/adapters/src/ticket/<id>/` that implements the port.
 
-This guide covers the two adapters shipped in the first plan: the markdown
-adapter and the GitHub Issues adapter. Jira, Linear, webhooks and OAuth
-variants ship in follow-up plans.
+This guide covers three adapters: the markdown adapter, the GitHub Issues
+adapter, and the Jira adapter (via Atlassian's Rovo MCP server). Linear,
+webhooks and the sandboxed backlog-importer agent ship in follow-up plans.
 
 ## Credentials
 
@@ -160,23 +160,111 @@ FLOWBOARD_LIVE_ROOT=/path/to/.lamproom/root     # defaults to cwd
 
 ```bash
 node --test packages/adapters/test/github-live.test.ts \
-            packages/adapters/test/markdown-live.test.ts
+            packages/adapters/test/markdown-live.test.ts \
+            packages/adapters/test/jira-live.test.ts
 ```
 
 The suite verifies a real round-trip, that `rateLimitRemaining` is reported
 and non-zero, and that pagination produces disjoint pages.
 
+## The Jira adapter (via Atlassian Rovo MCP)
+
+Lamproom talks to Jira through Atlassian's hosted [Rovo MCP server](https://mcp.atlassian.com/v2/mcp)
+over Streamable HTTP, using the `@modelcontextprotocol/sdk` client. Rovo
+converts ADF descriptions to markdown server-side, so Lamproom never sees
+ADF.
+
+Two auth modes, both production-grade:
+
+### OAuth 2.1 (recommended)
+
+1. Open **Settings → Connections → Task providers → Jira**.
+2. Click **Sign in with Atlassian**. A new tab opens the Atlassian consent
+   page; approve.
+3. Atlassian redirects to `/api/jira/auth/callback` and Lamproom stores
+   the refresh token. The access token is refreshed automatically before
+   expiry.
+
+Scopes requested: `read:jira-work`, `read:jira-user`, `offline_access`. No
+write scopes — this version is read-only.
+
+Lamproom uses PKCE (no client secret ships with Lamproom) and a one-time
+`state` parameter; a mismatched callback state is refused with a 400 and
+no detail (Review Focus #1).
+
+Tokens live in `jira.json` in your Lamproom data folder with mode `0600`.
+A fresh plan handles moving them into the OS keychain.
+
+### API token (power-user / CI fallback)
+
+1. Create a fresh token at `https://id.atlassian.com/manage-profile/security/api-tokens`.
+2. In the Jira settings page, pick the **API token** tab.
+3. Enter your Atlassian base URL (https only), email, and the token.
+4. Save. Optionally set a default JQL.
+
+The token is stored in `jira.json`; the Basic-auth header is built on
+every call (`Basic base64(email:token)`).
+
+### Default JQL
+
+The Jira settings page takes one default JQL string. If the preview or an
+import later runs without specifying `?jql=`, the default is used. A good
+starting point:
+
+```
+project = YOURKEY AND statusCategory != Done ORDER BY updated DESC
+```
+
+### Preview
+
+The same page includes a preview panel. Click **Preview** to fetch the
+first 10 issues via Rovo MCP and render them as a table. Errors from
+Rovo are surfaced with any token already redacted by the server.
+
+### Error shapes
+
+| Error | Means | Fix |
+|---|---|---|
+| `credentials missing` (401 on preview) | `jira.json` is empty or missing the `credential` field | Sign in with Atlassian or save an API token |
+| `no credentials configured` (400 on preview) | Same as above | Same |
+| OAuth returns `?auth=state` | PKCE state didn't match | Click Sign-in again; don't bounce between tabs mid-flow |
+| OAuth returns `?auth=exchange` | Atlassian refused the authorization code | Retry — usually transient |
+| OAuth returns `?auth=no_sites` | Account has no Jira site | Log into Atlassian at least once and create a site |
+| Preview returns with `[redacted]` in the error body | The adapter stripped the token from a transport error before surfacing it | Check the Jira site's rate-limit page; try again |
+
+### Running the live test
+
+```bash
+# Ensure .lamproom/credentials.json exists with a `jira` entry:
+#   { "jira": { "kind": "atlassian_api_token", "baseUrl": "https://you.atlassian.net",
+#               "email": "you@example.com", "token": "ATATT..." } }
+# or: the OAuth credential stored by the sign-in flow.
+
+FLOWBOARD_LIVE=1 \
+  FLOWBOARD_LIVE_JIRA_JQL='project = KAN AND statusCategory != Done' \
+  node --test packages/adapters/test/jira-live.test.ts
+```
+
 ## What's not here yet
 
 Named for the follow-up plans:
 
-* **OAuth** for GitHub, Jira, Linear.
+* **Writes to Jira** (`jira_create_issue`, `jira_update_issue`,
+  `jira_transition_issue`).
+* **Jira Server / Data Center** — Rovo is Cloud-only. A sooperset-backed
+  adapter lands in its own plan.
+* **Multi-site OAuth picker UI** — current behaviour: first site wins.
+* **OS-keychain credential storage** — OAuth refresh tokens live in
+  `jira.json` plaintext for now.
+* **JQL builder UI** — the settings page takes a single JQL string.
+* **OAuth** for GitHub and Linear.
 * **Webhook ingest** (`ingest()` on the port).
-* **Jira** adapter — ADF → markdown, JQL, cloudId lookup.
 * **Linear** adapter.
+* **Confluence, Bitbucket, Compass** via Rovo — the McpClient wrapper is
+  reusable; each is a separate adapter plan.
 * **Project-scoped credentials** — one file per project rather than one per
   installation.
-* **The intake API** — `POST /api/import/backlog`, the upsert loop, the UI.
+* **The intake API** — `POST /api/import/backlog`, the upsert loop.
 
-See `docs/superpowers/plans/2026-11-14-task-source-port-markdown-and-github.md`
-for the "What this plan does not finish" section.
+See `docs/superpowers/plans/2026-11-17-task-source-jira-mcp.md` for the
+"What this plan does not finish" section.

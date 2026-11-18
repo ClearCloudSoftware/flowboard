@@ -5,11 +5,21 @@ module: Intake And Import
 
 # Future Task Sources
 
+> [!success] 2026-11-18 — Jira (Cloud via Rovo MCP) landed
+> The Jira adapter ships through Atlassian's hosted Rovo MCP server
+> (`https://mcp.atlassian.com/v2/mcp`). Lives at
+> `packages/adapters/src/ticket/jira/` with OAuth 2.1 +
+> PKCE, API-token fallback, token refresh, Retry-After compliance and
+> token redaction. The settings page and preview panel are at
+> `/settings/connections/tasks/jira`. Still pending: Jira Server/DC,
+> writes to Jira, multi-site picker, OS keychain. See the
+> [plan](../../superpowers/plans/2026-11-17-task-source-jira-mcp.md).
+
 > [!success] 2026-11-17 — GitHub Issues landed
 > The GitHub Issues adapter shipped as part of the TaskSource port plan.
 > It lives at `packages/adapters/src/ticket/github/` with
 > PAT auth, pagination, rate-limit handling, retry with `Retry-After`
-> support and token redaction. Still pending for Jira, Linear, webhooks and
+> support and token redaction. Still pending for Linear, webhooks and
 > OAuth — see the "What this plan does not finish" section of the
 > [plan](../../superpowers/plans/2026-11-14-task-source-port-markdown-and-github.md).
 
