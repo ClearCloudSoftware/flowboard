@@ -16,3 +16,8 @@ export * from './ticket/github/auth.ts';
 export * from './mcp/client.ts';
 export * from './mcp/errors.ts';
 export * from './mcp/transport.ts';
+export * from './ticket/jira/provider.ts';
+export {
+  CredentialMissingError as JiraCredentialMissingError,
+  redactTokens as redactJiraTokens,
+} from './ticket/jira/auth.ts';
