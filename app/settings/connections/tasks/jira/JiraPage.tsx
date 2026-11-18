@@ -10,8 +10,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/loader';
@@ -82,8 +81,14 @@ const okBox =
   'm-0 flex items-start gap-2 border-l-[3px] border-run bg-[var(--run-soft)] px-2.5 py-1.5 font-sans text-xs text-run';
 
 function AuthStatusBanner({ status }: { status: JiraStatus }) {
-  const params = useSearchParams();
-  const auth = params.get('auth');
+  // Read ?auth=... once on mount instead of via useSearchParams, which forces
+  // dynamic rendering of the whole route in Next.js 15+ and triggers a
+  // Turbopack hot-reload loop in dev.
+  const [auth, setAuth] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setAuth(new URLSearchParams(window.location.search).get('auth'));
+  }, []);
   if (status.connected) {
     if (status.kind === 'atlassian_oauth')
       return (
