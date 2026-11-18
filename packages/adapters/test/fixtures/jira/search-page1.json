@@ -1,0 +1,105 @@
+{
+  "issues": [
+    {
+      "key": "ACME-42",
+      "fields": {
+        "summary": "Login redirect loops after SSO signin",
+        "description": "Users signing in through Okta are redirected to /login after authentication. Expected: redirect to /dashboard.\n\n**Steps to reproduce:**\n\n1. Visit /login\n2. Choose Okta\n3. Complete the Okta prompt\n4. Observe the redirect loop",
+        "status": { "name": "In Progress", "statusCategory": { "key": "indeterminate", "name": "In Progress" }, "id": "10003" },
+        "labels": ["bug", "sso", "priority-high"],
+        "assignee": {
+          "accountId": "5f1234567890abcdef123456",
+          "displayName": "Alice",
+          "emailAddress": "alice@example.com"
+        },
+        "issuetype": { "id": "10002", "name": "Bug" },
+        "parent": null,
+        "updated": "2026-11-01T09:12:34.000+0000",
+        "created": "2026-10-20T14:22:10.000+0000",
+        "priority": { "id": "2", "name": "High" },
+        "components": [{ "id": "10100", "name": "Auth" }],
+        "fixVersions": [{ "id": "10200", "name": "v4.2" }]
+      }
+    },
+    {
+      "key": "ACME-43",
+      "fields": {
+        "summary": "Document the refresh-token rotation flow",
+        "description": "After ACME-42 lands, update the Okta integration docs to describe the new rotation flow.",
+        "status": { "name": "To Do", "statusCategory": { "key": "new", "name": "To Do" }, "id": "10001" },
+        "labels": ["docs"],
+        "assignee": null,
+        "issuetype": { "id": "10001", "name": "Task" },
+        "parent": { "key": "ACME-42", "fields": { "summary": "Login redirect loops after SSO signin" } },
+        "updated": "2026-11-05T14:22:10.000+0000",
+        "created": "2026-10-25T08:00:00.000+0000",
+        "priority": { "id": "3", "name": "Medium" },
+        "components": [],
+        "fixVersions": [{ "id": "10200", "name": "v4.2" }]
+      }
+    },
+    {
+      "key": "ACME-44",
+      "fields": {
+        "summary": "Empty description issue",
+        "description": null,
+        "status": { "name": "To Do", "statusCategory": { "key": "new", "name": "To Do" }, "id": "10001" },
+        "labels": [],
+        "assignee": {
+          "accountId": "6a9876543210fedcba987654",
+          "displayName": "Bob",
+          "emailAddress": "bob@example.com"
+        },
+        "issuetype": { "id": "10001", "name": "Task" },
+        "parent": null,
+        "updated": "2026-11-10T06:00:00.000+0000",
+        "created": "2026-11-10T06:00:00.000+0000",
+        "priority": { "id": "4", "name": "Low" },
+        "components": [],
+        "fixVersions": []
+      }
+    },
+    {
+      "key": "SEC-7",
+      "fields": {
+        "summary": "Rotate access-token signing key quarterly",
+        "description": "Security requirement from Q4 review. Rotate HS256 signing keys every 90 days; track completion in Confluence.\n\n| Key id | Rotated | Next |\n|---|---|---|\n| hs256-2026-q3 | 2026-10-01 | 2026-12-30 |\n",
+        "status": { "name": "In Progress", "statusCategory": { "key": "indeterminate", "name": "In Progress" }, "id": "10003" },
+        "labels": ["security", "compliance"],
+        "assignee": {
+          "accountId": "7b1111111111aaaaaa111111",
+          "displayName": "Carol",
+          "emailAddress": "carol@example.com"
+        },
+        "issuetype": { "id": "10004", "name": "Story" },
+        "parent": null,
+        "updated": "2026-10-28T11:00:00.000+0000",
+        "created": "2026-10-01T08:00:00.000+0000",
+        "priority": { "id": "2", "name": "High" },
+        "components": [
+          { "id": "10101", "name": "Security" },
+          { "id": "10102", "name": "Platform" }
+        ],
+        "fixVersions": []
+      }
+    },
+    {
+      "key": "ACME-45",
+      "fields": {
+        "summary": "Add rate-limit headers to the public API",
+        "description": "Expose `X-RateLimit-Remaining`, `X-RateLimit-Reset` on every public endpoint. Matches what GitHub and Stripe do.",
+        "status": { "name": "To Do", "statusCategory": { "key": "new", "name": "To Do" }, "id": "10001" },
+        "labels": ["api", "platform"],
+        "assignee": null,
+        "issuetype": { "id": "10004", "name": "Story" },
+        "parent": null,
+        "updated": "2026-11-12T10:30:00.000+0000",
+        "created": "2026-11-12T10:30:00.000+0000",
+        "priority": { "id": "3", "name": "Medium" },
+        "components": [{ "id": "10103", "name": "API" }],
+        "fixVersions": [{ "id": "10201", "name": "v4.3" }]
+      }
+    }
+  ],
+  "next_page_token": "eyJjdXJzb3IiOiJBQ01FLTQ1In0="
+}
