@@ -10,13 +10,13 @@
  */
 
 import {
-  httpTransport,
   JiraCredentialMissingError,
   JiraTaskSource,
   McpClient,
   redactJiraTokens,
 } from '../../../../packages/adapters/src/index.ts';
 import { ATLASSIAN_CLIENT_ID, refreshIfNeeded } from '../../../../packages/adapters/src/ticket/jira/oauth.ts';
+import { restTransport } from '../../../../packages/adapters/src/ticket/jira/rest-transport.ts';
 import { readJira, writeJira, type JiraCredential } from '../../../../packages/cli/src/jira.ts';
 import type { SourceCredentialResolver, SourceCredentials } from '../../../../packages/core/src/index.ts';
 import { dataDir, refused } from '../../flows/local.ts';
@@ -77,18 +77,16 @@ export async function GET(request: Request) {
 }
 
 function buildTransport(cred: JiraCredential) {
+  // Rovo MCP currently refuses third-party OAuth apps ("We couldn't verify
+  // your access") and API tokens outright. For now Lamproom uses direct
+  // Jira REST, which honours the same OAuth and API-token credentials. The
+  // transport returns the same envelope shape so JiraTaskSource stays
+  // unchanged. When Rovo opens to third parties, swap for httpTransport.
   if (cred.kind === 'atlassian_oauth') {
-    return httpTransport({
-      url: 'https://mcp.atlassian.com/v2/mcp',
-      bearer: cred.accessToken,
-      headers: { 'X-Atlassian-Cloud-Id': cred.cloudId },
-    });
+    return restTransport({ cloudId: cred.cloudId, authorization: `Bearer ${cred.accessToken}` });
   }
   const basic = Buffer.from(`${cred.email}:${cred.token}`).toString('base64');
-  return httpTransport({
-    url: 'https://mcp.atlassian.com/v2/mcp',
-    headers: { Authorization: `Basic ${basic}` },
-  });
+  return restTransport({ cloudId: cred.baseUrl, authorization: `Basic ${basic}` });
 }
 
 function collectTokens(cred: JiraCredential): Array<string | undefined> {

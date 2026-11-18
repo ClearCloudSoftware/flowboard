@@ -12,7 +12,13 @@ import { ATLASSIAN_CLIENT_ID, buildAuthUrl, pkcePair } from '../../../../../pack
 import { refused } from '../../../flows/local.ts';
 import { pendingStates, sweepStates } from '../../local.ts';
 
-const SCOPES = ['read:jira-work', 'read:jira-user', 'offline_access'] as const;
+const SCOPES = [
+  'read:jira-work',
+  'read:jira-user',
+  'read:jira:agent-interface',
+  'search:jira:agent-interface',
+  'offline_access',
+] as const;
 
 export async function POST(request: Request) {
   const no = refused(request);

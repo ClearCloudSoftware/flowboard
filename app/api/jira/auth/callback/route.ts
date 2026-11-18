@@ -17,7 +17,13 @@ import { readJira, writeJira } from '../../../../../packages/cli/src/jira.ts';
 import { dataDir } from '../../../flows/local.ts';
 import { pendingStates, sweepStates } from '../../local.ts';
 
-const SCOPES = ['read:jira-work', 'read:jira-user', 'offline_access'] as const;
+const SCOPES = [
+  'read:jira-work',
+  'read:jira-user',
+  'read:jira:agent-interface',
+  'search:jira:agent-interface',
+  'offline_access',
+] as const;
 const SETTINGS_URL = '/settings/connections/tasks/jira';
 
 export async function GET(request: Request) {

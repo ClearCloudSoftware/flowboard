@@ -22,3 +22,4 @@ export {
   redactTokens as redactJiraTokens,
 } from './ticket/jira/auth.ts';
 export * from './ticket/jira/oauth.ts';
+export * from './ticket/jira/rest-transport.ts';
