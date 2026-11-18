@@ -14,7 +14,18 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/loader';
-import type { JiraStatus } from '../../../../../packages/cli/src/jira.ts';
+// Pure type copy — DO NOT import from packages/cli/src/jira.ts here. That file
+// pulls in node:fs which Turbopack cannot bundle into a 'use client' tree; the
+// import causes an HMR reload loop in dev even when the import is type-only.
+interface JiraStatus {
+  connected: boolean;
+  kind?: 'atlassian_oauth' | 'atlassian_api_token';
+  siteName?: string;
+  baseUrl?: string;
+  email?: string;
+  expiresAt?: string;
+  defaultJql?: string;
+}
 import { ErrorLine, Field, Head } from '../../../settings.tsx';
 
 interface ParsedTaskRow {
