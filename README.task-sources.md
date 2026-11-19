@@ -245,6 +245,78 @@ FLOWBOARD_LIVE=1 \
   node --test packages/adapters/test/jira-live.test.ts
 ```
 
+## Importing tasks into a project
+
+Once a Jira credential is saved, the project page (`/p/<slug>`) grows an
+**Import from Jira** button in its top bar. Clicking it kicks off a
+background drain into SQLite and opens a floating progress toast. The
+toast polls every 1.5s and shows `created / updated / pages` as the
+loop advances. On completion it links to the (not-built-yet) board at
+`/p/<slug>/tasks`. On failure it shows the server's redacted error.
+
+The storage itself lives in one file — `data/lamproom.db` by default,
+overridable via the `LAMPROOM_DATA_DIR` env var. Two tables: `tasks`
+(the imported items; PK `(project_id, source_id, import_key)`) and
+`imports` (one row per button-click; carries state + counters).
+
+### Endpoints
+
+| Route | Purpose |
+|---|---|
+| `POST /api/import/jira?project=<id>` | Starts an import. Returns `{ importId, reused }`. A second call for the same (project, source) while the first is running returns the first's id — no doubled work. |
+| `GET /api/imports/<id>` | The current `ImportRow`: `state`, `created`, `updated`, `skipped`, `pages`, `startedAt`, `endedAt`, `error`. The UI polls this. |
+| `GET /api/projects/<id>/tasks?source=<id>&limit=<n>&offset=<n>` | Lists stored tasks for a project, newest-updated first. `source` is optional; `limit` defaults to 100 and caps at 500. |
+| `DELETE /api/projects/<id>/tasks?source=<id>` | Clears all tasks for a (project, source) pair. Import history (the `imports` table) is NOT cleared — the audit trail of "when we imported, what happened" survives a wipe. |
+
+Every route is localhost + same-origin only (`refused()` in
+`app/api/flows/local.ts`). They return `{ error: ... }` with 400/404
+on bad input or a missing project.
+
+### Lifecycle
+
+```
+POST /api/import/jira?project=p
+  └─▶ recordImport    row: state=running, counters=0
+      │
+      ▼
+   drive loop
+      ├─ fetch page 1 ─▶ upsertTasks ─▶ updateImportProgress +counters
+      ├─ fetch page 2 ─▶ upsertTasks ─▶ updateImportProgress +counters
+      ├─ ...
+      └─ nextCursor=undef OR budget hit
+         │
+         ▼
+      finishImport state=done
+```
+
+If any page throws, the loop's `catch` runs `redactFn(message)` and
+calls `finishImport(state='failed', { error })`. Rows already upserted
+stay — the next idempotent re-run picks up where this left off.
+
+### Budgets
+
+| Cap | Default | Why |
+|---|---|---|
+| `maxTasks` | 500 | A "just preview" click can't become a day-long sync. Soft cap: the current page finishes before the loop stops. |
+| `maxMs` | 5 min | A runaway Rovo loop can't eat a demo. Hard cap — the next page fetch is not started if the clock is up. |
+
+Both are overrideable via the `budget` option on `runIntake` for the
+CLI use case; the HTTP route uses the defaults.
+
+### Live round-trip
+
+With a working Jira credential in `.lamproom/credentials.json`:
+
+```bash
+FLOWBOARD_LIVE=1 \
+  FLOWBOARD_LIVE_JIRA_JQL='project = KAN AND statusCategory != Done' \
+  node --test packages/cli/test/intake-live.test.ts
+```
+
+The test runs `runIntake` against the real site, asserts rows land in
+a fresh SQLite file, then runs it a second time and asserts
+`created=0, updated=N` — idempotency on the natural key.
+
 ## What's not here yet
 
 Named for the follow-up plans:

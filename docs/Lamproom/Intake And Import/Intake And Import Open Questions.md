@@ -5,6 +5,31 @@ module: Intake And Import
 
 # Intake And Import Open Questions
 
+> [!success] 2026-11-19 — storage + intake plan resolved several more
+> * **#6 initial status** — a stored row has **no `status` column**. The
+>   per-source `extras` JSON carries whatever upstream state the source
+>   reports (Jira's `status.name`, GitHub's `state`); the board maps that
+>   to its visible lane. Everything lands in the board's "backlog" lane
+>   by default — the kanban rules live in the board, not the storage.
+> * **#9 where progress lives** — resolved: the `imports` table. One row
+>   per button-click, with `state` (`running | done | failed | cancelled`),
+>   monotonically increasing counters (`created`, `updated`, `skipped`,
+>   `pages`), and the redacted `error` string on failure. The UI polls
+>   `GET /api/imports/<id>` every 1.5s; no SSE, no websocket.
+> * **#5 tasks removed from the source on re-import** — **still open.**
+>   v1 keeps them: an upsert touches rows the source returned, and
+>   anything missing from this run is left where it was. A follow-up
+>   plan adds a `missingMode: 'keep' | 'archive' | 'delete'` option to
+>   `runIntake` so the operator can pick a policy per source.
+>
+> Also: imports NEVER store credentials or tokens, and
+> `imports.error` is run through `redactJiraTokens` (or the per-source
+> equivalent) before it is written. The trust-boundary from the TaskSource
+> spec carries all the way through to the import history.
+>
+> See [plan](../../superpowers/plans/2026-11-19-task-storage-and-intake.md)
+> and [spec](../../superpowers/specs/2026-11-19-task-storage-and-intake-design.md).
+
 > [!success] 2026-11-17 — port + markdown + GitHub plan resolved several
 > * **#1 explicit id syntax** — `{#slug}` per task becomes the `importKey`
 >   directly, bypassing `deriveImportKey`. Front-matter is not read. A
