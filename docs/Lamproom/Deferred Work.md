@@ -24,6 +24,7 @@ Items were moved from their notes word for word on 2026-11-17 and not checked ag
 - [[#Slack escalation]]
 - [[#Machine doctor]]
 - [[#Desktop app on Windows]]
+- [[#License]]
 
 ## Run flow engine
 
@@ -520,3 +521,11 @@ There is no Windows machine in the loop yet. For each fix:
 
 1. Add a unit test that passes `'win32'` as the platform, as `electron/path.test.js` does, for anything that builds a command line or a path.
 2. Run the app on Windows: `pnpm install`, `pnpm build`, `pnpm electron`. Then start `flows/review-loop.yaml` from the New run sheet, stop it from the run page, and confirm no `node`, `sh` or agent process is left (`tasklist | findstr /i "node sh claude opencode"`).
+
+## License
+
+Lamproom is under Apache-2.0 since 2026-11-19: `LICENSE` is the apache.org text, unchanged, and every `package.json` says `"license": "Apache-2.0"`. Left open:
+
+1. **Who holds the copyright, Alex or ClearCloud Software?** The repo lives in the ClearCloudSoftware GitHub organization. `LICENSE` needs no copyright line. Once decided, put `Copyright 2026 <holder>` in a `NOTICE` file, which redistributors must keep.
+2. **Can another contributor's work merge under Apache-2.0?** Their commits on `feature/task-source-port`, `feature/task-storage-intake` and `feature/task-source-jira-mcp` predate the license. If ClearCloud Software doesn't own that work, get their agreement before it merges.
+3. **Third-party terms once builds ship.** `LICENSE` covers Lamproom's own code only. A packaged Electron app should ship third-party notices, including libvips (LGPL-3.0-or-later, through `sharp`). The Claude Agent SDK, and the Claude Code CLI that `docker/Dockerfile` installs, are Anthropic's, all rights reserved. Check the terms the SDK's `LICENSE.md` links to before redistributing them, for example in a published image.

@@ -168,3 +168,7 @@ lists how to move an existing setup.
 - **[Development](docs/Development.md)**: the flow designer, the desktop app, checks, and moving an old checkout.
 - **[Feature map](docs/feature-map.md)**: a plain-English tour of every component.
 - **[Mockups](docs/mockups/)**: clickable screens built ahead of the code.
+
+## License
+
+Lamproom is licensed under the [Apache License 2.0](LICENSE).
