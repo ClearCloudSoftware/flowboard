@@ -2,6 +2,7 @@
 ## Learned rules
 - Do not use the macOS Keychain for secret storage; use cross-platform storage so the app also works on Windows.
 - Refer to this project as Lamproom, not FlowBoard, in code, docs, and UI text.
+- Store project data in SQLite accessed through Prisma ORM instead of JSON files, so the database can be swapped later.
 <!-- end claude-reflect -->
 
 ## Layout
