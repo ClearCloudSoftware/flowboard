@@ -29,6 +29,37 @@ export interface JiraStatus {
 }
 
 export type ImportState = 'running' | 'done' | 'failed' | 'cancelled';
+
+/** One imported ticket. Mirrors the shape returned by GET /api/projects/<id>/tasks. */
+export interface TaskRow {
+  projectId: string;
+  sourceId: string;
+  importKey: string;
+  title: string;
+  body: string | null;
+  labels: string[];
+  assignees: string[];
+  extras: Record<string, unknown>;
+  acceptance: string[];
+  nonGoals: string[];
+  hint: { upstream?: string; titleSlug: string };
+  importedAt: string;
+  updatedAt: string;
+}
+
+/** List tasks stored for a project; polled lightly so a running import refreshes. */
+export const projectTasksQuery = (projectId: string, sourceId?: string) =>
+  queryOptions({
+    queryKey: ['project-tasks', projectId, sourceId ?? 'all'] as const,
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (sourceId !== undefined) params.set('source', sourceId);
+      params.set('limit', '500');
+      return call<{ tasks: TaskRow[]; offset: number; limit: number }>(`/api/projects/${projectId}/tasks?${params.toString()}`);
+    },
+    refetchInterval: 10_000,
+  });
+
 export interface ImportRow {
   id: string;
   projectId: string;

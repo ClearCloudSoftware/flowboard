@@ -167,7 +167,7 @@ function Rail({ path }: { path: string }) {
               <Item href="/" icon={ArrowLeft} label="All projects" active={false} />
               <Item href={`/p/${enc(p.slug)}`} icon={LayoutDashboard} label="Overview" active={here === p.slug} />
               <Soon icon={Kanban} label="Board" />
-              <Soon icon={ListChecks} label="Tasks" />
+              <Item href={`/p/${enc(p.slug)}/tasks`} icon={ListChecks} label="Tasks" active={path === `/p/${enc(p.slug)}/tasks`} />
               {/* ponytail: Runs and Settings are sections of the project page until they get routes of their own */}
               <Item href={`/p/${enc(p.slug)}#runs-h`} icon={Activity} label="Runs" active={false}>
                 <Counts waiting={waiting} running={running} />

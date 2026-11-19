@@ -21,6 +21,8 @@
  *
  * See docs/superpowers/plans/2026-11-19-task-storage-and-intake.md Task 6.
  */
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, X } from 'lucide-react';
@@ -147,6 +149,7 @@ export function ImportFromJira({ projectId }: { projectId: string }) {
 }
 
 function ImportToast({ importId, onClose }: { importId: string; onClose: () => void }) {
+  const { slug } = useParams<{ slug: string }>();
   const q = useQuery(importQuery(importId));
   const row = q.data;
   const state = row?.state;
@@ -197,10 +200,10 @@ function ImportToast({ importId, onClose }: { importId: string; onClose: () => v
           {err}
         </p>
       )}
-      {state === 'done' && (
-        <p className="text-xs text-muted-foreground">
-          Board view <span className="border border-dashed border-input px-1 text-[9px] tracking-[0.1em] uppercase">soon</span>
-        </p>
+      {state === 'done' && slug !== undefined && (
+        <Link href={`/p/${encodeURIComponent(slug)}/tasks`} className="text-xs text-run underline underline-offset-4">
+          Open the board
+        </Link>
       )}
     </div>
   );
