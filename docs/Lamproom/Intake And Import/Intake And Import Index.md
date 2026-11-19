@@ -16,6 +16,7 @@ There is no mockup for this component in `docs/mockups/`. This set is built from
 
 - [[Intake And Import Overview]]: purpose, place in the system, design principles
 - [[Intake And Import Glossary]]: terms, including the overloaded words *backlog*, *import*, *seed* and *promote*
+- [[Markdown Task Source Handoff]]: what is built (the Markdown backlog provider), how it works, and decisions open to review
 
 ## Core concepts
 

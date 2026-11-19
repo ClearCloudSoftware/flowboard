@@ -174,9 +174,8 @@ export function RepositoriesPage() {
   );
 }
 
-// Intake And Import's TaskSource adapters: markdown first, the rest later (Future Task Sources).
+// Intake And Import's TaskSource adapters: markdown is built (Markdown Task Source), the rest later (Future Task Sources).
 const TASK_PROVIDERS = [
-  { id: 'markdown', name: 'Markdown backlog', text: 'A backlog file in a repo, imported as tasks; importing again updates them rather than adding copies.', icon: FileText },
   { id: 'github', name: 'GitHub Issues', text: "A repository's issues as tasks, through the same GitHub CLI login as the repositories.", icon: CircleDot },
   { id: 'linear', name: 'Linear', text: "A team's issues as tasks.", icon: ListTodo },
   { id: 'jira', name: 'Jira', text: "A project's issues as tasks.", icon: ListTodo },
@@ -188,6 +187,9 @@ export function TaskProvidersPage() {
     <>
       <Head title="Task providers">Where tasks come from, besides creating them by hand.</Head>
       <ul className={ul}>
+        <Row icon={icon(FileText)} name="Markdown backlog" text="An existing backlog file, pasted, picked or in the repo: the backlog importer (Internal steps) maps each piece of work in it to a task, and the parser takes over if it fails. Importing again updates the tasks rather than adding copies.">
+          <p className="m-0 font-sans text-xs text-muted-foreground">Import from a project&rsquo;s page: <b className="font-medium text-foreground">Backlog → Import</b>.</p>
+        </Row>
         <Soon items={TASK_PROVIDERS} />
       </ul>
     </>

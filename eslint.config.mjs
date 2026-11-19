@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Notes, mockups and the old reference code, not the app.
     "docs/**",
+    // Prisma's generated client (pnpm db:generate).
+    "packages/cli/src/generated/**",
   ]),
 ]);
 

@@ -16,6 +16,7 @@
 - `pnpm test:packages` and `pnpm typecheck:packages`: package tests and types. `pnpm test:app`: app tests. `pnpm lint`.
 - `pnpm test:live` calls real providers: OpenRouter costs money and Claude uses the subscription login. Run it only when asked.
 - `pnpm lr-run-flow <flow.yaml>`: run a flow from the CLI.
+- `pnpm db:migrate --name <what>` after changing `packages/cli/prisma/schema.prisma`: writes a migration (SQLite at `<data>/lamproom.db`, through Prisma); the app applies it on its next start. `pnpm install` generates the client.
 
 ## UI
 - Build UI from shadcn/ui components in `components/ui/`. When one is missing, add it with `pnpm dlx shadcn@latest add <name>` (configured in `components.json`) instead of hand-rolling it.

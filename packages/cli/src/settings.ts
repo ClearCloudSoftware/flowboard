@@ -170,7 +170,7 @@ export const INTERNAL_STEPS: Record<InternalStep, { name: string; text: string; 
   },
   'backlog-importer': {
     name: 'Backlog importer',
-    text: 'Turns a markdown backlog the parser cannot read into tasks. Runs when you import such a file.',
+    text: 'Reads an existing markdown backlog and maps each piece of work in it to a task: title, body, acceptance criteria, non-goals. Runs on every backlog import; the parser takes over if it fails.',
     fixed: 'Sees only the file’s text; writes only the task list. No other tools.',
   },
 };

@@ -10,9 +10,11 @@ import type { HarnessStatus } from '../../packages/cli/src/harnesses.ts';
 import type { DoctorReport } from '../../packages/cli/src/doctor.ts';
 import type { SocketState } from '../../packages/cli/src/slack.ts';
 import type { Memory } from '../../packages/cli/src/memory.ts';
+import type { Task } from '../../packages/cli/src/tasks.ts';
+import type { AgentImport, ImportInput, Imported } from '../../packages/cli/src/backlog-import.ts';
 import { ApiError, call } from '../flows/api.ts';
 
-export type { AppSettings, CloneJob, GhRepo, GhStatus, Project, ProjectView };
+export type { AgentImport, AppSettings, CloneJob, GhRepo, GhStatus, Imported, Project, ProjectView, Task };
 
 /** Every project with its run counts and week's spend, polled so a run started elsewhere shows up. */
 export const projectsQuery = queryOptions({ queryKey: ['projects'], queryFn: () => call<ProjectView[]>('/api/projects'), refetchInterval: 10_000 });
@@ -89,3 +91,15 @@ export const slackQuery = queryOptions({ queryKey: ['slack'], queryFn: () => cal
 export const saveSlackTokens = (t: { bot?: string; app?: string }) => call<SlackView>('/api/slack', { method: 'PUT', body: JSON.stringify(t) });
 export const removeSlackTokens = () => call<SlackView>('/api/slack', { method: 'DELETE', body: '{}' });
 export const testSlackTokens = () => call<SlackTest>('/api/slack', { method: 'POST', body: '{}' });
+
+/** A project's tasks (`tasks.json`); imported ones carry their `importKey`. */
+export const tasksQuery = (id: string) => queryOptions({ queryKey: ['tasks', id], queryFn: () => call<Task[]>(`/api/projects/${id}/tasks`) });
+/** Imports a markdown backlog: the counts when the parser read it, or the importer agent's run to poll. */
+export const importBacklog = (id: string, input: ImportInput) => call<{ imported: Imported } | { run: string }>(`/api/projects/${id}/tasks/import`, { method: 'POST', body: JSON.stringify(input) });
+/** The importer agent's import, polled until it is done or failed. */
+export const agentImportQuery = (id: string, run: string) =>
+  queryOptions({
+    queryKey: ['tasks', id, 'import', run],
+    queryFn: () => call<AgentImport>(`/api/projects/${id}/tasks/import/${encodeURIComponent(run)}`),
+    refetchInterval: (q) => (q.state.data?.status === 'running' ? 2000 : false),
+  });

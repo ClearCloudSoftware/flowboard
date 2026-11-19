@@ -23,6 +23,7 @@ Items were moved from their notes word for word on 2026-11-17 and not checked ag
 - [[#Project memory]]
 - [[#Slack escalation]]
 - [[#Machine doctor]]
+- [[#Markdown backlog import]]
 - [[#Desktop app on Windows]]
 
 ## Run flow engine
@@ -357,6 +358,23 @@ Found by the page's final review and left unfixed. None blocks merging. Line num
   instead, or find a loader that resolves `next/server`.
 - **`next dev` once exited with code 1 to show an upgrade notice** for a security advisory on Next 16.4.1, before
   serving anything; starting it again served normally. Worth checking whether Next has a patched release.
+
+## Markdown backlog import
+
+What `feature/markdown-task-source` (2026-11-17) left for later. How it works and the decisions open to review are in [[Markdown Task Source Handoff]].
+
+| Issue | Effect | Where |
+|---|---|---|
+| The importer agent has not run with a real `claude` | It is the main path, but it is tested only with a stand-in `startRun` and run output. The skill's mapping on a real backlog, its `tasks` artifact and the counts have not been seen together | `packages/cli/src/backlog-import.ts`, `internal/backlog-importer/SKILL.md`. Import a real backlog once and check the tasks it makes |
+| The Import dialog has not been used in a browser | The routes were checked with `curl`, and the page returns 200. Paste, file picker, the result line and the agent's progress have not been seen | `app/projects/backlog.tsx` |
+| An agent import is applied only when a page asks | The tasks land when the Backlog card polls `import/<run>`. If the page closes before the run ends, nothing imports until the next poll of that run, and the card forgets the run on reload | `agentImport` in `backlog-import.ts`. Apply it when the run ends (lr-run-flow), or list pending imports on the card |
+| `backlog_imports` is never pruned | One small row per agent import; the backlog text is dropped once the result is kept, but stays while an import was never polled | `backlog-import.ts` |
+| The importer's run takes the repo's folder lock | An import whose file needs the agent is refused while another run in the repo is going, with lr-run-flow's words | Same as the repo analyst; `startRun` |
+| Only tasks and backlog imports are in SQLite | Projects, settings, memory and escalations are still JSON files in the data folder, so `tasks.project_id` has no foreign key and nothing joins across them | `packages/cli/prisma/schema.prisma`. Move each store into the schema when it is next changed |
+| The migration runner is SQLite-only | `db.ts` applies Prisma's `migration.sql` files itself with `better-sqlite3`. Another database needs its migrations made again for it, and `prisma migrate deploy` or a runner of its own | `packages/cli/src/db.ts`, marked `ponytail:` |
+| Two older tests time out under the full run's load | `opensandbox-relay.test.ts` and `clone.test.ts`'s *a failed clone says why* each hung or hit their 10 s wait once on 2026-11-17, and pass alone on this branch and on `dev` | `packages/adapters/test/`, `packages/cli/test/` |
+| A removed project's tasks stay | `removeProject` forgets the record and its memory, not its tasks, which stay in the `tasks` table with no project | `packages/cli/src/projects.ts` |
+| Tasks can only be imported | No create by hand, edit, delete, promote or demote yet, and no board. The Backlog card lists only `backlog` tasks | [[Creating A Task]], [[Promoting A Task]] |
 
 ## Desktop app on Windows
 

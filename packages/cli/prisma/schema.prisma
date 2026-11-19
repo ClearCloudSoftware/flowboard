@@ -1,0 +1,49 @@
+// Lamproom's database: SQLite at <data>/lamproom.db for now, through Prisma so it can move to another database later.
+// Tables and columns follow the PRD's names (PRD §5). Projects are still in projects.json, so project_id has no
+// foreign key yet. Change it with `pnpm db:migrate --name <what>`; `db.ts` applies the migrations when it opens the file.
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// A piece of work in a project (Task Record). `import_key`: null on a task made by hand, so no import matches it.
+model Task {
+  id                 String   @id @default(uuid())
+  projectId          String   @map("project_id")
+  title              String
+  body               String?
+  /// What has to be true to close it, one string per item (a JSON array).
+  acceptanceCriteria Json     @map("acceptance_criteria")
+  /// What agents must leave alone, one string per item (a JSON array).
+  nonGoals           Json     @map("non_goals")
+  /// backlog | todo | running | blocked | done | failed | cancelled
+  status             String   @default("backlog")
+  importKey          String?  @map("import_key")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@unique([projectId, importKey])
+  @@index([projectId, status])
+  @@map("tasks")
+}
+
+/// One backlog import by the importer agent: its run, the backlog text until the tasks are saved, then the result.
+model BacklogImport {
+  run       String   @id
+  projectId String   @map("project_id")
+  text      String?
+  /// running | applying | settled
+  state     String   @default("running")
+  /// AgentImport once settled (JSON).
+  result    Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("backlog_imports")
+}

@@ -31,6 +31,7 @@ import type { ProjectView } from './api.ts';
 import { Analysis } from './analysis.tsx';
 import { Knowledge } from './knowledge.tsx';
 import { Memory } from './memory.tsx';
+import { Backlog } from './backlog.tsx';
 import { FlowSelect } from './flow-select.tsx';
 import { Figures } from './list.tsx';
 import { type Draft, draftFrom, type PageId, problems, toLimits, toOverrides } from './settings-model.ts';
@@ -375,6 +376,11 @@ export function ProjectPage() {
                 )}
               </section>
             </div>
+            <Card>
+              <CardContent>
+                <Backlog projectId={p.id} />
+              </CardContent>
+            </Card>
             <Card>
               <CardContent>
                 <Analysis projectId={p.id} mode="project" />
