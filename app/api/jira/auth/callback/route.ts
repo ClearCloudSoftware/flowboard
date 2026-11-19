@@ -44,9 +44,15 @@ export async function GET(request: Request) {
 
   const redirectUri = `${url.origin}/api/jira/auth/callback`;
 
-  const clientSecret = process.env['ATLASSIAN_CLIENT_SECRET'];
-  if (clientSecret === undefined || clientSecret === '') {
-    console.error('[jira/auth/callback] ATLASSIAN_CLIENT_SECRET not set; Atlassian 3LO requires it');
+  // Prefer the secret stored in jira.json (UI-settable, no restart needed);
+  // fall back to the legacy env var.
+  const stored = readJira(dataDir()).oauthClientSecret;
+  const clientSecret =
+    stored !== undefined && stored.trim() !== ''
+      ? stored.trim()
+      : (process.env['ATLASSIAN_CLIENT_SECRET'] ?? '').trim() || undefined;
+  if (clientSecret === undefined) {
+    console.error('[jira/auth/callback] no OAuth client secret saved; Atlassian 3LO requires it');
     return redirectWith(url.origin, 'no_secret');
   }
 

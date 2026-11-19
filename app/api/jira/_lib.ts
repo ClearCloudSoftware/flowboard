@@ -42,7 +42,7 @@ export async function ensureFreshCredential(
     ATLASSIAN_CLIENT_ID,
     new Date(),
     fetch,
-    process.env['ATLASSIAN_CLIENT_SECRET'],
+    resolveClientSecret(settings),
   );
   if (refreshed === cred) return { cred, settings };
   const nextSettings = { ...settings, credential: refreshed };
@@ -62,11 +62,20 @@ export function makeRefreshOAuthFn(settings: JiraSettings) {
       ATLASSIAN_CLIENT_ID,
       new Date(),
       fetch,
-      process.env['ATLASSIAN_CLIENT_SECRET'],
+      resolveClientSecret(settings),
     );
     writeJira(dataDir(), { ...settings, credential: refreshed });
     return refreshed;
   };
+}
+
+/** Secret stored in jira.json wins; `.env.local` is the legacy fallback. */
+function resolveClientSecret(settings: JiraSettings): string | undefined {
+  const stored = settings.oauthClientSecret;
+  if (stored !== undefined && stored.trim() !== '') return stored.trim();
+  const env = process.env['ATLASSIAN_CLIENT_SECRET'];
+  if (env !== undefined && env.trim() !== '') return env.trim();
+  return undefined;
 }
 
 /** Build a `SourceCredentialResolver` that always returns the stored credential. */

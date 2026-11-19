@@ -25,6 +25,7 @@ interface JiraStatus {
   email?: string;
   expiresAt?: string;
   defaultJql?: string;
+  oauthSecretSaved: boolean;
 }
 import { ErrorLine, Field, Head } from '../../../settings.tsx';
 
@@ -74,6 +75,25 @@ async function signOut(): Promise<void> {
   if (!r.ok) throw new Error(`sign-out failed: ${r.status}`);
 }
 
+async function saveOauthSecret(secret: string): Promise<JiraStatus> {
+  const r = await fetch('/api/jira/oauth-secret', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ secret }),
+  });
+  if (!r.ok) {
+    const { error } = (await r.json()) as { error?: string };
+    throw new Error(error ?? `save failed: ${r.status}`);
+  }
+  return (await r.json()) as JiraStatus;
+}
+
+async function forgetOauthSecret(): Promise<JiraStatus> {
+  const r = await fetch('/api/jira/oauth-secret', { method: 'DELETE' });
+  if (!r.ok) throw new Error(`forget failed: ${r.status}`);
+  return (await r.json()) as JiraStatus;
+}
+
 async function preview(jql: string): Promise<{ tasks: ParsedTaskRow[]; nextCursor?: string }> {
   const url = new URL('/api/jira/preview', window.location.origin);
   if (jql.trim() !== '') url.searchParams.set('jql', jql.trim());
@@ -115,7 +135,7 @@ function AuthStatusBanner({ status }: { status: JiraStatus }) {
     );
   }
   if (auth === 'state') return <p className={warnBox}>OAuth was refused: state did not match. Try again.</p>;
-  if (auth === 'no_secret') return <p className={warnBox}>OAuth cannot run: ATLASSIAN_CLIENT_SECRET environment variable is not set. Restart the dev server with it defined.</p>;
+  if (auth === 'no_secret') return <p className={warnBox}>OAuth cannot run: no client secret saved. Paste it in the field below and try again.</p>;
   if (auth === 'exchange') return <p className={warnBox}>OAuth was refused: Atlassian would not exchange the code. Check that the Client Secret is current.</p>;
   if (auth === 'no_sites') return <p className={warnBox}>Signed in, but your account has no Jira sites.</p>;
   if (auth === 'missing') return <p className={warnBox}>Sign-in was cancelled.</p>;
@@ -124,37 +144,89 @@ function AuthStatusBanner({ status }: { status: JiraStatus }) {
 
 function OAuthTab({ status }: { status: JiraStatus }) {
   const queryClient = useQueryClient();
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['jira', 'status'] });
   const start = useMutation({
     mutationFn: startOAuth,
     onSuccess: ({ authUrl }) => {
       window.open(authUrl, '_blank', 'noopener,noreferrer');
     },
   });
-  const out = useMutation({
-    mutationFn: signOut,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['jira', 'status'] }),
-  });
-  if (status.connected && status.kind === 'atlassian_oauth') {
-    return (
-      <div className="grid gap-2">
-        <Button size="sm" variant="outline" disabled={out.isPending} onClick={() => out.mutate()}>
-          {out.isPending ? 'Signing out…' : 'Sign out'}
-        </Button>
-        <ErrorLine error={out.error} />
-      </div>
-    );
-  }
+  const out = useMutation({ mutationFn: signOut, onSuccess: invalidate });
   return (
-    <div className="grid gap-2">
-      <Button size="sm" disabled={start.isPending} onClick={() => start.mutate()}>
-        {start.isPending ? 'Opening Atlassian…' : 'Sign in with Atlassian'}
-      </Button>
-      <p className="m-0 font-sans text-xs text-[var(--ink-2)]">
-        Opens Atlassian in a new tab. Approve, then return here — Lamproom stores the refresh token and renews itself before
-        expiry.
-      </p>
-      <ErrorLine error={start.error} />
+    <div className="grid gap-3">
+      <ClientSecret status={status} />
+      {status.connected && status.kind === 'atlassian_oauth' ? (
+        <div className="grid gap-2">
+          <div>
+            <Button size="sm" variant="outline" disabled={out.isPending} onClick={() => out.mutate()}>
+              {out.isPending ? 'Signing out…' : 'Sign out'}
+            </Button>
+          </div>
+          <ErrorLine error={out.error} />
+        </div>
+      ) : (
+        <div className="grid gap-2">
+          <div>
+            <Button size="sm" disabled={start.isPending || !status.oauthSecretSaved} onClick={() => start.mutate()} title={!status.oauthSecretSaved ? 'Save the OAuth client secret first' : undefined}>
+              {start.isPending ? 'Opening Atlassian…' : 'Sign in with Atlassian'}
+            </Button>
+          </div>
+          <p className="m-0 font-sans text-xs text-[var(--ink-2)]">
+            Opens Atlassian in a new tab. Approve, then return here — Lamproom stores the refresh token and renews itself before
+            expiry.
+          </p>
+          <ErrorLine error={start.error} />
+        </div>
+      )}
     </div>
+  );
+}
+
+function ClientSecret({ status }: { status: JiraStatus }) {
+  const queryClient = useQueryClient();
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['jira', 'status'] });
+  const [secret, setSecret] = useState('');
+  const save = useMutation({
+    mutationFn: () => saveOauthSecret(secret.trim()),
+    onSuccess: () => {
+      setSecret('');
+      invalidate();
+    },
+  });
+  const forget = useMutation({ mutationFn: forgetOauthSecret, onSuccess: invalidate });
+  return (
+    <Field
+      title="OAuth client secret"
+      htmlFor="jira-oauth-secret"
+      text={
+        <>
+          The confidential-client secret from your Atlassian OAuth 2.0 app. Rotate it from
+          here — no dev-server restart. Stored in <code className="font-mono">jira.json</code>,
+          mode 0600, never returned to the UI once saved.
+        </>
+      }
+    >
+      <div className="flex max-w-md flex-wrap items-center gap-2">
+        <Input
+          id="jira-oauth-secret"
+          type="password"
+          value={secret}
+          onChange={(e) => setSecret(e.target.value)}
+          placeholder={status.oauthSecretSaved ? '(saved · enter a new one to replace)' : 'ATOA...'}
+          className="min-w-0 flex-1 font-mono"
+        />
+        <Button size="sm" disabled={secret.trim() === '' || save.isPending} onClick={() => save.mutate()}>
+          {save.isPending ? 'Saving…' : status.oauthSecretSaved ? 'Replace' : 'Save'}
+        </Button>
+        {status.oauthSecretSaved && (
+          <Button size="sm" variant="ghost" disabled={forget.isPending} onClick={() => forget.mutate()}>
+            {forget.isPending ? 'Forgetting…' : 'Forget'}
+          </Button>
+        )}
+      </div>
+      <ErrorLine error={save.error} />
+      <ErrorLine error={forget.error} />
+    </Field>
   );
 }
 
