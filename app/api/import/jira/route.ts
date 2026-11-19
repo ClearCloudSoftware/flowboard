@@ -24,6 +24,7 @@ import { readProjects } from '../../../../packages/cli/src/projects.ts';
 import {
   buildJiraTransport,
   collectJiraTokens,
+  ensureFreshCredential,
   makeRefreshOAuthFn,
   readJiraSettings,
   staticResolver,
@@ -68,7 +69,18 @@ export async function POST(request: Request) {
     return Response.json({ importId: existing.importId, reused: true });
   }
 
-  const cred = settings.credential;
+  // Refresh OAuth BEFORE building the transport — the REST transport bakes
+  // the bearer at construction, so a stale access token would 401 even
+  // though the source itself has a working refresh function.
+  let fresh: { cred: typeof settings.credential; settings: typeof settings };
+  try {
+    const r = await ensureFreshCredential(settings);
+    fresh = { cred: r.cred, settings: r.settings };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return Response.json({ error: `Jira token refresh failed: ${message}` }, { status: 401 });
+  }
+  const cred = fresh.cred!;
   const db = openDb(join(dataDir(), 'lamproom.db'));
   const mcpClient = new McpClient(buildJiraTransport(cred));
 
@@ -76,7 +88,7 @@ export async function POST(request: Request) {
     resolver: staticResolver(cred),
     defaultJql,
     mcpClient,
-    refreshOAuthFn: makeRefreshOAuthFn(settings),
+    refreshOAuthFn: makeRefreshOAuthFn(fresh.settings),
   });
 
   const tokens = collectJiraTokens(cred);

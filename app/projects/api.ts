@@ -117,8 +117,11 @@ export const testOpenRouterKey = () => call<KeyTest>('/api/openrouter/key', { me
 export const jiraStatusQuery = queryOptions({ queryKey: ['jira', 'auth-status'], queryFn: () => call<JiraStatus>('/api/jira/auth/status'), refetchInterval: 30_000 });
 
 /** Kick off a Jira import for a project; returns the id so the UI can poll `importQuery`. */
-export const startJiraImport = (projectId: string) =>
-  call<{ importId: string; reused: boolean }>(`/api/import/jira?project=${encodeURIComponent(projectId)}`, { method: 'POST', body: '{}' });
+export const startJiraImport = (projectId: string, jql?: string) => {
+  const params = new URLSearchParams({ project: projectId });
+  if (jql !== undefined && jql.trim() !== '') params.set('jql', jql.trim());
+  return call<{ importId: string; reused: boolean }>(`/api/import/jira?${params.toString()}`, { method: 'POST', body: '{}' });
+};
 
 /** One import row, polled every 1.5s while running; the poll stops once state leaves 'running'. */
 export const importQuery = (importId: string) =>

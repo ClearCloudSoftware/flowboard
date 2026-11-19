@@ -297,7 +297,7 @@ export function ProjectPage() {
         {p && (
           <>
             <Remove p={p} live={live} />
-            <ImportFromJira projectId={p.id} projectSlug={p.slug} />
+            <ImportFromJira projectId={p.id} />
             <Button size="sm" asChild>
               <Link href={newRunHref(p)}>
                 <Play aria-hidden /> New run

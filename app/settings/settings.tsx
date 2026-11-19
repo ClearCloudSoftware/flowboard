@@ -2,6 +2,7 @@
 /** The app settings sections: General, two Connections pages and Defaults; Escalation is `slack.tsx`, Agents `agents.tsx`. Each loads /api/settings. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleDot, FileText, FolderGit2, GitBranch, ListTodo, type LucideIcon, Webhook } from 'lucide-react';
+import Link from 'next/link';
 import { type ReactNode, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -175,20 +176,58 @@ export function RepositoriesPage() {
 }
 
 // Intake And Import's TaskSource adapters: markdown first, the rest later (Future Task Sources).
-const TASK_PROVIDERS = [
+// Jira is the first one with a shipping UI — the others follow in later plans.
+const TASK_PROVIDERS_SOON = [
   { id: 'markdown', name: 'Markdown backlog', text: 'A backlog file in a repo, imported as tasks; importing again updates them rather than adding copies.', icon: FileText },
   { id: 'github', name: 'GitHub Issues', text: "A repository's issues as tasks, through the same GitHub CLI login as the repositories.", icon: CircleDot },
   { id: 'linear', name: 'Linear', text: "A team's issues as tasks.", icon: ListTodo },
-  { id: 'jira', name: 'Jira', text: "A project's issues as tasks.", icon: ListTodo },
   { id: 'webhook', name: 'Webhook', text: 'Any tool that can post JSON to Lamproom creates a task.', icon: Webhook },
 ];
+
+function JiraRow() {
+  const status = useQuery({
+    queryKey: ['jira', 'auth-status'] as const,
+    queryFn: async () => {
+      const r = await fetch('/api/jira/auth/status');
+      if (!r.ok) throw new Error(`status ${r.status}`);
+      return (await r.json()) as { connected: boolean; kind?: string; siteName?: string; email?: string; baseUrl?: string };
+    },
+  });
+  const s = status.data;
+  return (
+    <Row icon={icon(ListTodo)} name="Jira" text="A Jira project's issues as tasks, via OAuth or an API token.">
+      <div className="grid gap-2 font-sans text-[13px]">
+        {status.isPending && <p className="m-0 text-xs text-muted-foreground">Checking…</p>}
+        {status.isError && <p className="m-0 text-xs text-fail">{status.error.message}</p>}
+        {s && (
+          s.connected ? (
+            <p className="m-0">
+              <span className="mr-1.5 inline-block size-[7px] bg-run align-middle" aria-hidden />
+              Connected {s.kind === 'atlassian_oauth' && s.siteName ? <>via OAuth · site <b>{s.siteName}</b></> : s.kind === 'atlassian_api_token' && s.email ? <>via API token · <b>{s.email}</b></> : null}
+            </p>
+          ) : (
+            <p className="m-0 border-l-[3px] border-wait bg-[var(--wait-soft)] px-2.5 py-1.5 text-wait">
+              Not connected.
+            </p>
+          )
+        )}
+        <div>
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/settings/connections/tasks/jira">Open Jira settings</Link>
+          </Button>
+        </div>
+      </div>
+    </Row>
+  );
+}
 
 export function TaskProvidersPage() {
   return (
     <>
       <Head title="Task providers">Where tasks come from, besides creating them by hand.</Head>
       <ul className={ul}>
-        <Soon items={TASK_PROVIDERS} />
+        <JiraRow />
+        <Soon items={TASK_PROVIDERS_SOON} />
       </ul>
     </>
   );

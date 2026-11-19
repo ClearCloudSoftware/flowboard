@@ -23,6 +23,33 @@ export function buildJiraTransport(cred: JiraCredential): McpTransport {
   return restTransport({ cloudId: cred.baseUrl, authorization: `Basic ${basic}` });
 }
 
+/**
+ * Pre-flight OAuth refresh. The adapter's own `maybeRefresh` runs INSIDE
+ * `fetch()` — but by then the REST transport has already been built with
+ * the (possibly stale) bearer baked in. So we refresh here, before the
+ * transport goes out, and persist the result to `jira.json` for next time.
+ *
+ * API-token credentials are returned unchanged (no refresh story).
+ */
+export async function ensureFreshCredential(
+  settings: JiraSettings,
+): Promise<{ cred: JiraCredential; settings: JiraSettings }> {
+  const cred = settings.credential;
+  if (cred === undefined) throw new Error('ensureFreshCredential: no credential configured');
+  if (cred.kind !== 'atlassian_oauth') return { cred, settings };
+  const refreshed = await refreshIfNeeded(
+    cred,
+    ATLASSIAN_CLIENT_ID,
+    new Date(),
+    fetch,
+    process.env['ATLASSIAN_CLIENT_SECRET'],
+  );
+  if (refreshed === cred) return { cred, settings };
+  const nextSettings = { ...settings, credential: refreshed };
+  writeJira(dataDir(), nextSettings);
+  return { cred: refreshed, settings: nextSettings };
+}
+
 export function collectJiraTokens(cred: JiraCredential): Array<string | undefined> {
   if (cred.kind === 'atlassian_oauth') return [cred.accessToken, cred.refreshToken];
   return [cred.token];

@@ -15,7 +15,7 @@ import {
   McpClient,
   redactJiraTokens,
 } from '../../../../packages/adapters/src/index.ts';
-import { buildJiraTransport, collectJiraTokens, makeRefreshOAuthFn, readJiraSettings, staticResolver } from '../_lib.ts';
+import { buildJiraTransport, collectJiraTokens, ensureFreshCredential, makeRefreshOAuthFn, readJiraSettings, staticResolver } from '../_lib.ts';
 import { refused } from '../../flows/local.ts';
 
 export async function GET(request: Request) {
@@ -36,7 +36,22 @@ export async function GET(request: Request) {
     return Response.json({ error: 'no JQL provided and no default saved' }, { status: 400 });
   }
 
-  const cred = settings.credential;
+  // Refresh OAuth BEFORE building the transport — the REST transport bakes
+  // the bearer at construction, so a stale access token would 401 even
+  // though the source itself has a working refresh function.
+  let cred: typeof settings.credential;
+  let currentSettings = settings;
+  try {
+    const r = await ensureFreshCredential(settings);
+    cred = r.cred;
+    currentSettings = r.settings;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return Response.json({ error: `Jira token refresh failed: ${message}` }, { status: 401 });
+  }
+  if (cred === undefined) {
+    return Response.json({ error: 'no credentials configured' }, { status: 400 });
+  }
   const mcpClient = new McpClient(buildJiraTransport(cred));
 
   try {
@@ -44,7 +59,7 @@ export async function GET(request: Request) {
       resolver: staticResolver(cred),
       defaultJql,
       mcpClient,
-      refreshOAuthFn: makeRefreshOAuthFn(settings),
+      refreshOAuthFn: makeRefreshOAuthFn(currentSettings),
     });
     const result = await src.fetch({ pageSize });
     return Response.json({ tasks: result.tasks, nextCursor: result.nextCursor, usage: result.usage });
