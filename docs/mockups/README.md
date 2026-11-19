@@ -202,6 +202,77 @@ browser, or run `python3 -m http.server` in this folder.
   Keys: `1`–`3` stages, `[`/`]` previous or next commit, `e` expand all,
   `d` dry run.
 
+- **[`board.html`](./board.html)**: a proposal for the project board
+  (`/p/[slug]`) as a Kanban. Its statuses build on the triage labels
+  Sandcastle's docs use, plus a new `backlog` and `needs-context` and
+  Lamproom's own `in progress` and `done`. They split by who manages them.
+  **You** manage `backlog`, `ready-for-agent`, `ready-for-human`, `done` and
+  `wontfix`, and only those show by default. **Agents** manage `needs-triage`,
+  `needs-info`, `needs-context` and `in progress`. `v` shows them as shaded,
+  locked columns, and while they're hidden the strip still counts their cards
+  and anything waiting on you. You can drag a card out of an agent status but
+  never into one. Agents move cards in two places. The **triage agent** reads
+  new issues in `needs-triage` and sorts them into `backlog` or `needs-info`.
+  It also checks every card you move to `ready-for-agent`: drag *Sunset the v1
+  /charges endpoint* there and it bounces to `needs-context`, with what's
+  missing. `needs-context` means the ask is clear, but the agent couldn't find
+  where in the code to start or which rule applies. That differs from
+  `needs-info`, which waits on the person who filed it. *Gather with
+  repo-analyst* attaches a `context.md` but doesn't move the card. **Start
+  run** puts a card in `in progress`; the run stops at review for you, then
+  closes the issue.
+  How the board behaves depends on the **issue provider**, which you switch
+  with the mockup control:
+  - **Markdown**: `BACKLOG.md` *is* the board. The status headings are
+    `## <status>` sections, and each move rewrites the file. There's nothing to
+    sync, and edits made in your editor show up on save.
+  - **GitHub Issues**: moves queue up as `gh issue edit … --add-label`
+    commands. Nothing syncs on its own: pressing Sync now (`s`) pushes the
+    queue and pulls remote changes, so there's no live two-way sync. If a
+    card changed on both sides, sync stops for that card and asks you to keep
+    yours or take theirs. A rejected token keeps the queue intact.
+  - **Beads**: syncs through git (`bd sync`). Dependencies are native, so a
+    blocked `ready-for-agent` card can't start. The `bd` command lines are
+    illustrative.
+  Every card carries its **type** as an icon: bug, task or story. The story
+  *Bill customers in their own currency* (#218) sits in its own `in tasks`
+  column. Its card shows how many of its five tasks are done, and each of
+  those tasks shows "part of #218". Nobody drags a story: it moves to `done`
+  by itself when its last task is done. In `BACKLOG.md`, type and story ride
+  on the attribute block, as `{#amount-minor .task parent=bill-in-currency}`.
+  Keys: `h`/`l` move between columns, `j`/`k` between cards, `↵` opens a card,
+  `[`/`]` move the card to the next status you manage, `v` shows or hides
+  agent statuses, `s` syncs, `a` approves at a gate, `Esc` closes.
+
+- **[`workflows.html`](./workflows.html)**: a proposal for workflows and task
+  types (`/p/[slug]/settings/workflows`), following
+  [Task Types And Workflows](../Lamproom/Board/Task%20Types%20And%20Workflows.md).
+  - **Task types:** Bug, Task and Story are on the left. Each one picks a
+    **workflow**, which sets its statuses and the moves that carry a rule.
+    It also picks a **flow**, which sets what a run does. Bug and Task share
+    the `standard` workflow but run `bugfix` and `software-delivery`.
+  - **The graph:** statuses sit in Jira's three categories (to do, in
+    progress, done), with agent statuses shaded. Arrows are drawn only for
+    moves with a rule. Clicking a status lights its moves and lists who makes
+    each one, and why, on the right. *Draw free moves* shows the hairball
+    that drawing every arrow makes.
+  - **New status** (`n`) asks for a name, a category, who manages it, which
+    workflows it joins and where its cards come from. It refuses a name that
+    can't be a heading or a label. It warns when an agent status has no way
+    in, or no agent to move cards out. The provider control at the bottom
+    right changes what the new status becomes: a `##` section in
+    `BACKLOG.md`, a GitHub label, a label on a Beads status, or a mapping to
+    a status that already exists in Jira.
+  - **Choosing a flow:** a story's flow must end in a `task_list`, so picking
+    `software-delivery` for Story warns that stories would build code
+    directly.
+  - **The Story type** shows #218 at the split step's approve gate. The
+    proposed tasks link three issues that already exist instead of
+    duplicating them, and mark which tasks have to wait for others. *Approve*
+    creates the two new tasks and moves the story to `in tasks`.
+  Keys: `1`/`2`/`3` switch types, `n` adds a status, `f` toggles free moves,
+  `Esc` closes.
+
 ## Conventions
 
 Run `/mockup` and these are applied for you — the skill carries the tokens, a skeleton, the

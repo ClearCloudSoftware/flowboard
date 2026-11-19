@@ -1,0 +1,614 @@
+<meta charset="utf-8">
+<title>Lamproom Workflows</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74; --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A; --wait-ink:#FDF6EA;
+  --fail:#B0231B; --fail-soft:#B0231B12;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);
+  font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+svg{flex:0 0 auto;display:block}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sans{font-family:var(--sans)}
+.sep{color:var(--line-2);padding:0 .45em}
+.sp{flex:1}
+.mute{color:var(--ink-3)}
+.app{height:100dvh;display:flex;flex-direction:column}
+
+/* ── topbar + provider strip ──────────────────────────────────── */
+.topbar{flex-shrink:0;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+.toplink{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);font-size:12px;text-decoration:none;border-bottom:1px solid var(--line-2)}
+.toplink:hover{color:var(--ink);border-color:var(--ink)}
+.strip{flex-shrink:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 18px;
+  background:var(--surface-3);border-top:2px solid var(--line-2);border-bottom:1px solid var(--line-2);font-size:12px}
+.strip b{font-weight:600}
+.strip .sans{color:var(--ink-2)}
+
+/* ── buttons ──────────────────────────────────────────────────── */
+.act{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-2);padding:3px 11px;
+  font-size:12px;white-space:nowrap;background:var(--surface);
+  transition:background var(--t),border-color var(--t),color var(--t)}
+.act:hover:not(:disabled){background:var(--surface-2);border-color:var(--ink-3)}
+.act:disabled{opacity:.4;cursor:default}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act.primary:hover:not(:disabled){background:var(--run);color:#fff}
+.act.wait{border-color:var(--wait);color:var(--wait);background:var(--wait-soft);font-weight:500}
+.act.wait:hover:not(:disabled){background:var(--wait);color:var(--wait-ink)}
+.act kbd{font-family:var(--mono);font-size:10px;color:var(--ink-3);border:1px solid var(--line);padding:0 3px}
+
+/* ── three panes ──────────────────────────────────────────────── */
+.body{flex:1;min-height:0;display:grid;grid-template-columns:250px minmax(0,1fr) 360px}
+
+.rail{min-height:0;overflow:auto;background:var(--surface);border-right:1px solid var(--line-2)}
+.rail-sec{padding:12px 14px;border-bottom:1px solid var(--line);display:grid;gap:6px}
+.ty{display:grid;grid-template-columns:18px 1fr auto;gap:2px 8px;align-items:center;width:100%;padding:8px 10px;
+  border:1px solid transparent;transition:background var(--t),border-color var(--t)}
+.ty:hover{background:var(--surface-2)}
+.ty[aria-current="true"]{background:var(--surface-2);border-color:var(--line-2);box-shadow:inset 2px 0 0 var(--ink)}
+.ty-name{font-weight:600}
+.ty-n{font-size:11px;color:var(--ink-3)}
+.ty-sub{grid-column:2/4;font-size:11px;color:var(--ink-3)}
+.wfl{display:flex;align-items:baseline;gap:8px;font-size:12px;padding:2px 0}
+.wfl b{font-weight:600}
+.rail-note{font-family:var(--sans);font-size:12px;color:var(--ink-3);line-height:1.45;margin:0}
+
+.main{min-height:0;overflow:auto;display:flex;flex-direction:column}
+.typehead{flex-shrink:0;padding:14px 20px 12px;border-bottom:1px solid var(--line);background:var(--paper);display:grid;gap:9px}
+.th-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.th-name{font-family:var(--sans);font-size:19px;font-weight:600;margin:0;display:flex;align-items:center;gap:8px}
+.th-sel{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)}
+.th-sel select{border:1px solid var(--line-2);background:var(--surface);padding:2px 6px;border-radius:0}
+.fsteps{display:flex;gap:2px;flex-wrap:wrap}
+.fstep{font-size:11px;padding:2px 8px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2)}
+.fstep.gate{border-color:var(--wait-edge);color:var(--wait);display:inline-flex;align-items:center;gap:4px}
+.fstep.out{background:transparent;border-style:dashed;color:var(--ink-3)}
+.warnline{font-family:var(--sans);font-size:12.5px;color:var(--wait);display:flex;gap:7px;align-items:flex-start}
+
+.legend{flex-shrink:0;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:8px 20px;font-size:11px;color:var(--ink-3);border-bottom:1px solid var(--line)}
+.legend i{display:inline-block;width:14px;height:10px;border:1px solid var(--line-2);vertical-align:-1px;margin-right:5px}
+.legend i.ag{background:var(--surface-2)}
+.legend i.tk{border-style:dashed}
+.tgl{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);cursor:pointer}
+.tgl input{accent-color:var(--ink);margin:0}
+
+/* the graph: statuses as boxes over an svg of move rules */
+.canvas-wrap{flex-shrink:0;overflow:auto;padding:0 0 10px}
+.canvas{position:relative;overflow:hidden}
+.lane{position:absolute;top:0;bottom:0;border-right:1px solid var(--line)}
+.lane-h{position:absolute;top:10px;left:14px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.edges{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.edges path{fill:none;stroke:var(--line-2);stroke-width:1.2}
+.edges path.free{stroke:var(--line);stroke-dasharray:2 3}
+.edges path.on{stroke:var(--ink);stroke-width:1.5}
+.edges path.new{stroke:var(--run);stroke-width:1.5}
+.entry{position:absolute;font-size:10.5px;color:var(--ink-3);transform:translateX(-50%);white-space:nowrap}
+
+.node{position:absolute;display:grid;gap:2px;padding:7px 10px;background:var(--surface);border:1px solid var(--line-2);z-index:3;
+  transition:border-color var(--t),box-shadow var(--t)}
+.node:hover{border-color:var(--ink-3)}
+.node[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.node.is-agent{background:var(--surface-2)}
+.node.is-tasks{border-style:dashed}
+.node.is-new{border-color:var(--run);box-shadow:inset 3px 0 0 var(--run)}
+.node.is-lit{background:var(--wait-wash);border-color:var(--wait)}
+.n-name{display:flex;align-items:center;gap:6px;font-weight:600;font-size:12.5px}
+.n-name .c{margin-left:auto;font-weight:400;color:var(--ink-3);font-size:11px}
+.n-who{font-size:10.5px;color:var(--ink-3);display:flex;align-items:center;gap:5px}
+.n-map{font-size:10px;color:var(--ink-2)}
+
+/* the story split */
+.split{flex-shrink:0;margin:6px 20px 20px;border:1px solid var(--line-2);background:var(--surface)}
+.split-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--line)}
+.split-t{font-family:var(--sans);font-size:15px;font-weight:600}
+.split-b{padding:10px 14px;display:grid;gap:8px;border-bottom:1px solid var(--line)}
+.split-b p{margin:0;font-family:var(--sans);font-size:13px;color:var(--ink-2)}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:grid;grid-template-columns:22px 18px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 14px;border-bottom:1px solid var(--line);font-size:12px}
+.tl .ix{color:var(--ink-3)}
+.tl .tt{font-family:var(--sans);font-size:13px}
+.tl .tt small{display:block;font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.tl .st{font-size:11px;color:var(--ink-2);white-space:nowrap}
+.tl .st.link{color:var(--ink-3)}
+.split-a{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px}
+.gatebar{display:flex;align-items:center;gap:8px;padding:7px 14px;background:var(--wait-wash);color:var(--wait);font-size:12px;font-weight:500;border-bottom:1px solid var(--wait-edge)}
+.donebar{display:flex;align-items:center;gap:8px;padding:7px 14px;background:var(--run-soft);color:var(--run);font-size:12px;font-weight:500;border-bottom:1px solid var(--line)}
+.roll{display:flex;gap:2px;width:160px}
+.roll i{height:6px;flex:1;background:var(--pend)}
+.roll i.d{background:var(--done)}
+.cmds{margin:0;padding:8px 14px 10px;background:var(--surface-2);font-size:11px;line-height:1.6;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* ── right panel ──────────────────────────────────────────────── */
+.panel{min-height:0;overflow:auto;background:var(--surface);border-left:1px solid var(--line-2)}
+.p-head{display:flex;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:4}
+.p-sec{padding:12px 16px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.p-title{font-size:16px;font-weight:600;margin:0;display:flex;align-items:center;gap:8px}
+.p-body{font-family:var(--sans);font-size:13px;color:var(--ink-2);line-height:1.5;margin:0}
+.p-kv{display:grid;grid-template-columns:98px 1fr;gap:5px 10px;font-size:12px;margin:0}
+.p-kv dt{color:var(--ink-3)}
+.p-kv dd{margin:0;overflow-wrap:anywhere}
+.mvl{list-style:none;margin:0;padding:0;display:grid;gap:5px;font-size:12px}
+.mvl li{display:grid;grid-template-columns:auto 1fr;gap:8px}
+.mvl .who{color:var(--ink-3)}
+.p-code{margin:0;padding:8px 10px;background:var(--surface-2);font-size:11.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink-2)}
+.why{font-size:11.5px;color:var(--ink-3);font-family:var(--sans);line-height:1.45}
+
+/* the new-status form */
+.f{display:grid;gap:5px}
+.f > .lbl{display:block}
+.f input[type=text],.f select{width:100%;border:1px solid var(--line-2);background:var(--surface);padding:5px 8px;border-radius:0}
+.f input[type=text]:focus,.f select:focus{outline:2px solid var(--run);outline-offset:-2px}
+.f input[type=text][aria-invalid="true"]{border-color:var(--fail)}
+.seg{display:flex;flex-wrap:wrap}
+.seg label{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--line-2);margin:0 -1px -1px 0;font-size:12px;cursor:pointer}
+.seg input{accent-color:var(--ink);margin:0}
+.seg label:has(input:checked){background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.checks{display:grid;gap:3px;font-size:12px}
+.checks label{display:flex;align-items:center;gap:7px;cursor:pointer}
+.checks input{accent-color:var(--ink);margin:0}
+.ferr{font-family:var(--sans);font-size:12px;color:var(--fail)}
+.fwarn{font-family:var(--sans);font-size:12px;color:var(--wait)}
+
+/* ── statusbar, toast, mockup controls ────────────────────────── */
+.statusbar{flex-shrink:0;display:flex;align-items:center;flex-wrap:wrap;
+  padding:6px 18px;background:var(--surface-2);border-top:1px solid var(--line);color:var(--ink-3);font-size:11px}
+.toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);z-index:20;max-width:min(560px,92vw);
+  padding:8px 14px;background:var(--ink);color:var(--surface);font-size:12px;opacity:0;transition:opacity var(--t);pointer-events:none}
+.toast.on{opacity:1}
+.mockctl{position:fixed;right:12px;bottom:38px;z-index:10;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:6px 10px;background:var(--ink);color:var(--surface);font-size:11px;max-width:calc(100vw - 24px)}
+.mockctl .lbl{color:var(--done)}
+.mockctl button{text-decoration:underline;text-underline-offset:3px;color:var(--done)}
+.mockctl button[aria-pressed="true"]{color:#fff;text-decoration:none;font-weight:600}
+
+@media (max-width:1100px){
+  .body{grid-template-columns:210px minmax(0,1fr)}
+  .panel{grid-column:1/-1;border-left:0;border-top:1px solid var(--line-2)}
+  .body{overflow:auto}
+}
+@media (max-width:700px){
+  .body{grid-template-columns:minmax(0,1fr)}
+  .rail{border-right:0;border-bottom:1px solid var(--line-2)}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after,*::before{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">lamproom<em>/</em><span>billing-svc</span><em>/</em><span>settings</span><em>/</em>workflows</div>
+    <span class="sp"></span>
+    <a class="toplink" href="board.html">board</a>
+  </header>
+  <div class="strip" id="strip"></div>
+  <div class="body">
+    <nav class="rail" id="rail" aria-label="Task types"></nav>
+    <main class="main" id="main" aria-label="Workflow"></main>
+    <aside class="panel" id="panel" aria-label="Status"></aside>
+  </div>
+  <footer class="statusbar" id="statusbar"></footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="mockctl" id="mockctl" role="group" aria-label="Mockup controls"></div>
+
+<script>
+/* ── icons: Lucide line icons, square caps, zero radius ── */
+const luc = (d, s = 13) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">${d}</svg>`;
+const LU = {
+  bug  : s => luc('<path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/>', s),
+  task : s => luc('<rect width="18" height="18" x="3" y="3"/><path d="m9 12 2 2 4-4"/>', s),
+  story: s => luc('<path d="M12 7v14"/><path d="M3 18V3h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6v15h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>', s),
+  lock : luc('<rect width="18" height="11" x="3" y="11"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', 10),
+  layers: luc('<path d="m12 2 10 5-10 5L2 7Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>', 10),
+  plus : luc('<path d="M5 12h14"/><path d="M12 5v14"/>', 12),
+  x    : luc('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>', 15),
+  alert: luc('<path d="M12 3 2 21h20Z"/><path d="M12 9v5"/><path d="M12 17v.5"/>', 13),
+  check: luc('<path d="M20 6 9 17l-5-5"/>', 13),
+  pause: '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.4" y="3.2" width="2.4" height="9.6" fill="currentColor"/><rect x="9.2" y="3.2" width="2.4" height="9.6" fill="currentColor"/></svg>',
+};
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+
+/* ── statuses: defined once per project, each workflow picks the ones it uses ── */
+const STATUS = {
+  'backlog':         { cat:'todo',  owner:'you',   who:'you manage',        means:'Parked. Nothing runs and nothing is spent until you move it on.' },
+  'needs-triage':    { cat:'todo',  owner:'agent', who:'triage agent',      means:'New issues land here; the triage agent reads each one, sets its type, and decides where it goes.' },
+  'needs-info':      { cat:'todo',  owner:'agent', who:'triage agent',      means:'The agent asked whoever filed it for detail only they have.' },
+  'needs-context':   { cat:'todo',  owner:'agent', who:'repo-analyst',      means:'The ask is clear, but the agent couldn’t find where in the code to start or which rule applies.' },
+  'ready-for-agent': { cat:'todo',  owner:'you',   who:'you manage',        means:'You want an agent on it. The triage agent checks it first; then Start run.' },
+  'ready-for-human': { cat:'todo',  owner:'you',   who:'you manage',        means:'Needs hands an agent shouldn’t have: secrets, production, a judgement call.' },
+  'in progress':     { cat:'doing', owner:'agent', who:'the run',           means:'A run is working through the type’s flow.' },
+  'in tasks':        { cat:'doing', owner:'tasks', who:'its tasks',         means:'A story split into tasks. It moves to done by itself when its last task is done.' },
+  'done':            { cat:'done',  owner:'you',   who:'you, or a run',     means:'Finished: a run landed it, or you closed it yourself.' },
+  'wontfix':         { cat:'done',  owner:'you',   who:'you manage',        means:'Will not be actioned.' },
+};
+const BUILTIN = new Set(Object.keys(STATUS));
+const CATS = [{ id:'todo', name:'to do', span:2 }, { id:'doing', name:'in progress', span:1 }, { id:'done', name:'done', span:1 }];
+
+/* ── workflows: which statuses, where they sit (col, row), and the moves that carry a rule.
+      Moves between statuses you manage are free and not drawn. ── */
+const WORKFLOWS = {
+  standard: {
+    at: { 'needs-triage':[0,0], 'needs-info':[0,1], 'needs-context':[0,2], 'backlog':[1,0], 'ready-for-agent':[1,1], 'ready-for-human':[1,2], 'in progress':[2,1], 'done':[3,0], 'wontfix':[3,2] },
+    entry: [['needs-triage', 'filed on the provider'], ['backlog', 'you create it']],
+    edges: [
+      ['needs-triage', 'backlog',        'triage agent',  'sorted: well specified, parked for you'],
+      ['needs-triage', 'needs-info',     'triage agent',  'asks the reporter'],
+      ['needs-triage', 'needs-context',  'triage agent',  'clear ask, no code context'],
+      ['needs-info',   'needs-triage',   'reporter',      'answers; read again'],
+      ['needs-context','ready-for-agent','repo-analyst',  'attaches .lamproom/context/'],
+      ['ready-for-agent','needs-context','triage agent',  'check fails: something is missing'],
+      ['ready-for-agent','in progress',  'you',           'Start run · check passed, not blocked'],
+      ['in progress',  'ready-for-agent','you',           'cancel the run'],
+      ['in progress',  'done',           'the run',       'lands: review approved'],
+    ],
+  },
+  story: {
+    at: { 'needs-triage':[0,0], 'needs-info':[0,1], 'backlog':[1,0], 'ready-for-agent':[1,1], 'in progress':[2,0], 'in tasks':[2,1], 'done':[3,1], 'wontfix':[3,2] },
+    entry: [['needs-triage', 'filed on the provider'], ['backlog', 'you create it']],
+    edges: [
+      ['needs-triage', 'backlog',        'triage agent',  'sorted: it’s a story'],
+      ['needs-triage', 'needs-info',     'triage agent',  'asks the reporter'],
+      ['needs-info',   'needs-triage',   'reporter',      'answers; read again'],
+      ['ready-for-agent','in progress',  'you',           'Start breakdown'],
+      ['in progress',  'in tasks',       'you',           'approve the split · tasks created'],
+      ['in progress',  'ready-for-agent','you',           'send the split back with a note'],
+      ['in tasks',     'done',           'its tasks',     'last task done'],
+      ['in tasks',     'wontfix',        'you',           'asks about its open tasks'],
+    ],
+  },
+};
+
+/* ── flows a type can run (the recipes from the flow designer) ── */
+const FLOWS = {
+  'software-delivery v4': { steps:['research','plan','build ∥ tests','review!','summarize'], out:'code' },
+  'bugfix v1':            { steps:['reproduce','fix','check','review!'], out:'code', note:'reproduce writes a failing test first' },
+  'story-breakdown v1':   { steps:['research','split','approve!'], out:'task_list' },
+};
+
+/* ── task types: Jira’s workflow scheme and Lamproom’s flow choice in one row ── */
+const TYPES = [
+  { id:'bug',   name:'Bug',   workflow:'standard', flow:'bugfix v1',            open:6,  means:'Something is broken. The flow proves it with a failing test before fixing it.' },
+  { id:'task',  name:'Task',  workflow:'standard', flow:'software-delivery v4', open:11, means:'A change with a clear ask, small enough for one run.' },
+  { id:'story', name:'Story', workflow:'story',    flow:'story-breakdown v1',   open:1,  means:'User-facing value too big for one run. Its flow splits it into tasks; it never builds code itself.' },
+];
+const COUNTS = { bug:{ 'needs-triage':2, 'needs-info':2, 'backlog':1, 'done':1 }, task:{ 'needs-context':2, 'backlog':2, 'ready-for-agent':3, 'ready-for-human':2, 'in progress':2, 'done':2, 'wontfix':1 }, story:{ 'in progress':1 } };
+
+/* ── where statuses, types and children live on each provider ── */
+const PROV = {
+  md:   { name:'Markdown backlog', where:'BACKLOG.md', how:'statuses are ## headings · type is a class on the bullet · a task names its story with parent=',
+          status: s => `## ${s}`, create: s => `BACKLOG.md · new section\n## ${s}`, type: t => `- **Title** {#key .${t}}` },
+  gh:   { name:'GitHub Issues', where:'tallyhq/billing-svc', how:'statuses are labels (done closes the issue) · type is the GitHub issue type · a story’s tasks are sub-issues',
+          status: s => STATUS[s].cat === 'done' ? `closed${s === 'wontfix' ? ' as not planned' : ''}` : `label ${s === 'in progress' ? 'lamproom:running' : s}`,
+          create: (s, x) => `gh label create ${s} --color EDEAE1 \\\n  --description "${x.means || x.cat}"`, type: t => `issue type ${{ bug:'Bug', task:'Task', story:'Feature' }[t]}` },
+  bd:   { name:'Beads', where:'.beads/ in billing-svc', how:'four fixed statuses; others ride as labels · type is --type · a story is an epic with parent-child tasks',
+          status: s => { const base = { todo:'open', doing:'in_progress', done:'closed' }[STATUS[s].cat]; return ['backlog','in progress','done'].includes(s) ? `status ${base}` : `status ${base} + label ${s}`; },
+          create: (s, x) => `no command: Beads can’t add a status.\ncards in ${s} are written as\n  status ${{ todo:'open', doing:'in_progress', done:'closed' }[x.cat]} + label ${s}`, type: t => `--type ${t === 'story' ? 'epic' : t}` },
+  jira: { name:'Jira', where:'project BILL', how:'Jira owns statuses and transitions · Lamproom maps to them and can’t create them',
+          status: s => `Jira “${JIRA_MAP[s] || '—'}”${['needs-triage','needs-info','needs-context','ready-for-human','in tasks'].includes(s) ? ` + label lamproom:${s}` : ''}`,
+          create: (s, x) => x.jira ? `maps to Jira “${x.jira}”\nLamproom keeps the finer status in label lamproom:${s}` : 'pick the Jira status it maps to', type: t => `issue type ${{ bug:'Bug', task:'Task', story:'Story' }[t]}${t === 'story' ? ' · its tasks become Sub-tasks' : ''}` },
+};
+const JIRA_STATUSES = ['Backlog', 'Selected for Development', 'In Progress', 'In Review', 'Blocked', 'Done', 'Won’t Do'];
+const JIRA_MAP = { 'backlog':'Backlog', 'needs-triage':'Backlog', 'needs-info':'Blocked', 'needs-context':'Blocked', 'ready-for-agent':'Selected for Development',
+                   'ready-for-human':'Selected for Development', 'in progress':'In Progress', 'in tasks':'In Progress', 'done':'Done', 'wontfix':'Won’t Do' };
+
+/* ── the story the split section shows ── */
+const STORY = { id:'#218', title:'Bill customers in their own currency',
+  body:'Invoices, API responses and PDFs assume dollars and cents. Swiss customers see “$” on franc invoices; Japanese customers see amounts a hundred times too large.',
+  accept:'A CHF and a JPY customer each get a correct invoice, PDF and API response.',
+  tasks: [
+    { type:'task', title:'Rename amount_cents to amount_minor in API responses', link:'#224', st:'ready-for-agent' },
+    { type:'task', title:'Backfill currency on legacy invoices', link:'#219', st:'ready-for-agent', after:1 },
+    { type:'bug',  title:'Invoice PDF shows “$” for CHF amounts', link:'#231', st:'needs-triage' },
+    { type:'task', title:'Format amounts with the currency’s minor units in the PDF renderer', after:1, newId:'#239' },
+    { type:'task', title:'Add CHF and JPY customers to the invoice end-to-end tests', after:'3, 4', newId:'#240' },
+  ] };
+
+/* ── state ── */
+const st = { type:'task', sel:'ready-for-agent', form:null, free:false, prov:'gh', split:'gate', fresh:null };
+const ty = () => TYPES.find(t => t.id === st.type);
+const wf = () => WORKFLOWS[ty().workflow];
+const P = () => PROV[st.prov];
+const $ = id => document.getElementById(id);
+
+/* ── geometry ── */
+const CW = 236, RH = 104, NW = 170, NH = 58, PADX = 60, TOP = 62;
+const box = s => { const [c, r] = wf().at[s]; return { x: PADX + c * CW, y: TOP + r * RH, w: NW, h: NH }; };
+function edgePath(a, b) {
+  const A = box(a), B = box(b);
+  if (A.x === B.x) {                                   // same column: straight down/up, or an arc on the left for a skip
+    const down = B.y > A.y, gap = Math.abs(B.y - A.y) / RH;
+    if (gap === 1) { const x = A.x + (down ? 52 : 118); const y1 = down ? A.y + A.h : A.y, y2 = down ? B.y : B.y + B.h;
+      return { d:`M${x},${y1} L${x},${y2}` }; }
+    const x = A.x, y1 = A.y + A.h / 2, y2 = B.y + B.h / 2;
+    return { d:`M${x},${y1} C${x - 46},${y1} ${x - 46},${y2} ${x},${y2}` };
+  }
+  const right = B.x > A.x;
+  const f = right ? .34 : .68;
+  const x1 = right ? A.x + A.w : A.x, y1 = A.y + A.h * f;
+  const x2 = right ? B.x : B.x + B.w, y2 = B.y + B.h * f;
+  const k = Math.max(30, Math.abs(x2 - x1) * .45) * (right ? 1 : -1);
+  const c1x = x1 + k, c2x = x2 - k;
+  return { d:`M${x1},${y1} C${c1x},${y1} ${c2x},${y2} ${x2},${y2}` };
+}
+
+/* ── render ── */
+function render() { renderStrip(); renderRail(); renderMain(); renderPanel(); renderStatus(); renderMock(); }
+
+function renderStrip() {
+  const p = P();
+  $('strip').innerHTML = `<span class="lbl">issues from</span><b>${esc(p.name)}</b><span class="mute">${esc(p.where)}</span><span class="sep">·</span><span class="sans">${esc(p.how)}</span>`;
+}
+
+function renderRail() {
+  const used = w => TYPES.filter(t => t.workflow === w).map(t => t.id).join(', ');
+  $('rail').innerHTML = `
+    <div class="rail-sec"><span class="lbl">task types</span>
+      ${TYPES.map(t => `<button class="ty" data-type="${t.id}" aria-current="${st.type === t.id}">
+        ${LU[t.id](14)}<span class="ty-name">${t.name}</span><span class="ty-n">${t.open} open</span>
+        <span class="ty-sub">${t.workflow} · ${esc(t.flow)}</span></button>`).join('')}
+    </div>
+    <div class="rail-sec"><span class="lbl">workflows</span>
+      ${Object.keys(WORKFLOWS).map(w => `<div class="wfl"><b>${w}</b><span class="mute">${Object.keys(WORKFLOWS[w].at).length} statuses · ${used(w)}</span></div>`).join('')}
+    </div>
+    <div class="rail-sec"><p class="rail-note">A type picks a <b>workflow</b> (which statuses, which moves have rules) and a <b>flow</b> (what a run does). Bug and Task share a workflow and run different flows.</p>
+      <p class="rail-note">Two levels only: a story holds tasks and bugs; a task holds nothing. A flow’s steps are the sub-tasks.</p></div>`;
+}
+
+function renderMain() {
+  const t = ty(), w = wf(), f = FLOWS[t.flow];
+  const wrong = t.id === 'story' ? f.out !== 'task_list' : f.out === 'task_list';
+  const cols = Math.max(...Object.values(w.at).map(a => a[0])) + 1, rows = Math.max(...Object.values(w.at).map(a => a[1])) + 1;
+  const W = PADX + (cols - 1) * CW + NW + 24, H = TOP + rows * RH + 6;
+  const touch = e => st.sel && (e[0] === st.sel || e[1] === st.sel);
+  // lanes by category
+  // lane borders sit in the middle of the gap between columns
+  const edge = col => col === 0 ? 0 : col >= cols ? W : PADX + col * CW - (CW - NW) / 2;
+  let c0 = 0; const lanes = CATS.map(c => { const a = edge(c0), b = edge(c0 + c.span); c0 += c.span; return `<div class="lane" style="left:${a}px;width:${b - a}px"><span class="lane-h">${c.name}</span></div>`; });
+  // free moves: every status you own ↔ every other one, plus out of agent statuses (drawn only on request)
+  const own = Object.keys(w.at).filter(s => STATUS[s].owner === 'you');
+  const free = st.free ? Object.keys(w.at).flatMap(a => own.filter(b => b !== a && STATUS[a].owner !== 'tasks' && a !== 'in progress').map(b => [a, b])) : [];
+  const paths = [
+    ...free.map(e => `<path class="free" d="${edgePath(e[0], e[1]).d}"/>`),
+    ...w.edges.map(e => `<path class="${touch(e) ? 'on' : ''}${st.fresh && (e[0] === st.fresh || e[1] === st.fresh) ? ' new' : ''}" d="${edgePath(e[0], e[1]).d}" marker-end="url(#${touch(e) ? 'ah-on' : 'ah'})"/>`),
+    ...w.entry.map(([s]) => { const b = box(s); const x = b.x + b.w / 2 + (s === 'backlog' ? 0 : 0); return `<path d="M${x},${b.y - 22} L${x},${b.y}" marker-end="url(#ah)"/>`; }),
+  ].join('');
+  // ponytail: no labels on the canvas; they crowd the gaps between columns. The panel lists each move with who and why.
+  const entries = w.entry.map(([s, txt]) => { const b = box(s); return `<span class="entry" style="left:${b.x + b.w / 2}px;top:${b.y - 38}px">${esc(txt)}</span>`; }).join('');
+  const cnt = COUNTS[t.id] || {};
+  const nodes = Object.keys(w.at).map(s => {
+    const b = box(s), S = STATUS[s];
+    const lit = t.id === 'story' && ((st.split === 'gate' && s === 'in progress') || (st.split === 'done' && s === 'in tasks'));
+    const cls = ['node', S.owner === 'agent' && 'is-agent', S.owner === 'tasks' && 'is-tasks', st.fresh === s && 'is-new', lit && 'is-lit'].filter(Boolean).join(' ');
+    const n = (t.id === 'story' ? (lit ? 1 : 0) : cnt[s]) || 0;
+    return `<button class="${cls}" data-node="${esc(s)}" aria-pressed="${st.sel === s}" style="left:${b.x}px;top:${b.y}px;width:${b.w}px;min-height:${b.h}px">
+      <span class="n-name">${esc(s)}<span class="c">${n || ''}</span></span>
+      <span class="n-who">${S.owner === 'agent' ? LU.lock : S.owner === 'tasks' ? LU.layers : ''}${esc(S.who)}</span>
+      ${st.prov === 'jira' ? `<span class="n-map">↔ ${esc(JIRA_MAP[s] || '—')}</span>` : ''}</button>`;
+  }).join('');
+
+  $('main').innerHTML = `
+    <div class="typehead">
+      <div class="th-row"><h1 class="th-name">${LU[t.id](17)}${t.name}</h1><span class="sans mute" style="font-size:13px">${esc(t.means)}</span></div>
+      <div class="th-row">
+        <label class="th-sel">workflow <select data-wf>${Object.keys(WORKFLOWS).map(x => `<option ${x === t.workflow ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+        <label class="th-sel">runs flow <select data-flow>${Object.keys(FLOWS).map(x => `<option ${x === t.flow ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
+        <span class="fsteps">${f.steps.map(s => s.endsWith('!') ? `<span class="fstep gate">${LU.pause}${esc(s.slice(0, -1))}</span>` : `<span class="fstep">${esc(s)}</span>`).join('')}<span class="fstep out">→ ${f.out}</span></span>
+        <span class="sp"></span>
+        <button class="act primary" data-new>${LU.plus}New status <kbd>n</kbd></button>
+      </div>
+      ${wrong ? `<div class="warnline">${LU.alert}<span>${t.id === 'story'
+        ? `A story’s flow must end with a <b>task_list</b>. ${esc(t.flow)} ends with code, so stories would build code directly instead of splitting.`
+        : `${esc(t.flow)} ends with a task_list: every ${t.id} would be split into tasks instead of fixed. Fine for a one-off; usually not what you want.`}</span></div>` : ''}
+      ${f.note ? `<span class="mute" style="font-size:11.5px">${esc(f.note)}</span>` : ''}
+    </div>
+    <div class="legend">
+      <span><i></i>you manage</span><span><i class="ag"></i>an agent manages</span>${w.at['in tasks'] ? '<span><i class="tk"></i>moves with its tasks</span>' : ''}
+      <span>arrows: moves with a rule · click a status to light its moves and list them on the right</span>
+      <span class="sp"></span>
+      <label class="tgl"><input type="checkbox" data-free ${st.free ? 'checked' : ''}>draw free moves</label>
+    </div>
+    <div class="canvas-wrap"><div class="canvas" style="width:${W}px;height:${H}px">
+      ${lanes.join('')}
+      <svg class="edges" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+        <defs>
+          <marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 Z" fill="#CFCBBE"/></marker>
+          <marker id="ah-on" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 Z" fill="#17171C"/></marker>
+        </defs>${paths}
+      </svg>
+      ${entries}${nodes}
+    </div></div>
+    ${st.free ? `<div class="warnline" style="padding:0 20px 8px;color:var(--ink-3)">${LU.alert}<span>${free.length} free moves. This is Jira’s hairball: draw every arrow and nobody reads the workflow. Lamproom keeps them implicit.</span></div>` : ''}
+    ${t.id === 'story' ? splitHtml() : ''}`;
+}
+
+function splitHtml() {
+  const s = STORY, done = st.split === 'done', back = st.split === 'back';
+  const stIx = i => s.tasks[i];
+  const cmds = {
+    md: `BACKLOG.md · ## ${st.splitTo}\n  - **Format amounts with the currency’s minor units…** {#pdf-minor-units .task parent=bill-in-currency}\n  - **Add CHF and JPY customers…** {#e2e-chf-jpy .task parent=bill-in-currency}\n  parent=bill-in-currency added to {#amount-minor} {#backfill-currency} {#chf-symbol}`,
+    gh: `gh issue create --type Task --title "Format amounts with the currency’s minor units…"\ngh issue create --type Task --title "Add CHF and JPY customers to the invoice e2e tests"\ngh api repos/tallyhq/billing-svc/issues/218/sub_issues -f sub_issue_id=…   ×5\n(goes out on Sync now)`,
+    bd: `bd create "Format amounts with…" --type task --parent billing-mc1\nbd create "Add CHF and JPY customers…" --type task --parent billing-mc1\nbd dep add billing-k2p billing-5nw   (after #1)\n(goes out on Sync now; illustrative)`,
+    jira: `create 2 Sub-tasks under BILL-218 · link 3 existing issues as Sub-tasks\n(Jira moves existing issues to Sub-task only if their type allows it; otherwise they are linked “is part of”)`,
+  }[st.prov];
+  return `<section class="split" aria-label="How a story splits">
+    <div class="split-h">${LU.story(15)}<span class="mute">${s.id}</span><span class="split-t">${esc(s.title)}</span><span class="sp"></span>
+      ${done ? `<span class="roll" title="0 of 5 tasks done">${s.tasks.map(() => '<i></i>').join('')}</span><span class="mute" style="font-size:11.5px">0 of 5 done</span>` : ''}</div>
+    <div class="split-b"><p>${esc(s.body)}</p><p><span class="lbl">accepted when</span> ${esc(s.accept)}</p></div>
+    ${done ? `<div class="donebar">${LU.check}Split approved · story is in tasks · it moves to done when the last one is</div>`
+      : back ? `<div class="gatebar">${LU.pause}Sent back: “Fold the e2e fixtures into the PDF task.” The breakdown runs split again.</div>`
+      : `<div class="gatebar">${LU.pause}story-breakdown · research ✓ · split ✓ · approve: waiting on you</div>`}
+    <ol class="tl">${s.tasks.map((x, i) => `<li><span class="ix">${i + 1}</span>${LU[x.type](13)}
+      <span class="tt">${esc(x.title)}<small>${x.after ? `after ${x.after}` : 'can start now'}${x.link ? ` · already ${esc(x.link)}: linked, not duplicated` : ''}</small></span>
+      <span class="st${x.link ? ' link' : ''}">${x.link ? esc(x.st) : done ? `${esc(x.newId)} · ${st.splitTo}` : 'new'}</span></li>`).join('')}</ol>
+    ${done ? `<pre class="cmds">${esc(cmds)}</pre>` : ''}
+    <div class="split-a">
+      ${done || back ? `<button class="act" data-reset>Show the gate again</button>` : `
+      <button class="act wait" data-approve="backlog">Approve · new tasks to backlog</button>
+      <button class="act" data-approve="ready-for-agent">Approve · queue in ready-for-agent</button>
+      <button class="act" data-back>Send back with a note</button>`}
+      <span class="why">Tasks 2, 4 and 5 stay blocked until the task they come after is done.</span>
+    </div></section>`;
+}
+
+/* ── right panel: a status, or the new-status form ── */
+function renderPanel() {
+  if (st.form) return renderForm();
+  const s = st.sel;
+  if (!s) { $('panel').innerHTML = `<div class="p-sec"><p class="p-body">Click a status to see its moves, or add one with <b>New status</b>.</p></div>`; return; }
+  const S = STATUS[s], w = wf();
+  const into = w.edges.filter(e => e[1] === s), out = w.edges.filter(e => e[0] === s);
+  const inWfs = Object.keys(WORKFLOWS).filter(x => WORKFLOWS[x].at[s]);
+  const freeTxt = S.owner === 'you' ? 'Free from any status you manage, and from any agent status.' : S.owner === 'agent' ? 'You can move cards out to any of yours; you can’t drag cards in.' : 'Nobody drags cards in or out.';
+  const mv = list => list.length ? `<ul class="mvl">${list.map(e => `<li><span class="who">${esc(e[2])}</span><span>${e[0] === s ? '→ ' + esc(e[1]) : esc(e[0]) + ' →'} <span class="mute">· ${esc(e[3])}</span></span></li>`).join('')}</ul>` : '<span class="mute" style="font-size:12px">none with a rule</span>';
+  $('panel').innerHTML = `
+    <div class="p-head"><h2 class="p-title">${S.owner === 'agent' ? LU.lock : S.owner === 'tasks' ? LU.layers : ''}${esc(s)}</h2><span class="sp"></span><button class="act" data-close aria-label="Close">${LU.x}</button></div>
+    <div class="p-sec"><p class="p-body">${esc(S.means)}</p>
+      <dl class="p-kv"><dt>category</dt><dd>${{ todo:'to do', doing:'in progress', done:'done' }[S.cat]}</dd>
+        <dt>owner</dt><dd>${S.owner === 'you' ? 'you · shown on the board' : S.owner === 'agent' ? `agent · ${esc(S.who)} · hidden until you press v` : 'its tasks · shown on the board'}</dd>
+        <dt>in workflows</dt><dd>${inWfs.join(', ')}</dd>
+        <dt>${esc(P().name.split(' ')[0])}</dt><dd>${esc(P().status(s))}</dd></dl></div>
+    <div class="p-sec"><span class="lbl">moves in</span>${mv(into)}<span class="why">${esc(freeTxt)}</span></div>
+    <div class="p-sec"><span class="lbl">moves out</span>${mv(out)}</div>
+    <div class="p-sec">${BUILTIN.has(s)
+      ? `<span class="why">Built in: agents, runs and stories depend on it. It can’t be removed.</span>`
+      : `<button class="act" data-del="${esc(s)}">Remove ${esc(s)}</button><span class="why">Empty, so it goes straight away. A status with cards asks where they move first.</span>`}</div>`;
+}
+
+function formState() {
+  const f = st.form, name = f.name.trim();
+  const bad = !name ? '' : !/^[a-z][a-z0-9-]*$/.test(name) ? 'Lowercase letters, digits and dashes: it becomes a heading or a label.' : STATUS[name] ? `${name} already exists.` : '';
+  const wfs = Object.keys(f.wfs).filter(k => f.wfs[k]);
+  const warn = !bad && name && f.owner === 'agent' && !f.from.length ? 'Nothing moves cards into it: an agent status needs at least one rule leading in.' :
+               !bad && name && f.owner === 'agent' && !f.agent ? 'Pick the agent that moves cards out, or they stay here.' : '';
+  const ok = name && !bad && wfs.length && (f.owner === 'you' || (f.from.length && f.agent)) && (st.prov !== 'jira' || f.jira);
+  return { name, bad, warn, ok, wfs };
+}
+function renderForm() {
+  const f = st.form, w = wf(), fs = formState();
+  const pool = [...new Set(fs.wfs.flatMap(x => Object.keys(WORKFLOWS[x].at)))];
+  $('panel').innerHTML = `
+    <div class="p-head"><h2 class="p-title">${LU.plus}New status</h2><span class="sp"></span><button class="act" data-close aria-label="Cancel">${LU.x}</button></div>
+    <div class="p-sec">
+      <label class="f"><span class="lbl">name</span><input type="text" data-f="name" value="${esc(f.name)}" placeholder="e.g. needs-repro" aria-invalid="${!!fs.bad}" autocomplete="off" spellcheck="false"></label>
+      ${fs.bad ? `<span class="ferr">${esc(fs.bad)}</span>` : ''}
+      <label class="f"><span class="lbl">what it means</span><input type="text" data-f="means" value="${esc(f.means)}" placeholder="the one line under the column name"></label>
+    </div>
+    <div class="p-sec"><span class="lbl">category</span>
+      <div class="seg" role="radiogroup">${CATS.map(c => `<label><input type="radio" name="cat" data-cat="${c.id}" ${f.cat === c.id ? 'checked' : ''}>${c.name}</label>`).join('')}</div>
+      <span class="why">Where it sits, what reports count it as, and on GitHub whether the issue is open or closed.</span></div>
+    <div class="p-sec"><span class="lbl">who manages it</span>
+      <div class="seg" role="radiogroup"><label><input type="radio" name="own" data-own="you" ${f.owner === 'you' ? 'checked' : ''}>you</label><label><input type="radio" name="own" data-own="agent" ${f.owner === 'agent' ? 'checked' : ''}>an agent</label></div>
+      ${f.owner === 'agent' ? `<label class="f"><span class="lbl">agent that moves cards out</span><select data-f="agent"><option value="">choose…</option>${['triage agent', 'repo-analyst', 'the run'].map(a => `<option ${f.agent === a ? 'selected' : ''}>${a}</option>`).join('')}</select></label>
+        <span class="lbl" style="margin-top:4px">cards come from</span>
+        <div class="checks">${pool.filter(s => s !== 'in tasks').map(s => `<label><input type="checkbox" data-from="${esc(s)}" ${f.from.includes(s) ? 'checked' : ''}>${esc(s)}</label>`).join('')}</div>`
+      : `<span class="why">Free moves to and from every status you manage. Shown on the board by default.</span>`}
+      ${fs.warn ? `<span class="fwarn">${esc(fs.warn)}</span>` : ''}</div>
+    <div class="p-sec"><span class="lbl">in workflows</span>
+      <div class="checks">${Object.keys(WORKFLOWS).map(x => `<label><input type="checkbox" data-wfc="${x}" ${f.wfs[x] ? 'checked' : ''}>${x} <span class="mute">· ${TYPES.filter(t => t.workflow === x).map(t => t.id).join(', ')}</span></label>`).join('')}</div></div>
+    <div class="p-sec"><span class="lbl">on ${esc(P().name)}</span>
+      ${st.prov === 'jira' ? `<label class="f"><span class="lbl">maps to Jira status</span><select data-f="jira"><option value="">choose…</option>${JIRA_STATUSES.map(j => `<option ${f.jira === j ? 'selected' : ''}>${esc(j)}</option>`).join('')}</select></label>` : ''}
+      <pre class="p-code">${esc(P().create(fs.name && !fs.bad ? fs.name : 'name', { cat: f.cat, means: f.means, jira: f.jira }))}</pre>
+      ${st.prov === 'jira' ? '<span class="why">Lamproom can’t add a status to a Jira workflow. Create it there for a 1:1 match, or map several onto one.</span>' : ''}</div>
+    <div class="p-sec"><div style="display:flex;gap:8px"><button class="act primary" data-save ${fs.ok ? '' : 'disabled'}>Add status</button><button class="act" data-close>Cancel</button></div></div>`;
+}
+
+function renderStatus() {
+  $('statusbar').innerHTML = `billing-svc<span class="sep">·</span>${Object.keys(STATUS).length} statuses<span class="sep">·</span>${Object.keys(WORKFLOWS).length} workflows<span class="sep">·</span>${TYPES.length} types<span class="sp"></span>1 2 3 types · n new status · f free moves · Esc close`;
+}
+function renderMock() {
+  $('mockctl').innerHTML = `<span class="lbl">mockup · issue provider</span>${Object.keys(PROV).map(k => `<button data-prov="${k}" aria-pressed="${st.prov === k}">${esc(PROV[k].name.split(' ')[0])}</button>`).join('')}`;
+}
+let tt;
+function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 3200); }
+
+/* ── adding a status: it lands in its category's lane, in the next free row ── */
+function save() {
+  const f = st.form, fs = formState(); if (!fs.ok) return;
+  STATUS[fs.name] = { cat: f.cat, owner: f.owner, who: f.owner === 'you' ? 'you manage' : f.agent, means: f.means || '' };
+  if (f.jira) JIRA_MAP[fs.name] = f.jira;
+  for (const x of fs.wfs) {
+    const W = WORKFLOWS[x], cols = f.cat === 'todo' ? [0, 1] : f.cat === 'doing' ? [2] : [3];
+    let spot = null;
+    for (let r = 0; !spot; r++) for (const c of cols) if (!spot && !Object.values(W.at).some(a => a[0] === c && a[1] === r)) spot = [c, r];
+    W.at[fs.name] = spot;
+    if (f.owner === 'agent') for (const s of f.from) if (W.at[s]) W.edges.push([s, fs.name, s === 'needs-triage' ? 'triage agent' : 'you', 'new rule']);
+    if (f.owner === 'agent') W.edges.push([fs.name, 'ready-for-agent', f.agent, 'done with it']);
+  }
+  if (!fs.wfs.includes(ty().workflow)) st.type = TYPES.find(t => fs.wfs.includes(t.workflow)).id;
+  st.sel = fs.name; st.fresh = fs.name; st.form = null;
+  toast(st.prov === 'md' ? `Added ${fs.name} · new section in BACKLOG.md` : st.prov === 'gh' ? `Added ${fs.name} · label created on the next Sync now` : st.prov === 'bd' ? `Added ${fs.name} · stored as a Beads label` : `Added ${fs.name} · mapped to Jira “${f.jira}”`);
+  render();
+}
+
+/* ── events ── */
+document.addEventListener('click', e => {
+  const b = e.target.closest('button,[data-free]'); if (!b) return;
+  const d = b.dataset;
+  if (d.type) { st.type = d.type; st.form = null; st.fresh = null; if (!wf().at[st.sel]) st.sel = 'ready-for-agent'; return render(); }
+  if (d.node) { st.sel = st.sel === d.node && !st.form ? null : d.node; st.form = null; return render(); }
+  if (d.new !== undefined) { openForm(); return; }
+  if (d.close !== undefined) { st.form = null; return render(); }
+  if (d.save !== undefined) return save();
+  if (d.del) { for (const W of Object.values(WORKFLOWS)) { delete W.at[d.del]; W.edges = W.edges.filter(x => x[0] !== d.del && x[1] !== d.del); } delete STATUS[d.del]; toast(`Removed ${d.del}`); st.sel = null; st.fresh = null; return render(); }
+  if (d.prov) { st.prov = d.prov; return render(); }
+  if (d.approve) { st.split = 'done'; st.splitTo = d.approve; toast(`2 tasks created in ${d.approve} · 3 existing linked · #218 is in tasks`); st.sel = 'in tasks'; return render(); }
+  if (d.back !== undefined) { st.split = 'back'; toast('Sent back to the split step with your note'); return render(); }
+  if (d.reset !== undefined) { st.split = 'gate'; st.sel = 'in progress'; return render(); }
+});
+document.addEventListener('change', e => {
+  const t = e.target, d = t.dataset;
+  if (d.free !== undefined) { st.free = t.checked; return render(); }
+  if (d.flow) { const old = ty().flow; ty().flow = t.value; toast(`New ${ty().id}s pin ${t.value} when they start · running ones keep ${old}`); return render(); }
+  if (d.wf) { ty().workflow = t.value; if (!wf().at[st.sel]) st.sel = null; toast(`${ty().name} now uses the ${t.value} workflow · cards in a status it lacks ask where to go`); return render(); }
+  const f = st.form; if (!f) return;
+  if (d.cat) f.cat = d.cat;
+  else if (d.own) { f.owner = d.own; }
+  else if (d.from) f.from = t.checked ? [...f.from, d.from] : f.from.filter(x => x !== d.from);
+  else if (d.wfc) f.wfs[d.wfc] = t.checked;
+  else if (d.f) f[d.f] = t.value;
+  renderForm();
+});
+document.addEventListener('input', e => {
+  const d = e.target.dataset; if (!st.form || !d.f || e.target.tagName !== 'INPUT') return;
+  st.form[d.f] = e.target.value;
+  const pos = e.target.selectionStart, key = d.f;
+  renderForm();
+  const el = document.querySelector(`[data-f="${key}"]`); el.focus(); el.setSelectionRange(pos, pos);
+});
+function openForm() {
+  st.form = { name:'', means:'', cat:'todo', owner:'agent', agent:'', from:[], wfs:{ [ty().workflow]: true }, jira:'' };
+  render(); document.querySelector('[data-f="name"]').focus();
+}
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input,select,textarea')) { if (e.key === 'Escape') { st.form = null; render(); } return; }
+  if (e.key === 'Escape') { st.form = null; st.sel = null; render(); }
+  else if (e.key === 'n') { e.preventDefault(); openForm(); }
+  else if (e.key === 'f') { st.free = !st.free; render(); }
+  else if (['1', '2', '3'].includes(e.key)) { st.type = TYPES[+e.key - 1].id; st.form = null; if (!wf().at[st.sel]) st.sel = null; render(); }
+});
+
+const q = new URLSearchParams(location.search);
+if (PROV[q.get('p')]) st.prov = q.get('p');
+if (TYPES.some(t => t.id === q.get('t'))) { st.type = q.get('t'); if (st.type === 'story') st.sel = 'in progress'; }
+render();
+</script>

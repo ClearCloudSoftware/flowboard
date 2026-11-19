@@ -1,0 +1,877 @@
+<meta charset="utf-8">
+<title>Lamproom Board</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74; --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --wait-ink:#FDF6EA; --wait-ink-2:#F8E8D0;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);
+  font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+svg{flex:0 0 auto;display:block}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sans{font-family:var(--sans)}
+.sep{color:var(--line-2);padding:0 .45em}
+.sp{flex:1}
+.mute{color:var(--ink-3)}
+.app{height:100dvh;display:flex;flex-direction:column}
+
+/* ── topbar ───────────────────────────────────────────────────── */
+.topbar{flex-shrink:0;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+.brand b{font-weight:600}
+.tcount{color:var(--ink-3);font-size:12px}
+.wflink{font-size:12px;color:var(--ink-2);text-decoration:none;border-bottom:1px solid var(--line-2)}
+.wflink:hover{color:var(--ink);border-color:var(--ink)}
+
+/* ── buttons ──────────────────────────────────────────────────── */
+.act{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-2);padding:3px 11px;
+  font-size:12px;white-space:nowrap;background:var(--surface);
+  transition:background var(--t),border-color var(--t),color var(--t)}
+.act:hover:not(:disabled){background:var(--surface-2);border-color:var(--ink-3)}
+.act:disabled{opacity:.4;cursor:default}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act.primary:hover:not(:disabled){background:var(--run);color:#fff}
+.act.wait{border-color:var(--wait);color:var(--wait);background:var(--wait-soft);font-weight:500}
+.act.wait:hover:not(:disabled){background:var(--wait);color:var(--wait-ink)}
+.act kbd{font-family:var(--mono);font-size:10px;color:var(--ink-3);border:1px solid var(--line);padding:0 3px}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;
+  color:var(--ink-3);transition:color var(--t),background var(--t)}
+.icon-btn:hover{color:var(--ink);background:var(--surface-2)}
+
+/* ── source strip: where the issues live and whether they're in step ── */
+.source{flex-shrink:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 18px;
+  background:var(--surface-3);border-top:2px solid var(--line-2);border-bottom:1px solid var(--line-2);font-size:12px}
+.src-name{font-weight:600}
+.src-where{color:var(--ink-2)}
+.sync{display:inline-flex;align-items:center;gap:7px;color:var(--ink-2)}
+.sync.is-run{color:var(--run)}
+.sync.is-fail{color:var(--fail);font-weight:500}
+.sync.is-quiet{color:var(--ink-3)}
+.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.queue-btn{display:inline-flex;align-items:center;gap:6px;color:var(--ink);border-bottom:1px dashed var(--ink-3)}
+.queue{flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--line-2);padding:8px 18px 10px;font-size:11.5px}
+.queue ol{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:3px}
+.queue li{display:grid;grid-template-columns:62px 1fr;gap:10px;color:var(--ink-2)}
+.queue code{font-family:var(--mono);color:var(--ink);overflow-wrap:anywhere}
+.failnote{flex-shrink:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 18px;
+  background:var(--fail-soft);border-bottom:1px solid var(--fail-edge);color:var(--fail);font-size:12px}
+.failnote .sans{color:var(--ink)}
+
+/* ── conflict zone: the one bold place ────────────────────────── */
+.zone{flex-shrink:0;background:var(--wait-wash);padding-bottom:11px;max-height:34vh;overflow:auto}
+.zone-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;
+  background:var(--wait);color:var(--wait-ink);padding:7px 18px;margin-bottom:11px}
+.zone-head .lbl{color:var(--wait-ink);font-weight:600;font-size:11px}
+.zone-head .sans{color:var(--wait-ink-2);font-size:12px}
+.ccard{margin:0 18px 8px;padding:10px 14px 12px;background:var(--surface);
+  border:1px solid var(--wait-edge);border-left:3px solid var(--wait);display:grid;gap:8px}
+.ccard-t{font-family:var(--sans);font-size:14px;font-weight:600}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.side{padding:7px 10px;background:var(--surface-2);font-size:12px;display:grid;gap:3px}
+.side .sans{color:var(--ink-2);font-size:12.5px}
+.ccard-a{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── body: board + panel ──────────────────────────────────────── */
+.body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr)}
+.body.has-panel{grid-template-columns:minmax(0,1fr) 400px}
+.board{min-height:0;overflow:auto;display:flex;gap:0;padding:0 0 0 6px}
+
+.col{flex:1 1 226px;min-width:226px;max-width:360px;display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+.col.is-over{background:var(--run-soft)}
+.col.is-refuse{background:var(--fail-soft)}
+.col-head{flex-shrink:0;padding:12px 12px 9px;position:sticky;top:0;background:var(--paper);z-index:1;border-bottom:1px solid var(--line)}
+.col-name{display:flex;align-items:center;gap:7px;font-weight:600;font-size:12.5px;padding-bottom:3px}
+.col.is-cur .col-name{box-shadow:inset 0 -2px 0 var(--ink)}
+.col-name .n{color:var(--ink-3);font-weight:400}
+.col-name .lk{color:var(--ink-3)}
+.col-who{font-size:10.5px;color:var(--ink-3);margin-top:2px}
+.col-means{font-family:var(--sans);font-size:11.5px;color:var(--ink-3);margin-top:4px;line-height:1.35}
+.col-body{flex:1;padding:8px 8px 40px;display:flex;flex-direction:column;gap:7px}
+.col-empty{font-size:11px;color:var(--ink-3);padding:10px 4px;border:1px dashed var(--line-2);text-align:center}
+.col.is-agent,.col.is-agent .col-head{background:var(--surface-2)}
+.col-who .tag{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:0 5px;border:1px solid var(--line-2);color:var(--ink-2);margin-right:6px}
+.agents{display:inline-flex;align-items:center;gap:8px;color:var(--ink-2)}
+.agents .w{color:var(--wait);font-weight:500}
+
+/* ── a card ───────────────────────────────────────────────────── */
+.kc{display:grid;gap:5px;width:100%;padding:8px 10px 9px;background:var(--surface);
+  border:1px solid var(--line);transition:border-color var(--t),opacity var(--t),box-shadow var(--t)}
+.kc:hover{border-color:var(--line-2)}
+.kc.is-sel{box-shadow:inset 2px 0 0 var(--ink);border-color:var(--line-2)}
+.kc.is-drag{opacity:.35}
+.kc.is-pending{border-style:dashed;border-color:var(--ink-3)}
+.kc.is-gate{border-color:var(--wait-edge);border-left:3px solid var(--wait)}
+.kc.is-run{border-left:3px solid var(--run)}
+.kc.is-done{background:transparent;color:var(--ink-3)}
+.kc.is-new{animation:arrive .9s cubic-bezier(.4,0,.2,1)}
+@keyframes arrive{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.kc-top{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-3)}
+.kc-t{font-family:var(--sans);font-size:13px;font-weight:500;line-height:1.3}
+.kc.is-done .kc-t{color:var(--ink-2)}
+.kc-m{font-size:11px;color:var(--ink-3);display:flex;gap:4px 8px;flex-wrap:wrap;align-items:center}
+.kc-line{font-size:11px;display:flex;gap:6px;align-items:flex-start;color:var(--ink-2)}
+.kc-line.run{color:var(--run)}
+.kc-line.wait{color:var(--wait);font-weight:500}
+.kc-line.pend{color:var(--ink-2)}
+.kc-line.remote{color:var(--ink-2);background:var(--surface-2);padding:2px 6px;margin:0 -2px}
+.kc-line.block{color:var(--ink-2)}
+.kc-miss{font-family:var(--sans);font-size:11.5px;color:var(--ink-2);border-left:2px solid var(--line-2);padding-left:7px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;padding:0 6px;border:1px solid var(--line);color:var(--ink-2);background:var(--surface-2)}
+
+/* the flow on a running card: one cell per step */
+.kbar{display:flex;gap:2px}
+.kseg{height:6px;flex:1;position:relative;overflow:hidden;background:var(--pend)}
+.kseg.done{background:var(--done)}
+.kseg.running{background:var(--run)}
+.kseg.running::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);
+  transform:translateX(-100%);animation:sweep 1.9s cubic-bezier(.4,0,.2,1) infinite}
+.kseg.hold{background:repeating-linear-gradient(45deg,var(--wait) 0 1.5px,transparent 1.5px 4px);box-shadow:inset 0 0 0 1px var(--wait)}
+@keyframes sweep{to{transform:translateX(100%)}}
+
+/* ── panel ────────────────────────────────────────────────────── */
+.panel{min-height:0;overflow:auto;background:var(--surface);border-left:1px solid var(--line-2)}
+.p-head{display:flex;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
+.p-sec{padding:12px 16px;border-bottom:1px solid var(--line);display:grid;gap:7px}
+.p-title{font-family:var(--sans);font-size:17px;font-weight:600;line-height:1.3;margin:0}
+.p-body{font-family:var(--sans);font-size:13.5px;color:var(--ink-2);line-height:1.5;margin:0}
+.p-kv{display:grid;grid-template-columns:96px 1fr;gap:4px 10px;font-size:12px}
+.p-kv dt{color:var(--ink-3)}
+.p-kv dd{margin:0;overflow-wrap:anywhere}
+.p-miss{margin:0;padding:0 0 0 16px;font-family:var(--sans);font-size:13px;color:var(--ink);display:grid;gap:4px}
+.p-ask{font-family:var(--sans);font-size:13px;padding:7px 10px;background:var(--surface-2);border-left:2px solid var(--line-2)}
+.p-acts{display:flex;gap:8px;flex-wrap:wrap}
+.p-file{margin:0;padding:8px 10px;background:var(--surface-2);font-size:11.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink-2)}
+.p-file mark{background:var(--run-soft);color:var(--ink);box-shadow:inset 2px 0 0 var(--run)}
+.moves{display:flex;flex-wrap:wrap;gap:4px}
+.mv{font-size:11px;padding:2px 7px;border:1px solid var(--line);color:var(--ink-2);transition:background var(--t),border-color var(--t)}
+.mv:hover:not(:disabled){border-color:var(--ink-3);background:var(--surface-2)}
+.mv[aria-current="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink);cursor:default}
+.mv:disabled:not([aria-current="true"]){opacity:.35;cursor:default}
+.hist{margin:0;padding:0;list-style:none;display:grid;gap:8px;font-size:11.5px}
+.hist li{display:grid;gap:2px}
+.hist .h-w{color:var(--ink-3)}
+.hist code{font-family:var(--mono);color:var(--ink-2);overflow-wrap:anywhere;font-size:11px}
+.hist .h-q{color:var(--ink-2)}
+.kids li{grid-template-columns:14px minmax(0,1fr) auto;gap:8px;align-items:start;font-family:var(--sans);font-size:12.5px}
+.kids svg{margin-top:2px}
+.why{font-size:11.5px;color:var(--ink-3);font-family:var(--sans)}
+
+/* ── statusbar, toast, mockup controls ────────────────────────── */
+.statusbar{flex-shrink:0;display:flex;align-items:center;flex-wrap:wrap;gap:0;
+  padding:6px 18px;background:var(--surface-2);border-top:1px solid var(--line);color:var(--ink-3);font-size:11px}
+.statusbar .w{color:var(--wait);font-weight:500}
+.toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);z-index:20;max-width:min(560px,92vw);
+  padding:8px 14px;background:var(--ink);color:var(--surface);font-size:12px;opacity:0;transition:opacity var(--t);pointer-events:none}
+.toast.on{opacity:1}
+.mockctl{position:fixed;right:12px;bottom:38px;z-index:10;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:6px 10px;background:var(--ink);color:var(--surface);font-size:11px;max-width:calc(100vw - 24px)}
+.mockctl .lbl{color:var(--done)}
+.mockctl button{text-decoration:underline;text-underline-offset:3px;color:var(--done)}
+.mockctl button[aria-pressed="true"]{color:#fff;text-decoration:none;font-weight:600}
+
+@media (max-width:900px){
+  .body.has-panel{grid-template-columns:minmax(0,1fr)}
+  .body.has-panel .board{display:none}
+  .sides{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after,*::before{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">lamproom<em>/</em><span>billing-svc</span><em>/</em><b>board</b></div>
+    <span class="tcount" id="tcount"></span>
+    <span class="sp"></span>
+    <a class="wflink" href="workflows.html"><span class="mute">types</span> bug · task · story<span class="sep">·</span>workflows</a>
+  </header>
+
+  <div class="source" id="source"></div>
+  <div id="queue"></div>
+  <div id="failnote"></div>
+  <section class="zone" id="zone" aria-label="Changed in both places" hidden></section>
+
+  <div class="body" id="body">
+    <main class="board" id="board" aria-label="Board"></main>
+    <aside class="panel" id="panel" aria-label="Issue" hidden></aside>
+  </div>
+
+  <footer class="statusbar" id="statusbar"></footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="mockctl" id="mockctl" role="group" aria-label="Mockup controls"></div>
+
+<script>
+/* ── icons: house status marks + Lucide line icons (square caps, zero radius) ── */
+const ICON = {
+  run : '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.1" fill="currentColor"/><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".3"/></svg>',
+  gate: '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.4" y="3.2" width="2.4" height="9.6" fill="currentColor"/><rect x="9.2" y="3.2" width="2.4" height="9.6" fill="currentColor"/></svg>',
+  ask : '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6.15 6.35a1.9 1.9 0 1 1 2.5 1.8c-.52.2-.72.58-.72 1.05v.35" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="7.93" cy="11.5" r=".95" fill="currentColor"/></svg>',
+  done: '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.3l3.1 3.1 6.1-7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+const luc = (d, s = 13) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">${d}</svg>`;
+const LU = {
+  sync : luc('<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'),
+  x    : luc('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>', 15),
+  lock : luc('<rect width="18" height="11" x="3" y="11"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>', 11),
+  up   : luc('<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>', 11),
+  down : luc('<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>', 11),
+  file : luc('<path d="M15 2H4v20h16V7Z"/><path d="M14 2v5h6"/><path d="M16 13H8"/><path d="M16 17H8"/>', 12),
+  ban  : luc('<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>', 11),
+  play : luc('<polygon points="6 3 20 12 6 21 6 3"/>', 11),
+  search: luc('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>', 12),
+  alert: luc('<path d="M12 3 2 21h20Z"/><path d="M12 9v5"/><path d="M12 17v.5"/>', 13),
+  check: luc('<path d="M20 6 9 17l-5-5"/>', 13),
+  layers: luc('<path d="m12 2 10 5-10 5L2 7Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>', 11),
+  flow : luc('<rect width="8" height="8" x="3" y="3"/><path d="M7 11v4h6"/><rect width="8" height="8" x="13" y="13"/>', 12),
+};
+/* task types: told apart by shape, not colour — colour is kept for alive / wants you / broken */
+const TY = {
+  bug  : luc('<path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/>', 12),
+  task : luc('<rect width="18" height="18" x="3" y="3"/><path d="m9 12 2 2 4-4"/>', 12),
+  story: luc('<path d="M12 7v14"/><path d="M3 18V3h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6v15h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>', 12),
+};
+
+/* ── the columns. You manage five of them; agents manage the rest, which stay hidden until asked for. ── */
+const COLS = [
+  { id:'backlog',         owner:'you',   who:'you manage',                 means:'Parked. Nothing runs and nothing is spent until you move it on.' },
+  { id:'needs-triage',    owner:'agent', who:'triage agent',               means:'New issues land here; the triage agent reads each one and decides what it is.' },
+  { id:'needs-info',      owner:'agent', who:'triage agent → reporter',    means:'The agent asked whoever filed it for detail only they have.' },
+  { id:'needs-context',   owner:'agent', who:'triage agent, repo-analyst', means:'The ask is clear, but the agent couldn’t find where in the code to start or which rule applies.' },
+  { id:'ready-for-agent', owner:'you',   who:'you manage',                 means:'You want an agent on it. The triage agent checks it first; then Start run.' },
+  { id:'ready-for-human', owner:'you',   who:'you manage',                 means:'Needs hands an agent shouldn’t have: secrets, production, a judgement call.' },
+  { id:'in tasks',        owner:'tasks', who:'its tasks',                  means:'A story split into tasks. It moves to done by itself when its last task is.' },
+  { id:'in progress',     owner:'agent', who:'the run',                    means:'A run is working through the flow. Cards come and go with the run.' },
+  { id:'done',            owner:'you',   who:'you, or a finished run',     means:'Finished: a run landed it, or you closed it yourself.' },
+  { id:'wontfix',         owner:'you',   who:'you manage',                 means:'Will not be actioned.' },
+];
+const COL = Object.fromEntries(COLS.map((c, i) => [c.id, { ...c, i }]));
+const human = id => COL[id].owner === 'you';
+const shown = id => COL[id].owner !== 'agent' || st.showAgent;
+
+/* ── where issues live. The markdown file IS the board; the others are copies to keep in step. ── */
+const PROV = {
+  md: { name:'Markdown backlog', where:'BACKLOG.md in billing-svc', sync:false, short:'BACKLOG.md',
+        id: c => '{#' + c.k + '}',
+        loc: c => `BACKLOG.md:${mdLine(c)}`,
+        cmd: (c, from, to) => `BACKLOG.md · moved “${c.title}” from ## ${from} to ## ${to}` },
+  gh: { name:'GitHub Issues', where:'tallyhq/billing-svc', sync:true, short:'GitHub', syncCmd:'gh api · push labels, pull issues',
+        id: c => '#' + c.gh,
+        loc: c => `github.com/tallyhq/billing-svc/issues/${c.gh}`,
+        cmd: (c, from, to) =>
+          to === 'done'    ? `gh issue close ${c.gh} --comment "Done by Lamproom run ${c.run ? c.run.id : ''}"` :
+          to === 'wontfix' ? `gh issue close ${c.gh} --reason "not planned"` :
+          from === 'wontfix' || from === 'done' ? `gh issue reopen ${c.gh} && gh issue edit ${c.gh} --add-label ${lab(to)}` :
+          `gh issue edit ${c.gh} --remove-label ${lab(from)} --add-label ${lab(to)}`,
+        fail:'GitHub rejected the token', fix:'Reconnect GitHub', failWhy:'Settings › Connections. Nothing is lost — your changes stay queued here and go out on the next sync.' },
+  bd: { name:'Beads', where:'.beads/issues.jsonl in billing-svc', sync:true, short:'git', syncCmd:'bd sync · commit, pull, push .beads/',
+        id: c => c.bd,
+        loc: c => `.beads/issues.jsonl · ${c.bd}`,
+        cmd: (c, from, to) =>
+          to === 'in progress' ? `bd update ${c.bd} --status in_progress` :
+          to === 'done'    ? `bd close ${c.bd} --reason "Done by Lamproom"` :
+          to === 'wontfix' ? `bd close ${c.bd} --reason wontfix` :
+          `bd label remove ${c.bd} ${lab(from)} && bd label add ${c.bd} ${lab(to)}`,
+        fail:'bd sync couldn’t reach origin', fix:'Retry sync', failWhy:'Your changes are written to .beads/ locally and go out with the next sync — teammates just don’t see them yet.' },
+};
+const lab = col => col === 'in progress' ? 'lamproom:running' : col;
+
+/* ── the flow a run walks (the project's pinned recipe) ── */
+const FLOW = [
+  { s:'research',  dur:5,  rate:.03, model:'haiku'  },
+  { s:'plan',      dur:7,  rate:.38, model:'opus'   },
+  { s:'build',     dur:18, rate:.42, model:'opus'   },
+  { s:'review',    dur:6,  rate:.14, model:'sonnet', gate:true },
+  { s:'summarize', dur:4,  rate:.03, model:'haiku'  },
+];
+const CLOCK = 10;                      // mock minutes per real minute: a run takes ~7 mock minutes
+const SEC = 1000, M = 60*SEC, H = 60*M, D = 24*H;
+
+/* ── seed: mid-flight, history behind it ── */
+const SEED = [
+  { k:'tax-breakdown', gh:233, bd:'billing-w3n', col:'backlog', by:'you', age:2*D,
+    title:'Show tax per line on the invoice PDF',
+    body:'Accountants in the EU want VAT per line, not only the total at the bottom.' },
+  { k:'export-csv', gh:230, bd:'billing-p6d', col:'backlog', by:'support-desk', age:4*D,
+    title:'Export invoices as CSV for accountants',
+    body:'Date range, one row per invoice line, same columns as the PDF.' },
+  { k:'sunset-v1', gh:207, bd:'billing-h9c', col:'backlog', by:'maria-k', age:11*D,
+    title:'Sunset the v1 /charges endpoint',
+    body:'v2 has been out for a year. Return 410 Gone from v1 and remove the handler.',
+    checkFail:{ to:'needs-context', why:'Nothing in the repo says which clients still call v1: no usage data, no deprecation notice to point at.',
+      missing:['Which API clients still call /v1/charges, and has anyone told them?', 'Is 410 Gone the agreed response, or a redirect to v2?'] } },
+  { k:'chf-symbol', type:'bug', parent:'bill-in-currency', gh:231, bd:'billing-q8m', col:'needs-triage', by:'support-desk', age:26*H,
+    triage:{ in:20, to:'backlog', why:'A rendering bug, small and well specified. Parked for you to schedule.' },
+    title:'Invoice PDF shows “$” for CHF amounts',
+    body:'Swiss customers get invoices with a dollar sign in front of franc amounts. Two support tickets this week.' },
+  { k:'limiter-500', type:'bug', gh:226, bd:'billing-2vx', col:'needs-triage', by:'dmitri-v', age:5*H,
+    title:'Rate limiter returns 500 instead of 429',
+    body:'Bursting POST /charges past the limit returns a 500 with a stack trace instead of a 429 with Retry-After.' },
+  { k:'duplicate-charge', type:'bug', gh:222, bd:'billing-7hd', col:'needs-info', by:'support-desk', age:3*D, waitOn:'support-desk', waited:2*D,
+    title:'Customer charged twice on 12 Nov',
+    body:'One customer reports two identical charges a second apart. Could be a client retry without an idempotency key, could be a double webhook on our side.',
+    asked:'Can you paste both Stripe charge ids? They tell a client retry apart from a double webhook.' },
+  { k:'refund-timeout', type:'bug', gh:217, bd:'billing-c3p', col:'needs-info', by:'dmitri-v', age:4*D, waitOn:'dmitri-v', waited:3*D,
+    title:'Refund webhook times out on large accounts',
+    body:'charge.refunded handling takes over 30s for some accounts and Stripe gives up.',
+    asked:'Roughly how many invoices does an affected account have — hundreds or tens of thousands?' },
+  { k:'webhook-retry', gh:214, bd:'billing-4k2', col:'needs-context', by:'maria-k', age:6*D,
+    title:'Retry webhook redelivery with backoff',
+    body:'When our handler 5xxs, Stripe redelivers on its own schedule. We want our own retry with backoff so a short outage doesn’t drop events.',
+    missing:['Which backoff policy applies — the one in ADR-0007, or Stripe’s own schedule?', 'Where retries should live: src/webhooks/stripe.ts, or the job queue in src/jobs/'],
+    seedPending:{ from:'needs-info', ago:3*M } },
+  { k:'proration-ledger', gh:209, bd:'billing-9re', col:'needs-context', by:'you', age:9*D,
+    title:'Move proration maths into the ledger package',
+    body:'Proration is computed in three places (checkout, plan change, refunds) and they disagree by a cent on odd day counts.',
+    missing:['Does packages/ledger own currency rounding, or does each caller round?', 'Which of the three call sites is the behaviour to keep?'] },
+  { k:'refund-idempotency', gh:228, bd:'billing-7tq', col:'ready-for-agent', by:'you', age:2*D,
+    title:'Add an idempotency key to POST /refunds',
+    body:'Accept an Idempotency-Key header and return the first response for repeats within 24h, the way POST /charges already does.' },
+  { k:'amount-minor', parent:'bill-in-currency', gh:224, bd:'billing-5nw', col:'ready-for-agent', by:'maria-k', age:3*D,
+    title:'Rename amount_cents to amount_minor in API responses',
+    body:'JPY has no cents. Keep amount_cents for one release as a deprecated alias.' },
+  { k:'backfill-currency', parent:'bill-in-currency', gh:219, bd:'billing-8fa', col:'ready-for-agent', by:'maria-k', age:3*D, blockedBy:'billing-5nw',
+    title:'Backfill currency on legacy invoices',
+    body:'Invoices created before 2024 have a null currency. Backfill from the customer’s billing country, in batches of 1,000.' },
+  { k:'pdf-minor-units', gh:239, bd:'billing-k2p', col:'backlog', by:'story-breakdown', parent:'bill-in-currency', age:20*H,
+    title:'Format amounts with the currency’s minor units in the PDF renderer',
+    body:'The renderer divides by 100 everywhere. Use the currency’s minor-unit count: 0 for JPY, 2 for CHF.' },
+  { k:'e2e-chf-jpy', gh:240, bd:'billing-t6s', col:'backlog', by:'story-breakdown', parent:'bill-in-currency', age:20*H,
+    title:'Add CHF and JPY customers to the invoice end-to-end tests',
+    body:'One customer per currency through checkout, invoice, PDF and the API.' },
+  { k:'bill-in-currency', gh:218, bd:'billing-mc1', type:'story', col:'in tasks', by:'maria-k', age:5*D,
+    title:'Bill customers in their own currency',
+    body:'Invoices, API responses and PDFs assume dollars and cents. Swiss customers see “$” on franc invoices; Japanese customers see amounts a hundred times too large.',
+    accept:'A CHF and a JPY customer each get a correct invoice, PDF and API response.' },
+  { k:'rotate-key', gh:221, bd:'billing-3jd', col:'ready-for-human', by:'ops-bot', age:1*D,
+    title:'Rotate the Stripe restricted key in production',
+    body:'The key is 13 months old. Agents never get production secrets: rotate it in the Stripe dashboard, update the vault, redeploy.' },
+  { k:'dunning-copy', gh:216, bd:'billing-6wd', col:'ready-for-human', by:'support-desk', age:5*D,
+    title:'Agree dunning email wording with support',
+    body:'Three reminder emails go out before suspension. Support wants the second one softer.' },
+  { k:'paginate-invoices', gh:212, bd:'billing-1ac', col:'in progress', by:'you', age:1*D, runSeed:{ step:2, into:7, id:'lr-0412' },
+    title:'Paginate GET /invoices',
+    body:'Cursor pagination, 50 per page, same shape as GET /charges.' },
+  { k:'tax-cache', gh:210, bd:'billing-0tm', col:'in progress', by:'you', age:2*D, runSeed:{ step:3, gate:true, waited:3*M, id:'lr-0409' },
+    title:'Cache tax rates per region',
+    body:'Tax rates are fetched per invoice line. Cache per region for an hour.' },
+  { k:'flaky-cart', type:'bug', gh:205, bd:'billing-y2e', col:'done', by:'you', age:4*D, spent:0.92, title:'Fix flaky test in cart totals', body:'' },
+  { k:'stripe-node-17', gh:203, bd:'billing-u7k', col:'done', by:'maria-k', age:6*D, spent:1.84, title:'Upgrade stripe-node to v17', body:'' },
+  { k:'healthz', gh:201, bd:'billing-e5v', col:'done', by:'ops-bot', age:8*D, spent:0.37, title:'Add a /healthz probe', body:'' },
+  { k:'paypal', gh:198, bd:'billing-r4s', col:'wontfix', by:'support-desk', age:20*D, title:'Support PayPal as a payment method',
+    body:'Out of scope for billing-svc — new payment methods belong to payments-gateway.' },
+];
+
+/* what the other side changed while you weren't looking — arrives on the first sync */
+const INBOUND = [
+  { kind:'new', card:{ k:'proxy-signature', type:'bug', gh:238, bd:'billing-x1z', col:'needs-triage', by:'dmitri-v', age:20*M,
+      triage:{ in:8, to:'needs-info', why:'Can’t tell which proxy re-encodes the body.', asked:'Which ingress is in front of staging now — the nginx one or the new Envoy?' },
+      title:'Webhook signature check fails behind the ingress proxy',
+      body:'Since the ingress change, every Stripe webhook fails signature verification in staging. The proxy may be re-encoding the body.' } },
+  { kind:'move', k:'limiter-500', to:'ready-for-agent', who:'maria-k', ago:2*M },
+  { kind:'move', k:'webhook-retry', to:'ready-for-agent', who:'maria-k', ago:1*M, note:'ADR-0007 covers the backoff — go.' },
+];
+
+/* ── state ── */
+let st;
+function load(prov) {
+  const now = Date.now();
+  st = { prov, cards: [], queue: [], sel: null, open: null, colCur: 0, showAgent: false,
+         sync: { last: now - 4*M, state: 'ok', reject: false, inboundDone: false },
+         conflicts: [], mdLast: now - 14*M };
+  for (const s of SEED) {
+    const c = { type: 'task', ...s, created: now - s.age, hist: [] };
+    c.hist.push({ at: c.created, who: s.by, what: `opened in ${s.col === 'backlog' ? 'backlog' : 'needs-triage'}` });
+    if (s.triage) c.triageAt = now + s.triage.in * SEC;
+    if (s.runSeed) c.run = seedRun(s.runSeed, now);
+    if (s.col === 'done') c.hist.push({ at: now - s.age + 3*H, who: 'lamproom', what: `run finished · $${s.spent.toFixed(2)}` });
+    if (s.col === 'wontfix') c.hist.push({ at: now - 19*D, who: 'maria-k', what: 'closed as wontfix' });
+    st.cards.push(c);
+  }
+  // the triage agent's last move hasn't gone out yet — on GitHub/Beads that sets up the conflict
+  const wr = card('webhook-retry');
+  if (PROV[prov].sync) enqueue(wr, 'needs-info', 'needs-context', now - 3*M, 'triage agent');
+  else wr.hist.push({ at: now - 3*M, who: 'triage agent', what: 'needs-info → needs-context', cmd: PROV.md.cmd(wr, 'needs-info', 'needs-context') });
+  st.sel = 'tax-breakdown';
+}
+function seedRun(r, now) {
+  const steps = FLOW.map((f, i) => ({ state: i < r.step ? 'done' : i === r.step ? (r.gate ? 'hold' : 'running') : 'pending', ms: i < r.step ? f.dur * SEC : 0 }));
+  if (r.gate) { steps[r.step].ms = FLOW[r.step].dur * SEC; }
+  else steps[r.step].ms = r.into * SEC;
+  return { id: r.id, steps, at: r.step, gateSince: r.gate ? now - r.waited : null, stepStart: now - (steps[r.step].ms) };
+}
+const card = k => st.cards.find(c => c.k === k);
+const kids = s => st.cards.filter(c => c.parent === s.k);
+const closed = c => c.col === 'done' || c.col === 'wontfix';
+const P = () => PROV[st.prov];
+const inCol = id => st.cards.filter(c => c.col === id);
+const runCost = r => r ? r.steps.reduce((a, s, i) => a + (s.ms / M) * CLOCK * FLOW[i].rate, 0) : 0;
+
+/* ── moving a card: the one rule set every path goes through (drag, keys, panel) ── */
+/* you move cards between your five statuses, and out of an agent's; agents own the rest */
+function canMove(c, to, who = 'you') {
+  if (!c || c.col === to) return 'same';
+  if (who !== 'you') return '';
+  if (c.col === 'in tasks') return 'A story moves with its tasks: it goes to done by itself when the last one is.';
+  if (to === 'in tasks') return 'Only a story goes in tasks, when you approve its split.';
+  if (c.col === 'in progress') return `The run owns this card (${c.run ? c.run.id : ''}). Open it to approve, or cancel the run from the task.`;
+  if (to === 'in progress') return 'Only a run puts a card in progress: open a ready-for-agent card and press Start run.';
+  if (!human(to)) return `Agents set ${to}. Move the card to ready-for-agent; the triage agent flags it if something is missing.`;
+  return '';
+}
+function move(c, to, who = 'you', silent) {
+  const no = canMove(c, to, who);
+  if (no) { if (no !== 'same' && !silent) toast(no); return false; }
+  const from = c.col;
+  c.col = to; c.agentNote = null;
+  if (to !== 'needs-info') delete c.waitOn;
+  delete c.checkAt;
+  record(c, from, to, who);
+  // a card you hand to the agents is read first, and may bounce to an agent status
+  if (to === 'ready-for-agent') c.checkAt = Date.now() + 6*SEC;
+  if (!silent) toast(P().sync ? `Moved to ${to} · queued for ${P().short}` : `Moved to ${to} · written to BACKLOG.md`);
+  render();
+  return true;
+}
+function agentMove(c, to, who, why) {
+  const from = c.col;
+  c.col = to; delete c.checkAt; delete c.triageAt;
+  record(c, from, to, who);
+  if (why) c.hist[c.hist.length - 1].note = why;
+  c.agentNote = `${who}: ${from} → ${to}`; c.fresh = true;
+  toast(`${who} moved ${P().id(c)} to ${to}${!shown(to) ? ' · hidden: press v to show agent statuses' : ''}`);
+}
+function record(c, from, to, who) {
+  if (P().sync) enqueue(c, from, to, Date.now(), who);
+  else { c.hist.push({ at: Date.now(), who, what: `${from} → ${to}`, cmd: P().cmd(c, from, to) }); st.mdLast = Date.now(); }
+}
+function enqueue(c, from, to, at, who) {
+  // a second local move of the same card replaces the first: only the end state goes out
+  const prev = st.queue.find(q => q.k === c.k);
+  if (prev) { prev.to = to; prev.at = at; prev.who = who; prev.cmd = P().cmd(c, prev.from, to); }
+  else st.queue.push({ k: c.k, from, to, at, who, cmd: P().cmd(c, from, to) });
+  c.hist.push({ at, who, what: `${from} → ${to}`, cmd: P().cmd(c, from, to), pending: true });
+}
+
+/* ── sync: push the queue, pull what changed, stop on anything changed in both places ── */
+function syncNow() {
+  if (!P().sync || st.sync.state === 'syncing') return;
+  st.sync.state = 'syncing'; render();
+  setTimeout(() => {
+    const now = Date.now();
+    if (st.sync.reject) { st.sync.state = 'error'; render(); return; }
+    const pulled = st.sync.inboundDone ? [] : INBOUND;
+    st.sync.inboundDone = true;
+    const clash = new Set();
+    for (const ev of pulled) {
+      if (ev.kind === 'new') {
+        const c = { ...ev.card, created: now - ev.card.age, hist: [{ at: now - ev.card.age, who: ev.card.by, what: 'opened in needs-triage' }], fresh: true, remote: `new on ${P().short} · ${ev.card.by}`, triageAt: now + ev.card.triage.in * SEC };
+        st.cards.push(c);
+      } else {
+        const c = card(ev.k), q = st.queue.find(x => x.k === ev.k);
+        if (q) {   // it moved here too, and that hasn't gone out: don't guess, ask
+          st.conflicts.push({ k: ev.k, mine: q.to, mineAt: q.at, mineWho: q.who, theirs: ev.to, who: ev.who, at: now - ev.ago, note: ev.note });
+          clash.add(ev.k);
+        } else {
+          const from = c.col; c.col = ev.to;
+          c.hist.push({ at: now - ev.ago, who: ev.who, what: `${from} → ${ev.to}`, remote: true });
+          c.remote = `${ev.who} on ${P().short}: ${from} → ${ev.to}`; c.fresh = true;
+        }
+      }
+    }
+    let pushed = 0;
+    st.queue = st.queue.filter(q => {
+      if (clash.has(q.k)) return true;
+      card(q.k).hist.forEach(h => { if (h.pending) h.pending = false; });
+      pushed++;
+      return false;
+    });
+    st.sync.last = now; st.sync.state = 'ok';
+    toast(`Synced · ${pushed} pushed · ${pulled.length} pulled${clash.size ? ' · 1 needs you' : ''}`);
+    render();
+    setTimeout(() => { st.cards.forEach(c => c.fresh = false); }, 1200);
+  }, 1400);
+}
+function resolve(k, keepMine) {
+  const x = st.conflicts.find(c => c.k === k); if (!x) return;
+  const c = card(k), q = st.queue.find(y => y.k === k);
+  st.conflicts = st.conflicts.filter(y => y !== x);
+  if (keepMine) {
+    // yours goes out on the next sync, over theirs
+    q.from = x.theirs; q.cmd = P().cmd(c, x.theirs, x.mine);
+    c.hist.push({ at: x.at, who: x.who, what: `${q.from} (on ${P().short})`, remote: true, note: x.note });
+    c.hist.push({ at: Date.now(), who: 'you', what: `kept ${x.mine} over ${x.who}’s change`, cmd: q.cmd, pending: true });
+    toast(`Keeping ${x.mine} · goes out on the next sync${shown(x.mine) ? '' : ' · it sits in a hidden agent status'}`);
+  } else {
+    st.queue = st.queue.filter(y => y !== q);
+    c.hist.forEach(h => { if (h.pending) { h.pending = false; h.what += ' (dropped)'; } });
+    c.hist.push({ at: x.at, who: x.who, what: `→ ${x.theirs}`, remote: true, note: x.note });
+    c.hist.push({ at: Date.now(), who: 'you', what: `took ${x.who}’s change, dropped the local one` });
+    c.col = x.theirs;
+    toast(`Took ${x.who}’s change · ${c.title.slice(0, 40)}… is ${x.theirs}`);
+  }
+  render();
+}
+
+/* ── runs: the smallest engine that walks the flow ── */
+function startRun(c) {
+  if (c.col !== 'ready-for-agent' || c.checkAt) return;
+  if (st.prov === 'bd' && c.blockedBy && card('amount-minor').col !== 'done') { toast(`bd ready skips this: blocked by ${c.blockedBy}`); return; }
+  const now = Date.now();
+  c.run = { id: 'lr-04' + (13 + st.cards.filter(x => x.run).length), steps: FLOW.map(() => ({ state: 'pending', ms: 0 })), at: 0, stepStart: now };
+  c.run.steps[0].state = 'running';
+  const from = c.col; c.col = 'in progress';
+  record(c, from, 'in progress', 'lamproom');
+  toast(`Run ${c.run.id} started · ${FLOW[0].s} on ${FLOW[0].model}`);
+  render();
+}
+function approve(c) {
+  if (!c.run || c.run.steps[c.run.at].state !== 'hold') return;
+  const r = c.run;
+  r.steps[r.at].state = 'done'; r.at++; r.steps[r.at].state = 'running'; r.stepStart = Date.now(); r.gateSince = null;
+  c.hist.push({ at: Date.now(), who: 'you', what: 'approved at review' });
+  toast('Approved · summarize is running');
+  render();
+}
+function tick() {
+  const now = Date.now(); let changed = false;
+  for (const s of inCol('in tasks')) { const k = kids(s);
+    if (k.length && k.every(closed) && k.some(x => x.col === 'done')) { agentMove(s, 'done', 'lamproom', 'last task done'); changed = true; } }
+  for (const c of st.cards) {
+    const r = c.run; if (!r || c.col !== 'in progress') continue;
+    const s = r.steps[r.at]; if (s.state !== 'running') continue;
+    s.ms = now - r.stepStart;
+    if (s.ms >= FLOW[r.at].dur * SEC) {
+      s.ms = FLOW[r.at].dur * SEC;
+      if (FLOW[r.at].gate) { s.state = 'hold'; r.gateSince = now; c.hist.push({ at: now, who: 'reviewer', what: 'review passed with notes · waiting on you' }); changed = true; continue; }
+      s.state = 'done';
+      if (r.at === FLOW.length - 1) {
+        c.spent = runCost(r); c.col = 'done';
+        c.hist.push({ at: now, who: 'lamproom', what: `run finished · $${c.spent.toFixed(2)}` });
+        record(c, 'in progress', 'done', 'lamproom');
+        toast(`${c.title} is done${P().sync ? ` · close queued for ${P().short}` : ' · moved to ## done in BACKLOG.md'}`);
+      } else { r.at++; r.steps[r.at].state = 'running'; r.stepStart = now; }
+      changed = true;
+    }
+  }
+  for (const c of st.cards) if (c.analyst && !c.context && now - c.analyst >= 7*SEC) {
+    c.context = { file: `.lamproom/context/${c.k}.md`, size: '2.3 kB',
+      found: c.k === 'webhook-retry'
+        ? ['ADR-0007 sets exponential backoff, 5 tries, 30s cap', 'src/jobs/queue.ts already retries jobs; stripe.ts acks before enqueueing']
+        : ['packages/ledger/round.ts rounds half-even; checkout rounds half-up', 'plan change is the call site with tests (tests/ledger/prorate.test.ts)'] };
+    c.hist.push({ at: now, who: 'repo-analyst', what: `attached ${c.context.file}`, cmd: P().sync ? (st.prov === 'gh' ? `gh issue comment ${c.gh} --body-file ${c.context.file}` : `bd comments add ${c.bd} -f ${c.context.file}`) : `BACKLOG.md · added “context: ${c.context.file}” under the item` });
+    toast('repo-analyst attached context.md · read it, then move the card');
+    changed = true;
+  }
+  // the triage agent: sorts new issues, and reads every card you hand to the agents
+  for (const c of st.cards) {
+    if (c.triageAt && now >= c.triageAt && c.col === 'needs-triage') {
+      const t = c.triage;
+      if (t.asked) { c.asked = t.asked; c.waitOn = c.by; c.waited = now; }
+      agentMove(c, t.to, 'triage agent', t.why); changed = true;
+    }
+    if (c.checkAt && now >= c.checkAt && c.col === 'ready-for-agent') {
+      if (c.checkFail) { c.missing = c.checkFail.missing; agentMove(c, c.checkFail.to, 'triage agent', c.checkFail.why); delete c.checkFail; }
+      else { delete c.checkAt; c.hist.push({ at: now, who: 'triage agent', what: 'checked: nothing missing, ready to run' }); toast(`triage agent: ${P().id(c)} is ready to run`); }
+      changed = true;
+    }
+  }
+  // ponytail: no auto-sync. Pulling on a timer would need live two-way sync with every provider; you pull and push with Sync now.
+  if (changed) render(); else renderLive();
+}
+
+/* ── formatting ── */
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[ch]));
+const ago = t => { const d = Date.now() - t; return d < M ? 'just now' : d < H ? `${Math.floor(d / M)}m ago` : d < D ? `${Math.floor(d / H)}h ago` : `${Math.floor(d / D)}d ago`; };
+const dur = ms => { const s = Math.floor(ms / SEC); return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`; };
+const mock = ms => dur(ms * CLOCK);
+const money = n => '$' + n.toFixed(2);
+
+/* markdown: where the item sits in the file, derived the same way the parser reads it */
+function mdLines() {
+  const out = ['# billing-svc backlog', ''];
+  for (const col of COLS) {
+    out.push(`## ${col.id}`);
+    for (const c of inCol(col.id)) {
+      out.push(`- **${c.title}** ${mdAttrs(c)}${c.body ? ' — ' + c.body.split('. ')[0].replace(/\.$/, '') : ''}`);
+      if (c.context) out.push(`  - context: ${c.context.file}`);
+    }
+    out.push('');
+  }
+  return out;
+}
+function mdAttrs(c) { return `{#${c.k} .${c.type}${c.parent ? ' parent=' + c.parent : ''}}`; }
+function mdLine(c) { return mdLines().findIndex(l => l.includes(mdAttrs(c))) + 1; }
+
+/* ── render ── */
+const $ = id => document.getElementById(id);
+function render() {
+  const p = P();
+  $('tcount').textContent = `${st.cards.length} issues · ${inCol('in progress').length} running`;
+  renderSource(); renderZone(); renderBoard(); renderPanel(); renderStatus(); renderMock();
+}
+function syncText() {
+  const p = P(), s = st.sync;
+  if (!p.sync) return `<span class="sync is-quiet">${LU.file} the file is the board · every move is written straight to it · last write ${ago(st.mdLast)}</span>`;
+  if (s.state === 'syncing') return `<span class="sync is-run"><span class="spin">${LU.sync}</span>syncing · ${esc(p.syncCmd)}</span>`;
+  if (s.state === 'error') return `<span class="sync is-fail">${LU.alert}${esc(p.fail)} · last good sync ${ago(s.last)}</span>`;
+  if (st.conflicts.length) return `<span class="sync">synced ${ago(s.last)} · paused for 1 conflict</span>`;
+  return `<span class="sync">synced ${ago(s.last)} · syncs when you press Sync now</span>`;
+}
+function renderSource() {
+  const p = P(), n = st.queue.length;
+  $('source').innerHTML = `
+    <span class="lbl">issues from</span>
+    <span class="src-name">${esc(p.name)}</span>
+    <span class="src-where">${esc(p.where)}</span>
+    <span class="sep">·</span>
+    <span id="synctext">${syncText()}</span>
+    <span class="sp"></span>
+    ${agentsHtml()}
+    ${p.sync ? `${n ? `<button class="queue-btn" data-q aria-expanded="${!!st.qOpen}">${LU.up}${n} ${n === 1 ? 'change' : 'changes'} not yet on ${esc(p.short)}</button>` : `<span class="mute">${LU.check.replace('<svg', '<svg style="display:inline;vertical-align:-2px"')} nothing waiting to go out</span>`}
+      <button class="act" data-sync ${st.sync.state === 'syncing' || st.conflicts.length ? 'disabled' : ''}>${LU.sync}Sync now <kbd>s</kbd></button>` : `<span class="mute">edits made in your editor show up on save</span>`}`;
+  $('queue').innerHTML = p.sync && n && st.qOpen ? `<div class="queue"><span class="lbl">goes out on the next sync, in this order</span><ol>${st.queue.map(q => `<li><span class="mute">${ago(q.at)}</span><code>${esc(q.cmd)}</code></li>`).join('')}</ol></div>` : '';
+  $('failnote').innerHTML = p.sync && st.sync.state === 'error' ? `<div class="failnote">${LU.alert}<b>${esc(p.fail)}.</b><span class="sans">${esc(p.failWhy)}</span><span class="sp"></span><button class="act" data-fix>${esc(p.fix)}</button></div>` : '';
+}
+function agentsHtml() {
+  const ids = COLS.filter(c => c.owner === 'agent').map(c => c.id);
+  const cards = st.cards.filter(c => ids.includes(c.col)).length;
+  const gates = st.cards.filter(c => c.run && c.col === 'in progress' && c.run.steps[c.run.at].state === 'hold').length;
+  return st.showAgent
+    ? `<button class="act" data-agents aria-pressed="true">Hide agent statuses <kbd>v</kbd></button>`
+    : `<span class="agents">${cards} cards in agent statuses${gates ? ` · <span class="w">${gates} waiting on you</span>` : ''}<button class="act" data-agents aria-pressed="false">Show <kbd>v</kbd></button></span>`;
+}
+function renderZone() {
+  const z = $('zone');
+  if (!st.conflicts.length) { z.hidden = true; z.innerHTML = ''; return; }
+  z.hidden = false;
+  const p = P();
+  z.innerHTML = `<div class="zone-head">${ICON.gate}<span class="lbl">changed in both places</span><span class="sans">Sync is paused for this card until you pick one. Everything else went through.</span></div>` +
+    st.conflicts.map(x => { const c = card(x.k); return `
+    <div class="ccard">
+      <div class="kc-top">${esc(p.id(c))}<span class="sep">·</span>${esc(p.loc(c))}</div>
+      <div class="ccard-t">${esc(c.title)}</div>
+      <div class="sides">
+        <div class="side"><span class="lbl">${x.mineWho === 'you' ? 'yours' : esc(x.mineWho) + ' here'} · ${ago(x.mineAt)}</span><b>→ ${esc(x.mine)}</b><span class="sans">${x.mineWho === 'you' ? 'You moved it here' : 'Lamproom’s ' + esc(x.mineWho) + ' moved it here'}; it hadn’t gone out yet.</span></div>
+        <div class="side"><span class="lbl">${esc(x.who)} on ${esc(p.short)} · ${ago(x.at)}</span><b>→ ${esc(x.theirs)}</b>${x.note ? `<span class="sans">“${esc(x.note)}”</span>` : ''}</div>
+      </div>
+      <div class="ccard-a"><button class="act" data-keep="${x.k}">Keep Lamproom’s · ${esc(x.mine)}</button><button class="act wait" data-take="${x.k}">Take ${esc(x.who)}’s · ${esc(x.theirs)}</button></div>
+    </div>`; }).join('');
+}
+function cardHtml(c) {
+  const p = P(), r = c.run, locked = c.col === 'in progress' || c.col === 'in tasks';
+  const pending = p.sync && st.queue.some(q => q.k === c.k);
+  const gate = r && c.col === 'in progress' && r.steps[r.at].state === 'hold';
+  const running = r && c.col === 'in progress' && !gate;
+  const cls = ['kc', st.sel === c.k && 'is-sel', pending && 'is-pending', gate && 'is-gate', running && 'is-run', (c.col === 'done' || c.col === 'wontfix') && 'is-done', c.fresh && 'is-new'].filter(Boolean).join(' ');
+  const blocked = st.prov === 'bd' && c.blockedBy && c.col === 'ready-for-agent' && card('amount-minor').col !== 'done';
+  let extra = '';
+  if (c.remote) extra += `<div class="kc-line remote">${LU.down}${esc(c.remote)}</div>`;
+  if (c.agentNote) extra += `<div class="kc-line remote">${ICON.done}${esc(c.agentNote)}</div>`;
+  if (c.checkAt) extra += `<div class="kc-line run">${ICON.run}triage agent checking it’s ready</div>`;
+  if (c.col === 'needs-triage' && c.triageAt) extra += `<div class="kc-line run">${ICON.run}triage agent reading it</div>`;
+  if (c.col === 'needs-info' && c.waitOn) extra += `<div class="kc-line">${ICON.ask}waiting on ${esc(c.waitOn)} · ${ago(Date.now() - c.waited)}</div>`;
+  if (c.col === 'needs-context') {
+    if (c.context) extra += `<div class="kc-line"><span class="chip">${LU.file}context.md ${c.context.size}</span></div>`;
+    else if (c.analyst) extra += `<div class="kc-line run">${ICON.run}repo-analyst reading the repo</div>`;
+    else extra += `<div class="kc-miss">missing: ${esc(c.missing[0])}${c.missing.length > 1 ? ` <span class="mute">+${c.missing.length - 1}</span>` : ''}</div>`;
+  }
+  if (blocked) extra += `<div class="kc-line block">${LU.ban}blocked by ${esc(c.blockedBy)} · bd ready skips it</div>`;
+  if (r && c.col === 'in progress') {
+    extra += `<div class="kbar">${r.steps.map(s => `<span class="kseg ${s.state}"></span>`).join('')}</div>`;
+    extra += gate
+      ? `<div class="kc-line wait">${ICON.gate}review passed with 2 notes · waiting on you <span data-live="gate-${c.k}">${mock(Date.now() - r.gateSince)}</span></div>`
+      : `<div class="kc-line run">${ICON.run}${FLOW[r.at].s} · <span data-live="el-${c.k}">${mock(r.steps[r.at].ms)}</span> · <span data-live="cost-${c.k}">${money(runCost(r))}</span></div>`;
+  }
+  if (c.type === 'story') { const k = kids(c), d = k.filter(x => x.col === 'done').length;
+    extra += `<div class="kbar">${k.map(x => `<span class="kseg ${x.col === 'done' ? 'done' : x.col === 'in progress' ? 'running' : ''}"></span>`).join('')}</div><div class="kc-line">${LU.layers}${d} of ${k.length} tasks done</div>`; }
+  if (c.parent && card(c.parent)) extra += `<div class="kc-line pend">${TY.story}part of ${esc(p.id(card(c.parent)))}</div>`;
+  if (c.col === 'done' && c.spent != null) extra += `<div class="kc-line">${ICON.done}${money(c.spent)} · merged lr/task-${esc(c.k)}</div>`;
+  if (pending) extra += `<div class="kc-line pend">${LU.up}not yet on ${esc(p.short)}</div>`;
+  return `<button class="${cls}" data-card="${c.k}" draggable="${!locked}" aria-label="${esc(c.title)}">
+    <span class="kc-top"><span title="${c.type}">${TY[c.type]}</span>${esc(p.id(c))}<span class="sp"></span>${locked ? LU.lock : ''}${c.by !== 'you' ? esc(c.by) : ''}</span>
+    <span class="kc-t">${esc(c.title)}</span>${extra}</button>`;
+}
+function renderBoard() {
+  $('board').innerHTML = COLS.map((col, i) => {
+    if (!shown(col.id)) return '';
+    const cards = inCol(col.id), agent = col.owner === 'agent';
+    return `<section class="col${agent ? ' is-agent' : ''}${st.colCur === i ? ' is-cur' : ''}" data-col="${col.id}" aria-label="${esc(col.id)}">
+      <div class="col-head">
+        <div class="col-name">${agent ? `<span class="lk">${LU.lock}</span>` : col.owner === 'tasks' ? `<span class="lk">${LU.layers}</span>` : ''}${esc(col.id)} <span class="n">${cards.length}</span></div>
+        <div class="col-who">${agent ? '<span class="tag">agent</span>' : ''}${esc(col.who)}</div>
+        <div class="col-means">${esc(col.means)}</div>
+      </div>
+      <div class="col-body">${cards.map(cardHtml).join('') || `<div class="col-empty">${agent ? 'nothing here' : 'drop a card here'}</div>`}</div>
+    </section>`;
+  }).join('');
+}
+function renderPanel() {
+  const body = $('body'), panel = $('panel');
+  const c = st.open && card(st.open);
+  if (!c) { panel.hidden = true; body.classList.remove('has-panel'); return; }
+  panel.hidden = false; body.classList.add('has-panel');
+  const p = P(), r = c.run, gate = r && c.col === 'in progress' && r.steps[r.at].state === 'hold';
+  const blocked = st.prov === 'bd' && c.blockedBy && card('amount-minor').col !== 'done';
+  let state = '';
+  if (c.col === 'needs-context') state = `<div class="p-sec"><span class="lbl">what an agent would be missing</span>
+      <ol class="p-miss">${c.missing.map(m => `<li>${esc(m)}</li>`).join('')}</ol>
+      ${c.context ? `<span class="lbl">repo-analyst found · ${esc(c.context.file)}</span><ol class="p-miss">${c.context.found.map(m => `<li>${esc(m)}</li>`).join('')}</ol>
+        <div class="p-acts"><button class="act primary" data-to="ready-for-agent">Context is enough · ready-for-agent</button></div>`
+      : `<div class="p-acts"><button class="act primary" data-analyst ${c.analyst ? 'disabled' : ''}>${LU.search}${c.analyst ? 'repo-analyst is reading…' : 'Gather with repo-analyst'}</button><button class="act" data-to="ready-for-human">A person should answer</button></div>
+         <span class="why">repo-analyst reads the repo read-only (about $0.04) and attaches what it finds. It doesn’t move the card — you decide whether it’s enough.</span>`}</div>`;
+  if (c.type === 'story') state = `<div class="p-sec"><span class="lbl">its tasks · split by story-breakdown v1, approved by you</span>
+      <ul class="hist kids">${kids(c).map(x => `<li><span>${TY[x.type]}</span><span>${esc(p.id(x))} ${esc(x.title)}</span><span class="h-w">${esc(x.col)}</span></li>`).join('')}</ul>
+      <span class="why">Accepted when: ${esc(c.accept)} It moves to done by itself when the last task is done.</span></div>`;
+  if (c.col === 'needs-info' && c.asked) state = `<div class="p-sec"><span class="lbl">asked ${esc(c.waitOn || '')} · ${c.waited ? ago(Date.now() - c.waited) : ''}</span><div class="p-ask">${esc(c.asked)}</div></div>`;
+  if (c.col === 'ready-for-agent') state = `<div class="p-sec"><span class="lbl">run it</span>
+      <div class="p-acts"><button class="act primary" data-start ${blocked || c.checkAt ? 'disabled' : ''}>${LU.play}Start run</button></div>
+      <span class="why">${c.checkAt ? 'The triage agent is checking the card has what a run needs. If something is missing it moves the card to needs-info or needs-context and says what.' : blocked ? `Blocked by ${esc(c.blockedBy)} (“Rename amount_cents…”) in Beads. Start it once that one is done.` : `Runs ${c.type === 'bug' ? 'bugfix v1, the Bug type’s flow' : 'software-delivery v4, the Task type’s flow'}, in its own workspace. The review step waits for you.`}</span></div>`;
+  if (r && c.col === 'in progress') state = `<div class="p-sec"><span class="lbl">run ${esc(r.id)} · ${money(runCost(r))}</span>
+      <div class="kbar">${r.steps.map(s => `<span class="kseg ${s.state}"></span>`).join('')}</div>
+      <div class="p-kv">${FLOW.map((f, i) => `<dt>${f.s}</dt><dd>${r.steps[i].state === 'pending' ? '<span class="mute">not started</span>' : r.steps[i].state === 'hold' ? '<span style="color:var(--wait)">waiting on you</span>' : `${mock(r.steps[i].ms)} · ${f.model}`}</dd>`).join('')}</div>
+      ${gate ? `<div class="p-ask">The reviewer passed the change with 2 notes: the cache key ignores the tax-exempt flag, and the TTL is hard-coded.</div><div class="p-acts"><button class="act wait" data-approve><kbd>a</kbd>Approve</button><button class="act">Open task</button></div>` : ''}</div>`;
+  const file = !p.sync ? (() => { const L = mdLines(), i = mdLine(c) - 1, h = L.slice(0, i).map((l, n) => [l, n]).filter(x => x[0].startsWith('## ')).pop();
+      const lines = [[h[0], h[1]], ...L.slice(i, i + (c.context ? 2 : 1)).map((l, n) => [l, i + n])];
+      return `<div class="p-sec"><span class="lbl">in the file</span><pre class="p-file">${lines.map(([l, n]) => `${String(n + 1).padStart(3)}  ${n >= i ? `<mark>${esc(l)}</mark>` : esc(l)}`).join('\n')}</pre></div>`; })() : '';
+  $('panel').innerHTML = `
+    <div class="p-head"><span class="mute">${esc(p.id(c))}</span><span class="sp"></span><button class="icon-btn" data-close aria-label="Close">${LU.x}</button></div>
+    <div class="p-sec"><h2 class="p-title">${esc(c.title)}</h2>${c.body ? `<p class="p-body">${esc(c.body)}</p>` : ''}
+      <dl class="p-kv"><dt>status</dt><dd><b>${esc(c.col)}</b> <span class="mute">· ${human(c.col) ? 'you manage' : 'set by ' + esc(COL[c.col].who)}</span></dd>
+      <dt>type</dt><dd>${c.type}${c.parent && card(c.parent) ? ` · part of ${esc(p.id(card(c.parent)))}` : ''}</dd>
+      <dt>lives in</dt><dd>${esc(p.loc(c))}</dd><dt>opened</dt><dd>${ago(c.created)} by ${esc(c.by)}</dd></dl></div>
+    ${state}${file}
+    <div class="p-sec"><span class="lbl">move to</span><div class="moves">${COLS.filter(col => human(col.id) || col.id === c.col).map(col => `<button class="mv" data-to="${col.id}" ${col.id === c.col ? 'aria-current="true" disabled' : canMove(c, col.id) ? 'disabled' : ''}>${esc(col.id)}</button>`).join('')}</div>
+      <span class="why">${c.col === 'in tasks' ? 'Its tasks move it. Open one of them to work on it.' : c.col === 'in progress' ? 'A run owns this card. It moves on when the run does.' : !human(c.col) ? 'An agent set this status. Move it to one of yours once you’re satisfied.' : 'You manage these five. needs-triage, needs-info, needs-context and in progress are set by agents.'}</span></div>
+    <div class="p-sec"><span class="lbl">history</span><ol class="hist">${c.hist.slice().reverse().map(h => `<li><span><span class="h-w">${ago(h.at)} · ${esc(h.who)}${h.remote ? ` on ${esc(p.short)}` : ''}</span></span><span>${esc(h.what)}${h.pending ? ' <span style="color:var(--ink-2)">· not yet on ' + esc(p.short) + '</span>' : ''}</span>${h.note ? `<span class="h-q sans">“${esc(h.note)}”</span>` : ''}${h.cmd ? `<code>${esc(h.cmd)}</code>` : ''}</li>`).join('')}</ol></div>`;
+}
+function renderStatus() {
+  const gates = st.cards.filter(c => c.run && c.col === 'in progress' && c.run.steps[c.run.at].state === 'hold').length;
+  const p = P();
+  $('statusbar').innerHTML = `billing-svc<span class="sep">·</span>${st.cards.length} issues<span class="sep">·</span>${inCol('in progress').length} in progress<span class="sep">·</span>${gates ? `<span class="w">${gates} waiting on you</span>` : 'nothing waiting on you'}<span class="sep">·</span>${p.sync ? `${esc(p.short)} sync on Sync now` : 'no sync: BACKLOG.md is the source'}<span class="sep">·</span>×${CLOCK} clock<span class="sp"></span>h l columns · j k cards · ↵ open · [ ] move · v agent statuses${p.sync ? ' · s sync' : ''} · Esc close`;
+}
+function renderMock() {
+  const b = (k, l) => `<button data-prov="${k}" aria-pressed="${st.prov === k}">${l}</button>`;
+  const p = P();
+  $('mockctl').innerHTML = `<span class="lbl">mockup · issue provider</span>${b('md', 'Markdown')}${b('gh', 'GitHub')}${b('bd', 'Beads')}<span class="sep">|</span>` +
+    (p.sync ? `<button data-reject>${st.sync.reject ? (st.prov === 'gh' ? 'GitHub accepts the token again' : 'origin is reachable again') : (st.prov === 'gh' ? 'make GitHub reject the token' : 'make origin unreachable')}</button>`
+            : `<button data-ext>edit BACKLOG.md in your editor</button>`);
+}
+function renderLive() {   // tick-only updates so open text fields and focus survive
+  for (const c of st.cards) {
+    const r = c.run; if (!r) continue;
+    const el = document.querySelector(`[data-live="el-${c.k}"]`); if (el) el.textContent = mock(r.steps[r.at].ms);
+    const co = document.querySelector(`[data-live="cost-${c.k}"]`); if (co) co.textContent = money(runCost(r));
+    const g = document.querySelector(`[data-live="gate-${c.k}"]`); if (g && r.gateSince) g.textContent = mock(Date.now() - r.gateSince);
+  }
+}
+
+let tt;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 2600); }
+
+/* ── input ── */
+document.addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  const d = t.dataset;
+  if (d.card) { st.sel = d.card; st.open = d.card; const c = card(d.card); c.remote = null; st.colCur = COL[c.col].i; render(); return; }
+  if (d.close !== undefined) { st.open = null; render(); return; }
+  if (d.sync !== undefined) return syncNow();
+  if (d.q !== undefined) { st.qOpen = !st.qOpen; render(); return; }
+  if (d.fix !== undefined) { st.sync.reject = false; st.sync.state = 'ok'; syncNow(); return; }
+  if (d.keep) return resolve(d.keep, true);
+  if (d.take) return resolve(d.take, false);
+  if (d.to && st.open) return move(card(st.open), d.to);
+  if (d.start !== undefined) return startRun(card(st.open));
+  if (d.approve !== undefined) return approve(card(st.open));
+  if (d.analyst !== undefined) { card(st.open).analyst = Date.now(); toast('repo-analyst is reading src/ and docs/adr/ · read-only'); render(); return; }
+  if (d.agents !== undefined) return toggleAgents();
+  if (d.prov) { load(d.prov); render(); toast(`Issue provider: ${P().name}`); return; }
+  if (d.reject !== undefined) { st.sync.reject = !st.sync.reject; if (!st.sync.reject && st.sync.state === 'error') st.sync.state = 'ok'; render(); toast(st.sync.reject ? 'The next sync will fail' : 'The next sync will go through'); return; }
+  if (d.ext !== undefined) {
+    if (card('proxy-signature')) { toast('Already added — the board reloaded BACKLOG.md on save'); return; }
+    const c = { ...INBOUND[0].card, col: 'backlog', triage: null, by: 'you', created: Date.now(), hist: [{ at: Date.now(), who: 'you', what: 'added in your editor', cmd: 'BACKLOG.md · new bullet under ## backlog' }], fresh: true, remote: 'added to BACKLOG.md in your editor' };
+    st.cards.push(c); st.mdLast = Date.now(); render(); toast('BACKLOG.md changed on disk · 1 new item, nothing to sync'); return;
+  }
+});
+
+/* drag: native, and only where it's honest */
+let dragK = null;
+document.addEventListener('dragstart', e => { const t = e.target.closest('[data-card]'); if (!t) return; dragK = t.dataset.card; t.classList.add('is-drag'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragK); });
+document.addEventListener('dragend', () => { dragK = null; document.querySelectorAll('.is-drag,.is-over,.is-refuse').forEach(n => n.classList.remove('is-drag', 'is-over', 'is-refuse')); });
+document.addEventListener('dragover', e => {
+  const col = e.target.closest('[data-col]'); if (!col || !dragK) return;
+  document.querySelectorAll('.is-over,.is-refuse').forEach(n => { if (n !== col) n.classList.remove('is-over', 'is-refuse'); });
+  const no = canMove(card(dragK), col.dataset.col);
+  if (!no) { e.preventDefault(); col.classList.add('is-over'); } else if (no !== 'same') col.classList.add('is-refuse');
+});
+document.addEventListener('drop', e => {
+  const col = e.target.closest('[data-col]'); if (!col || !dragK) return;
+  e.preventDefault(); const c = card(dragK); st.sel = c.k; move(c, col.dataset.col);
+});
+document.addEventListener('dragleave', e => { const col = e.target.closest('[data-col]'); if (col && !col.contains(e.relatedTarget)) col.classList.remove('is-over', 'is-refuse'); });
+/* a drop refused on a locked column still explains itself */
+document.addEventListener('drop', e => { const col = e.target.closest('.is-refuse'); if (col) { const no = canMove(card(e.dataTransfer.getData('text/plain')), col.dataset.col); if (no && no !== 'same') toast(no); } }, true);
+
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  const colCards = () => inCol(COLS[st.colCur].id);
+  const k = e.key;
+  if (k === 'h' || k === 'ArrowLeft' || k === 'l' || k === 'ArrowRight') {
+    const step = k === 'h' || k === 'ArrowLeft' ? -1 : 1;
+    let i = st.colCur + step;
+    while (i >= 0 && i < COLS.length && !shown(COLS[i].id)) i += step;
+    if (i < 0 || i >= COLS.length) return;
+    st.colCur = i;
+    const cc = colCards(); st.sel = cc.length ? cc[0].k : null; if (st.open) st.open = st.sel; render(); e.preventDefault();
+  } else if (k === 'j' || k === 'ArrowDown' || k === 'k' || k === 'ArrowUp') {
+    const cc = colCards(); if (!cc.length) return;
+    const i = Math.max(0, cc.findIndex(c => c.k === st.sel));
+    st.sel = cc[Math.min(cc.length - 1, Math.max(0, i + (k === 'j' || k === 'ArrowDown' ? 1 : -1)))].k;
+    if (st.open) st.open = st.sel; render(); e.preventDefault();
+  } else if (k === 'Enter' && st.sel && !e.target.closest('button')) { st.open = st.sel; card(st.sel).remote = null; render(); }
+  else if ((k === '[' || k === ']') && st.sel) {
+    const c = card(st.sel); let i = COL[c.col].i, step = k === '[' ? -1 : 1;
+    do { i += step; } while (i >= 0 && i < COLS.length && !human(COLS[i].id));
+    if (i < 0 || i >= COLS.length) return;
+    if (move(c, COLS[i].id)) { st.colCur = i; render(); }
+  }
+  else if (k === 'v') toggleAgents();
+  else if (k === 's') syncNow();
+  else if (k === 'a' && st.open) approve(card(st.open));
+  else if (k === 'Escape') { if (st.open) { st.open = null; render(); } }
+});
+
+function toggleAgents() {
+  st.showAgent = !st.showAgent;
+  // the cursor can't sit in a column that just disappeared
+  if (!shown(COLS[st.colCur].id)) { st.colCur = 0; if (st.sel && !shown(card(st.sel).col)) st.sel = null; }
+  if (st.open && !shown(card(st.open).col)) st.open = null;
+  render();
+}
+
+load('gh');
+render();
+setInterval(tick, 250);
+</script>
