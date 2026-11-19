@@ -8,11 +8,11 @@
 
 **Tech Stack:** TypeScript on Node 24 type stripping, `node:test`, `@opencode-ai/sdk` 1.19.3 (`/v2` entry), OpenCode CLI 1.19.3.
 
-**Spec:** `docs/Lamproom/Agent Providers/Provider SDK Fit Analysis.md` (the OpenCode column and *Changes the port needs*), plus the port notes it links (`AgentProvider Port.md`, `Run Spec.md`, `Agent Run Handle And Result.md`, `Normalized Event Envelope.md`, `Provider Capabilities.md`, `Capability Negotiation.md`). The shipped port is `code/lamproom/packages/core/src/`; the Claude adapter in `code/lamproom/packages/adapters/src/agent/claude/` is the pattern to follow.
+**Spec:** `docs/Lamproom/Agent Providers/Provider SDK Fit Analysis.md` (the OpenCode column and *Changes the port needs*), plus the port notes it links (`AgentProvider Port.md`, `Run Spec.md`, `Agent Run Handle And Result.md`, `Normalized Event Envelope.md`, `Provider Capabilities.md`, `Capability Negotiation.md`). The shipped port is `packages/core/src/`; the Claude adapter in `packages/adapters/src/agent/claude/` is the pattern to follow.
 
 ## Global Constraints
 
-- Work in the existing worktree `.claude/worktrees/agent-providers` on branch `feature/agent-providers`. Commands run from `code/lamproom/` unless stated.
+- Work in the existing worktree `.claude/worktrees/agent-providers` on branch `feature/agent-providers`. Commands run from the repo root unless stated.
 - Same code rules as the Claude plan: Node 24 type stripping (erasable syntax only, `import type`, `.ts` relative imports), `node:test` + `node:assert/strict`, `@lamproom/core` has no dependencies and never imports adapters.
 - Pin `@opencode-ai/sdk` to exactly `1.19.3` and import only from `@opencode-ai/sdk/v2`. Never use the root import (legacy API) or the separate 2.x package `@opencode/sdk`. The installed CLI is `/opt/homebrew/bin/opencode` 1.19.3.
 - Provider id `'opencode'`.
@@ -50,10 +50,10 @@
 ### Task 1: SDK, a real event capture, and the provider id
 
 **Files:**
-- Modify: `code/lamproom/packages/adapters/package.json` (dependency)
-- Modify: `code/lamproom/packages/core/src/ports/agent-provider.ts` (`ProviderId` gains `'opencode'`)
-- Create: `code/lamproom/packages/adapters/test/fixtures/capture-opencode.ts`
-- Create: `code/lamproom/packages/adapters/test/fixtures/opencode-read.jsonl` (the captured output)
+- Modify: `packages/adapters/package.json` (dependency)
+- Modify: `packages/core/src/ports/agent-provider.ts` (`ProviderId` gains `'opencode'`)
+- Create: `packages/adapters/test/fixtures/capture-opencode.ts`
+- Create: `packages/adapters/test/fixtures/opencode-read.jsonl` (the captured output)
 
 **Interfaces:**
 - Produces: `opencode-read.jsonl` — one SSE event JSON per line, from `server.connected` to the root `session.idle`, for a run that reads a file and replies. Task 4 tests against it.
@@ -89,8 +89,8 @@ git commit -m "test(adapters): add OpenCode SDK and a captured event stream"
 ### Task 2: Permission mapping
 
 **Files:**
-- Create: `code/lamproom/packages/adapters/src/agent/opencode/permissions.ts`
-- Test: `code/lamproom/packages/adapters/test/opencode-permissions.test.ts`
+- Create: `packages/adapters/src/agent/opencode/permissions.ts`
+- Test: `packages/adapters/test/opencode-permissions.test.ts`
 
 **Interfaces:**
 - Consumes: `RunSpec`, `PermissionMode` from `@lamproom/core`; `PermissionRule` type from `@opencode-ai/sdk/v2`.
@@ -161,8 +161,8 @@ git commit -m "feat(adapters): map RunSpec permissions to OpenCode rules"
 ### Task 3: `RunSpec` → server env, config and prompt
 
 **Files:**
-- Create: `code/lamproom/packages/adapters/src/agent/opencode/options.ts`
-- Test: `code/lamproom/packages/adapters/test/opencode-options.test.ts`
+- Create: `packages/adapters/src/agent/opencode/options.ts`
+- Test: `packages/adapters/test/opencode-options.test.ts`
 
 **Interfaces:**
 - Consumes: `renderPrompt`, `RunSpec` from `@lamproom/core`; `toPermissionRules` (Task 2); `Config` type from `@opencode-ai/sdk/v2`.
@@ -240,8 +240,8 @@ git commit -m "feat(adapters): map RunSpec to OpenCode server env, config and pr
 ### Task 4: OpenCode event normalizer
 
 **Files:**
-- Create: `code/lamproom/packages/adapters/src/agent/opencode/normalize.ts`
-- Test: `code/lamproom/packages/adapters/test/opencode-normalize.test.ts`
+- Create: `packages/adapters/src/agent/opencode/normalize.ts`
+- Test: `packages/adapters/test/opencode-normalize.test.ts`
 
 **Interfaces:**
 - Consumes: `NormalizedEvent`, `Usage`, `ZERO_USAGE` from `@lamproom/core`; `Event` type from `@opencode-ai/sdk/v2`; `summarizeTool` from `../claude/normalize.ts` (move it to `packages/adapters/src/agent/summarize.ts` and re-import it in the Claude normalizer, since two providers now share it).
@@ -323,8 +323,8 @@ git commit -m "feat(adapters): normalize OpenCode events"
 ### Task 5: Guard plugin
 
 **Files:**
-- Create: `code/lamproom/packages/adapters/src/agent/opencode/guard-plugin.ts`
-- Test: `code/lamproom/packages/adapters/test/opencode-guard-plugin.test.ts`
+- Create: `packages/adapters/src/agent/opencode/guard-plugin.ts`
+- Test: `packages/adapters/test/opencode-guard-plugin.test.ts`
 
 **Interfaces:**
 - Consumes: `checkToolCall`, `GuardRules` from `@lamproom/core`.
@@ -373,12 +373,12 @@ git commit -m "feat(adapters): add OpenCode guard plugin"
 ### Task 6: `OpencodeProvider` and the server process
 
 **Files:**
-- Create: `code/lamproom/packages/adapters/src/agent/opencode/server.ts`
-- Create: `code/lamproom/packages/adapters/src/agent/opencode/provider.ts`
-- Modify: `code/lamproom/packages/adapters/src/index.ts` (re-export the provider)
-- Create: `code/lamproom/packages/adapters/test/fixtures/fake-opencode.mjs` (executable)
-- Create: `code/lamproom/packages/adapters/test/fixtures/fake-opencode-crash.sh` (executable: `echo "bad config" >&2; exit 2`)
-- Test: `code/lamproom/packages/adapters/test/opencode-provider.test.ts`
+- Create: `packages/adapters/src/agent/opencode/server.ts`
+- Create: `packages/adapters/src/agent/opencode/provider.ts`
+- Modify: `packages/adapters/src/index.ts` (re-export the provider)
+- Create: `packages/adapters/test/fixtures/fake-opencode.mjs` (executable)
+- Create: `packages/adapters/test/fixtures/fake-opencode-crash.sh` (executable: `echo "bad config" >&2; exit 2`)
+- Test: `packages/adapters/test/opencode-provider.test.ts`
 
 **Interfaces:**
 - Consumes: Tasks 2–5; `hostExecHost`; `createOpencodeClient` from `@opencode-ai/sdk/v2`.
@@ -476,8 +476,8 @@ git commit -m "feat(adapters): add OpencodeProvider over a per-run opencode serv
 ### Task 7: Live check and docs
 
 **Files:**
-- Create: `code/lamproom/packages/adapters/test/opencode-live.test.ts`
-- Modify: `code/lamproom/package.json` (`test:live` runs both live files)
+- Create: `packages/adapters/test/opencode-live.test.ts`
+- Modify: `package.json` (`test:live` runs both live files)
 - Create: `docs/Lamproom/Agent Providers/OpenCode Adapter.md`
 - Modify: `docs/Lamproom/Agent Providers/Agent Providers Index.md` (link under *The adapters*)
 

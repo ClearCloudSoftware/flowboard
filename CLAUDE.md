@@ -6,11 +6,12 @@
 <!-- end claude-reflect -->
 
 ## Layout
-- `code/lamproom/`: Next.js 16 app (`app/`, `components/`) plus pnpm workspace packages in `packages/` (core, adapters, cli, ask-user); `electron/` is the desktop shell.
+- The repo root is the app: Next.js 16 (`app/`, `components/`) plus pnpm workspace packages in `packages/` (core, adapters, cli, ask-user); `electron/` is the desktop shell.
+- `docs/Development.md`: developer guide for the app (designer, desktop app, checks).
 - `docs/Lamproom/`: design and handoff notes, one folder per area.
 - `docs/Lamproom/Deferred Work.md`: the only list of work left for later (unfixed findings, known problems, open questions). Add leftovers there, not in handoff notes; remove an item when it is fixed.
 
-## Commands (run in `code/lamproom`, pnpm 10, Node 24 runs `.ts` directly)
+## Commands (run at the repo root, pnpm 10, Node 24 runs `.ts` directly)
 - `pnpm dev`: the web app. `pnpm electron:dev`: the desktop shell.
 - `pnpm test:packages` and `pnpm typecheck:packages`: package tests and types. `pnpm test:app`: app tests. `pnpm lint`.
 - `pnpm test:live` calls real providers: OpenRouter costs money and Claude uses the subscription login. Run it only when asked.
@@ -24,3 +25,5 @@
 ## Workflow
 - New work goes on a branch cut from `dev`, in its own worktree under `.claude/worktrees/`.
 - Other sessions merge into the shared `dev` checkout. List `origin/dev..dev` just before pushing.
+
+@AGENTS.md

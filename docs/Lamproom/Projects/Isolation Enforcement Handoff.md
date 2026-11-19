@@ -58,7 +58,7 @@ The branch and its worktree are removed. The build log, with every ruling and ev
 A **Normal** project, which is the default for a new Software project, now runs every step in a Docker box. Until the steps below are done, its runs are refused, with a message that names what is missing.
 
 1. **Docker running.** Otherwise the run is refused with `Docker is not running`.
-2. **A current `lamproom-cli` image.** Build it from `code/lamproom`:
+2. **A current `lamproom-cli` image.** Build it from the repo root:
 
    ```
    docker build -f docker/Dockerfile -t lamproom-cli .
@@ -148,7 +148,7 @@ A flow sandbox with any runtime other than `docker` or `opensandbox` is refused.
 For a Docker box, lr-run-flow checks, in order:
 
 1. Docker is running, or it refuses with `Docker is not running`.
-2. The image exists, or it refuses with `no image lamproom-cli; build it from code/lamproom: docker build -f docker/Dockerfile -t lamproom-cli .`
+2. The image exists, or it refuses with `no image lamproom-cli; build it from the repo root: docker build -f docker/Dockerfile -t lamproom-cli .`
 3. Each credential the flow's agents need is set. A box cannot read the macOS keychain, where your `claude` login lives. A missing credential is refused with:
 
    > `CLAUDE_CODE_OAUTH_TOKEN is not set: a container cannot use this machine's login. Run `claude setup-token` and set CLAUDE_CODE_OAUTH_TOKEN where Lamproom runs`

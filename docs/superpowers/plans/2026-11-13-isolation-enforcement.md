@@ -25,7 +25,7 @@ New run form that picks a project instead of a folder (lr-run-flow's refusal tex
 
 ## Global Constraints
 
-- All paths are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
+- All paths are under the repo root unless they start with `docs/`. Run commands from the repo root.
 - Branch `feature/isolation-enforcement`, cut from `dev` in its own worktree. Do not merge into `dev`; Alex decides.
 - **A flow never runs without a project.** lr-run-flow refuses a `--folder` that no registered project owns
   (`owns()` in `projects.ts`, on real paths). `--check` and `--mermaid` run nothing and stay project-free.
@@ -143,7 +143,7 @@ itself chained. The PATCH route's `Edit` gains `approvals: z.array(z.unknown()).
 - Produces:
   - `dockerHasGvisor(docker = 'docker'): boolean`: `docker info --format '{{json .Runtimes}}'` lists `runsc`
   - `dockerNotReady(image: string, docker = 'docker'): string | undefined`: undefined when `docker image inspect
-    <image>` succeeds; else `Docker is not running` or `no image <image>; build it from code/lamproom: docker
+    <image>` succeeds; else `Docker is not running` or `no image <image>; build it from the repo root: docker
     build -f docker/Dockerfile -t <image> .`
   - `dockerArgs` adds `--runtime runsc` when `profile.tier === 'gvisor'`
 
@@ -367,8 +367,8 @@ Copy (exact):
 - Modify: `docs/Lamproom/Projects/Project Settings.md:44` (no longer "does not act on it yet"), `Projects Index.md:22`
   (trust leaves the not-yet list), `Repository Trust And Sandboxing.md` (a "Built" section: the table from Task 3,
   approvals, decisions 1–6), `Projects Open Questions.md` #16 (answered: per project, the project's tier is the floor)
-- Modify: `code/lamproom/docker/README.md` (Normal and Untrusted projects use `lamproom-cli` by default; the token)
+- Modify: `docker/README.md` (Normal and Untrusted projects use `lamproom-cli` by default; the token)
 - Modify: `docs/Lamproom/Running Agent Work.md` wherever it says the flow's `sandbox:` alone decides
 
-- [ ] **Step 1: Edit them.** Quote nothing that the code no longer does; `grep -rn "not act on it yet\|does not act" docs code/lamproom/app` shows only the settings still pending.
+- [ ] **Step 1: Edit them.** Quote nothing that the code no longer does; `grep -rn "not act on it yet\|does not act" docs app` shows only the settings still pending.
 - [ ] **Step 2: Commit** `docs(projects): isolation is enforced`

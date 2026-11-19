@@ -8,7 +8,7 @@ date: 2026-10-19
 
 Every field of the YAML file that `pnpm lr-run-flow --folder <dir> --task <file> <flow.yaml>` reads, and how a flow runs: routes, loops, joins, gates, the budget, stopping and resuming, and the files it writes. A flow is a graph of steps. An agent step is one `lr-run-agent` run, with any provider; a shell step is one command. A flow file is a reusable recipe: each run gives it the folder to work in and the task. The `lr-run-agent` keys themselves are in [[Run Config Reference]]; why flows work this way is in [[Multi-Agent Orchestration Analysis]].
 
-Code: `code/lamproom/packages/cli/src/flow-config.ts` (the file), `flow-run.ts` (the command), `flow-exec.ts` (one step run); the rules live in the engine, `packages/core/src/flow/`.
+Code: `packages/cli/src/flow-config.ts` (the file), `flow-run.ts` (the command), `flow-exec.ts` (one step run); the rules live in the engine, `packages/core/src/flow/`.
 
 ## At a glance
 

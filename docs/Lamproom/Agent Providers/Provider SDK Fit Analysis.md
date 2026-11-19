@@ -12,7 +12,7 @@ Can the **Claude Agent SDK** and the **OpenCode SDK**, both in TypeScript, imple
 > Both SDKs can implement the port, with a few changes to the port. The Claude Agent SDK covers the design almost one for one. OpenCode covers most of it, but it runs as a long-lived HTTP server rather than one process per attempt, which changes how a run is launched, stopped and re-attached.
 
 > [!check] Implemented 2026-10-18
-> Both adapters were built on these SDKs the same day: [[Claude Code Adapter]] and [[OpenCode Adapter]], in `code/lamproom/packages/adapters/src/agent/`. The tables keep the analysis; an *As built* remark says where the build differs, as of 2026-10-22.
+> Both adapters were built on these SDKs the same day: [[Claude Code Adapter]] and [[OpenCode Adapter]], in `packages/adapters/src/agent/`. The tables keep the analysis; an *As built* remark says where the build differs, as of 2026-10-22.
 
 ## Versions checked
 
@@ -69,7 +69,7 @@ As built, the adapter follows the first three (`claude/options.ts`). The version
 ## Changes the port needs
 
 > [!check] Implemented 2026-10-18
-> Written as proposals; the build settled them the same day. Changes 1, 3 and 6 shipped as written, 2 and 4 shipped in another form, and 5 was not built. The shipped port is in `code/lamproom/packages/core/src/ports/`. The questions are in [[Agent Providers Open Questions]].
+> Written as proposals; the build settled them the same day. Changes 1, 3 and 6 shipped as written, 2 and 4 shipped in another form, and 5 was not built. The shipped port is in `packages/core/src/ports/`. The questions are in [[Agent Providers Open Questions]].
 
 1. **`RunSpec` gains `permissionMode` and `systemPrompt`** (#4). Both SDKs take them as options. The runner no longer writes Claude-format `settings.json` and `mcp.json`; guardrail rules become provider-neutral data that each adapter translates (Claude: hook callbacks; OpenCode: permission rules plus a plugin). *Shipped as written*, with the rules as a third field, `guards: GuardRules`, which `core/src/guard.ts` checks.
 2. **`AgentRun.pid` becomes optional.** Claude has one process per run; OpenCode has one server that can hold many sessions. Restart recovery (#30) becomes "re-attach by session id when the provider supports it", not "re-attach by pid". *Shipped as `pid: Promise<number>`* instead: it resolves once the process is spawned, or to `-1` if nothing was, and OpenCode's is the server's pid (#37). Re-attaching is not built (#30).

@@ -1,4 +1,6 @@
-Lamproom's code: the packages (`packages/`: the flow engine, the agent providers, and the `lr-run-agent` and `lr-run-flow` commands) and the web app (`app/`, Next.js).
+# Development
+
+Lamproom's code sits at the repo root: the packages (`packages/`: the flow engine, the agent providers, and the `lr-run-agent` and `lr-run-flow` commands) and the web app (`app/`, Next.js).
 
 ## Check your machine
 
@@ -24,7 +26,7 @@ The designer edits the recipes in `flows/`, the YAML files that `pnpm lr-run-flo
 
 Save writes the file in place and changes only the lines whose meaning changed, so comments and alignment written by hand survive. It is refused if the file changed on disk since it was opened. A run already started keeps its own copy of the flow.
 
-The flows API answers only on `localhost`. Notes: `docs/Lamproom/Flow Design/Flow Design Screen.md`.
+The flows API answers only on `localhost`. Notes: [Flow Design Screen](Lamproom/Flow%20Design/Flow%20Design%20Screen.md).
 
 ## The desktop app
 
@@ -53,9 +55,21 @@ pnpm build               # also typechecks the app
 
 The project was FlowBoard until 2026-11-16. Nothing reads the old names, so an existing setup moves its state by hand:
 
-- `code/flowboard/data` and `code/flowboard/runs` → `code/lamproom/` (git moves only tracked files; ignored folders stay behind). `data/flowboard.db` → `data/lamproom.db`.
+- `code/flowboard/data` and `code/flowboard/runs` → the repo root (git moves only tracked files; ignored folders stay behind). `data/flowboard.db` → `data/lamproom.db`.
 - `~/.config/flowboard/` → `~/.config/lamproom/`.
 - In each project repo: `.flowboard.yaml` → `.lamproom.yaml`, `.flowboard/` → `.lamproom/`. Task branches are now `lr/task-<id>`; existing `fb/task-<id>` branches and worktrees are no longer listed.
 - Environment variables `FLOWBOARD_*` → `LAMPROOM_*`.
 - Docker images: rebuild as `lamproom:cli` and `lamproom:sandbox` (see `docker/README.md`).
 - Commands: `pnpm run-agent`, `run-flow`, `clean-workspace` → `pnpm lr-run-agent`, `lr-run-flow`, `lr-clean-workspace`. The MCP tools are `mcp__lamproom__*`.
+
+## Moved up from code/lamproom
+
+Until 2026-11-19 the app sat in `code/lamproom/`; it is now the repo root. Git moved the tracked files, but ignored folders stay behind, so in an existing checkout move them by hand and reinstall:
+
+```bash
+mv code/lamproom/data code/lamproom/runs .     # your projects, settings, secrets and run logs
+rm -rf code                                    # node_modules and .next are rebuilt
+pnpm install
+```
+
+Rebuild the Docker images from the repo root (see `docker/README.md`).

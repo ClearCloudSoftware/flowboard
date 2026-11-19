@@ -39,7 +39,7 @@ PRD §5 `tasks`: `branch_name TEXT`, `worktree_path TEXT`. PRD §11: *"Store bot
 Why:
 
 - **`vibe` is the old name.** The shipped code has already dropped it: the MCP server is `lamproom`, the shim's variable is `LAMPROOM_ASK_SOCKET`, and run state lives in `<folder>/.lamproom/`.
-- **One exclude line covers it.** `lr-run-flow` already appends `.lamproom/` to each managed repo's `.git/info/exclude` (`code/lamproom/packages/cli/src/flow-run.ts`, `excludeFromGit`). With worktrees under `.lamproom/worktrees/`, git ignores them without a second line. See [[Parent Repo Hygiene]].
+- **One exclude line covers it.** `lr-run-flow` already appends `.lamproom/` to each managed repo's `.git/info/exclude` (`packages/cli/src/flow-run.ts`, `excludeFromGit`). With worktrees under `.lamproom/worktrees/`, git ignores them without a second line. See [[Parent Repo Hygiene]].
 - **Inside the repo, not in the home directory.** The mockup's `~/.lamproom/ws/<slug>` is sample data. Keeping the worktree under the repo keeps everything a project owns in one place.
 
 The PRD, backlog and `07` quotes elsewhere in these notes still say `.vibe-worktrees/` and `vibe/`. They are accurate citations of those sources and stay as written. This decision overrides them.

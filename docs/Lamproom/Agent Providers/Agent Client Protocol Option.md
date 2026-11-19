@@ -22,7 +22,7 @@ Before the port was built, the sources asked whether it should be a standard pro
 | MCP passthrough | `mcp_tools`, `RunSpec.tools` |
 | Cost | `native_cost`, `Usage.costUsd` |
 
-(The five needs are `01-ports.md`'s; the right column is this note's mapping onto the port, not a source table: [[Agent Providers Open Questions]] #35. The port is the shipped one, `code/lamproom/packages/core/src/ports/`.)
+(The five needs are `01-ports.md`'s; the right column is this note's mapping onto the port, not a source table: [[Agent Providers Open Questions]] #35. The port is the shipped one, `packages/core/src/ports/`.)
 
 ## Where it appears
 

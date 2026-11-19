@@ -31,7 +31,7 @@ a task worktree or a subfolder of the repo.
 
 ## Global Constraints
 
-- All paths are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
+- All paths are under the repo root unless they start with `docs/`. Run commands from the repo root.
 - Branch `feature/knowledge-assets`, cut from `feature/analysis-agent` at `098340e` in
   `.claude/worktrees/knowledge-assets`. Never merge, never push.
 - **A build respects isolation.** It is a run of the project through `startRun`; a cloned repo can never make it run

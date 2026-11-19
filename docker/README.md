@@ -49,14 +49,14 @@ To try an image built from a branch without replacing the shared `lamproom:cli`,
 point runs at it:
 
 ```sh
-docker build -f docker/Dockerfile -t lamproom:cli-knowledge .     # from code/lamproom
+docker build -f docker/Dockerfile -t lamproom:cli-knowledge .     # from the repo root
 LAMPROOM_IMAGE=lamproom:cli-knowledge pnpm dev                   # or lr-run-flow; the box image is boxImage() in isolation.ts
 ```
 
 ## 2. The whole CLI in one container
 
 ```sh
-docker build -f docker/Dockerfile -t lamproom:cli .          # from code/lamproom
+docker build -f docker/Dockerfile -t lamproom:cli .          # from the repo root
 docker run --rm -it -v "$PWD/my-flow:/work" \
   -e CLAUDE_CODE_OAUTH_TOKEN -e OPENROUTER_API_KEY \
   lamproom:cli flow.yaml

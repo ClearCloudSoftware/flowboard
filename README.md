@@ -54,7 +54,7 @@ runs on your machine, over your repositories, for one developer.
 
 ```bash
 git clone git@github.com:ClearCloudSoftware/flowboard.git lamproom
-cd lamproom/code/lamproom
+cd lamproom
 pnpm install
 pnpm dev
 ```
@@ -125,7 +125,7 @@ Each project has a trust level, and a flow's `sandbox:` key can only keep it or 
 | Normal    | A throwaway Docker container per step (`lamproom-cli` image)   |
 | Untrusted | The same under gVisor (`runsc`), with only the agents' keys     |
 
-Build the images before the first Normal or Untrusted run; see [`code/lamproom/docker/README.md`](code/lamproom/docker/README.md).
+Build the images before the first Normal or Untrusted run; see [`docker/README.md`](docker/README.md).
 
 > [!WARNING]
 > Docker containers have no egress proxy yet, so an AI step can reach the network and its keys are inside the box. For
@@ -136,7 +136,7 @@ Build the images before the first Normal or Untrusted run; see [`code/lamproom/d
 
 ## Development
 
-Run these from `code/lamproom`:
+Run these from the repo root:
 
 | Command                   | What it does                                  |
 | ------------------------- | --------------------------------------------- |
@@ -151,13 +151,13 @@ Run these from `code/lamproom`:
 > [!CAUTION]
 > `pnpm test:live` runs real agents and costs money.
 
-The code lives in [`code/lamproom`](code/lamproom): the flow engine, agent providers, and CLI commands in `packages/`,
+The code lives at the repo root: the flow engine, agent providers, and CLI commands in `packages/`,
 and the Next.js app in `app/`.
 
 ## Status
 
 Early and moving fast. Much of Lamproom is designed further than it's built; each component's notes mark what is built
-and when. The project was called FlowBoard until 2026-11-16; [`code/lamproom/README.md`](code/lamproom/README.md#renamed-from-flowboard)
+and when. The project was called FlowBoard until 2026-11-16; [`docs/Development.md`](docs/Development.md#renamed-from-flowboard)
 lists how to move an existing setup.
 
 ## Docs
@@ -165,5 +165,6 @@ lists how to move an existing setup.
 - **[Running agent work](docs/Lamproom/Running%20Agent%20Work.md)**: flows, execution, providers, capabilities, and
   sandboxing on one page. The app also renders it at `/docs`.
 - **[Component notes](docs/Lamproom/)**: an Obsidian vault with a folder per component.
+- **[Development](docs/Development.md)**: the flow designer, the desktop app, checks, and moving an old checkout.
 - **[Feature map](docs/feature-map.md)**: a plain-English tour of every component.
 - **[Mockups](docs/mockups/)**: clickable screens built ahead of the code.

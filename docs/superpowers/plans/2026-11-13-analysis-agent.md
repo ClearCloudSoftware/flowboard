@@ -18,7 +18,7 @@ hosts saves them on the record's new `networkHosts`; OpenSandbox boxes of the pr
 shadcn/ui + lucide-react.
 
 **Spec:** `docs/mockups/new-project-wizard.html` (`analyse()`, `proposals()`, the clone log lines),
-`code/lamproom/internal/repo-analyst/SKILL.md` (the proposal's JSON shape) and `flow.yaml` (its fixed tools),
+`internal/repo-analyst/SKILL.md` (the proposal's JSON shape) and `flow.yaml` (its fixed tools),
 `docs/Lamproom/Projects/Project Settings.md` (the *Network hosts* and *Check command* rows: stored on the record,
 never in the repo, for hosts; the repo's `.lamproom.yaml` for the check command).
 
@@ -28,7 +28,7 @@ automatically (it gets an **Analyse** button), and a live test that spends money
 
 ## Global Constraints
 
-- All paths are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
+- All paths are under the repo root unless they start with `docs/`. Run commands from the repo root.
 - Branch `feature/analysis-agent`, cut from `dev` at `2b2c29d` in `.claude/worktrees/analysis-agent`. Do not merge
   into `dev`; Alex decides.
 - **The analyst is a run of its project.** It goes through `startRun` and lr-run-flow like any run: the project's

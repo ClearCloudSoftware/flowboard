@@ -18,12 +18,12 @@ machine" section on the `/docs` page.
 **Spec:** `docs/superpowers/specs/2026-11-17-doctor-page-design.md`
 
 **Setup:** Work in the worktree `.claude/worktrees/doctor-page` on branch `feature/doctor-page`; `pnpm install` is
-already done. Run commands from `code/lamproom`.
+already done. Run commands from the repo root.
 
 ## Global Constraints
 
 - Before writing Next code, read the route-handler and client-component guides in `node_modules/next/dist/docs/01-app/`
-  (`code/lamproom/AGENTS.md`).
+  (`AGENTS.md`).
 - UI comes from shadcn/ui components in `components/ui/` (`Button` is there), data comes through TanStack Query, and
   icons come from `lucide-react` only.
 - House style: light only, zero radius, hairline `border-border`, no shadows. Colours: ok `text-run`, warn
@@ -54,10 +54,10 @@ already done. Run commands from `code/lamproom`.
 ### Task 1: Non-blocking Docker and GitHub probes
 
 **Files:**
-- Modify: `code/lamproom/packages/cli/src/project.ts` (`dockerDefaultMemoryMb`, `dockerHasGvisor`, `dockerNotReady`, at lines 93-115)
-- Modify: `code/lamproom/packages/cli/src/github.ts` (`ghStatus`, at lines 34-52)
-- Modify: `code/lamproom/packages/cli/src/doctor.ts` (`realProbes`, at lines 93-114)
-- Test: `code/lamproom/packages/cli/test/isolation.test.ts` (it has `fakeDocker`), `code/lamproom/packages/cli/test/github.test.ts` (it uses `fakeGh`)
+- Modify: `packages/cli/src/project.ts` (`dockerDefaultMemoryMb`, `dockerHasGvisor`, `dockerNotReady`, at lines 93-115)
+- Modify: `packages/cli/src/github.ts` (`ghStatus`, at lines 34-52)
+- Modify: `packages/cli/src/doctor.ts` (`realProbes`, at lines 93-114)
+- Test: `packages/cli/test/isolation.test.ts` (it has `fakeDocker`), `packages/cli/test/github.test.ts` (it uses `fakeGh`)
 
 **Interfaces:**
 - Produces:
@@ -120,15 +120,15 @@ already done. Run commands from `code/lamproom`.
 ### Task 2: `/api/doctor` and the System status page
 
 **Files:**
-- Create: `code/lamproom/packages/cli/src/doctor-view.ts`, holding `GROUPS` and `summaryLine`. It has no Node imports,
+- Create: `packages/cli/src/doctor-view.ts`, holding `GROUPS` and `summaryLine`. It has no Node imports,
   so the client can import it.
-- Modify: `code/lamproom/packages/cli/src/doctor-cli.ts` to import `GROUPS` and `summaryLine` from it and delete its
+- Modify: `packages/cli/src/doctor-cli.ts` to import `GROUPS` and `summaryLine` from it and delete its
   own copies.
-- Create: `code/lamproom/app/api/doctor/route.ts`
-- Modify: `code/lamproom/app/projects/api.ts` to add `doctorQuery`.
-- Create: `code/lamproom/app/settings/status.tsx` (the client component) and `code/lamproom/app/settings/status/page.tsx`.
-- Modify: `code/lamproom/app/settings/nav.tsx` to add the `SECTIONS` entry.
-- Test: `code/lamproom/packages/cli/test/doctor.test.ts` (summaryLine) and `code/lamproom/app/api/doctor/route.test.ts`.
+- Create: `app/api/doctor/route.ts`
+- Modify: `app/projects/api.ts` to add `doctorQuery`.
+- Create: `app/settings/status.tsx` (the client component) and `app/settings/status/page.tsx`.
+- Modify: `app/settings/nav.tsx` to add the `SECTIONS` entry.
+- Test: `packages/cli/test/doctor.test.ts` (summaryLine) and `app/api/doctor/route.test.ts`.
 
 **Interfaces:**
 - Consumes: `runDoctor`, `DoctorReport`, `Check`, `Status` and `Group` from `packages/cli/src/doctor.ts`, as type-only

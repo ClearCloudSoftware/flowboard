@@ -1,5 +1,5 @@
 # lr-run-flow and lr-run-agent in one container: the CLI, its agents and their questions all inside the box.
-# Build from code/lamproom:  docker build -f docker/Dockerfile -t lamproom:cli .
+# Build from the repo root:  docker build -f docker/Dockerfile -t lamproom:cli .
 # Also the `sandbox: { image: lamproom:cli }` image for per-step boxes: it has sh, git, node, pnpm, both agent CLIs,
 # graphify and Serena, and ripgrep, which OpenCode's glob and grep tools run (without it they fail with "ripgrep
 # execution failed").

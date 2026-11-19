@@ -21,7 +21,7 @@ Out of scope: direct LLM calls from Lamproom (no `complete()` service), Ollama o
 - `docs/Lamproom/Agent Providers/OpenCode Adapter.md`: how a run's OpenCode server is isolated.
 - `docs/Lamproom/Sandboxing/OpenSandbox Runtime.md` and `docs/Lamproom/Sandboxing/Sandboxing Testing.md`: the two sandbox runtimes and how to run them.
 - Code:
-  - `code/lamproom/packages/cli/src/openrouter.ts`: the key, the model list, `modelRules`, `prepareRun`.
+  - `packages/cli/src/openrouter.ts`: the key, the model list, `modelRules`, `prepareRun`.
   - `packages/cli/src/settings.ts`: `ApprovedModel`, `APPROVED_MODELS_SCHEMA` (ids must start with `openrouter/`), `modelProblem`, `isFree`, `FREE_WARNING`.
   - `packages/cli/src/config.ts`: the check in `configFromObject`.
   - `packages/adapters/src/agent/opencode/options.ts`: `buildLaunch`; native packs are merged into OpenCode's config at line ~57.
@@ -46,7 +46,7 @@ Out of scope: direct LLM calls from Lamproom (no `complete()` service), Ollama o
 ## Ground rules for the session
 
 - Ollama runs are **local and free**, so live runs on Ollama are fine. **Never run anything on OpenRouter or Claude that costs money.** The live test suites (`pnpm test:live`) do; don't run them.
-- Don't edit `~/.config/opencode`, and don't touch Alex's real data folder (`code/lamproom/data/` in the main checkout). Use a scratch `LAMPROOM_DATA_DIR`.
+- Don't edit `~/.config/opencode`, and don't touch Alex's real data folder (`data/` in the main checkout). Use a scratch `LAMPROOM_DATA_DIR`.
 - Don't pull, delete or change Ollama models, and don't change `OLLAMA_*` settings, without asking Alex.
 - Other Claude sessions may be live. Run `ListAgents` before reusing any worktree.
 - Put throwaway spike scripts in your scratchpad, not in the repo.

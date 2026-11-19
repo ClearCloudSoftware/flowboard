@@ -7,12 +7,12 @@ module: Agent Providers
 
 What each source contributed. There is no mockup for this component; sibling mockups mention it in sample data.
 
-There are two kinds of source. The design sources were written before any code, and the notes of 2026-10-15/16 rest on them. Since 2026-10-18 the shipped code in `code/lamproom/packages/`, and the plans and specs it was built from, are sources too: see *Code, plans and specs* below.
+There are two kinds of source. The design sources were written before any code, and the notes of 2026-10-15/16 rest on them. Since 2026-10-18 the shipped code in `packages/`, and the plans and specs it was built from, are sources too: see *Code, plans and specs* below.
 
 ## Design sources
 
 > [!warning] Reference port or shipped port
-> `docs/old/reference/core/ports/` holds the reference port, a design sketch. The notes written on 2026-10-15/16 quote or describe it, usually by bare file name (`agent-provider.ts`, `events.ts`, `exec-host.ts`, `replay-provider.ts`): [[Run Spec]], [[Agent Run Handle And Result]], [[Normalized Event Envelope]], [[Provider Capabilities]], [[Logical Model Ids]], [[Session Resume And Context Replay]], [[Stream Parsing And Normalization]], [[Providers And Sandboxing]], [[Provider Boundary Rules]], [[Replay Provider]], [[Codex Adapter]], [[Agent Providers Glossary]], [[Agent Providers Data Model]], [[Agent Providers Storage]], [[Agent Providers Overview]], the PRD mapping in [[Claude Code Adapter]], and the early entries of [[Agent Providers Open Questions]]. Since 2026-10-18 the shipped port in `code/lamproom/packages/core/src/ports/` replaces it. How the two differ is in the first row of *Code, plans and specs* below.
+> `docs/old/reference/core/ports/` holds the reference port, a design sketch. The notes written on 2026-10-15/16 quote or describe it, usually by bare file name (`agent-provider.ts`, `events.ts`, `exec-host.ts`, `replay-provider.ts`): [[Run Spec]], [[Agent Run Handle And Result]], [[Normalized Event Envelope]], [[Provider Capabilities]], [[Logical Model Ids]], [[Session Resume And Context Replay]], [[Stream Parsing And Normalization]], [[Providers And Sandboxing]], [[Provider Boundary Rules]], [[Replay Provider]], [[Codex Adapter]], [[Agent Providers Glossary]], [[Agent Providers Data Model]], [[Agent Providers Storage]], [[Agent Providers Overview]], the PRD mapping in [[Claude Code Adapter]], and the early entries of [[Agent Providers Open Questions]]. Since 2026-10-18 the shipped port in `packages/core/src/ports/` replaces it. How the two differ is in the first row of *Code, plans and specs* below.
 
 | Source | Contributed |
 |---|---|
@@ -54,7 +54,7 @@ There are two kinds of source. The design sources were written before any code, 
 
 ## Code, plans and specs
 
-Since 2026-10-18. Paths below are under `code/lamproom/packages/` unless they start with `docs/`.
+Since 2026-10-18. Paths below are under `packages/` unless they start with `docs/`.
 
 | Source | Contributed |
 |---|---|

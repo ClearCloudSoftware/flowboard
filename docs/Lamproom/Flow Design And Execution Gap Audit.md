@@ -5,7 +5,7 @@ date: 2026-11-10
 
 # Flow Design And Execution Gap Audit
 
-This audit checks the notes in [[Flow Design Index|Flow Design]] and [[Execution Index|Execution]] against `dev` at `7c1eb69` (2026-11-10). It is a follow-up to [[Flow Orchestration Conformance Audit]] (2026-10-21, fixed 2026-10-23) and does not repeat what that audit recorded as fixed or decided. Code paths are relative to `code/lamproom/`. Note line numbers are from the note's own folder.
+This audit checks the notes in [[Flow Design Index|Flow Design]] and [[Execution Index|Execution]] against `dev` at `7c1eb69` (2026-11-10). It is a follow-up to [[Flow Orchestration Conformance Audit]] (2026-10-21, fixed 2026-10-23) and does not repeat what that audit recorded as fixed or decided. Code paths are relative to the repo root. Note line numbers are from the note's own folder.
 
 ## Short version
 

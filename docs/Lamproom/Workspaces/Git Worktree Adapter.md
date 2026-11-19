@@ -33,7 +33,7 @@ export function worktreeWorkspace(repoPath: string): Workspace {
 ```
 
 > [!warning] The shipped code differs
-> As built on `feature/workspace-impl` (2026-11-12), the adapter is `worktreeWorkspace(repo)` in `code/lamproom/packages/adapters/src/workspace/worktree.ts`. It follows [[Workspace Naming#Decision]]: `<repo>/.lamproom/worktrees/task-<id>` on `lr/task-<id>`, cut from the repo's current `HEAD`. Where it departs from the sketch:
+> As built on `feature/workspace-impl` (2026-11-12), the adapter is `worktreeWorkspace(repo)` in `packages/adapters/src/workspace/worktree.ts`. It follows [[Workspace Naming#Decision]]: `<repo>/.lamproom/worktrees/task-<id>` on `lr/task-<id>`, cut from the repo's current `HEAD`. Where it departs from the sketch:
 >
 > - **Reuse.** `create` hands back a worktree that is already there, and checks out the task's branch again when only the branch is left. It prunes first, so a folder deleted by hand is made again.
 > - **Exclude.** `create` writes `.lamproom/` to the repo's `.git/info/exclude` before adding the worktree. Linked worktrees share that file, so one line covers all of them.

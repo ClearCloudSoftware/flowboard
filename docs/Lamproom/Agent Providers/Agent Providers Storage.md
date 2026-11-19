@@ -20,7 +20,7 @@ module: Agent Providers
 | `docs/old/reference/core/ports/agent-provider.ts`, `events.ts`, `exec-host.ts` | reference port types | the reference tree; `reference/README.md`'s file map lists the first two but omits `exec-host.ts` | still there; the shipped port replaced them |
 | `docs/old/reference/adapters/agent/replay/replay-provider.ts` | runnable reference adapter | `reference/README.md` | still there; replaced by `adapters/src/agent/replay/` |
 
-The shipped paths are under `code/lamproom/packages/`. Also built, with no path in the design: `core/src/guard.ts` (the guards), `core/src/prompt.ts`, `core/src/hitl/question.ts`, `adapters/src/agent/summarize.ts`, `adapters/src/exec/terminate.ts`, `ask-user/` (the ask_user shim) and `cli/` (`lr-run-agent`).
+The shipped paths are under `packages/`. Also built, with no path in the design: `core/src/guard.ts` (the guards), `core/src/prompt.ts`, `core/src/hitl/question.ts`, `adapters/src/agent/summarize.ts`, `adapters/src/exec/terminate.ts`, `ask-user/` (the ask_user shim) and `cli/` (`lr-run-agent`).
 
 Reference files use *"relative imports … so they run with zero config"* and *"`import type` only, so at runtime these depend on nothing but Node builtins"*; *"Avoid TS features that need a transform (e.g. parameter properties, enums) so strip-only runtimes keep working."* (`reference/README.md`)
 
@@ -59,7 +59,7 @@ A bad command line or YAML file writes no log. A run that fails during setup has
 While a run lasts, `lr-run-agent` also keeps a temp folder `/tmp/lr-*`, holding the broker socket `ask.sock` (the design's `data/sock/<run_id>.sock`) and the copied `skills:` plugin. The OpenCode adapter keeps a scratch `XDG_CONFIG_HOME` (`lr-oc-*` in the system temp folder). Both are deleted when the run ends.
 
 > [!check] Changed 2026-10-22
-> `code/lamproom/.gitignore` ignores `/runs/`, because a log holds prompts, answers and raw events. The pattern is anchored: it covers only `code/lamproom/runs/`, where the logs land when the command runs from `code/lamproom`, not a `runs/` folder anywhere else (R39 in [[Run Agent CLI Decisions]]). Question batches are numbered and logged when they arrive, a decision taken 2026-10-22 and open to Alex's review; before, a batch withdrawn while it waited in the queue left no `question` line.
+> `.gitignore` ignores `/runs/`, because a log holds prompts, answers and raw events. The pattern is anchored: it covers only `runs/`, where the logs land when the command runs from the repo root, not a `runs/` folder anywhere else (R39 in [[Run Agent CLI Decisions]]). Question batches are numbered and logged when they arrive, a decision taken 2026-10-22 and open to Alex's review; before, a batch withdrawn while it waited in the queue left no `question` line.
 
 ## In the database
 
@@ -73,8 +73,8 @@ As built there is no database. Each `event` line in a run log keeps the event's 
 |---|---|
 | `docs/old/stream-sample.jsonl` | The PRD §0 probe: 22 `stream-json` lines. PRD §0 names the path `docs/stream-sample.jsonl`. |
 | `docs/old/stream-sample.stderr` | Its stderr, empty in this capture |
-| `code/lamproom/packages/adapters/test/fixtures/claude-hello.jsonl` | The same 22 lines, byte for byte. The Claude normalizer and provider tests replay it |
-| `code/lamproom/packages/adapters/test/fixtures/opencode-read.jsonl` | One OpenCode event stream (87 events), recorded by `capture-opencode.ts` beside it. The OpenCode normalizer tests replay it |
+| `packages/adapters/test/fixtures/claude-hello.jsonl` | The same 22 lines, byte for byte. The Claude normalizer and provider tests replay it |
+| `packages/adapters/test/fixtures/opencode-read.jsonl` | One OpenCode event stream (87 events), recorded by `capture-opencode.ts` beside it. The OpenCode normalizer tests replay it |
 
 See [[Stream Parsing And Normalization]].
 

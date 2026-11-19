@@ -15,12 +15,12 @@ How to check the two providers ([[Claude Code Adapter]], [[OpenCode Adapter]]) a
 
 - **Claude:** the `claude` CLI is installed and logged in with your subscription (`claude` opens without asking you to log in). No API key is used; runs spend subscription quota.
 - **OpenCode:** the `opencode` CLI is installed (1.19.3) with an OpenRouter key (`opencode auth login`). Runs cost real OpenRouter credit.
-- **Code:** `code/lamproom/` in the main checkout, on `dev` (merged from `feature/agent-providers` on 2026-10-19). Run `pnpm install` there first: without it the suite fails with `ERR_MODULE_NOT_FOUND`.
+- **Code:** the repo root in the main checkout, on `dev` (merged from `feature/agent-providers` on 2026-10-19). Run `pnpm install` there first: without it the suite fails with `ERR_MODULE_NOT_FOUND`.
 - **Node:** the suite and `lr-run-agent` run the TypeScript files directly, through Node's built-in type stripping. Checked with Node 24.11.1. Nothing in the repo pins a version (no `.nvmrc`, no `engines` field); `@types/node` is `^24`.
 
 ## 1. Automated suite (free)
 
-From `code/lamproom/`:
+From the repo root:
 
 ```sh
 pnpm typecheck:packages
@@ -64,7 +64,7 @@ Paths in the YAML are relative to the folder you run the command from, and the l
 
 ```sh
 mkdir -p ~/lr-try/proj && cd ~/lr-try
-alias lrrun='pnpm -s --dir /Users/alex/projects/personal/flowboard/flowboard_v3/code/lamproom lr-run-agent'
+alias lrrun='pnpm -s --dir /Users/alex/projects/personal/flowboard/flowboard_v3 lr-run-agent'
 ```
 
 `-s` hides pnpm's own *Command failed* banner. Check the exit code after each run with `echo "exit $?"`.
@@ -103,7 +103,7 @@ Each row changes the base files as shown. "Exit" is what `echo "exit $?"` prints
 | 6 | Shell refusal | `permissions: { mode: bypassPermissions }` | Nothing launches: `task.yaml: permissions.mode: bypassPermissions lets shell commands write outside folder; …`; exit 2. Same for `allow: [Bash]` or `allow: ["Bash(:*)"]`, and on `adapter: opencode` for `allow: ["*"]` or `allow: ["Bash(?*)"]` |
 | 7 | Shell opt-in | add `allow_unrestricted_shell: true` under `permissions` to 6 | The run goes ahead; the header has `-- warning: unrestricted shell: …`; exit 0 |
 | 8 | Validation | add `colour: red`, or change `folder: nope` | `task.yaml: colour: unknown key` or `task.yaml: folder: not a directory: …`; exit 2; no `runs/` file |
-| 9 | Plugin skill | `plugins: [<…>/code/lamproom/packages/adapters/test/fixtures/lrecho-plugin]`, `skill: /lrecho:echo`, `task.md` empty. The plugin is named `lrecho` in its `.claude-plugin/plugin.json`, not after its folder | The agent replies `ECHO-OK`; exit 0 |
+| 9 | Plugin skill | `plugins: [<…>/packages/adapters/test/fixtures/lrecho-plugin]`, `skill: /lrecho:echo`, `task.md` empty. The plugin is named `lrecho` in its `.claude-plugin/plugin.json`, not after its folder | The agent replies `ECHO-OK`; exit 0 |
 | 10 | Budget cap | `limits: { budget_usd: 0.0001 }` | The run stops early; the result has an `error` about the budget; exit 1 |
 | 11 | Effort | `effort: low` (Claude), or on OpenCode a model that has that variant | Runs as normal. OpenCode drops an effort the model has no variant for, without saying so |
 | 12 | Ctrl+C | `task.md`: *Count slowly from 1 to 50, one line per number.*; press Ctrl+C once mid-run | `-- stopping`, then `-- result` with `"error":"stopped"`; exit 130; the log ends with a `result` line. Pressing Ctrl+C again (after 300 ms) exits at once, without the result line |
@@ -193,7 +193,7 @@ model: haiku
 folder: proj
 prompt: empty.md
 plugins:
-  - /Users/alex/projects/personal/flowboard/flowboard_v3/code/lamproom/packages/adapters/test/fixtures/lrecho-plugin
+  - /Users/alex/projects/personal/flowboard/flowboard_v3/packages/adapters/test/fixtures/lrecho-plugin
 skill: /lrecho:echo
 limits:
   max_turns: 2

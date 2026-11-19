@@ -110,7 +110,7 @@ Backlog Story 0.1 adds: verify the flags exist (*"`--effort`, `--session-id`, `-
 ## Built on the Agent SDK
 
 > [!check] Implemented 2026-10-18
-> The adapter is built on `@anthropic-ai/claude-agent-sdk` 0.3.302, not on hand-built `claude -p` flags. The SDK still runs the installed `claude` CLI (2.1.302) as a child process, so PRD §17 holds. Code: `code/lamproom/packages/adapters/src/agent/claude/` (`options.ts`, `normalize.ts`, `provider.ts`). Why: [[Provider SDK Fit Analysis]]. The flag tables above remain the PRD's CLI form; this table supersedes them.
+> The adapter is built on `@anthropic-ai/claude-agent-sdk` 0.3.302, not on hand-built `claude -p` flags. The SDK still runs the installed `claude` CLI (2.1.302) as a child process, so PRD §17 holds. Code: `packages/adapters/src/agent/claude/` (`options.ts`, `normalize.ts`, `provider.ts`). Why: [[Provider SDK Fit Analysis]]. The flag tables above remain the PRD's CLI form; this table supersedes them.
 
 | `RunSpec` field | SDK option |
 |---|---|
@@ -133,7 +133,7 @@ The constructor takes `claudePath` (default `claude`), `env` (default `process.e
 
 Claude does not glob tool names in allow rules, only in deny and ask rules (checked in the Claude Code 2.1.302 binary on 2026-10-22); an MCP rule can still name a whole server, as the adapter's `mcp__<name>__*` does. So `allow: ["*"]` or `["b*"]` allows nothing here, and `lr-run-agent` asks for `allow_unrestricted_shell: true` only for `Bash`, or `Bash(…)` holding only `*`, `:` and spaces. OpenCode globs tool names in allow rules too: see [[OpenCode Adapter]].
 
-Verified live on 2026-10-18 against the installed CLI, with the checks in `adapters/test/claude-live.test.ts`: `apiKeySource` is `none` (the subscription login), `/<plugin>:<slug>` runs headless from a mounted plugin dir, and the guard hook denies a write outside the worktree even under `bypassPermissions`. To run only these, from `code/lamproom`: `LAMPROOM_LIVE=1 node --test packages/adapters/test/claude-live.test.ts`. They spend subscription quota. `pnpm test:live` runs four live suites, including OpenCode's and `lr-run-agent`'s on both adapters, so it also spends OpenRouter credit ([[Testing The Run Agent CLI]]). A plugin dir missing from `system/init` fails the run, since the CLI skips it silently.
+Verified live on 2026-10-18 against the installed CLI, with the checks in `adapters/test/claude-live.test.ts`: `apiKeySource` is `none` (the subscription login), `/<plugin>:<slug>` runs headless from a mounted plugin dir, and the guard hook denies a write outside the worktree even under `bypassPermissions`. To run only these, from the repo root: `LAMPROOM_LIVE=1 node --test packages/adapters/test/claude-live.test.ts`. They spend subscription quota. `pnpm test:live` runs four live suites, including OpenCode's and `lr-run-agent`'s on both adapters, so it also spends OpenRouter credit ([[Testing The Run Agent CLI]]). A plugin dir missing from `system/init` fails the run, since the CLI skips it silently.
 
 ## Run results
 

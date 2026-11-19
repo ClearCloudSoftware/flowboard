@@ -10,7 +10,7 @@ The port's types live in code, in `core/src/ports/`; the database stores what th
 ## Types
 
 > [!check] Implemented 2026-10-18
-> All but `SpecTransform` and `PricingService`, which are design. Paths are under `code/lamproom/packages/`.
+> All but `SpecTransform` and `PricingService`, which are design. Paths are under `packages/`.
 
 | Type | File | Note |
 |---|---|---|

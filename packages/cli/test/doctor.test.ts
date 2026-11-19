@@ -272,7 +272,7 @@ const sampleReport = (): DoctorReport => ({
   checks: [
     chk('git', 'core', 'git', 'ok', '2.47.1'),
     { ...chk('docker', 'container', 'Docker', 'ok', '28.1.1, 7.6 GB memory'), needed: true },
-    chk('docker.image', 'container', 'Image', 'fail', 'lamproom:cli is not built', 'cd code/lamproom && docker build -f docker/Dockerfile -t lamproom:cli .'),
+    chk('docker.image', 'container', 'Image', 'fail', 'lamproom:cli is not built', 'docker build -f docker/Dockerfile -t lamproom:cli .'),
     chk('docker.gvisor', 'container', 'gVisor', 'skip', 'not needed: no Untrusted project'),
     chk('opencode', 'agents', 'opencode', 'warn', 'not installed (optional)', 'install OpenCode'),
   ],
@@ -288,7 +288,7 @@ test('renderReport: groups, marks and summary as in the spec sample', () => {
   assert.match(t, /^Projects: api \(Normal\) · new projects: Normal$/m);
   assert.match(t, /^Containers +needed: api, web are Normal/m);
   assert.match(t, /^ {2}✗ Image {8}lamproom:cli is not built$/m);
-  assert.match(t, /^ {17}→ cd code\/lamproom && docker build/m);
+  assert.match(t, /^ {17}→ docker build/m);
   assert.match(t, /^ {2}– gVisor/m);
   assert.match(t, /^ {2}! opencode/m);
   assert.match(t, /^Not ready: 1 problem stops runs, 1 warning\.$/m);

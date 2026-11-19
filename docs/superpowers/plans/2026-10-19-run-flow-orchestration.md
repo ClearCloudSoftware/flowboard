@@ -24,7 +24,7 @@
 - Create a worktree for a new branch `feature/flow-orchestration` from `dev`, using superpowers:using-git-worktrees. `feature/agent-providers` is merged into `dev` first (Alex, 2026-10-19).
   - Don't reuse an existing worktree: another session may own it. Check ListAgents first.
 - Copy this plan into the new worktree's `docs/superpowers/plans/` and commit it.
-- In `code/lamproom/`, run `pnpm install && pnpm test:packages && pnpm typecheck:packages`. Everything should pass before Task 1.
+- In the repo root, run `pnpm install && pnpm test:packages && pnpm typecheck:packages`. Everything should pass before Task 1.
 
 ## Decisions this plan makes
 
@@ -100,7 +100,7 @@ Each is small to add later, when its trigger arrives:
   - `import type` for types;
   - `.ts` relative imports;
   - tests with `node:test` and `node:assert/strict`;
-  - commands run from `code/lamproom/`.
+  - commands run from the repo root.
 - **Core purity:** `packages/core` imports no framework, database driver, CLI or `@lamproom/adapters`. `validateFlow` and `advance` do no I/O. `@lamproom/adapters` is not changed.
 - **No new dependencies.**
 - **Relative paths** (the YAML or run-folder argument, `folder`, `task`, `prompt`, `plugins`, `skills`, `runs/`) resolve against the folder the command was run from, `process.env.INIT_CWD ?? process.cwd()` (R2). `write_roots` resolve against `folder`. *2026-10-23:* a flow file is a reusable recipe (Alex's call), so `folder` and `task` are the run's `--folder` and `--task`, which still resolve against the folder lr-run-flow starts in. The recipe's own paths (`prompt`, `plugins` and `skills`, in a step or in `defaults`) now resolve against the flow file's folder, so a recipe and its prompts move together (Claude's call, open to Alex's review). `write_roots` must be relative paths inside the folder; an absolute path, `~` or `..` is refused.

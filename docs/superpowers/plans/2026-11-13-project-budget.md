@@ -18,7 +18,7 @@ its card and page, with a warning past the alert percentage.
 + lucide-react.
 
 **Spec:** `docs/Lamproom/Projects/Project Settings.md` (the *Budget* row) and `Budget` in
-`code/lamproom/packages/cli/src/settings.ts`. Builds on phase 3a, `docs/superpowers/plans/2026-11-13-isolation-enforcement.md`
+`packages/cli/src/settings.ts`. Builds on phase 3a, `docs/superpowers/plans/2026-11-13-isolation-enforcement.md`
 and `docs/Lamproom/Projects/Isolation Enforcement Handoff.md` on branch `feature/isolation-enforcement`.
 
 **Not in this plan:** a Slack or chat alert at the alert percentage (escalation, phase 6), the analysis agent's cost
@@ -27,7 +27,7 @@ and `docs/Lamproom/Projects/Isolation Enforcement Handoff.md` on branch `feature
 
 ## Global Constraints
 
-- All paths are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
+- All paths are under the repo root unless they start with `docs/`. Run commands from the repo root.
 - Branch `feature/project-budget`, cut from `feature/isolation-enforcement` in its own worktree (it needs
   `findProject`, `dataDirOf`, `isolate` and `resumeRun` from there), or from `dev` once that branch is merged.
   Do not merge into `dev`; Alex decides.

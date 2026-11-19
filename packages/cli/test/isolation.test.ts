@@ -26,7 +26,7 @@ test('dockerNotReady: undefined when the image is there; else says what is missi
   assert.equal(dockerNotReady('lamproom:cli', fakeDocker({})), undefined);
   assert.equal(
     dockerNotReady('lamproom:cli', fakeDocker({ inspect: 1 })),
-    'no image lamproom:cli; build it from code/lamproom: docker build -f docker/Dockerfile -t lamproom:cli .',
+    'no image lamproom:cli; build it from the repo root: docker build -f docker/Dockerfile -t lamproom:cli .',
   );
   assert.equal(dockerNotReady('lamproom:cli', fakeDocker({ info: 1, inspect: 1 })), 'Docker is not running');
   assert.equal(dockerNotReady('lamproom:cli', '/no/such/docker'), 'Docker is not running');

@@ -11,7 +11,7 @@ Agent Providers is the Lamproom platform component that lets the system drive di
 > An adapter does **exactly two mappings**: `RunSpec` to the provider's native flags, and the provider's native stream to `NormalizedEvent`. *"Everything else — the flow engine, board projection, cost ledger, HITL protocol, live viewer — consumes only the normalized outputs and never learns which provider ran."* (`core/src/ports/agent-provider.ts`). See [[AgentProvider Port]].
 
 > [!check] Implemented 2026-10-18
-> The port, both providers, Replay and the `lr-run-agent` command were built on 2026-10-18 in `code/lamproom/packages/` (`core`, `adapters`, `ask-user`, `cli`). They were fixed on 2026-10-22 after the [[Agent Providers Docs Audit]]. The runner, the database, the routes and capability negotiation are not built; the entries marked *design* below describe them.
+> The port, both providers, Replay and the `lr-run-agent` command were built on 2026-10-18 in `packages/` (`core`, `adapters`, `ask-user`, `cli`). They were fixed on 2026-10-22 after the [[Agent Providers Docs Audit]]. The runner, the database, the routes and capability negotiation are not built; the entries marked *design* below describe them.
 
 > [!question] v1 was planned Claude-only
 > The plan: the Capability Library decisions of 2026-10-15 summarise v1 as *"Claude-only, with the provider seam kept in the port"* ([[Capability Library Decisions]], *v1 in one paragraph*); D1 reads *"**v1 is Claude-only.**"* PRD §3 lists `adapters/agent/` as *"claude-cli, codex-cli (later), replay"*, so Codex was to come second.

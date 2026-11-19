@@ -12,7 +12,7 @@ How Lamproom could run several agents as one piece of work, measured against [ya
 Sources read:
 
 - the [[Execution Index|Execution]] and [[Flow Design Index|Flow Design]] notes on `dev`;
-- the code on `feature/agent-providers` at `e24a515`, which is not yet merged into `dev`: about 2,300 lines of source in `code/lamproom/packages/`;
+- the code on `feature/agent-providers` at `e24a515`, which is not yet merged into `dev`: about 2,300 lines of source in `packages/`;
 - yamlgraph v0.6.5 at commit `00742bd` (2026-10-14). Its code was read, not run.
 
 ## Short version
@@ -544,7 +544,7 @@ As built in lr-run-flow (2026-10-23):
 ## Sources
 
 - **Lamproom notes:** [[Execution Overview]], [[Execution Entities]], [[Execution Data Model]], [[Execution State Machines]], [[Run Outcomes]], [[Advancement Rules]], [[Fan-Out And Join]], [[Rework Loop]], [[Loop Guard And Escalation]], [[Stuck Detection And Fingerprints]], [[Infra Retries]], [[Runner Pipeline]], [[Agent Launch Contract]], [[Prompt Assembly]], [[Job Queue]], [[Worker Lifecycle]], [[Execution Runtime]], [[Shell Step Execution]], [[Execution Roadmap]], [[Execution Testing]], [[Flow Design Overview]], [[Flow Data Model]], [[Flow Definition Internals]], [[Step Kinds]], [[Step Definitions]], [[Connections And Routes]], [[Branching Joining And Loops]], [[Artifact Contract]], [[Check Steps]], [[Flow Validation]], [[Flows And Flow Versions]], [[Version Pinning]], [[Flow Storage]], [[Seeded Flows]], [[Flow Design Roadmap]], [[Ask Park And Resume]], and the feature map's §2, §4 and parking lot.
-- **On `feature/agent-providers` only** (these links resolve once that branch merges): [[Run Config Reference]], [[Run Agent CLI Decisions]], [[Provider SDK Fit Analysis]], `docs/superpowers/specs/2026-10-18-yaml-run-config-design.md`, and the code in `code/lamproom/packages/` (`core`, `adapters`, `ask-user`, `cli`).
+- **On `feature/agent-providers` only** (these links resolve once that branch merges): [[Run Config Reference]], [[Run Agent CLI Decisions]], [[Provider SDK Fit Analysis]], `docs/superpowers/specs/2026-10-18-yaml-run-config-design.md`, and the code in `packages/` (`core`, `adapters`, `ask-user`, `cli`).
 - **yamlgraph** `00742bd`:
   - `README.md` ("When NOT to Use", "Security Considerations"), `ARCHITECTURE.md`;
   - `yamlgraph/models/node_schema.py`, `yamlgraph/node_factory/copilot_runtime_claude.py`, `yamlgraph/routing.py`, `yamlgraph/compile/edge_compiler.py`;

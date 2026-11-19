@@ -250,7 +250,7 @@ export async function runDoctor(o: DoctorOptions): Promise<DoctorReport> {
         const found = await Promise.all(needs.images.map(async (name) => ({ name, img: await p.image(name) })));
         const missing = found.filter((f) => !f.img).map((f) => f.name);
         if (missing.length) {
-          const fix = missing.map((m) => (m === boxImage() ? `cd code/lamproom && docker build -f docker/Dockerfile -t ${m} .` : `build or pull ${m}`)).join('; ');
+          const fix = missing.map((m) => (m === boxImage() ? `docker build -f docker/Dockerfile -t ${m} .` : `build or pull ${m}`)).join('; ');
           return broken(`${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not built`, fix);
         }
         return ok(found.map((f) => `${f.name}, built ${f.img!.created.slice(0, 10)}, ${(f.img!.sizeBytes / 1e9).toFixed(2)} GB`).join('; '));
@@ -348,7 +348,7 @@ export async function runDoctor(o: DoctorOptions): Promise<DoctorReport> {
         const domain = env.OPENSANDBOX_DOMAIN ?? '127.0.0.1:8080';
         if (!(await p.reach(`http://${domain}/`))) return broken(`no answer on ${domain}`, 'start the OpenSandbox server (config in ~/.config/lamproom/opensandbox/)');
         const missing = (await Promise.all(needs.opensandboxImages.map(async (i) => ((await p.image(i)) ? [] : [i])))).flat();
-        if (missing.length) return broken(`${missing.join(', ')} not built`, 'cd code/lamproom && docker build -f docker/Dockerfile.opensandbox -t lamproom:sandbox .');
+        if (missing.length) return broken(`${missing.join(', ')} not built`, 'docker build -f docker/Dockerfile.opensandbox -t lamproom:sandbox .');
         return ok(`answers on ${domain}`);
       },
     },

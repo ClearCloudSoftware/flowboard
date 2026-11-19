@@ -13,7 +13,7 @@ The 33 notes in [[Agent Providers Index|Agent Providers]] checked against the co
 What was compared:
 
 - the notes in `docs/Lamproom/Agent Providers/` on `dev`;
-- the code on `feature/agent-providers` at `e24a515`, merged into `dev` as `8917550` (the trees are identical): the `core`, `adapters`, `ask-user` and `cli` packages in `code/lamproom/packages/`;
+- the code on `feature/agent-providers` at `e24a515`, merged into `dev` as `8917550` (the trees are identical): the `core`, `adapters`, `ask-user` and `cli` packages in `packages/`;
 - the 2026-10-18 plans and specs in `docs/superpowers/`, as context only.
 
 Nine auditors, one per area, listed every checkable claim in their notes and traced it to the code. Eight verifiers then tried to refute every high and medium finding and every claim about code behaviour. Nothing was refuted outright, and 28 findings were corrected. See [[#Method and limits]].
@@ -288,7 +288,7 @@ Two verifiers found this in passing. It was checked against the code, but not ru
 
 ### 3.1 The port changed; the contract notes did not
 
-The contract notes quote the reference port in `docs/old/reference/core/ports/`. The shipped port in `code/lamproom/packages/core/src/ports/` replaced it on 2026-10-18. Yet the shipped files' header comments send readers back to these notes: `agent-provider.ts:16`, `exec-host.ts:11`, `claude/normalize.ts:5` and `replay-provider.ts:6`. [[Agent Providers Sources]] maps `agent-provider.ts` to the reference file, so a reader cannot tell which file a note means.
+The contract notes quote the reference port in `docs/old/reference/core/ports/`. The shipped port in `packages/core/src/ports/` replaced it on 2026-10-18. Yet the shipped files' header comments send readers back to these notes: `agent-provider.ts:16`, `exec-host.ts:11`, `claude/normalize.ts:5` and `replay-provider.ts:6`. [[Agent Providers Sources]] maps `agent-provider.ts` to the reference file, so a reader cannot tell which file a note means.
 
 | Change | Shipped code | Notes still showing the old form |
 |---|---|---|
@@ -459,7 +459,7 @@ No caller passes `resume` yet, and no test covers OpenCode's plain resume.
 - **The free suite can spend money.** `pnpm test:packages` also globs the four `*-live` files, which skip only because `LAMPROOM_LIVE` is unset. If it is exported in your shell, the "free" suite runs the paid tests.
 - **Reading the logs.** The note lists three line kinds. `run.ts` writes six (`start`, `event`, `question`, `answer`, `withdrawn` and `result`) and adds an `at` field to every line. A run that fails during setup has only a `result` line.
 - **"Every field".** `all-fields.yaml` leaves out `plugins`, `skills`, `skill` and `permissions.allow_unrestricted_shell`.
-- **Location.** The note still says the code lives in the agent-providers worktree "until a merge". It has been merged. On `dev`, run `pnpm install` in `code/lamproom` first; without it the suite fails there today with `ERR_MODULE_NOT_FOUND`.
+- **Location.** The note still says the code lives in the agent-providers worktree "until a merge". It has been merged. On `dev`, run `pnpm install` in the repo root first; without it the suite fails there today with `ERR_MODULE_NOT_FOUND`.
 - **Node version.** The note does not state one. The suite relies on Node's built-in type stripping (Node 24 here) (unverified).
 
 ### [[Provider Implementation Decisions]]
@@ -679,7 +679,7 @@ One status line per note or section, such as "Design. Not built on `dev` as of 2
 ## Sources
 
 - Notes: `docs/Lamproom/Agent Providers/`, all 33, on `dev` at `8917550`.
-- Code: `code/lamproom/packages/{core,adapters,ask-user,cli}` at `e24a515`, the same tree as `dev`.
+- Code: `packages/{core,adapters,ask-user,cli}` at `e24a515`, the same tree as `dev`.
 - Plans and specs: `docs/superpowers/plans/2026-10-18-*.md` and `docs/superpowers/specs/2026-10-18-*.md`.
 - Installed versions: `@anthropic-ai/claude-agent-sdk` 0.3.302 (CLI 2.1.302) and `opencode` 1.19.3.
 - Free suite and typecheck in `.claude/worktrees/agent-providers`: 209 tests, 195 pass, 14 skipped; typecheck clean.

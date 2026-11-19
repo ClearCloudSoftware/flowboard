@@ -8,7 +8,7 @@ date: 2026-10-18
 
 Every field of the YAML file that `pnpm lr-run-agent <task.yaml>` reads: what it means, its type and default, how it is checked, and how it behaves on each adapter. One file describes one run. How to try it out is in [[Testing The Run Agent CLI]]; why the rules are what they are is in [[Run Agent CLI Decisions]].
 
-Code: `code/lamproom/packages/cli/src/config.ts`.
+Code: `packages/cli/src/config.ts`.
 
 > [!check] Changed 2026-10-22
 > These changed: the recursive-`rm` rule, writes through links or to `~/`, dot-files and letter case in `deny_paths`, the built-in `git` rules, the shell opt-in on OpenCode, denying the ask tools, the question log, how `skills:` copies links, and the git-ignored `runs/`. Claude decided them on 2026-10-22, and they are open to Alex's review: R35 to R37 and R39 in [[Run Agent CLI Decisions]]; C11, C13, C14, C18 and O18 in [[Provider Implementation Decisions]].
@@ -44,7 +44,7 @@ limits:
 - **The root** must be a mapping. An empty file, a list or a single value is an error.
 - **Relative paths** (`folder`, `prompt`, `plugins`, `skills`, and the YAML path given on the command line) resolve against the folder you ran the command from, not the YAML file's folder. A leading `~/` means your home folder; write a bare home folder as `"~"` in quotes, because unquoted `~` is YAML's empty value.
 - **Real paths.** `folder` and `plugins` are then resolved to their real paths, with links followed: on macOS `folder: /tmp/x` runs in `/private/tmp/x`. The guards follow links too, so the agent may still write to `/tmp/x/a.md`.
-- **The log** goes into `runs/` in the folder you ran the command from, named `<YYYY-MM-DDTHH-MM-SS>-<adapter>.jsonl`. It holds your prompts, your answers and the raw events. `code/lamproom/.gitignore` ignores only `code/lamproom/runs/`, the log folder when you run from `code/lamproom`; anywhere else, ignore `runs/` yourself.
+- **The log** goes into `runs/` in the folder you ran the command from, named `<YYYY-MM-DDTHH-MM-SS>-<adapter>.jsonl`. It holds your prompts, your answers and the raw events. `.gitignore` ignores only `runs/`, the log folder when you run from the repo root; anywhere else, ignore `runs/` yourself.
 - **Errors** are printed one per line as `<yaml path>: <field>: <message>`, and the command exits with code 2 before anything launches. Type and unknown-key errors are reported first; the file, folder and rule checks run once those are fixed.
 - **Secrets** never go in the YAML. Claude uses your `claude` login; OpenCode uses its own stored credentials. Neither adapter passes an exported `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` on to the run.
 

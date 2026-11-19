@@ -8,7 +8,7 @@ module: Agent Providers
 The shipped file opens: *"AgentProvider — the port that makes coding-agent CLIs interchangeable. This is the seam of the whole system. `core/` and the runner (not built yet; `lr-run-agent` stands in) program against this interface; `adapters/src/agent/<claude|opencode|replay>/` implement it. No file under `core/` or the runner may import a provider adapter — only this port."* (`core/src/ports/agent-provider.ts`)
 
 > [!check] Implemented 2026-10-18
-> The port is `code/lamproom/packages/core/src/ports/agent-provider.ts`, with `events.ts` and `exec-host.ts` beside it. It replaced the reference port in `docs/old/reference/core/ports/agent-provider.ts`, which named `runner/` and `adapters/agent/<claude|codex|replay>/`. Two real providers implement it, the [[Claude Code Adapter]] and the [[OpenCode Adapter]], plus the [[Replay Provider]], a test double. The [[Codex Adapter]] is designed, not built. The plan named Codex as the second provider; whether OpenCode is in v1 and Codex still next is open ([[Agent Providers Open Questions]] #38).
+> The port is `packages/core/src/ports/agent-provider.ts`, with `events.ts` and `exec-host.ts` beside it. It replaced the reference port in `docs/old/reference/core/ports/agent-provider.ts`, which named `runner/` and `adapters/agent/<claude|codex|replay>/`. Two real providers implement it, the [[Claude Code Adapter]] and the [[OpenCode Adapter]], plus the [[Replay Provider]], a test double. The [[Codex Adapter]] is designed, not built. The plan named Codex as the second provider; whether OpenCode is in v1 and Codex still next is open ([[Agent Providers Open Questions]] #38).
 
 ## The interface
 

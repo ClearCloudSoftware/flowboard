@@ -32,7 +32,7 @@ one adapter (YAGNI: one channel, one module); undo; per-person routing; posting 
 
 ## Global Constraints
 
-- All paths are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
+- All paths are under the repo root unless they start with `docs/`. Run commands from the repo root.
 - Branch `feature/slack-escalation`, cut from `feature/knowledge-assets` at `87f0f70` in
   `.claude/worktrees/slack-escalation`. Never merge (except `git merge feature/knowledge-assets` when asked), never push.
 - No new npm dependencies. Socket Mode uses Node's global `WebSocket`; tests use a hand-written RFC 6455 server.

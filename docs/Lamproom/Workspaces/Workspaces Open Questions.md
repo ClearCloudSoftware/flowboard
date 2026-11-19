@@ -36,7 +36,7 @@ PRD/backlog/`07`: `<repo>/.vibe-worktrees/task-<id>` on `vibe/task-<id>`. Drawio
 Backlog 2.1 excludes `.vibe-worktrees/`. The drawio path would need its own line. Appending on every promote repeats the line *(inferred)*. → [[Parent Repo Hygiene]]
 
 > [!check] Decided 2026-11-12 (Alex)
-> Worktrees go under `.lamproom/worktrees/`, so they need no line of their own: the `.lamproom/` line covers them. The shipped `excludeFromGit` (`code/lamproom/packages/cli/src/flow-run.ts`) appends that line only when it is missing, so calling it on every promote does not repeat it. See [[Workspace Naming#Decision]].
+> Worktrees go under `.lamproom/worktrees/`, so they need no line of their own: the `.lamproom/` line covers them. The shipped `excludeFromGit` (`packages/cli/src/flow-run.ts`) appends that line only when it is missing, so calling it on every promote does not repeat it. See [[Workspace Naming#Decision]].
 
 ## Demote and reuse
 

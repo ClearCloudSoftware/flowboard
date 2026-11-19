@@ -81,7 +81,7 @@ As built in the flow designer (checked 2026-11-10), there are no domains, so the
 
 ## As built in the flow designer
 
-As of 2026-11-10, the rail lists every `<name>.yaml` in the flows folder (`code/lamproom/flows/`, or `LAMPROOM_FLOWS_DIR`), sorted by name. A file whose name breaks the rule for step names (lowercase letters, digits, `-` and `_`) is not listed, and nor is a `.yml` file. The header reads `flow library` and the count.
+As of 2026-11-10, the rail lists every `<name>.yaml` in the flows folder (`flows/`, or `LAMPROOM_FLOWS_DIR`), sorted by name. A file whose name breaks the rule for step names (lowercase letters, digits, `-` and `_`) is not listed, and nor is a `.yml` file. The header reads `flow library` and the count.
 
 | Part | As built |
 |---|---|

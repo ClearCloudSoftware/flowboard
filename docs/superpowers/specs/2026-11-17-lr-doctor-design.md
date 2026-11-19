@@ -91,7 +91,7 @@ Status per check: `ok` · `warn` (optional and broken, or needed but degraded) �
 | id | Probe | ok when | Fix shown |
 |---|---|---|---|
 | `docker` | `docker --version`, then `docker info` (as `dockerNotReady`), memory via `dockerDefaultMemoryMb` | daemon answers | "Start Docker Desktop" / install Docker |
-| `docker.image` | `docker image inspect` on each image to check (see the needs: `boxImage()` — `lamproom:cli` or `LAMPROOM_IMAGE` — plus flows' own) | all exist; detail = each image's created date and size, or which are missing. One check, one stable id, however many images | `cd code/lamproom && docker build -f docker/Dockerfile -t lamproom:cli .` for Lamproom's; "build or pull X" for a flow's |
+| `docker.image` | `docker image inspect` on each image to check (see the needs: `boxImage()` — `lamproom:cli` or `LAMPROOM_IMAGE` — plus flows' own) | all exist; detail = each image's created date and size, or which are missing. One check, one stable id, however many images | `docker build -f docker/Dockerfile -t lamproom:cli .` for Lamproom's; "build or pull X" for a flow's |
 | `docker.gvisor` | `dockerHasGvisor()` | `runsc` registered. Needed only with an Untrusted project; on macOS the detail says it is not available there | set the project to Normal, or run on Linux with gVisor |
 | `token.claude` | `CLAUDE_CODE_OAUTH_TOKEN` in the doctor's env, shape `sk-ant-oat01-…` | set. Needed when the container tier is needed **and** a flow uses claude. Not sent anywhere | `claude setup-token`, then export it where Lamproom runs |
 
@@ -176,7 +176,7 @@ Every check is always present (as `skip` if not run), so a page can lay out a fi
 ## The terminal output
 
 ```
-Lamproom doctor · macOS arm64 · data code/lamproom/data
+Lamproom doctor · macOS arm64 · data data
 Projects: api (Normal), web (Normal), Scratch (Trusted) · new projects: Normal
 
 Core
@@ -187,7 +187,7 @@ Core
 Containers                                  needed: api, web are Normal
   ✓ Docker       28.1.1, 7.6 GB memory
   ✗ Image        lamproom:cli is not built
-                 → cd code/lamproom && docker build -f docker/Dockerfile -t lamproom:cli .
+                 → docker build -f docker/Dockerfile -t lamproom:cli .
   – gVisor       not needed: no Untrusted project
   ✗ Claude token CLAUDE_CODE_OAUTH_TOKEN is not set
                  → claude setup-token, then export CLAUDE_CODE_OAUTH_TOKEN where Lamproom runs
@@ -220,11 +220,11 @@ don't change the exit code. Arguments via `node:util` `parseArgs`, as `flow-run.
 
 ## Files
 
-- `code/lamproom/packages/cli/src/doctor.ts` — needs, checks, `runDoctor(deps?)`, the types. Probes injectable
+- `packages/cli/src/doctor.ts` — needs, checks, `runDoctor(deps?)`, the types. Probes injectable
   through `deps` (as `RunDeps` does in `flow-run.ts`) so the test runs without Docker or network.
-- `code/lamproom/packages/cli/src/doctor-main.ts` — args, table/JSON printing, exit code.
-- `code/lamproom/package.json` — `"lr-doctor": "node packages/cli/src/doctor-main.ts"`.
-- `code/lamproom/packages/cli/test/doctor.test.ts` — one file: the needs rules (Trusted-only machine with Docker
+- `packages/cli/src/doctor-main.ts` — args, table/JSON printing, exit code.
+- `package.json` — `"lr-doctor": "node packages/cli/src/doctor-main.ts"`.
+- `packages/cli/test/doctor.test.ts` — one file: the needs rules (Trusted-only machine with Docker
   down is `ready`, Docker `warn` "needed for new projects"; Untrusted needs gVisor; a flow's docker `sandbox:` makes
   Docker needed and adds its image; optional broken → `warn`, never `fail`), every id present, `--json` parses.
 - Later, separate work: `app/api/doctor/route.ts` (behind `refused(request)` like the other routes) and the page.

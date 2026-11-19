@@ -9,7 +9,7 @@ The agent-facing half of HITL: how a headless CLI session asks a question, decla
 
 > [!check] Implemented 2026-10-18, for `lr-run-agent` only
 > The rest of this note is the PRD's design. What exists on `dev`:
-> - **Shim**: `code/lamproom/packages/ask-user/`, a stdio MCP server named `lamproom` with two tools, `ask_user` and `ask_user_batch` (the agent sees `mcp__lamproom__ask_user`). `declare_artifact` and `set_outcome` are not built. It reads only `LAMPROOM_ASK_SOCKET`: no `RUN_ID`, no database, no network.
+> - **Shim**: `packages/ask-user/`, a stdio MCP server named `lamproom` with two tools, `ask_user` and `ask_user_batch` (the agent sees `mcp__lamproom__ask_user`). `declare_artifact` and `set_outcome` are not built. It reads only `LAMPROOM_ASK_SOCKET`: no `RUN_ID`, no database, no network.
 > - **Broker**: `cli/src/ask/broker.ts`, inside `lr-run-agent`, not a worker. It listens on `ask.sock` in the run's `/tmp/lr-*` folder and shows one batch at a time in the terminal, first in, first out. Since 2026-10-22 each batch is numbered and logged when it arrives. There is no `questions` table, Inbox, Slack or park.
 > - **Mounting**: no `mcp.json` is written. Each adapter injects the server in memory: Claude through the Agent SDK's `mcpServers` with `strictMcpConfig`, OpenCode through its config's `mcp`. Both lift MCP time limits, so a question waits as long as it takes, and both pre-approve the server's tools; an explicit deny still wins (2026-10-22).
 > - **Fallback**: the `questions.json` file protocol is not built; both built providers take an injected MCP server.
@@ -27,7 +27,7 @@ The agent-facing half of HITL: how a headless CLI session asks a question, decla
 | **Shim** | `apps/mcp-shim`, launched by the CLI | *"a tiny stdio MCP server … The runner writes a per-run `mcp.json` pointing at it and passes `RUN_ID` and the socket path as environment variables. The shim forwards each tool call over the socket and relays the reply. It never opens the database and needs no network."* |
 
 > [!warning] The shipped code differs
-> As built (2026-10-18), the shim is `code/lamproom/packages/ask-user/`, and the broker runs inside `lr-run-agent` (`cli/src/ask/broker.ts`), not a worker; it writes no table. No `mcp.json` is written: `lr-run-agent` passes the shim's command to the adapter as a `RunSpec.tools` entry, and the shim reads only `LAMPROOM_ASK_SOCKET`, not `RUN_ID` ([[Run Agent CLI Decisions]] R18).
+> As built (2026-10-18), the shim is `packages/ask-user/`, and the broker runs inside `lr-run-agent` (`cli/src/ask/broker.ts`), not a worker; it writes no table. No `mcp.json` is written: `lr-run-agent` passes the shim's command to the adapter as a `RunSpec.tools` entry, and the shim reads only `LAMPROOM_ASK_SOCKET`, not `RUN_ID` ([[Run Agent CLI Decisions]] R18).
 
 *"So a host run and a sandboxed run behave identically, and there is one path to test."* (PRD §9). `08-sandboxing.md`: *"decided, host-side broker on every tier."* PRD §11.1: *"the `ask_user` MCP server cannot open the host SQLite file. It doesn't need to: the shim talks to the host broker over the mounted socket (§9), never to the database or the network."* The architecture README strikes HITL-in-sandbox out of its open decisions: *"~~HITL-in-sandbox~~ (decided: host-side broker on every tier …)"*. The sandbox side is in [[Host-Side Brokers]] and [[Sandbox Mounts]].
 

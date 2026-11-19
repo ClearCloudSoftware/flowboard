@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Code rules: erasable syntax only, `import type` for types, `.ts` relative imports, `node:test` + `node:assert/strict`; commands run from `code/lamproom/`.
+- Code rules: erasable syntax only, `import type` for types, `.ts` relative imports, `node:test` + `node:assert/strict`; commands run from the repo root.
 - Question shape exactly: `QuestionKind = 'yes_no' | 'single_select' | 'multi_select' | 'text' | 'number'`; `Question { id; prompt; help?; kind; options?: { value; label }[]; required? /* default true */ }`.
 - Answer values: `yes_no` → boolean, `single_select` → option `value`, `multi_select` → `string[]`, `text` → string, `number` → number, skipped optional → `null`.
 - Tool names `ask_user({ question })` and `ask_user_batch({ questions })`; both return `{ answers: { [id]: value } }`. MCP server name in `RunSpec.tools`: `lamproom`.
@@ -312,7 +312,7 @@ test('without a terminal the agent is told no one can answer', async () => {
 
 **Files:**
 - Create: `packages/cli/test/ask-live.test.ts`
-- Modify: `code/lamproom/package.json` (`test:live` gains the file)
+- Modify: `package.json` (`test:live` gains the file)
 - Modify (vault): `docs/Lamproom/Agent Providers/Run Config Reference.md`, `Testing The Run Agent CLI.md`, `Run Agent CLI Decisions.md`
 
 **Interfaces:**

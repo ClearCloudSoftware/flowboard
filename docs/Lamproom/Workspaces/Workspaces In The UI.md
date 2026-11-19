@@ -14,7 +14,7 @@ The sections below come from the sources, which gave workspaces no screen of the
 > - **The New run sheet** (`new-run-workspace.html`): *Work in* the repo folder, or a task workspace named by id, suggested from the task text. A live preview says whether the workspace is new, picked up again, picked up with uncommitted files (Start waits for *run even with uncommitted changes*), checked out again from a kept branch, or refused (bad id, a run holding it, broken, or the repo folder's own lock).
 > - **`/workspaces/land?folder=&id=`** (`land-workspace.html`): **Review** the branch against the base, commit by commit, with numbered diffs; **Land** it by merge commit, squash, or rebase then fast-forward, after a dry run (`git merge-tree`, in memory) that names conflicting files and offers *update the branch from the base* or *send back to the flow*; then **Clean up**. Landing runs in the repo's own checkout and needs it clean and on the base branch. A failed merge or rebase is undone in full.
 >
-> The host-side code is `code/lamproom/packages/cli/src/workspace-git.ts`. Every action shows the git or CLI command that does the same thing. This answers [[Git Inside A Workspace]]'s open question of who merges: you do, from the Land page.
+> The host-side code is `packages/cli/src/workspace-git.ts`. Every action shows the git or CLI command that does the same thing. This answers [[Git Inside A Workspace]]'s open question of who merges: you do, from the Land page.
 
 ## Task detail
 

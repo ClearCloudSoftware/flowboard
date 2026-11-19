@@ -58,7 +58,7 @@ export interface ExecContext {
   opencodeConfig?(model: string, hostName?: string): Record<string, unknown> | undefined;
 }
 
-/** code/lamproom: holds the shim and the adapters' plugins, and their node_modules. */
+/** the repo root: holds the shim and the adapters' plugins, and their node_modules. */
 const LAMPROOM_ROOT = resolve(SHIM_ENTRY, '../../../..');
 
 export const artifactPath = (artifactsDir: string, type: string): string => join(artifactsDir, `${type}.md`);
