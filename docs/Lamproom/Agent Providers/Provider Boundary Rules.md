@@ -13,7 +13,7 @@ The rules that keep provider knowledge inside the adapter.
 
 PRD §3 states the package form: *"`packages/core` imports no framework, no database driver and no CLI."* The drawio *Lamproom ideation* page: *"core/ never imports adapters/ / Only core/ports. Enforce with a lint rule."*
 
-As built (2026-10-22): `core` imports only Node built-ins and its own files, so the rule holds, but no lint rule enforces it; `code/lamproom/eslint.config.mjs` is the Next.js default. There is no `runner/` yet. `lr-run-agent` stands in from `packages/cli`, which may import the adapters because it is not the runner (R6 in [[Run Agent CLI Decisions]]).
+As built (2026-10-22): `core` imports only Node built-ins and its own files, so the rule holds, but no lint rule enforces it; `eslint.config.mjs` is the Next.js default. There is no `runner/` yet. `lr-run-agent` stands in from `packages/cli`, which may import the adapters because it is not the runner (R6 in [[Run Agent CLI Decisions]]).
 
 ## What the spec leaked, and where it goes
 

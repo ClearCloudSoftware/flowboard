@@ -25,7 +25,7 @@ does not act on them. The clone view ends at "registered" and the proposals pane
 
 ## Global Constraints
 
-- All paths below are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
+- All paths below are under the repo root unless they start with `docs/`. Run commands from the repo root.
 - Branch `feature/projects-impl`; do not merge into `dev`.
 - Pin new dependencies to exact versions at least two weeks old. Expected: none needed (shadcn components are added
   with `pnpm dlx shadcn@4.23.0 add <name>`, which only writes into `components/ui/`).

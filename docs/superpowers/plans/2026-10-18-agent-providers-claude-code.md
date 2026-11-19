@@ -4,7 +4,7 @@
 
 **Goal:** Ship the `AgentProvider` port, a replay test double, a host `ExecHost`, and a Claude Code provider built on `@anthropic-ai/claude-agent-sdk` that drives the locally installed `claude` CLI with the owner's subscription login.
 
-**Architecture:** Two workspace packages inside `code/lamproom`. `@lamproom/core` holds the port types and two provider-neutral helpers (prompt rendering, guard rules) and has no runtime dependencies. `@lamproom/adapters` holds the host exec, the replay provider and the Claude provider. The Claude provider is three units: `options.ts` maps `RunSpec` to SDK `Options` (pure), `normalize.ts` maps `SDKMessage` to `NormalizedEvent` (pure, stateful per run), and `provider.ts` wires them to `query()`, spawning the CLI through `RunSpec.exec`.
+**Architecture:** Two workspace packages inside the repo root. `@lamproom/core` holds the port types and two provider-neutral helpers (prompt rendering, guard rules) and has no runtime dependencies. `@lamproom/adapters` holds the host exec, the replay provider and the Claude provider. The Claude provider is three units: `options.ts` maps `RunSpec` to SDK `Options` (pure), `normalize.ts` maps `SDKMessage` to `NormalizedEvent` (pure, stateful per run), and `provider.ts` wires them to `query()`, spawning the CLI through `RunSpec.exec`.
 
 **Tech Stack:** TypeScript 5.9 run directly by Node 24 type stripping (no build step), `node:test`, pnpm 10 workspaces, `@anthropic-ai/claude-agent-sdk` 0.3.302.
 
@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Work on branch `feature/agent-providers-claude`, branched from `dev`.
-- All commands run from `code/lamproom/` unless stated.
+- All commands run from the repo root unless stated.
 - Node 24, no build step: only erasable TypeScript (no `enum`, no parameter properties, no `namespace`); type-only imports use `import type`; relative imports carry the `.ts` extension.
 - `@lamproom/core` has **no** `dependencies` and never imports `@lamproom/adapters` (the dependency rule in `Provider Boundary Rules.md`).
 - Tests use `node:test` and `node:assert/strict` only. No test framework.
@@ -52,17 +52,17 @@ These settle Agent Providers Open Questions; Task 7 records them in the docs.
 ### Task 1: Workspace and the `@lamproom/core` port
 
 **Files:**
-- Modify: `code/lamproom/pnpm-workspace.yaml`
-- Modify: `code/lamproom/tsconfig.json` (`exclude`)
-- Modify: `code/lamproom/package.json` (scripts, `@types/node`)
-- Create: `code/lamproom/packages/tsconfig.json`
-- Create: `code/lamproom/packages/core/package.json`
-- Create: `code/lamproom/packages/core/src/ports/agent-provider.ts`
-- Create: `code/lamproom/packages/core/src/ports/events.ts`
-- Create: `code/lamproom/packages/core/src/ports/exec-host.ts`
-- Create: `code/lamproom/packages/core/src/prompt.ts`
-- Create: `code/lamproom/packages/core/src/index.ts`
-- Test: `code/lamproom/packages/core/test/prompt.test.ts`
+- Modify: `pnpm-workspace.yaml`
+- Modify: `tsconfig.json` (`exclude`)
+- Modify: `package.json` (scripts, `@types/node`)
+- Create: `packages/tsconfig.json`
+- Create: `packages/core/package.json`
+- Create: `packages/core/src/ports/agent-provider.ts`
+- Create: `packages/core/src/ports/events.ts`
+- Create: `packages/core/src/ports/exec-host.ts`
+- Create: `packages/core/src/prompt.ts`
+- Create: `packages/core/src/index.ts`
+- Test: `packages/core/test/prompt.test.ts`
 
 **Interfaces:**
 - Produces (all re-exported from `@lamproom/core`):
@@ -161,9 +161,9 @@ git commit -m "feat(core): add AgentProvider port and prompt renderer"
 ### Task 2: Guard rules
 
 **Files:**
-- Create: `code/lamproom/packages/core/src/guard.ts`
-- Modify: `code/lamproom/packages/core/src/index.ts` (re-export)
-- Test: `code/lamproom/packages/core/test/guard.test.ts`
+- Create: `packages/core/src/guard.ts`
+- Modify: `packages/core/src/index.ts` (re-export)
+- Test: `packages/core/test/guard.test.ts`
 
 **Interfaces:**
 - Consumes: `GuardRules` (Task 1).
@@ -226,11 +226,11 @@ git commit -m "feat(core): add provider-neutral tool guard rules"
 ### Task 3: `@lamproom/adapters` with host exec and the replay provider
 
 **Files:**
-- Create: `code/lamproom/packages/adapters/package.json`
-- Create: `code/lamproom/packages/adapters/src/exec/host.ts`
-- Create: `code/lamproom/packages/adapters/src/agent/replay/replay-provider.ts`
-- Create: `code/lamproom/packages/adapters/src/index.ts`
-- Test: `code/lamproom/packages/adapters/test/replay.test.ts`
+- Create: `packages/adapters/package.json`
+- Create: `packages/adapters/src/exec/host.ts`
+- Create: `packages/adapters/src/agent/replay/replay-provider.ts`
+- Create: `packages/adapters/src/index.ts`
+- Test: `packages/adapters/test/replay.test.ts`
 
 **Interfaces:**
 - Consumes: `AgentProvider`, `AgentRun`, `ExecHost`, `NormalizedEvent`, `ZERO_USAGE` from `@lamproom/core`.
@@ -282,10 +282,10 @@ git commit -m "feat(adapters): add host exec and replay provider"
 ### Task 4: Claude message normalizer
 
 **Files:**
-- Modify: `code/lamproom/packages/adapters/package.json` (SDK dependency)
-- Create: `code/lamproom/packages/adapters/src/agent/claude/normalize.ts`
-- Create: `code/lamproom/packages/adapters/test/fixtures/claude-hello.jsonl` (copy of `docs/old/stream-sample.jsonl`)
-- Test: `code/lamproom/packages/adapters/test/claude-normalize.test.ts`
+- Modify: `packages/adapters/package.json` (SDK dependency)
+- Create: `packages/adapters/src/agent/claude/normalize.ts`
+- Create: `packages/adapters/test/fixtures/claude-hello.jsonl` (copy of `docs/old/stream-sample.jsonl`)
+- Test: `packages/adapters/test/claude-normalize.test.ts`
 
 **Interfaces:**
 - Consumes: `NormalizedEvent`, `Usage`, `ZERO_USAGE` from `@lamproom/core`; `SDKMessage` type from the SDK.
@@ -374,8 +374,8 @@ git commit -m "feat(adapters): normalize Claude Agent SDK messages"
 ### Task 5: `RunSpec` → SDK options
 
 **Files:**
-- Create: `code/lamproom/packages/adapters/src/agent/claude/options.ts`
-- Test: `code/lamproom/packages/adapters/test/claude-options.test.ts`
+- Create: `packages/adapters/src/agent/claude/options.ts`
+- Test: `packages/adapters/test/claude-options.test.ts`
 
 **Interfaces:**
 - Consumes: `RunSpec`, `renderPrompt`, `checkToolCall` from `@lamproom/core`; `Options`, `SpawnOptions`, `SpawnedProcess` types from the SDK.
@@ -462,9 +462,9 @@ git commit -m "feat(adapters): map RunSpec to Claude Agent SDK options"
 ### Task 6: `ClaudeCodeProvider`
 
 **Files:**
-- Create: `code/lamproom/packages/adapters/src/agent/claude/provider.ts`
-- Modify: `code/lamproom/packages/adapters/src/index.ts` (re-export)
-- Test: `code/lamproom/packages/adapters/test/claude-provider.test.ts`
+- Create: `packages/adapters/src/agent/claude/provider.ts`
+- Modify: `packages/adapters/src/index.ts` (re-export)
+- Test: `packages/adapters/test/claude-provider.test.ts`
 
 **Interfaces:**
 - Consumes: `buildQuery` (Task 5), `createNormalizer` (Task 4), `hostExecHost` (Task 3), port types from `@lamproom/core`, `query` from the SDK.
@@ -545,10 +545,10 @@ git commit -m "feat(adapters): add ClaudeCodeProvider on the Agent SDK"
 ### Task 7: Live check against the installed CLI, and the docs
 
 **Files:**
-- Create: `code/lamproom/packages/adapters/test/fixtures/lrecho-plugin/.claude-plugin/plugin.json` (`{ "name": "lrecho", "version": "0.0.1", "description": "Lamproom test plugin" }`)
-- Create: `code/lamproom/packages/adapters/test/fixtures/lrecho-plugin/skills/echo/SKILL.md` (frontmatter `name: echo`, `description: Replies with a fixed token`; body `Reply with exactly: ECHO-OK`)
-- Create: `code/lamproom/packages/adapters/test/claude-live.test.ts`
-- Modify: `code/lamproom/package.json` (script `"test:live": "LAMPROOM_LIVE=1 node --test packages/adapters/test/claude-live.test.ts"`)
+- Create: `packages/adapters/test/fixtures/lrecho-plugin/.claude-plugin/plugin.json` (`{ "name": "lrecho", "version": "0.0.1", "description": "Lamproom test plugin" }`)
+- Create: `packages/adapters/test/fixtures/lrecho-plugin/skills/echo/SKILL.md` (frontmatter `name: echo`, `description: Replies with a fixed token`; body `Reply with exactly: ECHO-OK`)
+- Create: `packages/adapters/test/claude-live.test.ts`
+- Modify: `package.json` (script `"test:live": "LAMPROOM_LIVE=1 node --test packages/adapters/test/claude-live.test.ts"`)
 - Modify: `docs/Lamproom/Agent Providers/Claude Code Adapter.md`
 - Modify: `docs/Lamproom/Agent Providers/Agent Providers Open Questions.md`
 
@@ -585,7 +585,7 @@ Expected: 3 tests pass. If the skill test fails, check the `system` event's `raw
 
 - [ ] **Step 3: Update the docs**
 
-In `Claude Code Adapter.md`, add a section `## Built on the Agent SDK` (2026-10-18) that points to `code/lamproom/packages/adapters/src/agent/claude/` and replaces the inferred flag table with Task 5's mapping table. In `Agent Providers Open Questions.md`, append to #1, #4, #5, #7, #9, #20 and #33 a line `**Decided 2026-10-18** (Claude adapter implementation): <the row from *Port decisions*>.`, keeping the house style of the notes (cited, sentence case, `[[wikilinks]]`).
+In `Claude Code Adapter.md`, add a section `## Built on the Agent SDK` (2026-10-18) that points to `packages/adapters/src/agent/claude/` and replaces the inferred flag table with Task 5's mapping table. In `Agent Providers Open Questions.md`, append to #1, #4, #5, #7, #9, #20 and #33 a line `**Decided 2026-10-18** (Claude adapter implementation): <the row from *Port decisions*>.`, keeping the house style of the notes (cited, sentence case, `[[wikilinks]]`).
 
 - [ ] **Step 4: Commit**
 

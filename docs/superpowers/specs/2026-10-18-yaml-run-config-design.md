@@ -1,6 +1,6 @@
 # YAML run config and runner — design
 
-Date: 2026-10-18. Branch: `feature/agent-providers`. Builds on the Claude Code and OpenCode providers in `code/lamproom/packages/adapters/` (see `docs/Lamproom/Agent Providers/Claude Code Adapter.md`, `OpenCode Adapter.md`, `Provider Implementation Decisions.md`).
+Date: 2026-10-18. Branch: `feature/agent-providers`. Builds on the Claude Code and OpenCode providers in `packages/adapters/` (see `docs/Lamproom/Agent Providers/Claude Code Adapter.md`, `OpenCode Adapter.md`, `Provider Implementation Decisions.md`).
 
 ## Intent
 
@@ -29,7 +29,7 @@ The owner wants to run one agent task from a file they can keep, edit and rerun,
 
 ## Constraints
 
-- Same code rules as the providers: TypeScript run by Node 24 type stripping (erasable syntax only, `import type`, `.ts` relative imports), tests with `node:test` + `node:assert/strict`, commands run from `code/lamproom/`.
+- Same code rules as the providers: TypeScript run by Node 24 type stripping (erasable syntax only, `import type`, `.ts` relative imports), tests with `node:test` + `node:assert/strict`, commands run from the repo root.
 - Auth is unchanged: Claude uses the installed `claude` login; OpenCode uses its own credentials. The YAML never holds secrets.
 - Runs spend real quota or money; automated tests must not.
 
@@ -94,7 +94,7 @@ With the opt-in set, the run goes ahead and the header prints one warning line s
 
 ## The runner
 
-Command: `pnpm lr-run-agent <path/to/task.yaml>` (a script in `code/lamproom/package.json`).
+Command: `pnpm lr-run-agent <path/to/task.yaml>` (a script in `package.json`).
 
 Every relative path — the YAML path on the command line, the paths inside the YAML, and `runs/` — is resolved against the folder `pnpm` was run from (owner's decision). pnpm runs scripts in the package folder and puts the original folder in `INIT_CWD`, so the runner uses `INIT_CWD` when set, else its own working directory (my call).
 
@@ -118,7 +118,7 @@ JSONL, written line by line as the run goes, so a crash or stop keeps everything
 
 ## Where it lives
 
-A new workspace package `code/lamproom/packages/cli` (`@lamproom/cli`), because it is the one place that knows every adapter (my call). It is not named `runner`: the architecture rule *"core/ and runner/ must never import from adapters/"* reserves that name for Lamproom's runner component, and this command exists to import adapters (my call). It depends on `@lamproom/core`, `@lamproom/adapters`, `yaml` (Node cannot parse YAML itself) and `zod` (already in the workspace, used for validation with readable messages). `packages/adapters/try.ts` is deleted.
+A new workspace package `packages/cli` (`@lamproom/cli`), because it is the one place that knows every adapter (my call). It is not named `runner`: the architecture rule *"core/ and runner/ must never import from adapters/"* reserves that name for Lamproom's runner component, and this command exists to import adapters (my call). It depends on `@lamproom/core`, `@lamproom/adapters`, `yaml` (Node cannot parse YAML itself) and `zod` (already in the workspace, used for validation with readable messages). `packages/adapters/try.ts` is deleted.
 
 ## Testing
 

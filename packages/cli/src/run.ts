@@ -48,7 +48,7 @@ export interface RunDeps {
   docker?: { gvisor(): boolean; notReady(image: string): string | undefined };
 }
 
-/** Lamproom's own data folder, `code/lamproom/data`, wherever lr-run-flow is started from. */
+/** Lamproom's own data folder, `data/` at the repo root, wherever lr-run-flow is started from. */
 const OWN_DATA = fileURLToPath(new URL('../../../data', import.meta.url));
 /** Lamproom's data folder: LAMPROOM_DATA_DIR, else its own, as the app has it. */
 export const dataDirOf = (deps: Pick<RunDeps, 'cwd' | 'dataDir'>) => deps.dataDir ?? (process.env.LAMPROOM_DATA_DIR ? resolve(deps.cwd, process.env.LAMPROOM_DATA_DIR) : OWN_DATA);

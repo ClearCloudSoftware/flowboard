@@ -6,13 +6,13 @@
 
 **Architecture:** Small, independent fixes in the places each issue names. No new modules. Each fix gets a test that fails first.
 
-**Tech Stack:** TypeScript on Node 24 type stripping, `node:test`, pnpm workspaces (`code/lamproom/packages/{core,adapters,cli}`).
+**Tech Stack:** TypeScript on Node 24 type stripping, `node:test`, pnpm workspaces (`packages/{core,adapters,cli}`).
 
 **Spec:** the deferred-issue rows in `docs/Lamproom/Agent Providers/Run Agent CLI Decisions.md` and `Provider Implementation Decisions.md`, plus the "group 1" list agreed in chat on 2026-10-18 (the `/tmp` link item was found in a real run and never recorded).
 
 ## Global Constraints
 
-- Code rules: erasable syntax only, `import type`, `.ts` relative imports, `node:test` + `node:assert/strict`; commands run from `code/lamproom/`.
+- Code rules: erasable syntax only, `import type`, `.ts` relative imports, `node:test` + `node:assert/strict`; commands run from the repo root.
 - Kill grace before `SIGKILL`: `5000` ms by default, overridable per provider with a `killGraceMs` constructor option (tests use `200`).
 - OpenCode `.env` rules mirror OpenCode's own defaults: `read` of `*.env` and `*.env.*` → `ask`; `*.env.example` → `allow`. In a headless run `ask` is refused unless the mode is `bypassPermissions` or `auto`.
 - OpenCode step limit goes on agents `build`, `plan`, `general` and `explore`.

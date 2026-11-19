@@ -61,7 +61,7 @@ Listed in [[Flow Design Open Questions]] #30.
 
 ## As built in the flow designer (2026-10-24)
 
-Route handlers in `code/lamproom/app/api/flows/`. They are thin, as the PRD asks: zod checks the input, a function in `packages/cli/src/flow-files.ts` does the work, and the answer is JSON. A flow is named by its file name, less `.yaml`, under the rule for step names; the files sit in `code/lamproom/flows/`, or in the folder `LAMPROOM_FLOWS_DIR` names.
+Route handlers in `app/api/flows/`. They are thin, as the PRD asks: zod checks the input, a function in `packages/cli/src/flow-files.ts` does the work, and the answer is JSON. A flow is named by its file name, less `.yaml`, under the rule for step names; the files sit in `flows/`, or in the folder `LAMPROOM_FLOWS_DIR` names.
 
 | Method | Path | Does |
 |---|---|---|

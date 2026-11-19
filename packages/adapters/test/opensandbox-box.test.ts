@@ -1,5 +1,5 @@
 /**
- * Live: needs an OpenSandbox server (see code/lamproom/docker/README.md) and LAMPROOM_OPENSANDBOX=1,
+ * Live: needs an OpenSandbox server (see docker/README.md) and LAMPROOM_OPENSANDBOX=1,
  * OPENSANDBOX_DOMAIN and OPENSANDBOX_API_KEY. Skipped otherwise.
  */
 import { after, before, test } from 'node:test';

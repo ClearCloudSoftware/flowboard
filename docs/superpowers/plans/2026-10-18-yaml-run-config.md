@@ -12,8 +12,8 @@
 
 ## Global Constraints
 
-- Code rules: erasable syntax only, `import type` for types, `.ts` relative imports, tests with `node:test` + `node:assert/strict`; commands run from `code/lamproom/`.
-- Package: `code/lamproom/packages/cli`, name `@lamproom/cli` — never `runner` (architecture rule: *"core/ and runner/ must never import from adapters/"*).
+- Code rules: erasable syntax only, `import type` for types, `.ts` relative imports, tests with `node:test` + `node:assert/strict`; commands run from the repo root.
+- Package: `packages/cli`, name `@lamproom/cli` — never `runner` (architecture rule: *"core/ and runner/ must never import from adapters/"*).
 - Dependencies: `@lamproom/core` and `@lamproom/adapters` (`workspace:*`), `yaml` (^2.9.1), `zod` (^4.6.7). Nothing else.
 - Every relative path (the YAML path argument, `folder`, `prompt`, `plugins`, `runs/`) resolves against the folder `pnpm` was run from: `process.env.INIT_CWD ?? process.cwd()`. Absolute paths are used as written.
 - Error line format: `<yaml path as typed>: <field>: <message>`; bad config or bad usage → exit **2**, nothing launched.
@@ -193,7 +193,7 @@ git commit -m "feat(cli): validate the YAML run config with field-named errors"
 
 **Files:**
 - Create: `packages/cli/src/run.ts`, `packages/cli/src/main.ts`
-- Modify: `code/lamproom/package.json` (script `"lr-run-agent": "node packages/cli/src/main.ts"`)
+- Modify: `package.json` (script `"lr-run-agent": "node packages/cli/src/main.ts"`)
 - Delete: `packages/adapters/try.ts`
 - Test: `packages/cli/test/run.test.ts`
 
@@ -275,7 +275,7 @@ Expected: all pass (adapters' 6 live tests skipped); no type errors.
 
 - [ ] **Step 5: Smoke the real entry point without spending**
 
-Run: `d=$(mktemp -d) && printf 'adapter: claude-code\n' > "$d/lr-bad.yaml" && (cd "$d" && pnpm --dir <abs path to code/lamproom> lr-run-agent lr-bad.yaml); echo "exit $?"`
+Run: `d=$(mktemp -d) && printf 'adapter: claude-code\n' > "$d/lr-bad.yaml" && (cd "$d" && pnpm --dir <abs path to the repo root> lr-run-agent lr-bad.yaml); echo "exit $?"`
 Expected: `lr-bad.yaml: model: required` (and the other required fields), `exit 2` — proving `INIT_CWD` resolution.
 
 - [ ] **Step 6: Commit**
@@ -291,7 +291,7 @@ git commit -m "feat(cli): lr-run-agent launches the configured provider, prints 
 
 **Files:**
 - Create: `packages/cli/test/cli-live.test.ts`
-- Modify: `code/lamproom/package.json` (`test:live` gains `packages/cli/test/cli-live.test.ts`)
+- Modify: `package.json` (`test:live` gains `packages/cli/test/cli-live.test.ts`)
 
 **Interfaces:**
 - Consumes: `runAgent` (Task 3) with the default `makeProvider`.

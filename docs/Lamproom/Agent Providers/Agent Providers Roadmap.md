@@ -41,7 +41,7 @@ The 2026-10-22 fixes. The decisions behind them were taken that day and are open
 - File-edit writes are checked where they land, after following links; `~/` is the home folder.
 - `deny_paths` globs match dot-files, and ignore letter case on macOS and Windows.
 - The built-in `git push` and `git reset --hard` rules also catch git's global options (`git -C . push`).
-- `code/lamproom/.gitignore` ignores the run logs in `/runs/`.
+- `.gitignore` ignores the run logs in `/runs/`.
 - OpenCode runs inherit no `OPENCODE_*` setting except credentials, and no Anthropic key.
 - A native OpenCode pack can no longer replace the adapter's own config keys.
 - An explicit deny of the ask tool wins on both adapters.

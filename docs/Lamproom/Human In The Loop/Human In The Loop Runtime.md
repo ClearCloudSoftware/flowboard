@@ -16,7 +16,7 @@ Where each HITL responsibility lives in the two-process design.
 | Notifier interface | `core/ports` | PRD §3, architecture README module layout; the interface sketch is in `01-ports.md` |
 | Slack adapter | `packages/adapters/notify` (`notify/slack/`) | PRD §3, architecture README |
 | `ask_user` broker, escalation timer | `apps/worker` (*"job loop, runner, ask_user broker, escalation timer"*). As built (2026-10-18), the only broker is `lr-run-agent`'s, `cli/src/ask/broker.ts` | PRD §3 |
-| MCP shim | `apps/mcp-shim`. As built (2026-10-18): `code/lamproom/packages/ask-user/` | PRD §3, §9 |
+| MCP shim | `apps/mcp-shim`. As built (2026-10-18): `packages/ask-user/` | PRD §3, §9 |
 | `/inbox`, SSE, answer routes | `apps/web` (*"Calls core; holds no rules"*) | PRD §3 |
 
 The dependency rule: *"the domain (flow engine, board projection, question protocol, cost ledger) depends only on **ports**"* (architecture README). *"Only `apps/web` and `apps/worker` open the SQLite file; the MCP shim never does"* (PRD §3).

@@ -131,7 +131,7 @@ const runAsync = (docker: string, args: string[]): Promise<Ran> =>
 const MEM_TOTAL = ['info', '--format', '{{.MemTotal}}'];
 const RUNTIMES = ['info', '--format', '{{json .Runtimes}}'];
 const NOT_RUNNING = 'Docker is not running';
-const noImage = (image: string) => `no image ${image}; build it from code/lamproom: docker build -f docker/Dockerfile -t ${image} .`;
+const noImage = (image: string) => `no image ${image}; build it from the repo root: docker build -f docker/Dockerfile -t ${image} .`;
 
 function memoryOf(r: Ran): number | undefined {
   const total = Number(r.stdout.trim());

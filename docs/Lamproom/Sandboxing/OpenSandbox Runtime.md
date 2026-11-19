@@ -36,7 +36,7 @@ pnpm lr-run-flow --folder ~/code/app --task task.md flow.yaml
 git -C ~/code/app apply runs/<run>/changes.patch
 ```
 
-Setup (server config, images): `code/lamproom/docker/README.md`, section 3.
+Setup (server config, images): `docker/README.md`, section 3.
 
 ### The `sandbox:` keys
 
@@ -125,7 +125,7 @@ The providers are unchanged in shape. They spawn through `spec.exec`, and four o
 
 | Hook | Used by | Box behaviour |
 |---|---|---|
-| `mapPath(p)` | `withAsking`, OpenCode guard plugin | `code/lamproom/...` → `/opt/lamproom/...` in the image |
+| `mapPath(p)` | `withAsking`, OpenCode guard plugin | `...` → `/opt/lamproom/...` in the image |
 | `exists(p)` | OpenCode guard-loaded marker | `files.getFileInfo` in the box |
 | `endpoint(port)` | OpenCode client | the gateway URL for that port |
 | `tunnel(box, host)` | `ask_user` | the reverse tunnel above |

@@ -107,7 +107,7 @@ Light only, zero radius, IBM Plex Mono and Sans, hairlines not shadows. PRD §13
 
 ## As built in the flow designer (2026-10-24)
 
-The screen is `/flows` in the web app, `code/lamproom/app/flows/` (`pnpm dev`, then `http://localhost:3000/flows`). It edits lr-run-flow recipe files, the YAML that `pnpm lr-run-flow` runs, in `code/lamproom/flows/` or the folder `LAMPROOM_FLOWS_DIR` names. The canvas is React Flow (xyflow); data, form, state and debouncing are TanStack Query, Form, Store and Pacer (Alex's call, 2026-10-24). Styles are plain CSS in the mockup's tokens, light only, without shadcn/ui (Claude's call, 2026-10-24, open to Alex's review).
+The screen is `/flows` in the web app, `app/flows/` (`pnpm dev`, then `http://localhost:3000/flows`). It edits lr-run-flow recipe files, the YAML that `pnpm lr-run-flow` runs, in `flows/` or the folder `LAMPROOM_FLOWS_DIR` names. The canvas is React Flow (xyflow); data, form, state and debouncing are TanStack Query, Form, Store and Pacer (Alex's call, 2026-10-24). Styles are plain CSS in the mockup's tokens, light only, without shadcn/ui (Claude's call, 2026-10-24, open to Alex's review).
 
 | Region | As built |
 |---|---|

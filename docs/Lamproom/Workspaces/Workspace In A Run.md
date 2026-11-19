@@ -51,7 +51,7 @@ flowchart TB
 Backlog 3.2 (**FIX**): *"Per‑run `mcp.json` pointing at `mcp/ask-user.ts` via `tsx --tsconfig <root>/tsconfig.json` (path aliases break when spawned from the worktree cwd)."* Running from the worktree means anything Lamproom launches inside it must not depend on Lamproom's own `cwd`. PRD §3's layout has a separate `apps/mcp-shim` instead. See [[Worker Lifecycle]].
 
 > [!warning] The shipped code differs
-> No `mcp.json` is written (2026-10-18), and the shim is `code/lamproom/packages/ask-user/`, not `apps/mcp-shim`. `lr-run-agent` adds it to `RunSpec.tools` as a server named `lamproom` that `node` starts from the shim's absolute path, with the broker socket in `LAMPROOM_ASK_SOCKET`. The Claude adapter passes it in memory as the Agent SDK's `mcpServers`; the OpenCode adapter puts it in the per-run `OPENCODE_CONFIG_CONTENT`. See [[Ask User MCP Server]].
+> No `mcp.json` is written (2026-10-18), and the shim is `packages/ask-user/`, not `apps/mcp-shim`. `lr-run-agent` adds it to `RunSpec.tools` as a server named `lamproom` that `node` starts from the shim's absolute path, with the broker socket in `LAMPROOM_ASK_SOCKET`. The Claude adapter passes it in memory as the Agent SDK's `mcpServers`; the OpenCode adapter puts it in the per-run `OPENCODE_CONFIG_CONTENT`. See [[Ask User MCP Server]].
 
 ## Related
 

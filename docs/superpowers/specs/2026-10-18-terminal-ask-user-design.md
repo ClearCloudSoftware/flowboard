@@ -1,6 +1,6 @@
 # Terminal ask_user for lr-run-agent — design
 
-Date: 2026-10-18. Branch: `feature/agent-providers`. Builds on the `lr-run-agent` CLI (`docs/superpowers/specs/2026-10-18-yaml-run-config-design.md`, code in `code/lamproom/packages/cli/`) and the two providers in `packages/adapters/`. The Human In The Loop design it follows is in `docs/Lamproom/Human In The Loop/` (`Ask User MCP Server.md`, `Questions.md`, `Ask Park And Resume.md`).
+Date: 2026-10-18. Branch: `feature/agent-providers`. Builds on the `lr-run-agent` CLI (`docs/superpowers/specs/2026-10-18-yaml-run-config-design.md`, code in `packages/cli/`) and the two providers in `packages/adapters/`. The Human In The Loop design it follows is in `docs/Lamproom/Human In The Loop/` (`Ask User MCP Server.md`, `Questions.md`, `Ask Park And Resume.md`).
 
 ## Intent
 
@@ -41,7 +41,7 @@ The owner wants an easy terminal interface for answering, and wants the work to 
 
 ## Constraints
 
-- Same code rules as the rest of `packages/`: TypeScript on Node 24 type stripping, erasable syntax only, `node:test`, pnpm workspaces, commands run from `code/lamproom/`.
+- Same code rules as the rest of `packages/`: TypeScript on Node 24 type stripping, erasable syntax only, `node:test`, pnpm workspaces, commands run from the repo root.
 - The shim never opens a database and needs no network: it talks only to the broker over a local Unix socket (`Ask User MCP Server.md`: *"It never opens the database and needs no network."*).
 - The question shape is Lamproom's (`Questions.md`), defined once:
 

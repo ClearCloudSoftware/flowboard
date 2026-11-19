@@ -95,7 +95,7 @@ The doctor changes nothing: it doesn't install, build, log in or edit a file. Th
 
 ### Configure and use
 
-To check your machine from a terminal, run this from `code/lamproom`:
+To check your machine from a terminal, run this from the repo root:
 
 ```sh
 pnpm lr-doctor
@@ -354,7 +354,7 @@ pnpm lr-run-flow --resume <run folder> [--budget-usd <n>] [--max-runs <n>] [--pa
 
 ## Agent Providers
 
-Agent Providers is the layer that lets Lamproom drive different AI coding CLIs through one contract, the `AgentProvider` port. You describe a run once, as a `RunSpec`, and get back one stream of normalized events and one `RunResult`, whichever CLI ran it. As built (2026-10-18, fixed 2026-10-22), two real providers implement the port, Claude Code and OpenCode, plus Replay, a zero-spend test double. The port lives in `code/lamproom/packages/core/src/ports/`, and the adapters live in `packages/adapters/src/agent/<claude|opencode|replay>/`.
+Agent Providers is the layer that lets Lamproom drive different AI coding CLIs through one contract, the `AgentProvider` port. You describe a run once, as a `RunSpec`, and get back one stream of normalized events and one `RunResult`, whichever CLI ran it. As built (2026-10-18, fixed 2026-10-22), two real providers implement the port, Claude Code and OpenCode, plus Replay, a zero-spend test double. The port lives in `packages/core/src/ports/`, and the adapters live in `packages/adapters/src/agent/<claude|opencode|replay>/`.
 
 ### Key concepts
 
@@ -651,7 +651,7 @@ The box can't dial the host: questions reach the host broker through a reverse t
 
 To run a flow in OpenSandbox, follow these steps:
 
-1. Set up the server and images as described in `code/lamproom/docker/README.md`, section 3. Give the server an `api_key`, set `publish_host = "127.0.0.1"`, and set `[egress] mode = "dns+nft"`, because the credential vault refuses DNS-only mode.
+1. Set up the server and images as described in `docker/README.md`, section 3. Give the server an `api_key`, set `publish_host = "127.0.0.1"`, and set `[egress] mode = "dns+nft"`, because the credential vault refuses DNS-only mode.
 2. Add a flow-level `sandbox:` key. Steps don't take a `sandbox` key; a per-step one fails as `unknown key`.
 
    ```yaml

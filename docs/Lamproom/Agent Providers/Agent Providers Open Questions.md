@@ -7,7 +7,7 @@ module: Agent Providers
 
 Every place the sources disagree or leave a gap. Items marked **proposal** are inferences, not source facts.
 
-In the questions, `agent-provider.ts`, `events.ts` and `replay-provider.ts` mean the reference port in `docs/old/reference/`. The shipped code is in `code/lamproom/packages/` and is cited by package, as in `core/src/ports/agent-provider.ts`; adapter files are cited from `adapters/src/agent/`, as in `claude/options.ts`. A **Decided** line says how a question was settled and where the code is. Lines dated 2026-10-22 were decided by Claude while fixing a docs audit, and are open to Alex's review.
+In the questions, `agent-provider.ts`, `events.ts` and `replay-provider.ts` mean the reference port in `docs/old/reference/`. The shipped code is in `packages/` and is cited by package, as in `core/src/ports/agent-provider.ts`; adapter files are cited from `adapters/src/agent/`, as in `claude/options.ts`. A **Decided** line says how a question was settled and where the code is. Lines dated 2026-10-22 were decided by Claude while fixing a docs audit, and are open to Alex's review.
 
 ## The contract
 

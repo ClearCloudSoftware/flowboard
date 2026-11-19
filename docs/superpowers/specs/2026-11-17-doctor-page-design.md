@@ -36,7 +36,7 @@ the app has `CLAUDE_CODE_OAUTH_TOKEN`.
   CLAUDE.md).
 - Alex's house style: light, minimal, zero radius, hairlines. Follow the existing settings sections (`agents.tsx`,
   `settings.tsx` `Head`).
-- Read `node_modules/next/dist/docs/` before writing Next code (code/lamproom/AGENTS.md).
+- Read `node_modules/next/dist/docs/` before writing Next code (AGENTS.md).
 - **No blocking the server.** `dockerNotReady`, `dockerHasGvisor`, `dockerDefaultMemoryMb` (`project.ts`) and
   `ghStatus` (`github.ts`) use `spawnSync`. In the Next server that would freeze every request for about 2 s, and up
   to about 20 s with Docker Desktop stuck. Each gets a non-blocking version (`execFile`) that shares its parsing with

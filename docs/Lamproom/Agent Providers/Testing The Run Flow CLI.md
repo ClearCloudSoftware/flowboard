@@ -15,12 +15,12 @@ Every field is described in [[Run Flow Reference]], and what is left for later i
 
 ## Before you start
 
-- **Code:** branch `fix/flow-orchestration-audit`, which adds the conformance audit's fixes to `feature/flow-orchestration`. Today that is the worktree `.claude/worktrees/flow-orchestration-audit/code/lamproom`; after a merge it is `code/lamproom` in the main checkout. Run `pnpm install` there once. The flow files below are recipes: they use `entry:` and `budget_usd:`, and leave the folder and the task to `--folder` and `--task`. Older code refuses them.
+- **Code:** branch `fix/flow-orchestration-audit`, which adds the conformance audit's fixes to `feature/flow-orchestration`. Today that is the worktree `.claude/worktrees/flow-orchestration-audit/the repo root`; after a merge it is the repo root in the main checkout. Run `pnpm install` there once. The flow files below are recipes: they use `entry:` and `budget_usd:`, and leave the folder and the task to `--folder` and `--task`. Older code refuses them.
 - **Agent steps** need what `lr-run-agent` needs: the `claude` CLI logged in with your subscription, and, for OpenCode steps, the `opencode` CLI with an OpenRouter key. Shell-only flows need neither, and cost nothing.
 
 ## 1. Automated suite (free)
 
-From `code/lamproom/`:
+From the repo root:
 
 ```sh
 pnpm typecheck:packages
@@ -65,7 +65,7 @@ When a model wanders off and runs out of turns, the flow stops at a gate and the
 ```sh
 mkdir -p ~/lr-flow/proj && cd ~/lr-flow
 printf 'Make a tiny greeting.\n' > task.md
-alias lrflow='pnpm -s --dir /Users/alex/projects/personal/flowboard/flowboard_v3/.claude/worktrees/flow-orchestration-audit/code/lamproom lr-run-flow'
+alias lrflow='pnpm -s --dir /Users/alex/projects/personal/flowboard/flowboard_v3/.claude/worktrees/flow-orchestration-audit/the repo root lr-run-flow'
 ```
 
 - A flow file is a recipe: every run below gives it `--folder proj --task task.md` (a `--resume` takes neither), which resolve against the folder you run from, and each run gets its own folder in `runs/` there. Shell steps run in `proj/`, so the files they write land there. Paths inside a flow file, such as its prompts, resolve against the flow file's own folder, here `~/lr-flow` too.

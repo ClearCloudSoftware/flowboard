@@ -33,7 +33,7 @@ Feature map §19: *"**Appearance** — Light, dark, or follow the system."*
 >
 > Dark-first (PRD, old handoff), light by default with a dark theme (backlog 9.1), light only (mockups, drawio). Feature map §19 and backlog 8.3 offer a switch, which assumes both themes exist. The same question is open in [[Flow Design Open Questions]] #34, [[Human In The Loop Open Questions]] #34 and [[Monitor Open Questions]] #27. See [[Settings And Plumbing Open Questions]] #7.
 
-The Next.js scaffold at `code/lamproom/app/globals.css` follows the system (`prefers-color-scheme: dark`). It is the stock `create-next-app` output, not a design decision.
+The Next.js scaffold at `app/globals.css` follows the system (`prefers-color-scheme: dark`). It is the stock `create-next-app` output, not a design decision.
 
 ## Related
 

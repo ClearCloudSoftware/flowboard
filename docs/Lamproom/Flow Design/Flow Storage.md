@@ -21,7 +21,7 @@ As built (checked 2026-11-10):
 
 | What | Where |
 |---|---|
-| Recipes | `<name>.yaml` in `LAMPROOM_FLOWS_DIR`, else `flows/` in the web app's folder (`code/lamproom/flows/`). The designer and its API read and write only here |
+| Recipes | `<name>.yaml` in `LAMPROOM_FLOWS_DIR`, else `flows/` in the web app's folder (`flows/`). The designer and its API read and write only here |
 | Prompt files | Beside the recipes, by the path a step's `prompt` names, such as `flows/prompts/plan.md`. The prompt editor writes only inside the recipes folder ([[Flow Design API And Routes]]) |
 | Run folders | `runs/<stamp>-<flow name>/` in the folder `lr-run-flow` starts in, or in `LAMPROOM_RUNS_DIR` when it is set. The runs page reads the same: `LAMPROOM_RUNS_DIR`, else `runs/` in the web app's folder |
 | Runs started from the page | **+ New run** writes the task to `runs/.started/<id>.task.md` and lr-run-flow's output to `runs/.started/<id>.log`. A dot folder is never listed as a run. It starts lr-run-flow in the folder above the runs folder, so the run lands in that folder's `runs/` |

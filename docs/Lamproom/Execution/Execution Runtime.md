@@ -21,7 +21,7 @@ The drawio *Harness architecture* title: *"One laptop · two Node processes · o
 | Egress proxy | the only way out of the sandbox network | PRD §11.1 |
 
 > [!warning] The shipped code differs
-> - The shim is `code/lamproom/packages/ask-user/`, not `apps/mcp-shim`. The agent CLI, or the OpenCode server, still launches it once per run. Its broker (`cli/src/ask/broker.ts`) runs inside the terminal commands, `pnpm lr-run-agent` and, one per agent run, `pnpm lr-run-flow`, not in a worker.
+> - The shim is `packages/ask-user/`, not `apps/mcp-shim`. The agent CLI, or the OpenCode server, still launches it once per run. Its broker (`cli/src/ask/broker.ts`) runs inside the terminal commands, `pnpm lr-run-agent` and, one per agent run, `pnpm lr-run-flow`, not in a worker.
 > - The agent is not started as `claude -p …`. The Claude Agent SDK spawns the installed `claude` through the host ExecHost and talks to it over stdio; OpenCode runs one `opencode serve` per run. Both are host child processes (2026-10-18). See [[Agent Providers Runtime]].
 
 As built in lr-run-flow (2026-10-23), one `pnpm lr-run-flow` process stands in for `apps/worker` for one flow: it runs the engine, launches each step's run, and hosts the brokers. There is no web process, queue, database, container or egress proxy; a lock file keeps one such process per folder. See [[Run Flow Reference]].
@@ -70,7 +70,7 @@ apps/
 (PRD §3, trimmed to the execution parts.) The architecture README's layout puts the runner and worker at top level: *"`runner/` # generic execution loop — imports ports, not adapters (03)"*, *"`worker/` # queue + lifecycle"*. Its rule: *"`core/` and `runner/` must never import from `adapters/` — only from `core/ports/`. Enforce with a lint rule."*
 
 > [!warning] The shipped code differs
-> The provider layer, built 2026-10-18, lives in `code/lamproom/packages/`. `core/src/ports/` holds `agent-provider.ts`, `events.ts` and `exec-host.ts`, and `events.ts` has no version `v` yet ([[Agent Providers Open Questions]] #6). `adapters/src/agent/` holds `claude`, `opencode` and `replay`, and `adapters/src/exec/` only the `host` tier (2026-10-18; it now also holds `docker.ts` and `opensandbox/`, below); the shim is `ask-user`, and `cli` is `lr-run-agent`. OpenCode, not Codex, was built second; Codex is designed, not built ([[Agent Providers Open Questions]] #38).
+> The provider layer, built 2026-10-18, lives in `packages/`. `core/src/ports/` holds `agent-provider.ts`, `events.ts` and `exec-host.ts`, and `events.ts` has no version `v` yet ([[Agent Providers Open Questions]] #6). `adapters/src/agent/` holds `claude`, `opencode` and `replay`, and `adapters/src/exec/` only the `host` tier (2026-10-18; it now also holds `docker.ts` and `opensandbox/`, below); the shim is `ask-user`, and `cli` is `lr-run-agent`. OpenCode, not Codex, was built second; Codex is designed, not built ([[Agent Providers Open Questions]] #38).
 
 As built in lr-run-flow (2026-10-23), the engine is `core/src/flow/`: `engine.ts` (DAG traversal, advancement, the loop guard), `flow.ts` (the flow shape and its validation) and `fingerprint.ts`. `cli` also holds `lr-run-flow`, the terminal host that stands in for the runner and the worker: `flow-config.ts` (the flow file), `flow-run.ts` (the command) and `flow-exec.ts` (one step's run).
 

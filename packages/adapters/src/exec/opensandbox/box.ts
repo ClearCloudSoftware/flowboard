@@ -51,7 +51,7 @@ export interface Box {
 }
 
 const RELAY = fileURLToPath(new URL('./relay.cjs', import.meta.url));
-/** code/lamproom on this machine; the lamproom:cli image keeps the same tree at /opt/lamproom. */
+/** the repo root on this machine; the lamproom:cli image keeps the same tree at /opt/lamproom. */
 // A plain path, not `new URL('../…', import.meta.url)`: bundlers (Next's Turbopack) read that as an asset import.
 const LAMPROOM_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../..');
 const IN_IMAGE = '/opt/lamproom';

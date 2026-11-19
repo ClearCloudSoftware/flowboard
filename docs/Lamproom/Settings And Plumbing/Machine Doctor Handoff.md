@@ -23,7 +23,7 @@ The design is `docs/superpowers/specs/2026-11-17-lr-doctor-design.md` and the pl
 
 ## How it works
 
-| File (in `code/lamproom/packages/cli/src/`) | What it does |
+| File (in `packages/cli/src/`) | What it does |
 |---|---|
 | `doctor-needs.ts` | `readSetup` reads projects, app settings and every flow in the flows folder. `doctorNeeds` works out, for each check, whether it is needed (`yes`), needed only for a new project (`new`) or not needed (`no`), with a `why` line. |
 | `doctor.ts` | `runDoctor(options)` runs each check through the probe the runs or the Settings pages already use, grades it by its need, and returns a `DoctorReport`. Every probe can be swapped out through `options.probes`. |

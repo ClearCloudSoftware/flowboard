@@ -43,7 +43,7 @@ The other sources say the same in their own words:
 
 Since 2026-11-13 a project's trust (*Trusted*, *Normal*, *Untrusted*; [[Project Settings]]) decides where its runs work (`isolation.ts`, `flow-run.ts`). Not built: an egress proxy for Docker boxes, a project budget, a New run form that picks a project (the run's `--folder` finds it).
 
-**A flow never runs without a project.** lr-run-flow refuses a `--folder` that no registered project owns, on real paths, a task worktree under the repo included: `<folder>: not in a Lamproom project (none in <data>/projects.json); create one for this repo first`. A repo inside another project's repo is its own project: the innermost owner decides. lr-run-flow reads `LAMPROOM_DATA_DIR`, else Lamproom's own `code/lamproom/data/`, wherever it is started from. `--check` and `--mermaid` run nothing and stay project-free.
+**A flow never runs without a project.** lr-run-flow refuses a `--folder` that no registered project owns, on real paths, a task worktree under the repo included: `<folder>: not in a Lamproom project (none in <data>/projects.json); create one for this repo first`. A repo inside another project's repo is its own project: the innermost owner decides. lr-run-flow reads `LAMPROOM_DATA_DIR`, else Lamproom's own `data/`, wherever it is started from. `--check` and `--mermaid` run nothing and stay project-free.
 
 **The project's tier is the floor.** The flow's own `sandbox:` may keep it or make it stronger (host < docker = opensandbox < gVisor); nothing in a flow or the repo weakens it.
 

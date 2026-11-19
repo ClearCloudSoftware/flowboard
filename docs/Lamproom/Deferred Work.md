@@ -29,7 +29,7 @@ Items were moved from their notes word for word on 2026-11-17 and not checked ag
 
 What `pnpm lr-run-flow` left for later, as of 2026-10-23: findings from its final review that were not fixed, limits accepted while building it, what the testing guide's scenarios turned up, and what the fixes after the [[Flow Orchestration Conformance Audit]] left open. The command is described in [[Run Flow Reference]], and how to try it is in [[Testing The Run Flow CLI]]. The scope the plan left out (the worker, dynamic fan-out, routing on labels and the rest) is the plan's *Left out* list, not here.
 
-Code: `code/lamproom/packages/core/src/flow/` and `code/lamproom/packages/cli/src/flow-*.ts`. Paths in the tables are under `code/lamproom/packages/`.
+Code: `packages/core/src/flow/` and `packages/cli/src/flow-*.ts`. Paths in the tables are under `packages/`.
 
 ### Run flow safety and leftovers
 
@@ -72,7 +72,7 @@ Code: `code/lamproom/packages/core/src/flow/` and `code/lamproom/packages/cli/sr
 
 ## Projects and the wizard
 
-Minor problems the final review of the new project wizard found (branch `feature/projects-impl`, 2026-11-12) and left unfixed. None loses data or opens a hole; each is small. Paths are under `code/lamproom/`.
+Minor problems the final review of the new project wizard found (branch `feature/projects-impl`, 2026-11-12) and left unfixed. None loses data or opens a hole; each is small. Paths are under the repo root.
 
 ### Wizard input checks
 
@@ -217,7 +217,7 @@ From [[Slack Escalation Handoff]].
 
 ## Machine doctor
 
-From [[Machine Doctor Handoff]] (`pnpm lr-doctor`, merged into dev 1988916) and the System status page (`/settings/status`, branch `feature/doctor-page`, 2026-11-17). Paths are under `code/lamproom/`; bare file names such as `doctor.ts` are in `packages/cli/src/`. The calls made while building `lr-doctor` itself are in [[Machine Doctor Handoff#Calls made without asking]].
+From [[Machine Doctor Handoff]] (`pnpm lr-doctor`, merged into dev 1988916) and the System status page (`/settings/status`, branch `feature/doctor-page`, 2026-11-17). Paths are under the repo root; bare file names such as `doctor.ts` are in `packages/cli/src/`. The calls made while building `lr-doctor` itself are in [[Machine Doctor Handoff#Calls made without asking]].
 
 ### Doctor next steps
 
@@ -362,7 +362,7 @@ Found by the page's final review and left unfixed. None blocks merging. Line num
 
 What stops Lamproom working on Windows, found while making the Electron app (`feature/electron-app`, 2026-11-15). Nothing here has been fixed. Nothing has been run on a Windows machine either: every item comes from reading the code, so each fix needs a run on Windows to confirm it.
 
-The app's own shell, `code/lamproom/electron/`, is written for Windows. The rest of Lamproom assumes macOS or Linux. Paths below are relative to `code/lamproom/`.
+The app's own shell, `electron/`, is written for Windows. The rest of Lamproom assumes macOS or Linux. Paths below are relative to the repo root.
 
 ### What already handles Windows
 

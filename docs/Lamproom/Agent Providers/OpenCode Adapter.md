@@ -7,7 +7,7 @@ module: Agent Providers
 
 The second real provider, implemented 2026-10-18. It runs a Lamproom step on OpenCode, so on a non-Claude model, through the same [[AgentProvider Port]]. *"The interface is only as good as its second implementation."* (`01-ports.md`). The choice of OpenCode over Codex for that role, and what its SDK covers, is in [[Provider SDK Fit Analysis]]. The design had planned Codex as the second provider and v1 as Claude-only ([[Codex Adapter]]); whether OpenCode is in v1 is not decided ([[Agent Providers Open Questions]]).
 
-Code: `code/lamproom/packages/adapters/src/agent/opencode/` (`permissions.ts`, `options.ts`, `normalize.ts`, `guard-plugin.ts`, `server.ts`, `provider.ts`), on `@opencode-ai/sdk` 1.19.3 (the `/v2` entry) and the OpenCode CLI 1.19.3.
+Code: `packages/adapters/src/agent/opencode/` (`permissions.ts`, `options.ts`, `normalize.ts`, `guard-plugin.ts`, `server.ts`, `provider.ts`), on `@opencode-ai/sdk` 1.19.3 (the `/v2` entry) and the OpenCode CLI 1.19.3.
 
 ## One server per run
 
@@ -100,7 +100,7 @@ OpenCode 1.19.3 has no Claude Pro/Max login, so this provider runs non-Claude mo
 
 ## Verified live
 
-Verified on 2026-10-18 against the installed CLI, with the checks in `adapters/test/opencode-live.test.ts`: a read-and-reply run, a plugin skill invoked by name, and the guard plugin blocking a write outside the worktree under `bypassPermissions` (the plugin loads inside OpenCode and imports `@lamproom/core`). To run only these, from `code/lamproom`: `LAMPROOM_LIVE=1 LAMPROOM_OPENCODE_MODEL=openrouter/deepseek/deepseek-v4.1-flash node --test packages/adapters/test/opencode-live.test.ts`. They spend OpenRouter credit, and without `LAMPROOM_OPENCODE_MODEL` they are skipped. `pnpm test:live` runs four live suites, including Claude's and `lr-run-agent`'s on both adapters, so it also spends Claude subscription quota ([[Testing The Run Agent CLI]]). The normalizer is also tested against a recorded stream, `packages/adapters/test/fixtures/opencode-read.jsonl`.
+Verified on 2026-10-18 against the installed CLI, with the checks in `adapters/test/opencode-live.test.ts`: a read-and-reply run, a plugin skill invoked by name, and the guard plugin blocking a write outside the worktree under `bypassPermissions` (the plugin loads inside OpenCode and imports `@lamproom/core`). To run only these, from the repo root: `LAMPROOM_LIVE=1 LAMPROOM_OPENCODE_MODEL=openrouter/deepseek/deepseek-v4.1-flash node --test packages/adapters/test/opencode-live.test.ts`. They spend OpenRouter credit, and without `LAMPROOM_OPENCODE_MODEL` they are skipped. `pnpm test:live` runs four live suites, including Claude's and `lr-run-agent`'s on both adapters, so it also spends Claude subscription quota ([[Testing The Run Agent CLI]]). The normalizer is also tested against a recorded stream, `packages/adapters/test/fixtures/opencode-read.jsonl`.
 
 ## Related
 

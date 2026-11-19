@@ -30,7 +30,7 @@ editing a memory; a recall limit or `max_recall_chars` setting (fixed at 6,000);
 
 ## Global Constraints
 
-- All paths are under `code/lamproom/` unless they start with `docs/`. Run commands from `code/lamproom/`.
+- All paths are under the repo root unless they start with `docs/`. Run commands from the repo root.
 - Branch `feature/project-memory`, cut from `feature/slack-escalation` at `38e972a` in
   `.claude/worktrees/project-memory`. Never merge (except `git merge --no-ff feature/slack-escalation` when asked),
   never push, never rebase.

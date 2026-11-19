@@ -10,7 +10,7 @@ module: Agent Providers
 Feature map §6: *"A fake provider that replays a recorded session, so the whole system can be tested without spending real money."*
 
 > [!check] Implemented 2026-10-18
-> Shipped as `code/lamproom/packages/adapters/src/agent/replay/replay-provider.ts`, a copy of the reference above, and changed on 2026-10-22 (below). It is a test double next to the two real providers, [[Claude Code Adapter]] and [[OpenCode Adapter]]. `lr-run-agent` cannot select it; only tests use it (see [[#Where it is used]]).
+> Shipped as `packages/adapters/src/agent/replay/replay-provider.ts`, a copy of the reference above, and changed on 2026-10-22 (below). It is a test double next to the two real providers, [[Claude Code Adapter]] and [[OpenCode Adapter]]. `lr-run-agent` cannot select it; only tests use it (see [[#Where it is used]]).
 
 ## Origin
 
@@ -47,7 +47,7 @@ export interface ReplayScript {
 
 ## Self-check
 
-The reference file checked itself when run directly (`node docs/reference/adapters/agent/replay/replay-provider.ts`; the file now lives under `docs/old/reference/`), printing *"ReplayProvider self-check passed"*. The shipped file has no self-check. Its checks are in `adapters/test/replay.test.ts`, part of the free suite (`pnpm test:packages` in `code/lamproom`):
+The reference file checked itself when run directly (`node docs/reference/adapters/agent/replay/replay-provider.ts`; the file now lives under `docs/old/reference/`), printing *"ReplayProvider self-check passed"*. The shipped file has no self-check. Its checks are in `adapters/test/replay.test.ts`, part of the free suite (`pnpm test:packages` in the repo root):
 
 - the reference's self-check: it replays `system` (`abc-123`), `assistant_text` (`hello`) and `result` (`costUsd: 0.012`, `outcome: 'pass'`), and asserts the event order, the session id, `pid` -1, `exitCode 0`, `outcome 'pass'` and `costUsd 0.012`;
 - `stop()` settles with exit 130 and `stopped`;

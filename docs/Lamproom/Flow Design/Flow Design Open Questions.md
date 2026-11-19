@@ -266,7 +266,7 @@ The seeded `check` step requires nothing but must run after `implement` and `tes
 
 ### 34. Light or dark?
 
-> [!check] **Answered by the flow designer, 2026-10-24.** Light only, with no dark variant, as `docs/mockups/README.md` sets for every screen (*"Light only — no dark variant."*), and as Alex prefers. The web app's tokens follow that README (`code/lamproom/app/globals.css`).
+> [!check] **Answered by the flow designer, 2026-10-24.** Light only, with no dark variant, as `docs/mockups/README.md` sets for every screen (*"Light only — no dark variant."*), and as Alex prefers. The web app's tokens follow that README (`app/globals.css`).
 
 PRD §13: *"Dark-first, dense, keyboard-friendly."* (`PRD.MD:575`). The old design handoff (`docs/old/design/README.md`) draws dark artboards (e.g. header background `#0c0c0e`) and adds *"1f — Light mode"* as a variant. Every mockup is light only (`color-scheme:light`), as is the drawio *Harness architecture* tech card (*"shadcn/ui + Tailwind (light, zero radius, IBM Plex)"*). Backlog 9.1 says *"light default"*, and Story 8.3 and feature map §19 offer a light / dark / system switch. Does the flow designer ship light only, or light by default with a dark theme?
 

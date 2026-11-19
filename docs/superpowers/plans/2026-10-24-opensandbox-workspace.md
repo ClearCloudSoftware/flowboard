@@ -40,10 +40,10 @@ The run ends with a patch for the owner to review and apply.
 The relay runs inside the box. The client turns each relay connection into a `ChildProcess`-like object, so providers and `execShell` keep working unchanged. Both are tested on the host: the relay is plain Node, so tests start it locally on a free port, with no OpenSandbox involved.
 
 **Files:**
-- Create: `code/lamproom/packages/adapters/src/exec/opensandbox/relay.cjs` (no imports beyond Node built-ins; it is uploaded and run with `node` in the box)
-- Create: `code/lamproom/packages/adapters/src/exec/opensandbox/frames.ts`
-- Create: `code/lamproom/packages/adapters/src/exec/opensandbox/relay-host.ts`
-- Test: `code/lamproom/packages/adapters/test/opensandbox-relay.test.ts`
+- Create: `packages/adapters/src/exec/opensandbox/relay.cjs` (no imports beyond Node built-ins; it is uploaded and run with `node` in the box)
+- Create: `packages/adapters/src/exec/opensandbox/frames.ts`
+- Create: `packages/adapters/src/exec/opensandbox/relay-host.ts`
+- Test: `packages/adapters/test/opensandbox-relay.test.ts`
 
 **Interfaces:**
 - Produces:
@@ -63,13 +63,13 @@ The relay runs inside the box. The client turns each relay connection into a `Ch
   - `stdin end closes the process's stdin`: spawn `wc -l`, write `a\nb\n`, `stdin.end()`, and stdout is `2`.
 
 - [ ] **Step 2: Run them to verify they fail**
-  Run: `cd code/lamproom && node --test packages/adapters/test/opensandbox-relay.test.ts`
+  Run: `node --test packages/adapters/test/opensandbox-relay.test.ts`
   Expected: FAIL, cannot find `relay-host.ts`.
 
 - [ ] **Step 3: Implement `frames.ts`, `relay.cjs` and `relayExecHost`.** The relay is the spike's `relay.cjs` grown to the frame protocol plus the token check. It spawns with `stdio: 'pipe'`, kills on a kill frame, and sends the exit frame on `close`, then ends the socket. The client does the upgrade with `http.request` (the spike's `t2-stdin.mjs` shows the headers the gateway passes: `Connection: Upgrade`, `Upgrade: websocket`, a `Sec-WebSocket-Key`, `Sec-WebSocket-Version: 13`).
 
 - [ ] **Step 4: Run the tests to verify they pass**
-  Run: `cd code/lamproom && node --test packages/adapters/test/opensandbox-relay.test.ts && pnpm -s typecheck:packages`
+  Run: `node --test packages/adapters/test/opensandbox-relay.test.ts && pnpm -s typecheck:packages`
   Expected: 7 pass, no type errors.
 
 - [ ] **Step 5: Commit**
@@ -80,9 +80,9 @@ The relay runs inside the box. The client turns each relay connection into a `Ch
 The box cannot reach the Mac, so the host opens connections and the relay hands each one to a shim that connects inside the box.
 
 **Files:**
-- Modify: `code/lamproom/packages/adapters/src/exec/opensandbox/relay.cjs`
-- Modify: `code/lamproom/packages/adapters/src/exec/opensandbox/relay-host.ts`
-- Test: `code/lamproom/packages/adapters/test/opensandbox-relay.test.ts`
+- Modify: `packages/adapters/src/exec/opensandbox/relay.cjs`
+- Modify: `packages/adapters/src/exec/opensandbox/relay-host.ts`
+- Test: `packages/adapters/test/opensandbox-relay.test.ts`
 
 **Interfaces:**
 - Consumes: the relay and its token check from Task 1.
@@ -106,10 +106,10 @@ The box cannot reach the Mac, so the host opens connections and the relay hands 
 The OpenCode provider checks a marker file with `existsSync`, loads its guard plugin from a host path, and connects to the server's printed URL. `withAsking` points the shim at a host path. With OpenSandbox, all three are wrong, so the port gains small optional hooks.
 
 **Files:**
-- Modify: `code/lamproom/packages/core/src/ports/exec-host.ts`
-- Modify: `code/lamproom/packages/adapters/src/agent/opencode/provider.ts`, `.../opencode/server.ts`, `.../opencode/options.ts` (guard plugin path)
-- Modify: `code/lamproom/packages/cli/src/run.ts` (`withAsking`)
-- Test: `code/lamproom/packages/adapters/test/opencode-provider.test.ts`, `code/lamproom/packages/cli/test/run.test.ts`
+- Modify: `packages/core/src/ports/exec-host.ts`
+- Modify: `packages/adapters/src/agent/opencode/provider.ts`, `.../opencode/server.ts`, `.../opencode/options.ts` (guard plugin path)
+- Modify: `packages/cli/src/run.ts` (`withAsking`)
+- Test: `packages/adapters/test/opencode-provider.test.ts`, `packages/cli/test/run.test.ts`
 
 **Interfaces:**
 - Produces, on `ExecHost`, all optional, with absent meaning today's behaviour:
@@ -133,10 +133,10 @@ The OpenCode provider checks a marker file with `existsSync`, loads its guard pl
 ### Task 4: The box: create, fill, mirror, patch, kill
 
 **Files:**
-- Create: `code/lamproom/packages/adapters/src/exec/opensandbox/box.ts`
-- Modify: `code/lamproom/packages/adapters/src/index.ts` (export `openBox`, `connectBox`, type `Box`)
-- Modify: `code/lamproom/packages/adapters/package.json` (`"@alibaba-group/opensandbox": "1.1.1"`)
-- Test: `code/lamproom/packages/adapters/test/opensandbox-box.test.ts` (live, `LAMPROOM_OPENSANDBOX=1`)
+- Create: `packages/adapters/src/exec/opensandbox/box.ts`
+- Modify: `packages/adapters/src/index.ts` (export `openBox`, `connectBox`, type `Box`)
+- Modify: `packages/adapters/package.json` (`"@alibaba-group/opensandbox": "1.1.1"`)
+- Test: `packages/adapters/test/opensandbox-box.test.ts` (live, `LAMPROOM_OPENSANDBOX=1`)
 
 **Interfaces:**
 - Consumes: `relayExecHost` (Task 1), `tunnel` (Task 2), the port hooks (Task 3).
@@ -182,8 +182,8 @@ The OpenCode provider checks a marker file with `existsSync`, loads its guard pl
 ### Task 5: The flow YAML
 
 **Files:**
-- Modify: `code/lamproom/packages/cli/src/flow-config.ts`
-- Test: `code/lamproom/packages/cli/test/flow-config.test.ts`
+- Modify: `packages/cli/src/flow-config.ts`
+- Test: `packages/cli/test/flow-config.test.ts`
 
 **Interfaces:**
 - Produces: `Sandbox` becomes a union:
@@ -212,9 +212,9 @@ The OpenCode provider checks a marker file with `existsSync`, loads its guard pl
 ### Task 6: lr-run-flow drives a flow in the box
 
 **Files:**
-- Modify: `code/lamproom/packages/cli/src/flow-run.ts`
-- Modify: `code/lamproom/packages/cli/src/flow-exec.ts` (ask socket choice)
-- Test: `code/lamproom/packages/cli/test/flow-run.test.ts` (with a fake `Box`), `code/lamproom/packages/cli/test/flow-opensandbox-live.test.ts` (live)
+- Modify: `packages/cli/src/flow-run.ts`
+- Modify: `packages/cli/src/flow-exec.ts` (ask socket choice)
+- Test: `packages/cli/test/flow-run.test.ts` (with a fake `Box`), `packages/cli/test/flow-opensandbox-live.test.ts` (live)
 
 **Interfaces:**
 - Consumes: `openBox`/`connectBox`/`Box` (Task 4), `Sandbox` (Task 5), `ExecHost.tunnel` (Task 2).
@@ -248,7 +248,7 @@ The OpenCode provider checks a marker file with `existsSync`, loads its guard pl
 ### Task 7: Docs
 
 **Files:**
-- Modify: `code/lamproom/docker/README.md`. Add a section 3, *OpenSandbox*: the server config (the four settings from Global Constraints), `OPENSANDBOX_DOMAIN` and `OPENSANDBOX_API_KEY`, the YAML, what stays on the host, how to apply `changes.patch`, and pre-pulling `opensandbox/execd:v1.1.0` and `opensandbox/egress:v1.1.7`.
+- Modify: `docker/README.md`. Add a section 3, *OpenSandbox*: the server config (the four settings from Global Constraints), `OPENSANDBOX_DOMAIN` and `OPENSANDBOX_API_KEY`, the YAML, what stays on the host, how to apply `changes.patch`, and pre-pulling `opensandbox/execd:v1.1.0` and `opensandbox/egress:v1.1.7`.
 - Modify: `docs/Lamproom/Sandboxing/Sandboxing Roadmap.md`: mark the egress allowlist and credential injection as delivered through OpenSandbox, linking `[[OpenSandbox Spike]]`.
 
 - [ ] **Step 1: Write both.**

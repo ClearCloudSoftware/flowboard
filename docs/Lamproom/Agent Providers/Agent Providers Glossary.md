@@ -11,7 +11,7 @@ module: Agent Providers
 > - **Session** is both the provider's own conversation id (`sessionId`, `runs.claude_session_id`) and, in the UI, the *live session viewer* at `/runs/[id]`.
 > - **Model** is either a **logical id** (`reasoning-high` in the design; as built, a Claude alias or an OpenCode `providerID/modelID`) or a **native id** (`o3`, the `claude-fable-5-1` reported in the stream sample). PRD §5 calls `sonnet` *"a Claude alias"*, so by extension `opus` and `haiku` are too, though `resolveModel`'s doc comment shows `opus` on the native side (`'reasoning-high' -> 'opus' | 'o3'`). See [[Logical Model Ids]].
 
-In the *Source* column, `agent-provider.ts`, `events.ts`, `exec-host.ts` and `replay-provider.ts` are the shipped files in `code/lamproom/packages/` (`core/src/ports/` and `adapters/src/agent/replay/`), not the reference port in `docs/old/reference/`.
+In the *Source* column, `agent-provider.ts`, `events.ts`, `exec-host.ts` and `replay-provider.ts` are the shipped files in `packages/` (`core/src/ports/` and `adapters/src/agent/replay/`), not the reference port in `docs/old/reference/`.
 
 | Term | Meaning | Source |
 |---|---|---|

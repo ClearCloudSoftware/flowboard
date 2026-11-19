@@ -6,7 +6,7 @@ date: 2026-10-18
 
 # Provider Implementation Decisions
 
-The calls made while building the [[Claude Code Adapter]] and the [[OpenCode Adapter]] on 2026-10-18, and the review findings left for later. Both providers were built on branch `feature/agent-providers`, merged into `dev` on 2026-10-19, and live under `code/lamproom/packages/adapters/src/agent/`. Each was built from a plan (`docs/superpowers/plans/2026-10-18-agent-providers-claude-code.md` and `…-opencode.md`) and checked by an independent whole-branch review; the review's critical and important findings were fixed test-first before this note was written.
+The calls made while building the [[Claude Code Adapter]] and the [[OpenCode Adapter]] on 2026-10-18, and the review findings left for later. Both providers were built on branch `feature/agent-providers`, merged into `dev` on 2026-10-19, and live under `packages/adapters/src/agent/`. Each was built from a plan (`docs/superpowers/plans/2026-10-18-agent-providers-claude-code.md` and `…-opencode.md`) and checked by an independent whole-branch review; the review's critical and important findings were fixed test-first before this note was written.
 
 Port-level decisions (new `RunSpec` fields, the `usage` event, `pid` as a promise, and so on) are recorded against their questions in [[Agent Providers Open Questions]]. This note covers the rest.
 
