@@ -53,7 +53,7 @@ runs on your machine, over your repositories, for one developer.
 ### Install and run
 
 ```bash
-git clone git@github.com:ClearCloudSoftware/flowboard.git lamproom
+git clone git@github.com:ClearCloudSoftware/lamproom.git
 cd lamproom
 pnpm install
 pnpm dev
