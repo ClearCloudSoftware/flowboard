@@ -17,14 +17,20 @@ import Database from 'better-sqlite3';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { mkdirSync } from 'node:fs';
-import { dirname, resolve as resolvePath } from 'node:path';
+import { dirname, join, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export type LamproomDb = BetterSQLite3Database<Record<string, never>>;
 
 const cache = new Map<string, LamproomDb>();
 
-const MIGRATIONS_FOLDER = resolvePath(fileURLToPath(new URL('../drizzle', import.meta.url)));
+// Compute the drizzle folder off this file's dirname rather than
+// `new URL('../drizzle', import.meta.url)`. Turbopack intercepts the
+// latter pattern (it treats the first arg as an asset module specifier
+// at build time) and refuses the build with "Can't resolve '../drizzle'"
+// when this file is pulled into a Next.js server bundle.
+const THIS_DIR = dirname(fileURLToPath(import.meta.url));
+const MIGRATIONS_FOLDER = resolvePath(join(THIS_DIR, '..', 'drizzle'));
 
 export function openDb(path: string): LamproomDb {
   const abs = resolvePath(path);
